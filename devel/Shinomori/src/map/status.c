@@ -425,7 +425,16 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	memset(sd->addeff,0,sizeof(sd->addeff));
 	memset(sd->addeff2,0,sizeof(sd->addeff2));
 	memset(sd->reseff,0,sizeof(sd->reseff));
-	memset(&sd->special_state,0,sizeof(sd->special_state));
+	sd->state.killer = 0;
+	sd->state.killable = 0;
+	sd->state.restart_full_recover = 0;
+	sd->state.no_castcancel = 0;
+	sd->state.no_castcancel2 = 0;
+	sd->state.no_sizefix = 0;
+	sd->state.no_magic_damage = 0;
+	sd->state.no_weapon_damage = 0;
+	sd->state.no_gemstone = 0;
+	sd->state.infinite_endure = 0;
 	memset(sd->weapon_coma_ele,0,sizeof(sd->weapon_coma_ele));
 	memset(sd->weapon_coma_race,0,sizeof(sd->weapon_coma_race));
 	memset(sd->weapon_atk,0,sizeof(sd->weapon_atk));
@@ -517,7 +526,11 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	memset(sd->addrace2_,0,sizeof(sd->addrace2_));
 	sd->hp_gain_value = sd->sp_drain_type = 0;
 	memset(sd->subsize,0,sizeof(sd->subsize));
-	sd->unequip_damage = 0;
+	memset(sd->unequip_losehp,0,sizeof(sd->unequip_losehp));
+	memset(sd->unequip_losesp,0,sizeof(sd->unequip_losesp));
+	memset(sd->subrace2,0,sizeof(sd->subrace2));
+	memset(sd->expaddrace,0,sizeof(sd->expaddrace));
+	memset(sd->sp_gain_race,0,sizeof(sd->sp_gain_race));
 
 	if(!sd->disguiseflag && sd->disguise) {
 		sd->disguise=0;
@@ -533,7 +546,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	if (sd->status.guild_id > 0) {
 		struct guild *g = guild_search(sd->status.guild_id);
 		if (g && strcmp(sd->status.name,g->master)==0)
-			sd->state.gmaster_flag = (int)g;
+			sd->gmaster_flag = (int)g;
 	}
 
 	for(i=0;i<10;i++) {
@@ -715,7 +728,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	}
 
 	// ステ?タス?化による基本パラメ?タ補正
-	if(sd->sc_count){
+//!!	if(sd->sc_count)
+	{
 		if(sd->sc_data[SC_CONCENTRATE].timer!=-1 && sd->sc_data[SC_QUAGMIRE].timer == -1){	// 集中力向上
 			sd->paramb[1]+= (sd->status.agi+sd->paramb[1]+sd->parame[1]-sd->paramcard[1])*(2+sd->sc_data[SC_CONCENTRATE].val1)/100;
 			sd->paramb[4]+= (sd->status.dex+sd->paramb[4]+sd->parame[4]-sd->paramcard[4])*(2+sd->sc_data[SC_CONCENTRATE].val1)/100;
@@ -739,7 +753,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		}
 		if(sd->sc_data[SC_SLOWDOWN].timer!=-1)
 			sd->speed = sd->speed*150/100;
-		if(sd->sc_data[SC_SPEEDUP0].timer!=-1)
+		if(sd->sc_data[SC_SPEEDUP0].timer!=-1 && sd->sc_data[SC_INCREASEAGI].timer==-1)
 			sd->speed -= sd->speed*25/100;
 		if(sd->sc_data[SC_BLESSING].timer!=-1){	// ブレッシング
 			sd->paramb[0]+= sd->sc_data[SC_BLESSING].val1;
@@ -835,7 +849,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	for(i=0;i<6;i++)
 		if(sd->paramc[i] < 0) sd->paramc[i] = 0;
 
-	if (sd->sc_count) {
+//!!	if (sd->sc_count) 
+	{
 		if (sd->sc_data[SC_CURSE].timer!=-1)
 			sd->paramc[5] = 0;
 	}
@@ -913,11 +928,12 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	if( (skill=pc_checkskill(sd,BS_WEAPONRESEARCH))>0)	// 武器?究の命中率?加
 		sd->hit += skill*2;
 	if(sd->status.option&2 && (skill = pc_checkskill(sd,RG_TUNNELDRIVE))>0 )	// トンネルドライブ	// トンネルドライブ
-		sd->speed += (short)(1.2*DEFAULT_WALK_SPEED - skill*9);
+		sd->speed += (100-16)*skill*DEFAULT_WALK_SPEED/100;
+		//sd->speed += (1.2*DEFAULT_WALK_SPEED - skill*9);		
 	if (pc_iscarton(sd) && (skill=pc_checkskill(sd,MC_PUSHCART))>0)	// カ?トによる速度低下
-		sd->speed += (short)((10-skill) * (DEFAULT_WALK_SPEED * 0.1));
+		sd->speed += (10-skill) * DEFAULT_WALK_SPEED/10;
 	else if (pc_isriding(sd)) {	// ペコペコ?りによる速度?加
-		sd->speed -= (short)(0.25 * DEFAULT_WALK_SPEED);
+		sd->speed -= DEFAULT_WALK_SPEED/4;
 		sd->max_weight += 10000;
 	}
 	if((skill=pc_checkskill(sd,CR_TRUST))>0) { // フェイス
@@ -944,7 +960,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	if(sd->hprate!=100)
 		sd->status.max_hp = sd->status.max_hp*sd->hprate/100;
 
-	if(sd->sc_count && sd->sc_data[SC_BERSERK].timer!=-1){	// バ?サ?ク
+	if(//!!sd->sc_count && 
+		sd->sc_data[SC_BERSERK].timer!=-1){	// バ?サ?ク
 		sd->status.max_hp = sd->status.max_hp * 3;
 		// sd->status.hp = sd->status.hp * 3;
 		if(sd->status.max_hp > battle_config.max_hp) // removed negative max hp bug by Valaris
@@ -1036,7 +1053,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		sd->flee += (skill*3)>>1;
 
 	// スキルやステ?タス異常による?りのパラメ?タ補正
-	if(sd->sc_count){
+//!!	if(sd->sc_count)
+	{
 		// ATK/DEF?化形
 		if(sd->sc_data[SC_ANGELUS].timer!=-1)	// エンジェラス
 			sd->def2 = sd->def2*(110+5*sd->sc_data[SC_ANGELUS].val1)/100;
@@ -1483,7 +1501,8 @@ int status_calc_speed (struct map_session_data *sd)
 	b_speed = sd->speed;
 	sd->speed = DEFAULT_WALK_SPEED ;
 
-	if(sd->sc_count){
+//!!	if(sd->sc_count)
+	{
 		if(sd->sc_data[SC_INCREASEAGI].timer!=-1 && sd->sc_data[SC_QUAGMIRE].timer == -1 && sd->sc_data[SC_DONTFORGETME].timer == -1){	// 速度?加
 			sd->speed -= sd->speed *25/100;
 		}
@@ -1533,11 +1552,11 @@ int status_calc_speed (struct map_session_data *sd)
 	}
 
 	if(sd->status.option&2 && (skill = pc_checkskill(sd,RG_TUNNELDRIVE))>0 )
-		sd->speed += (short)(1.2*DEFAULT_WALK_SPEED - skill*9);
+		sd->speed += (DEFAULT_WALK_SPEED + DEFAULT_WALK_SPEED/5 - skill*9);
 	if (pc_iscarton(sd) && (skill=pc_checkskill(sd,MC_PUSHCART))>0)
-		sd->speed += (short)((10-skill) * (DEFAULT_WALK_SPEED * 0.1));
+		sd->speed += (10-skill) * DEFAULT_WALK_SPEED/10;
 	else if (pc_isriding(sd)) {
-		sd->speed -= (short)(0.25 * DEFAULT_WALK_SPEED);
+		sd->speed -= DEFAULT_WALK_SPEED/4;
 	}
 	if((skill=pc_checkskill(sd,TF_MISS))>0)
 		if(s_class.job==12)
@@ -2674,7 +2693,7 @@ int status_get_dmotion(struct block_list *bl)
 		return 2000;
 
 	if((sc_data && (sc_data[SC_ENDURE].timer!=-1 || sc_data[SC_BERSERK].timer!=-1)) ||
-		(bl->type == BL_PC && ((struct map_session_data *)bl)->special_state.infinite_endure))
+		(bl->type == BL_PC && ((struct map_session_data *)bl)->state.infinite_endure))
 		ret=0;
 
 	return ret;
@@ -2869,13 +2888,14 @@ struct status_change *status_get_sc_data(struct block_list *bl)
 		return ((struct map_session_data*)bl)->sc_data;
 	return NULL;
 }
+
 short *status_get_sc_count(struct block_list *bl)
 {
-	nullpo_retr(NULL, bl);
-	if(bl->type==BL_MOB && (struct mob_data *)bl)
-		return &((struct mob_data*)bl)->sc_count;
-	else if(bl->type==BL_PC && (struct map_session_data *)bl)
-		return &((struct map_session_data*)bl)->sc_count;
+//!!	nullpo_retr(NULL, bl);
+//!!	if(bl->type==BL_MOB && (struct mob_data *)bl)
+//!!		return &((struct mob_data*)bl)->sc_count;
+//!!	else if(bl->type==BL_PC && (struct map_session_data *)bl)
+//!!		return &((struct map_session_data*)bl)->sc_count;
 	return NULL;
 }
 short *status_get_opt1(struct block_list *bl)
@@ -2990,7 +3010,8 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 {
 	struct map_session_data *sd = NULL;
 	struct status_change* sc_data;
-	short *sc_count, *option, *opt1, *opt2, *opt3;
+	//!!short *sc_count;
+	short*option, *opt1, *opt2, *opt3;
 	int opt_flag = 0, calc_flag = 0,updateflag = 0, save_flag = 0, race, mode, elem, undead_flag;
 	int scdef=0;
 
@@ -3001,7 +3022,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		if (status_isdead(bl)) return 0;
 
 	nullpo_retr(0, sc_data=status_get_sc_data(bl));
-	nullpo_retr(0, sc_count=status_get_sc_count(bl));
+//!!	nullpo_retr(0, sc_count=status_get_sc_count(bl));
 	nullpo_retr(0, option=status_get_option(bl));
 	nullpo_retr(0, opt1=status_get_opt1(bl));
 	nullpo_retr(0, opt2=status_get_opt2(bl));
@@ -3094,7 +3115,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		if ((type >=SC_STAN && type <= SC_BLIND) || type == SC_DPOISON)
 			return 0;/* ?ぎ足しができない?態異常である時は?態異常を行わない */
 
-		(*sc_count)--;
+//!!		(*sc_count)--;
 		delete_timer(sc_data[type].timer, status_change_timer);
 		sc_data[type].timer = -1;
 	}
@@ -3837,7 +3858,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 				int i;
 				for(i = SC_STONE; i <= SC_SLEEP; i++){
 					if(sc_data[i].timer != -1){
-						(*sc_count)--;
+//!!						(*sc_count)--;
 						delete_timer(sc_data[i].timer, status_change_timer);
 						sc_data[i].timer = -1;
 					}
@@ -3891,7 +3912,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 	if(opt_flag)	/* optionの?更 */
 		clif_changeoption(bl);
 
-	(*sc_count)++;	/* ステ?タス異常の? */
+//!!	(*sc_count)++;	/* ステ?タス異常の? */
 
 	sc_data[type].val1 = val1;
 	sc_data[type].val2 = val2;
@@ -3918,25 +3939,26 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 int status_change_clear(struct block_list *bl,int type)
 {
 	struct status_change* sc_data;
-	short *sc_count, *option, *opt1, *opt2, *opt3;
+//!!	short *sc_count;
+	short *option, *opt1, *opt2, *opt3;
 	int i;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, sc_data = status_get_sc_data(bl));
-	nullpo_retr(0, sc_count = status_get_sc_count(bl));
+//!!	nullpo_retr(0, sc_count = status_get_sc_count(bl));
 	nullpo_retr(0, option = status_get_option(bl));
 	nullpo_retr(0, opt1 = status_get_opt1(bl));
 	nullpo_retr(0, opt2 = status_get_opt2(bl));
 	nullpo_retr(0, opt3 = status_get_opt3(bl));
 
-//	if (*sc_count == 0)
-//		return 0;
+//!!	if (*sc_count == 0)
+//!!		return 0;
 	for(i = 0; i < MAX_STATUSCHANGE; i++){
 		if(sc_data[i].timer != -1){	/* 異常があるならタイマ?を削除する */
 			status_change_end(bl, i, -1);
 		}
 	}
-	*sc_count = 0;
+//!!	*sc_count = 0;
 	*opt1 = 0;
 	*opt2 = 0;
 	*opt3 = 0;
@@ -3960,7 +3982,8 @@ int status_change_end( struct block_list* bl , int type,int tid )
 {
 	struct status_change* sc_data;
 	int opt_flag=0, calc_flag = 0;
-	short *sc_count, *option, *opt1, *opt2, *opt3;
+	//!!short *sc_count;
+	short *option, *opt1, *opt2, *opt3;
 
 	nullpo_retr(0, bl);
 	if(bl->type!=BL_PC && bl->type!=BL_MOB) {
@@ -3969,20 +3992,21 @@ int status_change_end( struct block_list* bl , int type,int tid )
 		return 0;
 	}
 	nullpo_retr(0, sc_data = status_get_sc_data(bl));
-	nullpo_retr(0, sc_count = status_get_sc_count(bl));
+//!!	nullpo_retr(0, sc_count = status_get_sc_count(bl));
 	nullpo_retr(0, option = status_get_option(bl));
 	nullpo_retr(0, opt1 = status_get_opt1(bl));
 	nullpo_retr(0, opt2 = status_get_opt2(bl));
 	nullpo_retr(0, opt3 = status_get_opt3(bl));
 
-	if ((*sc_count) > 0 && sc_data[type].timer != -1 && (sc_data[type].timer == tid || tid == -1)) {
+	if (//!!(*sc_count) > 0 && 
+		sc_data[type].timer != -1 && (sc_data[type].timer == tid || tid == -1)) {
 
 		if (tid == -1)	// タイマから呼ばれていないならタイマ削除をする
 			delete_timer(sc_data[type].timer,status_change_timer);
 
 		/* 該?の異常を正常に?す */
 		sc_data[type].timer=-1;
-		(*sc_count)--;
+		//!!(*sc_count)--;
 
 		switch(type){	/* 異常の種類ごとの?理 */
 			case SC_PROVOKE:			/* プロボック */
@@ -4393,7 +4417,7 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 
 	case SC_ENDURE:	/* インデュア */
 	case SC_AUTOBERSERK: // Celest
-		if(sd && sd->special_state.infinite_endure) {
+		if(sd && sd->state.infinite_endure) {
 			sc_data[type].timer=add_timer( 1000*60+tick,status_change_timer, bl->id, data );
 			return 0;
 		}
@@ -4625,7 +4649,7 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 			}
 			/* タイマ?再設定 */
 			sc_data[type].timer=add_timer(1000+tick, status_change_timer,bl->id, data);
-			return 0;
+				return 0;
 		}
 		break;
 

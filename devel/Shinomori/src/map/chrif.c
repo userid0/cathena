@@ -106,7 +106,8 @@ int chrif_save(struct map_session_data *sd)
 	memcpy(WFIFOP(char_fd,12), &sd->status, sizeof(sd->status));
 	WFIFOSET(char_fd, WFIFOW(char_fd,2));
 
-	storage_storage_save(sd); // to synchronise storage with character [Yor]
+	storage_storage_dirty(sd);
+	storage_storage_save(sd);
 
 	return 0;
 }
@@ -1067,7 +1068,7 @@ int chrif_parse(int fd)
 				return 0;
 			packet_len = RFIFOW(fd,2);
 		}
-		if (RFIFOREST(fd) < packet_len)
+		if(RFIFOREST(fd) < packet_len)
 			return 0;
 
 		switch(cmd) {

@@ -91,7 +91,7 @@ int battle_damage(struct block_list *bl,struct block_list *target,int damage,int
 {
 	struct map_session_data *sd=NULL;
 	struct status_change *sc_data=status_get_sc_data(target);
-	short *sc_count;
+//!!	short *sc_count;
 	int i;
 
 	nullpo_retr(0, target); //blはNULLで呼ばれることがあるので他でチェック
@@ -113,7 +113,9 @@ int battle_damage(struct block_list *bl,struct block_list *target,int damage,int
 	if(damage<0)
 		return battle_heal(bl,target,-damage,0,flag);
 
-	if(!flag && (sc_count=status_get_sc_count(target))!=NULL && *sc_count>0){
+	if(!flag 
+//!!		&& (sc_count=status_get_sc_count(target))!=NULL && *sc_count>0
+		){
 		// 凍結、石化、睡眠を消去
 		if(sc_data[SC_FREEZE].timer!=-1)
 			status_change_end(target,SC_FREEZE,-1);
@@ -151,8 +153,8 @@ int battle_damage(struct block_list *bl,struct block_list *target,int damage,int
 
 		if(tsd && tsd->skilltimer!=-1){	// 詠唱妨害
 				// フェンカードや妨害されないスキルかの検査
-			if( (!tsd->special_state.no_castcancel || map[bl->m].flag.gvg) && tsd->state.skillcastcancel &&
-				!tsd->special_state.no_castcancel2)
+			if( (!tsd->state.no_castcancel || map[bl->m].flag.gvg) && tsd->state.skillcastcancel &&
+				!tsd->state.no_castcancel2)
 				skill_castcancel(target,0);
 		}
 
@@ -238,7 +240,7 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 	struct map_session_data *sd=NULL;
 	struct mob_data *md=NULL;
 	struct status_change *sc_data,*sc;
-	short *sc_count;
+//!!	short *sc_count;
 	int class_;
 
 	nullpo_retr(0, bl);
@@ -248,9 +250,10 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 	else sd=(struct map_session_data *)bl;
 
 	sc_data=status_get_sc_data(bl);
-	sc_count=status_get_sc_count(bl);
+//!!	sc_count=status_get_sc_count(bl);
 
-	if(sc_count!=NULL && *sc_count>0){
+//!!	if(sc_count!=NULL && *sc_count>0)
+	{
 		if (sc_data[SC_SAFETYWALL].timer!=-1 && damage>0 && flag&BF_WEAPON &&
 			flag&BF_SHORT && skill_num != NPC_GUIDEDATTACK) {
 			// セーフティウォール
@@ -1061,9 +1064,9 @@ static struct Damage battle_calc_mob_weapon_attack(
 	struct Damage wd;
 	int damage,damage2=0,type,div_,blewcount=skill_get_blewcount(skill_num,skill_lv);
 	int flag,skill,ac_flag = 0,dmg_lv = 0;
-	int t_mode=0,t_race=0,t_size=1,s_race=0,s_ele=0,s_size=0;
+	int t_mode=0,t_race=0,t_size=1,s_race=0,s_ele=0,s_size=0,s_race2=0;
 	struct status_change *sc_data,*t_sc_data;
-	short *sc_count;
+//!!	short *sc_count;
 	short *option, *opt1, *opt2;
 	int div_flag=0;	// 0: total damage is to be divided by div_
 					// 1: damage is distributed,and has to be multiplied by div_ [celest]
@@ -1079,10 +1082,11 @@ static struct Damage battle_calc_mob_weapon_attack(
 	s_ele = status_get_attack_element(src);
 	s_size = status_get_size(src);
 	sc_data = status_get_sc_data(src);
-	sc_count = status_get_sc_count(src);
+//!!	sc_count = status_get_sc_count(src);
 	option = status_get_option(src);
 	opt1 = status_get_opt1(src);
 	opt2 = status_get_opt2(src);
+	s_race2 = status_get_race2(src);
 
 	// ターゲット
 	if(target->type == BL_PC)
@@ -1439,7 +1443,7 @@ static struct Damage battle_calc_mob_weapon_attack(
 		if( skill_num!=NPC_CRITICALSLASH ){
 			// 対 象の防御力によるダメージの減少
 			// ディバインプロテクション（ここでいいのかな？）
-			if ( skill_num != MO_INVESTIGATE && skill_num != MO_EXTREMITYFIST && skill_num != KN_AUTOCOUNTER && skill_num != KN_AUTOCOUNTER && def1 < 1000000) {	//DEF, VIT無視
+			if ( skill_num != MO_INVESTIGATE && skill_num != MO_EXTREMITYFIST && skill_num != KN_AUTOCOUNTER && skill_num != AM_ACIDTERROR && def1 < 1000000) {	//DEF, VIT無視
 				int t_def;
 				target_count = 1 + battle_counttargeted(target,src,battle_config.vit_penalty_count_lv);
 				if(battle_config.vit_penalty_type > 0) {
@@ -1503,6 +1507,7 @@ static struct Damage battle_calc_mob_weapon_attack(
 		cardfix=cardfix*(100-tsd->subele[s_ele])/100;	// 属 性によるダメージ耐性
 		cardfix=cardfix*(100-tsd->subrace[s_race])/100;	// 種族によるダメージ耐性
 		cardfix=cardfix*(100-tsd->subsize[s_size])/100;
+		cardfix=cardfix*(100-tsd->subrace2[s_race2])/100;	// 種族によるダメージ耐性
 		if(mob_db[md->class_].mode & 0x20)
 			cardfix=cardfix*(100-tsd->subrace[10])/100;
 		else
@@ -1582,7 +1587,7 @@ static struct Damage battle_calc_mob_weapon_attack(
 	if(t_mode&0x40 && damage > 0)
 		damage = 1;
 
-	if( tsd && tsd->special_state.no_weapon_damage)
+	if( tsd && tsd->state.no_weapon_damage)
 		damage = 0;
 
 	if(skill_num != CR_GRANDCROSS)
@@ -1623,7 +1628,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 	int t_mode=0,t_race=0,t_size=1,s_race=7,s_ele=0,s_size=1;
 	int t_race2=0;
 	struct status_change *sc_data,*t_sc_data;
-	short *sc_count;
+//!!	short *sc_count;
 	short *option, *opt1, *opt2;
 	int atkmax_=0, atkmin_=0, s_ele_;	//二刀流用
 	int watk,watk_,cardfix,t_ele;
@@ -1646,7 +1651,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 	s_ele_=status_get_attack_element2(src); //左手属性
 	s_size=status_get_size(src);
 	sc_data=status_get_sc_data(src); //ステータス異常
-	sc_count=status_get_sc_count(src); //ステータス異常の数
+//!!	sc_count=status_get_sc_count(src); //ステータス異常の数
 	option=status_get_option(src); //鷹とかペコとかカートとか
 	opt1=status_get_opt1(src); //石化、凍結、スタン、睡眠、暗闇
 	opt2=status_get_opt2(src); //毒、呪い、沈黙、暗闇？
@@ -1743,7 +1748,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 	// サイズ修正
 	// ペコ騎乗していて、槍で攻撃した場合は中型のサイズ修正を100にする
 	// ウェポンパーフェクション,ドレイクC
-	if(((sd->special_state.no_sizefix) || (pc_isriding(sd) && (sd->status.weapon==4 || sd->status.weapon==5) && t_size==1) || skill_num == MO_EXTREMITYFIST)){	//ペコ騎乗していて、槍で中型を攻撃
+	if(((sd->state.no_sizefix) || (pc_isriding(sd) && (sd->status.weapon==4 || sd->status.weapon==5) && t_size==1) || skill_num == MO_EXTREMITYFIST)){	//ペコ騎乗していて、槍で中型を攻撃
 		atkmax = watk;
 		atkmax_ = watk_;
 	} else {
@@ -1752,7 +1757,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 			atkmax_ = (watk_ * sd->atkmods_[ t_size ]) / 100;
 		atkmin_ = (atkmin_ * sd->atkmods[ t_size ]) / 100;
 	}
-	if( (sc_data != NULL && sc_data[SC_WEAPONPERFECTION].timer!=-1) || (sd->special_state.no_sizefix)) {	// ウェポンパーフェクション || ドレイクカード
+	if( (sc_data != NULL && sc_data[SC_WEAPONPERFECTION].timer!=-1) || (sd->state.no_sizefix)) {	// ウェポンパーフェクション || ドレイクカード
 		atkmax = watk;
 		atkmax_ = watk_;
 	}
@@ -2701,7 +2706,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 	}
 
 	//bNoWeaponDamage(設定アイテム無し？)でグランドクロスじゃない場合はダメージが0
-	if( tsd && tsd->special_state.no_weapon_damage && skill_num != CR_GRANDCROSS)
+	if( tsd && tsd->state.no_weapon_damage && skill_num != CR_GRANDCROSS)
 		damage = damage2 = 0;
 
 	if(skill_num != CR_GRANDCROSS && (damage > 0 || damage2 > 0) ) {
@@ -2806,7 +2811,8 @@ struct Damage battle_calc_weapon_attack(
 		breakrate_[0] += sd->break_weapon_rate;
 		breakrate_[1] += sd->break_armor_rate;
 		
-		if (sd->sc_count) {
+//!!		if (sd->sc_count) 
+		{
 			if (sd->sc_data[SC_MELTDOWN].timer!=-1) {
 				breakrate_[0] += 100*sd->sc_data[SC_MELTDOWN].val1;
 				breakrate_[1] = 70*sd->sc_data[SC_MELTDOWN].val1;
@@ -2855,7 +2861,7 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,struct block_list *
 	int aflag;
 	int normalmagic_flag=1;
 	int matk_flag = 1;
-	int ele=0,race=7,size=1,t_ele=0,t_race=7,t_mode = 0,cardfix,t_class,i;
+	int ele=0,race=7,size=1,race2=7,t_ele=0,t_race=7,t_mode = 0,cardfix,t_class,i;
 	struct map_session_data *sd=NULL,*tsd=NULL;
 	struct mob_data *tmd = NULL;
 
@@ -2877,6 +2883,7 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,struct block_list *
 	ele = skill_get_pl(skill_num);
 	race = status_get_race(bl);
 	size = status_get_size(bl);
+	race2 = status_get_race2(bl);
 	t_ele = status_get_elem_type(target);
 	t_race = status_get_race(target);
 	t_mode = status_get_mode(target);
@@ -3089,6 +3096,7 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,struct block_list *
 		cardfix=cardfix*(100-tsd->subrace[race])/100;	// 種族によるダメージ耐性
 		cardfix=cardfix*(100-tsd->subsize[size])/100;
 		cardfix=cardfix*(100-tsd->magic_subrace[race])/100;
+		cardfix=cardfix*(100-tsd->subrace2[race2])/100;	// 種族によるダメージ耐性
 		if(status_get_mode(bl) & 0x20)
 			cardfix=cardfix*(100-tsd->magic_subrace[10])/100;
 		else
@@ -3123,7 +3131,7 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,struct block_list *
 	if(t_mode&0x40 && damage > 0)
 		damage = 1;
 
-	if( tsd && tsd->special_state.no_magic_damage) {
+	if( tsd && tsd->state.no_magic_damage) {
                 if (battle_config.gtb_pvp_only != 0)  { // [MouseJstr]
                     if ((map[target->m].flag.pvp || map[target->m].flag.gvg) && target->type==BL_PC)
                       damage = (damage * (100 - battle_config.gtb_pvp_only)) / 100;
@@ -3164,7 +3172,7 @@ struct Damage  battle_calc_misc_attack(
 	int int_=status_get_int(bl);
 //	int luk=status_get_luk(bl);
 	int dex=status_get_dex(bl);
-	int skill,ele,race,size,cardfix;
+	int skill,ele,race,size,cardfix,race2;
 	struct map_session_data *sd=NULL,*tsd=NULL;
 	int damage=0,div_=1,blewcount=skill_get_blewcount(skill_num,skill_lv);
 	struct Damage md;
@@ -3268,6 +3276,7 @@ struct Damage  battle_calc_misc_attack(
 	ele = skill_get_pl(skill_num);
 	race = status_get_race(bl);
 	size = status_get_size(bl);
+	race2 = status_get_race(bl);
 
 	if(damagefix){
 		if(damage<1 && skill_num != NPC_DARKBREATH)
@@ -3279,6 +3288,7 @@ struct Damage  battle_calc_misc_attack(
 			cardfix=cardfix*(100-tsd->subrace[race])/100;	// 種族によるダメージ耐性
 			cardfix=cardfix*(100-tsd->subsize[size])/100;
 			cardfix=cardfix*(100-tsd->misc_def_rate)/100;
+			cardfix=cardfix*(100-tsd->subrace2[race2])/100;
 			damage=damage*cardfix/100;
 		}
 		if (sd && skill_num > 0 && sd->skillatk[0] == skill_num)
@@ -3957,7 +3967,6 @@ static const struct {
 	{ "player_skillup_limit",              &battle_config.skillup_limit			},
 	{ "weapon_produce_rate",               &battle_config.wp_rate					},
 	{ "potion_produce_rate",               &battle_config.pp_rate					},
-	{ "deadly_potion_produce_rate",	       &battle_config.cdp_rate					},
 	{ "monster_active_enable",             &battle_config.monster_active_enable	},
 	{ "monster_damage_delay_rate",         &battle_config.monster_damage_delay_rate},
 	{ "monster_loot_type",                 &battle_config.monster_loot_type		},
@@ -4057,7 +4066,6 @@ static const struct {
 	{ "dead_branch_active",                &battle_config.dead_branch_active			},
 	{ "vending_max_value",                 &battle_config.vending_max_value		},
 	{ "show_steal_in_same_party",          &battle_config.show_steal_in_same_party		},
-	{ "enable_upper_class",                &battle_config.enable_upper_class		},
 	{ "pet_attack_attr_none",              &battle_config.pet_attack_attr_none		},
 	{ "mob_attack_attr_none",              &battle_config.mob_attack_attr_none		},
 	{ "mob_ghostring_fix",                 &battle_config.mob_ghostring_fix		},
@@ -4074,7 +4082,6 @@ static const struct {
 	{ "skill_removetrap_type",             &battle_config.skill_removetrap_type	},
 	{ "disp_experience",                   &battle_config.disp_experience			},
 	{ "castle_defense_rate",               &battle_config.castle_defense_rate		},
-	{ "riding_weight",                     &battle_config.riding_weight		},
 	{ "hp_rate",					       &battle_config.hp_rate					},
 	{ "sp_rate",					       &battle_config.sp_rate					},
 	{ "gm_can_drop_lv",				       &battle_config.gm_can_drop_lv			},
@@ -4130,7 +4137,6 @@ static const struct {
 	{ "skill_steal_type",       &battle_config.skill_steal_type}, // [celest]
 	{ "skill_steal_rate",       &battle_config.skill_steal_rate}, // [celest]
 	{ "night_darkness_level",   &battle_config.night_darkness_level}, // [celest]
-	{ "skill_range_leniency",   &battle_config.skill_range_leniency}, // [celest]
 	{ "motd_type",              &battle_config.motd_type}, // [celest]
 	{ "allow_atcommand_when_mute",			&battle_config.allow_atcommand_when_mute}, // [celest]
 	{ "finding_ore_rate",       &battle_config.finding_ore_rate}, // [celest]
@@ -4208,7 +4214,6 @@ void battle_set_defaults() {
 	battle_config.skillup_limit = 0;
 	battle_config.wp_rate=100;
 	battle_config.pp_rate=100;
-	battle_config.cdp_rate=100;
 	battle_config.monster_active_enable=1;
 	battle_config.monster_damage_delay_rate=100;
 	battle_config.monster_loot_type=0;
@@ -4236,7 +4241,7 @@ void battle_set_defaults() {
 	battle_config.finger_offensive_type=0;
 	battle_config.heal_exp=0;
 	battle_config.resurrection_exp=0;
-	battle_config.shop_exp=0;
+	battle_config.shop_exp=100;
 	battle_config.combo_delay_rate=100;
 	battle_config.item_check=1;
 	battle_config.wedding_modifydisplay=0;
@@ -4308,7 +4313,6 @@ void battle_set_defaults() {
 	battle_config.dead_branch_active = 0;
 	battle_config.vending_max_value = 10000000;
 	battle_config.show_steal_in_same_party = 0;
-	battle_config.enable_upper_class = 0;
 	battle_config.pet_attack_attr_none = 0;
 	battle_config.pc_attack_attr_none = 0;
 	battle_config.mob_attack_attr_none = 1;
@@ -4325,7 +4329,6 @@ void battle_set_defaults() {
 	battle_config.skill_removetrap_type = 0;
 	battle_config.disp_experience = 0;
 	battle_config.castle_defense_rate = 100;
-	battle_config.riding_weight = 0;
 	battle_config.hp_rate = 100;
 	battle_config.sp_rate = 100;
 	battle_config.gm_can_drop_lv = 0;
@@ -4380,7 +4383,6 @@ void battle_set_defaults() {
 	battle_config.skill_steal_type = 1;
 	battle_config.skill_steal_rate = 100;
 	battle_config.night_darkness_level = 9;
-	battle_config.skill_range_leniency = 1;
 	battle_config.motd_type = 0;
 	battle_config.allow_atcommand_when_mute = 0;
 	battle_config.finding_ore_rate = 100;
@@ -4485,11 +4487,11 @@ void battle_validate_conf() {
 		battle_config.night_at_start = 0;
 	else if (battle_config.night_at_start > 1) // added by [Yor]
 		battle_config.night_at_start = 1;
-	if (battle_config.day_duration < 0) // added by [Yor]
-		battle_config.day_duration = 0;
-	if (battle_config.night_duration < 0) // added by [Yor]
-		battle_config.night_duration = 0;
-
+	if (battle_config.day_duration != 0 && battle_config.day_duration < 60000) // added by [Yor]
+		battle_config.day_duration = 60000;
+	if (battle_config.night_duration != 0 && battle_config.night_duration < 60000) // added by [Yor]
+		battle_config.night_duration = 60000;
+	
 	if (battle_config.ban_spoof_namer < 0) // added by [Yor]
 		battle_config.ban_spoof_namer = 0;
 	else if (battle_config.ban_spoof_namer > 32767)
@@ -4511,9 +4513,6 @@ void battle_validate_conf() {
 
 	if (battle_config.night_darkness_level > 10) // Celest
 		battle_config.night_darkness_level = 10;
-
-	if (battle_config.skill_range_leniency < 0) // Celest
-		battle_config.skill_range_leniency = 0;
 
 	if (battle_config.motd_type < 0)
 		battle_config.motd_type = 0;

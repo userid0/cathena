@@ -1590,91 +1590,89 @@ int map_quit(struct map_session_data *sd) {
 
 	nullpo_retr(0, sd);
 
-	if (sd->state.event_disconnect) {
-		struct npc_data *npc;
-		if ((npc = npc_name2id(script_config.logout_event_name))) {
+		if (sd->state.event_disconnect) {
+			struct npc_data *npc;
+			if ((npc = npc_name2id(script_config.logout_event_name))) {
 			if(npc && npc->u.scr.ref)
 			run_script(npc->u.scr.ref->script,0,sd->bl.id,npc->bl.id); // PCLogoutNPC
 			ShowStatus("Event '"CL_WHITE"%s"CL_RESET"' executed.\n", script_config.logout_event_name);
+			}
 		}
-	}
 
-	if(sd->chatID)	// チャットから出る
-		chat_leavechat(sd);
+		if(sd->chatID)	// チャットから出る
+			chat_leavechat(sd);
 
-	if(sd->trade_partner)	// 取引を中?する
-		trade_tradecancel(sd);
+		if(sd->trade_partner)	// 取引を中?する
+			trade_tradecancel(sd);
 
-	if(sd->party_invite>0)	// パ?ティ?誘を拒否する
-		party_reply_invite(sd,sd->party_invite_account,0);
+		if(sd->party_invite>0)	// パ?ティ?誘を拒否する
+			party_reply_invite(sd,sd->party_invite_account,0);
 
-	if(sd->guild_invite>0)	// ギルド?誘を拒否する
-		guild_reply_invite(sd,sd->guild_invite,0);
-	if(sd->guild_alliance>0)	// ギルド同盟?誘を拒否する
-		guild_reply_reqalliance(sd,sd->guild_alliance_account,0);
+		if(sd->guild_invite>0)	// ギルド?誘を拒否する
+			guild_reply_invite(sd,sd->guild_invite,0);
+		if(sd->guild_alliance>0)	// ギルド同盟?誘を拒否する
+			guild_reply_reqalliance(sd,sd->guild_alliance_account,0);
 
-	party_send_logout(sd);	// パ?ティのログアウトメッセ?ジ送信
+		party_send_logout(sd);	// パ?ティのログアウトメッセ?ジ送信
 
-	guild_send_memberinfoshort(sd,0);	// ギルドのログアウトメッセ?ジ送信
+		guild_send_memberinfoshort(sd,0);	// ギルドのログアウトメッセ?ジ送信
 
-	pc_cleareventtimer(sd);	// イベントタイマを破棄する
+		pc_cleareventtimer(sd);	// イベントタイマを破棄する
 
-	if(sd->state.storage_flag)
-		storage_guild_storage_quit(sd,0);
-	else
-		storage_storage_quit(sd);	// 倉庫を開いてるなら保存する
+		if(sd->state.storage_flag)
+			storage_guild_storage_quit(sd,0);
+		else
+			storage_storage_quit(sd);	// 倉庫を開いてるなら保存する
 
-	// check if we've been authenticated [celest]
-	if (sd->state.auth)
-		skill_castcancel(&sd->bl,0);	// 詠唱を中?する
+		// check if we've been authenticated [celest]
+		if (sd->state.auth)
+			skill_castcancel(&sd->bl,0);	// 詠唱を中?する
 
-	skill_stop_dancing(&sd->bl,1);// ダンス/演奏中?
+		skill_stop_dancing(&sd->bl,1);// ダンス/演奏中?
 
-	if(sd->sc_data && sd->sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中の終了はHPを100に
-		sd->status.hp = 100;
+		if(sd->sc_data && sd->sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中の終了はHPを100に
+			sd->status.hp = 100;
 
-	// check if we've been authenticated [celest]
-	if (sd->state.auth) {
-		pc_stop_walking(sd,0);
-		pc_stopattack(sd);
-		pc_delinvincibletimer(sd);
-	}
+		// check if we've been authenticated [celest]
+		if (sd->state.auth) {
+			pc_stop_walking(sd,0);
+			pc_stopattack(sd);
+			pc_delinvincibletimer(sd);
+		}
 	
-	skill_unit_move(&sd->bl,gettick(),0);
+		skill_unit_move(&sd->bl,gettick(),0);
 
 	status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
 	skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
 	skill_cleartimerskill(&sd->bl);
 
-	if (sd->state.auth)
-		status_calc_pc(sd,4);
+		if (sd->state.auth)
+			status_calc_pc(sd,4);
 
 	pc_delspiritball(sd,sd->spiritball,1);
 	skill_gangsterparadise(sd,0);
 
-	clif_clearchar_area(&sd->bl,2);
-	if(sd->status.pet_id && sd->pd) {
-		pet_lootitem_drop(sd->pd,sd);
-		pet_remove_map(sd);
-		if(sd->pet.intimate <= 0) {
-			intif_delete_petdata(sd->status.pet_id);
-			sd->status.pet_id = 0;
-			sd->pd = NULL;
-			sd->petDB = NULL;
+		clif_clearchar_area(&sd->bl,2);
+		if(sd->status.pet_id && sd->pd) {
+			pet_lootitem_drop(sd->pd,sd);
+			pet_remove_map(sd);
+			if(sd->pet.intimate <= 0) {
+				intif_delete_petdata(sd->status.pet_id);
+				sd->status.pet_id = 0;
+				sd->pd = NULL;
+				sd->petDB = NULL;
+			}
+			else
+				intif_save_petdata(sd->status.account_id,&sd->pet);
 		}
-		else
-			intif_save_petdata(sd->status.account_id,&sd->pet);
-	}
-	if(pc_isdead(sd))
-		pc_setrestartvalue(sd,2);
+		if(pc_isdead(sd))
+			pc_setrestartvalue(sd,2);
 
-	pc_makesavestatus(sd);
-	chrif_save(sd);
-	storage_storage_dirty(sd);
-	storage_storage_save(sd);
-	map_delblock(&sd->bl);
+		chrif_save(sd);
 
-	if( sd->npc_stackbuf && sd->npc_stackbuf != NULL) {
+		map_delblock(&sd->bl);
+
+	if( sd->npc_stackbuf != NULL) {
 		aFree( sd->npc_stackbuf );
 		sd->npc_stackbuf = NULL;
 	}
@@ -1884,9 +1882,9 @@ int map_mapname2mapid(char *name) {
 	#ifdef USE_AFM
 		// If we can't find the .gat map try .afm instead [celest]
 		if( (md==NULL) && (NULL!=strstr(name,".gat")) ) {
-			char afm_name[24];
-			strncpy(afm_name, name, strlen(name) - 4);
-			strcat(afm_name, ".afm");
+			char afm_name[50];
+			memcpy(afm_name, name, strlen(name) - 3);	// copy without extension including the point
+			memcpy(afm_name+strlen(name) - 3, "afm",4);	// add the extension including the eos
 			md = (struct map_data*)strdb_search(map_db,afm_name);
 		}
 	#endif
@@ -2399,7 +2397,7 @@ int map_cache_read(struct map_data *m)
 				fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
 				if(fread(buf,1,size_compress,map_cache.fp) != size_compress) {
 					// なぜかファイル後半が欠けてるので読み直し
-				aFree(buf);
+					aFree(buf);
 				buf = NULL;
 				m->gat = NULL;
 				m->xs = 0; 
@@ -2410,7 +2408,7 @@ int map_cache_read(struct map_data *m)
 			decode_zip((unsigned char*)m->gat, &dest_len, buf, size_compress);
 			if(dest_len != map_cache.map[i].xs * map_cache.map[i].ys * sizeof(struct mapgat)) {
 					// 正常に解凍が出来てない
-				aFree(buf);
+					aFree(buf);
 				buf=NULL;
 				aFree(m->gat);
 				m->gat = NULL;
@@ -2509,7 +2507,7 @@ int map_cache_write(struct map_data *m)
 
 		if(compress == 1)	// zlib compress has alloced an additional buffer
 		{
-			aFree(write_buf);
+				aFree(write_buf);
 			write_buf = NULL;
 			}
 			return 0;
@@ -2730,9 +2728,6 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 int map_readallmap(void) {
 	int i,maps_removed=0;
 	char fn[256];
-#ifdef USE_AFM
-	FILE *afm_file;
-#endif
 	int map_cache = 0;
 
 	// マップキャッシュを開く
@@ -2749,19 +2744,22 @@ int map_readallmap(void) {
 	for(i=0;i<map_num;i++){
 
 #ifdef USE_AFM
+		FILE *afm_file;
 		char afm_name[256] = "";
+
+		map[i].alias = NULL;
 
 		if(!strstr(map[i].name,".afm")) {
 		// check if it's necessary to replace the extension - speeds up loading abit
-			strncpy(afm_name, map[i].name, strlen(map[i].name) - 4);
-			strcat(afm_name, ".afm");
+			memcpy(afm_name, map[i].name, strlen(map[i].name) - 3);
+			memcpy(afm_name+strlen(map[i].name) - 3, "afm", 4); // copy with EOS
 		}
-		map[i].alias = NULL;
 		sprintf(fn,"%s%c%s",afm_dir,PATHSEP,afm_name);
 		afm_file = savefopen(fn, "r");
 		if (afm_file != NULL) {
-			map_readafm(i,fn);
 			fclose(afm_file);
+			// map_readafm open and closes the file anyway
+			map_readafm(i,fn);
 		}
 		else if(strstr(map[i].name,".gat")!=NULL) {
 #else
@@ -3052,10 +3050,13 @@ int inter_config_read(char *cfgName)
 		i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
 		if(i!=2)
 			continue;
-		if(strcasecmp(w1,"stall_time")==0){
-			stall_time_ = atoi(w2);
+
+		if(strcasecmp(w1,"import")==0){
+			//support the import command, just like any other config
+			inter_config_read(w2);
+		}
 	#ifndef TXT_ONLY
-		} else if(strcasecmp(w1,"item_db_db")==0){
+		  else if(strcasecmp(w1,"item_db_db")==0){
 			strcpy(item_db_db,w2);
 		} else if(strcasecmp(w1,"mob_db_db")==0){
 			strcpy(mob_db_db,w2);
@@ -3114,11 +3115,8 @@ int inter_config_read(char *cfgName)
 			strcpy(log_db_pw, w2);
 		} else if(strcasecmp(w1,"log_db_port")==0) {
 			log_db_port = atoi(w2);
-	#endif
-		//support the import command, just like any other config
-		} else if(strcasecmp(w1,"import")==0){
-			inter_config_read(w2);
 		}
+	#endif
 	}
 	fclose(fp);
 
@@ -3281,7 +3279,7 @@ int map_db_final(void *k,void *d,va_list ap)
 }
 int nick_db_final(void *k,void *d,va_list ap){ return 0; }
 int charid_db_final(void *k,void *d,va_list ap){ return 0; }
-static int cleanup_sub(struct block_list *bl, va_list ap) {
+int cleanup_sub(struct block_list *bl, va_list ap) {
 	nullpo_retr(0, bl);
 
         switch(bl->type) {

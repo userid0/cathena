@@ -1,6 +1,9 @@
 // $Id: storage.c,v 1.3 2004/09/25 02:05:22 MouseJstr Exp $
 #include "base.h"
-#include "db.h"
+#include "../common/db.h"
+#include "../common/nullpo.h"
+#include "../common/malloc.h"
+
 #include "itemdb.h"
 #include "clif.h"
 #include "intif.h"
@@ -11,9 +14,13 @@
 #include "showmsg.h"
 #include "utils.h"
 #include "malloc.h"
+#include "battle.h"
+#include "atcommand.h"
 #ifdef MEMWATCH
 #include "memwatch.h"
 #endif
+
+
 
 static struct dbt *storage_db;
 static struct dbt *guild_storage_db;
@@ -116,7 +123,12 @@ int storage_storageopen(struct map_session_data *sd)
 	struct pc_storage *stor;
 
 	nullpo_retr(0, sd);
-	if((stor = (struct pc_storage *)numdb_search(storage_db,sd->status.account_id)) != NULL) {
+
+	if(pc_isGM(sd) && pc_isGM(sd) < battle_config.gm_can_drop_lv) {
+		clif_displaymessage(sd->fd, msg_txt(246));
+		return 1;
+	}
+	if((stor = (pc_storage *)numdb_search(storage_db,sd->status.account_id)) != NULL) {
 		if (stor->storage_status == 0) {
 			stor->storage_status = 1;
 			sd->state.storage_flag = 0;

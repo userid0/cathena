@@ -1,9 +1,9 @@
-#include "../common/core.h"
-#include "../common/socket.h"
-#include "../common/timer.h"
-#include "../common/mmo.h"
-#include "../common/version.h"
-#include "../common/db.h"
+#include "core.h"
+#include "socket.h"
+#include "timer.h"
+#include "mmo.h"
+#include "version.h"
+#include "db.h"
 
 #ifndef _CHAR_H_
 #define _CHAR_H_

@@ -89,12 +89,12 @@ int pc_iskiller(struct map_session_data *src, struct map_session_data *target) {
 
 	if(src->bl.type!=BL_PC )
 		return 0;
-        if (src->special_state.killer)
+        if (src->state.killer)
                  return 1;
 
 	if(target->bl.type!=BL_PC )
 		return 0;
-        if (target->special_state.killable)
+        if (target->state.killable)
                  return 1;
 
         return 0;
@@ -259,7 +259,7 @@ int pc_setrestartvalue(struct map_session_data *sd,int type) {
 
 	//-----------------------
 	// 死亡した
-	if(sd->special_state.restart_full_recover ||	// オシリスカ?ド
+	if(sd->state.restart_full_recover ||	// オシリスカ?ド
 		sd->state.snovice_flag == 4) {				// [Celest]
 		sd->status.hp=sd->status.max_hp;
 		sd->status.sp=sd->status.max_sp;
@@ -368,25 +368,24 @@ int pc_makesavestatus(struct map_session_data *sd)
 		sd->status.clothes_color=0;
 
 	// 死亡?態だったのでhpを1、位置をセ?ブ場所に?更
-	if(!sd->state.waitingdisconnect) {
-		if(pc_isdead(sd)){
-			pc_setrestartvalue(sd,0);
-			memcpy(&sd->status.last_point,&sd->status.save_point,sizeof(sd->status.last_point));
-		} else {
-			memcpy(sd->status.last_point.map,sd->mapname,24);
-			sd->status.last_point.x = sd->bl.x;
-			sd->status.last_point.y = sd->bl.y;
-		}
-
-		// セ?ブ禁止マップだったので指定位置に移動
-		if(map[sd->bl.m].flag.nosave){
-			struct map_data *m=&map[sd->bl.m];
-			if(strcmp(m->save.map,"SavePoint")==0)
-				memcpy(&sd->status.last_point,&sd->status.save_point,sizeof(sd->status.last_point));
-			else
-				memcpy(&sd->status.last_point,&m->save,sizeof(sd->status.last_point));
-		}
+	if(pc_isdead(sd)){
+		pc_setrestartvalue(sd,0);
+		memcpy(&sd->status.last_point,&sd->status.save_point,sizeof(sd->status.last_point));
+	} else {
+		memcpy(sd->status.last_point.map,sd->mapname,24);
+		sd->status.last_point.x = sd->bl.x;
+		sd->status.last_point.y = sd->bl.y;
 	}
+
+	// セ?ブ禁止マップだったので指定位置に移動
+	if(map[sd->bl.m].flag.nosave){
+		struct map_data *m=&map[sd->bl.m];
+		if(strcmp(m->save.map,"SavePoint")==0)
+			memcpy(&sd->status.last_point,&sd->status.save_point,sizeof(sd->status.last_point));
+		else
+			memcpy(&sd->status.last_point,&m->save,sizeof(sd->status.last_point));
+	}
+
 
 	//マナ?ポイントがプラスだった場合0に
 	if(battle_config.muting_players && sd->status.manner > 0)
@@ -608,7 +607,8 @@ int pc_break_equip(struct map_session_data *sd, unsigned short where)
 		default:
 			return 0;
 	}
-	if(sd->sc_count && sd->sc_data[sc].timer != -1)
+	if(//!!sd->sc_count && 
+		sd->sc_data[sc].timer != -1)
 		return 0;
 
 	for (i=0;i<MAX_INVENTORY;i++) {
@@ -733,7 +733,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 		sd->sc_data[i].timer=-1;
 		sd->sc_data[i].val1 = sd->sc_data[i].val2 = sd->sc_data[i].val3 = sd->sc_data[i].val4 = 0;
 	}
-	sd->sc_count=0;
+//!!	sd->sc_count=0;
 	if ((battle_config.atc_gmonly == 0 || pc_isGM(sd)) &&
 	    (pc_isGM(sd) >= get_atcommand_level(AtCommand_Hide)))
 		sd->status.option &= (OPTION_MASK | OPTION_HIDE);
@@ -979,13 +979,11 @@ int pc_calc_skilltree(struct map_session_data *sd)
 			if(i==331) continue;
 			sd->status.skill[i].id=i;
 		}
-		if(battle_config.enable_upper_class){ //confで無?でなければ?み?む
-			for(i=355;i<411;i++)
-				sd->status.skill[i].id=i;
-			for(i=475;i<480;i++)
-				sd->status.skill[i].id=i;
-		}
-	}else{
+		for(i=355;i<411;i++)
+			sd->status.skill[i].id=i;
+		for(i=475;i<480;i++)
+			sd->status.skill[i].id=i;
+	} else {
             do {
                 flag=0;
                 for(i=0;(id=skill_tree[s][c][i].id)>0;i++){
@@ -1423,35 +1421,35 @@ int pc_bonus(struct map_session_data *sd,int type,int val)
 		break;
 	case SP_RESTART_FULL_RECORVER:
 		if(sd->state.lr_flag != 2)
-			sd->special_state.restart_full_recover = 1;
+			sd->state.restart_full_recover = 1;
 		break;
 	case SP_NO_CASTCANCEL:
 		if(sd->state.lr_flag != 2)
-			sd->special_state.no_castcancel = 1;
+			sd->state.no_castcancel = 1;
 		break;
 	case SP_NO_CASTCANCEL2:
 		if(sd->state.lr_flag != 2)
-			sd->special_state.no_castcancel2 = 1;
+			sd->state.no_castcancel2 = 1;
 		break;
 	case SP_NO_SIZEFIX:
 		if(sd->state.lr_flag != 2)
-			sd->special_state.no_sizefix = 1;
+			sd->state.no_sizefix = 1;
 		break;
 	case SP_NO_MAGIC_DAMAGE:
 		if(sd->state.lr_flag != 2)
-			sd->special_state.no_magic_damage = 1;
+			sd->state.no_magic_damage = 1;
 		break;
 	case SP_NO_WEAPON_DAMAGE:
 		if(sd->state.lr_flag != 2)
-			sd->special_state.no_weapon_damage = 1;
+			sd->state.no_weapon_damage = 1;
 		break;
 	case SP_NO_GEMSTONE:
 		if(sd->state.lr_flag != 2)
-			sd->special_state.no_gemstone = 1;
+			sd->state.no_gemstone = 1;
 		break;
 	case SP_INFINITE_ENDURE:
 		if(sd->state.lr_flag != 2)
-			sd->special_state.infinite_endure = 1;
+			sd->state.infinite_endure = 1;
 		break;
 	case SP_UNBREAKABLE_WEAPON:
 		if(sd->state.lr_flag != 2)
@@ -1585,8 +1583,26 @@ int pc_bonus(struct map_session_data *sd,int type,int val)
 			sd->hp_gain_value += val;
 		break;
 	case SP_DAMAGE_WHEN_UNEQUIP:
-		if(!sd->state.lr_flag)
-			sd->unequip_damage += val;
+		if(!sd->state.lr_flag) {
+			int i;
+			for (i=0; i<11; i++) {
+				if (sd->inventory_data[current_equip_item_index]->equip & equip_pos[i]) {
+					sd->unequip_losehp[i] += val;
+					break;
+				}
+			}
+		}
+		break;
+	case SP_LOSESP_WHEN_UNEQUIP:
+		if(!sd->state.lr_flag) {
+			int i;
+			for (i=0; i<11; i++) {
+				if (sd->inventory_data[current_equip_item_index]->equip & equip_pos[i]) {
+					sd->unequip_losesp[i] += val;
+					break;
+				}
+			}
+		}
 		break;
 	default:
 		if(battle_config.error_log)
@@ -1855,9 +1871,21 @@ int pc_bonus2(struct map_session_data *sd,int type,int type2,int val)
 		if(sd->state.lr_flag != 2)
 			sd->subsize[type2]+=val;
 		break;
+	case SP_SUBRACE2:
+		if(sd->state.lr_flag != 2)
+			sd->subrace2[type2]+=val;
+		break;
 	case SP_ADD_ITEM_HEAL_RATE:
 		if(sd->state.lr_flag != 2)
 			sd->itemhealrate[type2 - 1] += val;
+		break;
+	case SP_EXP_ADDRACE:
+		if(sd->state.lr_flag != 2)
+			sd->expaddrace[type2]+=val;
+		break;
+	case SP_SP_GAIN_RACE:
+		if(sd->state.lr_flag != 2)
+			sd->sp_gain_race[type2]+=val;
 		break;
 
 	default:
@@ -2887,7 +2915,8 @@ bool pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clr
 		skill_gangsterparadise(sd,0);
 	}
 
-	if (sd->sc_count) {
+//!!	if (sd->sc_count) 
+	{
 		if(sd->sc_data[SC_TRICKDEAD].timer != -1)
 			status_change_end(&sd->bl, SC_TRICKDEAD, -1);
 		if(sd->sc_data[SC_BLADESTOP].timer!=-1)
@@ -3251,7 +3280,8 @@ static int pc_walk(int tid,unsigned long tick,int id,int data)
 				break;
 			}
 		/* 被ディボ?ション?査 */
-		if(sd->sc_count) {
+//!!		if(sd->sc_count) 
+		{
 			if (sd->sc_data[SC_DANCING].timer!=-1)
 				skill_unit_move_unit_group((struct skill_unit_group *)sd->sc_data[SC_DANCING].val2,sd->bl.m,dx,dy);
 
@@ -3340,8 +3370,8 @@ int pc_walktoxy(struct map_session_data *sd,int x,int y)
 		pc_walktoxy_sub(sd);
 	}
 
-	if (sd->state.gmaster_flag > 0) {
-		struct guild *g = (struct guild *)sd->state.gmaster_flag;
+	if (sd->gmaster_flag > 0) {
+		struct guild *g = (struct guild *)sd->gmaster_flag;
 		if (g)
 			map_foreachinarea (skill_guildaura_sub, sd->bl.m,
 				sd->bl.x-2, sd->bl.y-2, sd->bl.x+2, sd->bl.y+2, BL_PC,
@@ -3591,10 +3621,6 @@ struct pc_base_job pc_calc_base_job(int b_class)
 		bj.upper = 2;
 	}
 
-	if(battle_config.enable_upper_class==0){ //confで無?になっていたらupper=0
-		bj.upper = 0;
-	}
-
 	if(bj.job == 0){
 		bj.type = 0;
 	}else if(bj.job < 7){
@@ -3677,7 +3703,8 @@ int pc_attack_timer(int tid,unsigned long tick,int id,int data)
 	if( sd->opt1>0 || sd->status.option&2 || sd->status.option&0x4000)	// 異常などで攻?できない
 		return 0;
 
-	if (sd->sc_count) {
+//!!	if (sd->sc_count) 
+	{
 		if(sd->sc_data[SC_AUTOCOUNTER].timer != -1)
 			return 0;
 		if(sd->sc_data[SC_BLADESTOP].timer != -1)
@@ -4334,12 +4361,10 @@ int pc_allskillup(struct map_session_data *sd)
 			if(i==331) continue;
 			sd->status.skill[i].lv=skill_get_max(i);
 		}
-		if(battle_config.enable_upper_class){ //confで無?でなければ?み?む
-			for(i=355;i<411;i++)
-				sd->status.skill[i].lv=skill_get_max(i);
-			for(i=475;i<480;i++)
-				sd->status.skill[i].lv=skill_get_max(i);
-		}
+		for(i=355;i<411;i++)
+			sd->status.skill[i].lv=skill_get_max(i);
+		for(i=475;i<480;i++)
+			sd->status.skill[i].lv=skill_get_max(i);
 	}
 	else {
 		for(i=0;(id=skill_tree[s][c][i].id)>0;i++){
@@ -4556,7 +4581,7 @@ int pc_damage(struct block_list *src,struct map_session_data *sd,int damage)
 	// ? いていたら足を止める
 	if (sd->sc_data) {
 		if (sd->sc_data[SC_BERSERK].timer != -1 ||
-			sd->special_state.infinite_endure)
+			sd->state.infinite_endure)
 			;	// do nothing
 		else if (sd->sc_data[SC_ENDURE].timer != -1 && (src != NULL && src->type == BL_MOB) && !map[sd->bl.m].flag.gvg) {
 			if ((--sd->sc_data[SC_ENDURE].val2) < 0) 
@@ -5082,7 +5107,8 @@ int pc_heal(struct map_session_data *sd,int hp,int sp)
 			sp = 0;
 	}
 
-	if(sd->sc_count && sd->sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中は回復させないらしい
+	if(//!!sd->sc_count && 
+		sd->sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中は回復させないらしい
 		return 0;
 
 	if(hp+sd->status.hp>sd->status.max_hp)
@@ -5123,7 +5149,8 @@ int pc_itemheal(struct map_session_data *sd,int hp,int sp)
 
 	nullpo_retr(0, sd);
 
-	if(sd->sc_count && sd->sc_data[SC_GOSPEL].timer!=-1) //バ?サ?ク中は回復させないらしい
+	if(//!!sd->sc_count && 
+		sd->sc_data[SC_GOSPEL].timer!=-1) //バ?サ?ク中は回復させないらしい
 		return 0;
 
 	if(sd->state.potionpitcher_flag) {
@@ -5917,7 +5944,7 @@ int pc_equipitem(struct map_session_data *sd,int n,int pos)
 	id = sd->inventory_data[n];
 	pos = pc_equippoint(sd,n);
 	if(battle_config.battle_log)
-		ShowMessage("equip %d(%d) %x:%x\n",nameid,n,id->equip,pos);
+		ShowMessage("(char %i) equip %d(%d) %x:%x\n",sd->char_id, nameid,n,id->equip,pos);
 	if(!pc_isequip(sd,n) || !pos || sd->status.inventory[n].attribute==1 ) { // [Valaris]
 		clif_equipitemack(sd,n,0,0);	// fail
 		return 0;
@@ -5925,7 +5952,8 @@ int pc_equipitem(struct map_session_data *sd,int n,int pos)
 
 // -- moonsoul (if player is berserk then cannot equip)
 //
-	if(sd->sc_count && sd->sc_data[SC_BERSERK].timer!=-1){
+	if(//!!sd->sc_count && 
+		sd->sc_data[SC_BERSERK].timer!=-1){
 		clif_equipitemack(sd,n,0,0);	// fail
 		return 0;
 	}
@@ -6032,16 +6060,18 @@ int pc_equipitem(struct map_session_data *sd,int n,int pos)
 	}
 	status_calc_pc(sd,0);
 
-	if(sd->special_state.infinite_endure) {
+	if(sd->state.infinite_endure) {
 		if(sd->sc_data[SC_ENDURE].timer == -1)
 			status_change_start(&sd->bl,SC_ENDURE,10,1,0,0,0,0);
 	}
 	else {
-		if(sd->sc_count && sd->sc_data[SC_ENDURE].timer != -1 && sd->sc_data[SC_ENDURE].val2)
+		if(//!!sd->sc_count && 
+			sd->sc_data[SC_ENDURE].timer != -1 && sd->sc_data[SC_ENDURE].val2)
 			status_change_end(&sd->bl,SC_ENDURE,-1);
 	}
 
-	if(sd->sc_count) {
+//!!	if(sd->sc_count) 
+	{
 		if (sd->sc_data[SC_SIGNUMCRUCIS].timer != -1 && !battle_check_undead(7,sd->def_ele))
 			status_change_end(&sd->bl,SC_SIGNUMCRUCIS,-1);
 		if(sd->sc_data[SC_DANCING].timer!=-1 && (sd->status.weapon != 13 && sd->status.weapon !=14))
@@ -6061,11 +6091,14 @@ int pc_equipitem(struct map_session_data *sd,int n,int pos)
  */
 int pc_unequipitem(struct map_session_data *sd,int n,int flag)
 {
+	short hp = 0, sp = 0;
 	nullpo_retr(0, sd);
 
 // -- moonsoul	(if player is berserk then cannot unequip)
 //
-	if(flag<2 && sd->sc_count && (sd->sc_data[SC_BLADESTOP].timer!=-1 || sd->sc_data[SC_BERSERK].timer!=-1)){
+	if(flag<2 && 
+		//!!sd->sc_count && 
+		(sd->sc_data[SC_BLADESTOP].timer!=-1 || sd->sc_data[SC_BERSERK].timer!=-1)){
 		clif_unequipitemack(sd,n,0,0);
 		return 0;
 	}
@@ -6075,8 +6108,17 @@ int pc_unequipitem(struct map_session_data *sd,int n,int flag)
 	if(sd->status.inventory[n].equip){
 		int i;
 		for(i=0;i<11;i++) {
-			if(sd->status.inventory[n].equip & equip_pos[i])
+			if(sd->status.inventory[n].equip & equip_pos[i]) {
 				sd->equip_index[i] = -1;
+				if(sd->unequip_losehp[i] > 0) {
+					hp += sd->unequip_losehp[i];
+					sd->unequip_losehp[i] = 0;
+				}
+				if(sd->unequip_losesp[i] > 0) {
+					sp += sd->unequip_losesp[i];
+					sd->unequip_losesp[i] = 0;
+				}
+			}
 		}
 		if(sd->status.inventory[n].equip & 0x0002) {
 			sd->weapontype1 = 0;
@@ -6104,7 +6146,8 @@ int pc_unequipitem(struct map_session_data *sd,int n,int flag)
 		if(sd->status.inventory[n].equip & 0x0040)
 			clif_changelook(&sd->bl,LOOK_SHOES,0);
 
-		if(sd->sc_count) {
+//!!		if(sd->sc_count) 
+		{
 			if (sd->sc_data[SC_BROKNWEAPON].timer != -1 && sd->status.inventory[n].equip & 0x0002 &&
 				sd->status.inventory[n].attribute == 1)
 				status_change_end(&sd->bl,SC_BROKNWEAPON,-1);
@@ -6122,17 +6165,20 @@ int pc_unequipitem(struct map_session_data *sd,int n,int flag)
 	} else {
 		clif_unequipitemack(sd,n,0,0);
 	}
-	if (sd->unequip_damage > 0) {
-		short dmg = sd->unequip_damage;
-		if (dmg > sd->status.hp)
-			dmg = sd->status.hp;
-		pc_heal(sd,-dmg,0);
-	}
 
 	if(flag&1) {
 		status_calc_pc(sd,0);
-		if(sd->sc_count && sd->sc_data[SC_SIGNUMCRUCIS].timer != -1 && !battle_check_undead(7,sd->def_ele))
+		if(//!!sd->sc_count && 
+			sd->sc_data[SC_SIGNUMCRUCIS].timer != -1 && !battle_check_undead(7,sd->def_ele))
 			status_change_end(&sd->bl,SC_SIGNUMCRUCIS,-1);
+	}
+
+	if (hp > 0 || sp > 0) {
+		if (hp > sd->status.hp)
+			hp = sd->status.hp;
+		if (sp > sd->status.sp)
+			sp = sd->status.sp;
+		pc_heal(sd,-hp,-sp);
 	}
 
 	return 0;
@@ -6406,7 +6452,8 @@ static int pc_spheal(struct map_session_data *sd)
 
 	a = natural_heal_diff_tick;
 	if(pc_issit(sd)) a += a;
-	if (sd->sc_count) {
+//!!	if (sd->sc_count) 
+	{
 		if (sd->sc_data[SC_MAGNIFICAT].timer!=-1)	// マグニフィカ?ト
 			a += a;
 		if (sd->sc_data[SC_REGENERATION].timer != -1)
@@ -6439,7 +6486,8 @@ static int pc_hpheal(struct map_session_data *sd)
 
 	a = natural_heal_diff_tick;
 	if(pc_issit(sd)) a += a;
-	if (sd->sc_count) {
+	//!!if (sd->sc_count) 
+	{
 		if( sd->sc_data[SC_MAGNIFICAT].timer!=-1 )	// Modified by RoVeRT
 			a += a;
 		if (sd->sc_data[SC_REGENERATION].timer != -1)
@@ -6463,7 +6511,8 @@ static int pc_natural_heal_hp(struct map_session_data *sd)
 
 	nullpo_retr(0, sd);
 
-	if (sd->sc_count && sd->sc_data[SC_TRICKDEAD].timer != -1)		// Modified by RoVeRT
+	if (//!!sd->sc_count && 
+		sd->sc_data[SC_TRICKDEAD].timer != -1)		// Modified by RoVeRT
 		return 0;
 
 	if (sd->no_regen & 1)
@@ -6536,7 +6585,8 @@ static int pc_natural_heal_hp(struct map_session_data *sd)
 
 	return 0;
 
-	if(sd->sc_count && sd->sc_data[SC_APPLEIDUN].timer!=-1 && sd->sc_data[SC_BERSERK].timer==-1) { // Apple of Idun
+	if(//!!sd->sc_count && 
+		sd->sc_data[SC_APPLEIDUN].timer!=-1 && sd->sc_data[SC_BERSERK].timer==-1) { // Apple of Idun
 		if(sd->inchealhptick >= 6000 && sd->status.hp < sd->status.max_hp) {
 			bonus = skill*20;
 			while(sd->inchealhptick >= 6000) {
@@ -6564,7 +6614,8 @@ static int pc_natural_heal_sp(struct map_session_data *sd)
 
 	nullpo_retr(0, sd);
 
-	if (sd->sc_count && (sd->sc_data[SC_TRICKDEAD].timer != -1 ||	// Modified by RoVeRT
+	if (//!!sd->sc_count && 
+		(sd->sc_data[SC_TRICKDEAD].timer != -1 ||	// Modified by RoVeRT
 		sd->sc_data[SC_BERSERK].timer != -1 ||
 		sd->sc_data[SC_BLEEDING].timer != -1))
 		return 0;
@@ -6818,7 +6869,8 @@ int pc_setsavepoint(struct map_session_data *sd,char *mapname,int x,int y)
  *------------------------------------------
  */
 static int last_save_fd,save_flag;
-static int Ghp[MAX_GUILDCASTLE][8]; // so save only if HP are changed // experimental code [Yor]
+// --- uncomment to reenable guild castle saving ---//
+//static int Ghp[MAX_GUILDCASTLE][8]; // so save only if HP are changed // experimental code [Yor]
 
 static int pc_autosave_sub(struct map_session_data *sd,va_list ap)
 {
@@ -7004,7 +7056,8 @@ int map_night_timer(int tid, unsigned long tick, int id, int data) { // by [yor]
 void pc_setstand(struct map_session_data *sd){
 	nullpo_retv(sd);
 
-	if(sd->sc_count && sd->sc_data[SC_TENSIONRELAX].timer!=-1)
+	if(//!!sd->sc_count && 
+		sd->sc_data[SC_TENSIONRELAX].timer!=-1)
 		status_change_end(&sd->bl,SC_TENSIONRELAX,-1);
 
 	sd->state.dead_sit = 0;
@@ -7212,16 +7265,13 @@ int do_init_pc(void) {
 	pc_read_gm_account(0);
 #endif /* not TXT_ONLY */
 
-	// add night/day timer (by [yor])
-	add_timer_func_list(map_day_timer, "map_day_timer"); // by [yor]
-	add_timer_func_list(map_night_timer, "map_night_timer"); // by [yor]
-	{
+	if (battle_config.day_duration > 0 && battle_config.night_duration > 0) {
 		int day_duration = battle_config.day_duration;
 		int night_duration = battle_config.night_duration;
-		if (day_duration < 60000)
-			day_duration = 60000;
-		if (night_duration < 60000)
-			night_duration = 60000;
+		// add night/day timer (by [yor])
+		add_timer_func_list(map_day_timer, "map_day_timer"); // by [yor]
+		add_timer_func_list(map_night_timer, "map_night_timer"); // by [yor]
+
 		if (battle_config.night_at_start == 0) {
 			night_flag = 0; // 0=day, 1=night [Yor]
 			day_timer_tid = add_timer_interval(gettick() + day_duration + night_duration, day_duration + night_duration, map_day_timer, 0, 0);

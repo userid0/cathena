@@ -690,7 +690,8 @@ is_atcommand(const int fd, struct map_session_data* sd, const char* message, int
 	nullpo_retr(AtCommand_None, sd);
 
 	if (!battle_config.allow_atcommand_when_mute &&
-		sd->sc_count && sd->sc_data[SC_NOCHAT].timer != -1) {
+//!!		sd->sc_count && 
+		sd->sc_data[SC_NOCHAT].timer != -1) {
 		return AtCommand_Unknown;
 	}
 
@@ -792,15 +793,11 @@ AtCommandType atcommand(struct map_session_data* sd, const int level, const char
  *------------------------------------------
  */
 static int atkillmonster_sub(struct block_list *bl, va_list ap) {
-	int flag = va_arg(ap, int);
+	struct mob_data *md;
+	nullpo_retr(0, md=(struct mob_data *)bl);
 
-	nullpo_retr(0, bl);
-
-	if (flag)
-		mob_damage(NULL, (struct mob_data *)bl, ((struct mob_data *)bl)->hp, 2);
-	else
-		mob_delete((struct mob_data *)bl);
-
+	mob_damage(NULL, md, md->hp, 2);
+	
 	return 0;
 }
 /*==========================================
@@ -855,34 +852,6 @@ static int atcommand_cleanmap_sub(struct block_list *bl,va_list ap)
 	map_delobject(fitem->bl.id);
 
 	return 0;
-}
-static int atkillnpc_sub(struct block_list *bl, va_list ap)
-{
-        int flag = va_arg(ap,int);
-
-        nullpo_retr(0, bl);
-
-        npc_delete((struct npc_data *)bl);
-
-        flag = 0;
-
-        return 0;
-}
-
-void rehash( const int fd, struct map_session_data* sd )
-{
-        int map_id = 0;
-
-        int LOADED_MAPS = map_num;
-
-        for (map_id = 0; map_id < LOADED_MAPS;map_id++) {
-
-            if (map_id > LOADED_MAPS)
-                break;
-
-            map_foreachinarea(atkillmonster_sub, map_id, 0, 0, map[map_id].xs, map[map_id].ys, BL_MOB, 0);
-            map_foreachinarea(atkillnpc_sub, map_id, 0, 0, map[map_id].xs, map[map_id].ys, BL_NPC, 0);
-        }
 }
 
 /*==========================================
@@ -1041,11 +1010,11 @@ int atcommand_rura(
 	if (x > 0 && x < 400 && y > 0 && y < 400) {
 		m = map_mapname2mapid(map_name);
 		if (m >= 0 && map[m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-			clif_displaymessage(fd, "You are not authorised to warp you to this map.");
+			clif_displaymessage(fd, msg_table[247]);
 			return -1;
 		}
 		if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-			clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+			clif_displaymessage(fd, msg_table[248]);
 			return -1;
 		}
 		if (pc_setpos(sd, map_name, x, y, 3) == 0)
@@ -1124,11 +1093,11 @@ int atcommand_jumpto(
 
 	if ((pl_sd = map_nick2sd(character)) != NULL) {
 		if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-			clif_displaymessage(fd, "You are not authorised to warp you to the map of this player.");
+			clif_displaymessage(fd, msg_table[247]);
 			return -1;
 		}
 		if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-			clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+			clif_displaymessage(fd, msg_table[248]);
 			return -1;
 		}
 		pc_setpos(sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
@@ -1164,12 +1133,8 @@ int atcommand_jump(
 	if (y <= 0)
 		y = rand() % 399 + 1;
 	if (x > 0 && x < 400 && y > 0 && y < 400) {
-		if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-			clif_displaymessage(fd, "You are not authorised to warp you to your actual map.");
-			return -1;
-		}
-		if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-			clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+		if (sd->bl.m >= 0 && (map[sd->bl.m].flag.nowarp || map[sd->bl.m].flag.nowarpto) && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+			clif_displaymessage(fd, msg_table[248]);
 			return -1;
 		}
 		pc_setpos(sd, sd->mapname, x, y, 3);
@@ -1775,11 +1740,11 @@ int atcommand_load(
 
 	m = map_mapname2mapid(sd->status.save_point.map);
 	if (m >= 0 && map[m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-		clif_displaymessage(fd, "You are not authorised to warp you to your save map.");
+		clif_displaymessage(fd, msg_table[249]);
 		return -1;
 	}
 	if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-		clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+		clif_displaymessage(fd, msg_table[248]);
 		return -1;
 	}
 
@@ -1833,11 +1798,24 @@ int atcommand_storage(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
+	struct pc_storage *stor; //changes from Freya/Yor
 	nullpo_retr(-1, sd);
+
+	if (sd->state.storage_flag == 1) {
+		clif_displaymessage(fd, msg_table[250]);
+		return -1;
+	}
+
+	if ((stor = account2storage2(sd->status.account_id)) != NULL && stor->storage_status == 1) {
+		clif_displaymessage(fd, msg_table[250]);
+		return -1;
+	}
+
 	storage_storageopen(sd);
 
 	return 0;
 }
+
 
 /*==========================================
  *
@@ -1847,9 +1825,23 @@ int atcommand_guildstorage(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
+	struct pc_storage *stor; //changes from Freya/Yor
 	nullpo_retr(-1, sd);
-	if (sd->status.guild_id > 0)
+
+	if (sd->status.guild_id > 0) {
+		if (sd->state.storage_flag == 1) {
+			clif_displaymessage(fd, msg_table[251]);
+			return -1;
+		}
+		if ((stor = account2storage2(sd->status.account_id)) != NULL && stor->storage_status == 1) {
+			clif_displaymessage(fd, msg_table[251]);
+			return -1;
+		}
 		storage_guild_storageopen(sd);
+	} else {
+		clif_displaymessage(fd, msg_table[252]);
+		return -1;
+	}
 
 	return 0;
 }
@@ -2995,11 +2987,11 @@ int atcommand_go(
 			if (sd->status.memo_point[-town-1].map[0]) {
 				m = map_mapname2mapid(sd->status.memo_point[-town-1].map);
 				if (m >= 0 && map[m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-					clif_displaymessage(fd, "You are not authorised to warp you to this memo map.");
+					clif_displaymessage(fd, msg_table[247]);
 					return -1;
 				}
 				if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-					clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+					clif_displaymessage(fd, msg_table[248]);
 					return -1;
 				}
 				if( pc_setpos(sd, sd->status.memo_point[-town-1].map, sd->status.memo_point[-town-1].x, sd->status.memo_point[-town-1].y, 3) ) {
@@ -3016,11 +3008,11 @@ int atcommand_go(
 		} else if (town >= 0 && town < (int)(sizeof(data) / sizeof(data[0]))) {
 			m = map_mapname2mapid((char *)data[town].map);
 			if (m >= 0 && map[m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-				clif_displaymessage(fd, "You are not authorised to warp you to this destination map.");
+				clif_displaymessage(fd, msg_table[247]);
 				return -1;
 			}
 			if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-				clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+				clif_displaymessage(fd, msg_table[248]);
 				return -1;
 			}
 			if( pc_setpos(sd, (char *)data[town].map, data[town].x, data[town].y, 3) ) {
@@ -3605,7 +3597,7 @@ int atcommand_memo(
 	else {
 		if (position >= MIN_PORTAL_MEMO && position <= MAX_PORTAL_MEMO) {
 			if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-				clif_displaymessage(fd, "You are not authorised to memo this map.");
+				clif_displaymessage(fd, msg_table[253]);
 				return -1;
 			}
 			if (sd->status.memo_point[position].map[0]) {
@@ -5629,15 +5621,24 @@ int atcommand_reloadskilldb(
  *
  *------------------------------------------
  */
+void rehash(void)
+{
+	int map_id;
+
+	for (map_id = 0; map_id < map_num; map_id++) {
+		map_foreachinarea(cleanup_sub, map_id, 0, 0, map[map_id].xs, map[map_id].ys, BL_MOB);
+		map_foreachinarea(cleanup_sub, map_id, 0, 0, map[map_id].xs, map[map_id].ys, BL_NPC);
+	}
+}
 int atcommand_reloadscript(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
 	nullpo_retr(-1, sd);
-	atcommand_broadcast( fd, sd, "@broadcast", "eAthena SQL Server is Rehashing..." );
+	atcommand_broadcast( fd, sd, "@broadcast", "eAthena Server is Rehashing..." );
 	atcommand_broadcast( fd, sd, "@broadcast", "You will feel a bit of lag at this point !" );
 
-        rehash( fd, sd );
+	rehash();
 
 	atcommand_broadcast( fd, sd, "@broadcast", "Reloading NPCs..." );
 	do_init_npc();
@@ -6923,9 +6924,9 @@ atcommand_killer(
 	const char* command, const char* message)
 {
 	nullpo_retr(-1, sd);
-	sd->special_state.killer = !sd->special_state.killer;
+	sd->state.killer = !sd->state.killer;
 
-	if(sd->special_state.killer)
+	if(sd->state.killer)
 	  clif_displaymessage(fd, msg_table[241]);
         else
 	  clif_displaymessage(fd, msg_table[242]);
@@ -6944,9 +6945,9 @@ atcommand_killable(
 	const char* command, const char* message)
 {
 	nullpo_retr(-1, sd);
-	sd->special_state.killable = !sd->special_state.killable;
+	sd->state.killable = !sd->state.killable;
 
-	if(sd->special_state.killable)
+	if(sd->state.killable)
 	  clif_displaymessage(fd, msg_table[242]);
         else
 	  clif_displaymessage(fd, msg_table[241]);
@@ -6973,9 +6974,9 @@ atcommand_charkillable(
 	if((pl_sd=map_nick2sd((char *) message)) == NULL)
                 return -1;
 
-	pl_sd->special_state.killable = !pl_sd->special_state.killable;
+	pl_sd->state.killable = !pl_sd->state.killable;
 
-	if(pl_sd->special_state.killable)
+	if(pl_sd->state.killable)
 	  clif_displaymessage(fd, "The player is now killable");
         else
 	  clif_displaymessage(fd, "The player is no longer killable");
@@ -7279,7 +7280,7 @@ atcommand_useskill(const int fd, struct map_session_data* sd,
 
 	if (!message || !*message)
 		return -1;
-	if(sscanf(message, "%d %d %s", &skillnum, &skilllv, target) != 3) {
+	if(sscanf(message, "%d %d %99[^\n]", &skillnum, &skilllv, target) != 3) {
 		clif_displaymessage(fd, "Usage: @useskill <skillnum> <skillv> <target>");
 		return -1;
 	}
@@ -7381,7 +7382,7 @@ atcommand_skilltree(const int fd, struct map_session_data* sd,
 }
 
 /*==========================================
- * @marry by [MouseJstr]
+ * @marry by [MouseJstr], fixed by Lupus
  *
  * Marry two players
  *------------------------------------------
@@ -7396,37 +7397,35 @@ atcommand_marry(const int fd, struct map_session_data* sd,
 
   nullpo_retr(-1, sd);
 
-  if (!message || !*message)
-    return -1;
-
-  if (sscanf(message, "%[^,],%[^\r\n]", player1, player2) != 2) {
-    clif_displaymessage(fd, "usage: @marry <player1> <player2>.");
+  if (!message || !*message || sscanf(message, "%[^,],%[^\r\n]", player1, player2) != 2) {
+    clif_displaymessage(fd, "Usage: @marry <player1>,<player2>.");
     return -1;
   }
 
   if((pl_sd1=map_nick2sd((char *) player1)) == NULL) {
-    sprintf(player2, "Cannot find player %s online", player1);
+    sprintf(player2, "Cannot find player '%s' online", player1);
     clif_displaymessage(fd, player2);
     return -1;
   }
 
   if((pl_sd2=map_nick2sd((char *) player2)) == NULL) {
-    sprintf(player1, "Cannot find player %s online", player2);
+    sprintf(player1, "Cannot find player '%s' online", player2);
     clif_displaymessage(fd, player1);
     return -1;
   }
 
   if (pc_marriage(pl_sd1, pl_sd2) == 0) {
-    clif_displaymessage(fd, "They are married.. wish them well");
-    return 0;
-  } else
-    return -1;
+	clif_displaymessage(fd, "They are married.. wish them well");
+	clif_wedding_effect(&sd->bl);	//wedding effect and music [Lupus]
+	return 0;
+  }
+  return -1;
 }
 
 /*==========================================
- * @divorce by [MouseJstr]
+ * @divorce by [MouseJstr], fixed by [Lupus]
  *
- * divorce two players
+ * divorce two players 
  *------------------------------------------
  */
 int
@@ -7434,19 +7433,29 @@ atcommand_divorce(const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
   struct map_session_data *pl_sd = NULL;
+  char player[255], output[255];
 
   nullpo_retr(-1, sd);
 
-  if (!message || !*message)
+  if (!message || !*message || sscanf(message, "%[^\r\n]", player) != 1) {
+    clif_displaymessage(fd, "Usage: @divorce <player>.");
     return -1;
+  }
 
-  if((pl_sd=map_nick2sd((char *) message)) != NULL) {
-    return pc_divorce(pl_sd);
-    clif_displaymessage(fd, "They are now divorced.");
-  } else
-    clif_displaymessage(fd, "The divorce has failed.. talk to the judge..");
-
-  return 0;
+  if((pl_sd=map_nick2sd((char *) player)) != NULL) {
+	if (pc_divorce(pl_sd) != 0) {
+		sprintf(output, "The divorce has failed.. Cannot find player '%s' or his(her) partner online.", player);
+		clif_displaymessage(fd, output);
+		return -1;
+	} else {
+		sprintf(output, "'%s' and his(her) partner are now divorced.", player);
+		clif_displaymessage(fd, output);
+		return 0;
+	}
+  }
+  sprintf(output, "Cannot find player '%s' online", player);
+  clif_displaymessage(fd, output);
+  return -1;
 }
 
 /*==========================================
@@ -7522,7 +7531,7 @@ atcommand_grind(const int fd, struct map_session_data* sd,
 	if (!message || !*message)
 		return -1;
 	if(sscanf(message, "%s", target) != 1) {
-		clif_displaymessage(fd, "Usage: @grind  <target>");
+		clif_displaymessage(fd, "Usage: @grind <target>");
 		return -1;
 	}
 	if((pl_sd=map_nick2sd(target)) == NULL)
@@ -7602,14 +7611,14 @@ atcommand_autoloot(
 	const char* command, const char* message)
 {
 	nullpo_retr(-1, sd);
-	if (sd->autoloot) 
+	if (sd->state.autoloot) 
 	{
-		sd->autoloot = 0;
+		sd->state.autoloot = 0;
 		clif_displaymessage(fd, "Autoloot is now off.");
 	}
 	else 
 	{
-		sd->autoloot = 1;
+		sd->state.autoloot = 1;
 		clif_displaymessage(fd, "Autoloot is now on.");
 	}
 	return 0;  
@@ -7796,7 +7805,7 @@ atcommand_mobsearch(
 
 	nullpo_retr(-1, sd);
 
-	if (sscanf(message, "%99s", mob_name) < 0)
+	if (sscanf(message, "%99[^\n]", mob_name) < 0)
 		return -1;
 
 	if ((mob_id = atoi(mob_name)) == 0)
@@ -7990,7 +7999,7 @@ atcommand_adjcmdlvl(
 	nullpo_retr(-1, sd);
 
     if (!message || !*message || sscanf(message, "%d %s", &newlev, cmd) != 2) {
-        clif_displaymessage(fd, "usage: @adjcmdlvl <lvl> <command>.");
+        clif_displaymessage(fd, "Usage: @adjcmdlvl <lvl> <command>.");
         return -1;
     }
 
@@ -8025,7 +8034,7 @@ atcommand_adjgmlvl(
 	nullpo_retr(-1, sd);
 
     if (!message || !*message || sscanf(message, "%d %[^\r\n]", &newlev, user) != 2) {
-        clif_displaymessage(fd, "usage: @adjgmlvl <lvl> <user>.");
+        clif_displaymessage(fd, "Usage: @adjgmlvl <lvl> <user>.");
         return -1;
     }
 
@@ -8078,7 +8087,7 @@ atcommand_setbattleflag(
 	nullpo_retr(-1, sd);
 
 	if (!message || !*message || sscanf(message, "%s %s", flag, value) != 2) {
-        	clif_displaymessage(fd, "usage: @setbattleflag <flag> <value>.");
+        	clif_displaymessage(fd, "Usage: @setbattleflag <flag> <value>.");
         	return -1;
     	}
 
@@ -8176,7 +8185,7 @@ int atcommand_mute(
 	nullpo_retr(-1, sd);
 
 	if (!message || !*message || sscanf(message, "%d %99[^\n]", &manner, character) < 1) {
-		clif_displaymessage(fd, "usage: @mute <time> <character name>.");
+		clif_displaymessage(fd, "Usage: @mute <time> <character name>.");
 		return -1;
 	}
 
@@ -8380,11 +8389,11 @@ int atcommand_jumptoid(const int fd, struct map_session_data* sd, const char* co
 	if ((session_id=charid2sessionid(cid))!=0){
 		if ((pl_sd = (struct map_session_data *)session[session_id]->session_data) != NULL) {
          if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-            clif_displaymessage(fd, "You are not authorised to warp you to the map of this player.");
+            clif_displaymessage(fd, msg_table[247]);
             return -1;
          }
          if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-            clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+            clif_displaymessage(fd, msg_table[248]);
             return -1;
          }
          pc_setpos(sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
@@ -8428,11 +8437,11 @@ int atcommand_jumptoid2(const int fd, struct map_session_data* sd, const char* c
 	if ((session_id=accountid2sessionid(aid))!=0) {
 		if ((pl_sd = (struct map_session_data *)session[session_id]->session_data) != NULL) {
          if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-            clif_displaymessage(fd, "You are not authorised to warp you to the map of this player.");
+            clif_displaymessage(fd, msg_table[247]);
             return -1;
          }
          if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-            clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+            clif_displaymessage(fd, msg_table[248]);
             return -1;
          }
          pc_setpos(sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
@@ -8477,11 +8486,11 @@ int atcommand_recallid(const int fd, struct map_session_data* sd, const char* co
 		if ((pl_sd = (struct map_session_data *)session[session_id]->session_data) != NULL) {
          if (pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can recall only lower or same level
             if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-               clif_displaymessage(fd, "You are not authorised to warp you to the map of this player.");
+               clif_displaymessage(fd, msg_table[247]);
                return -1;
             }
             if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-               clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+               clif_displaymessage(fd, msg_table[248]);
                return -1;
             }
             pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
@@ -8530,11 +8539,11 @@ int atcommand_recallid2(const int fd, struct map_session_data* sd, const char* c
 		if ((pl_sd = (struct map_session_data *)session[session_id]->session_data) != NULL) {
          if (pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can recall only lower or same level
             if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-               clif_displaymessage(fd, "You are not authorised to warp you to the map of this player.");
-               return -1;
+				clif_displaymessage(fd, msg_table[247]);
+				return -1;
             }
             if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
-               clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
+               clif_displaymessage(fd, msg_table[248]);
                return -1;
             }
             pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
@@ -8831,9 +8840,9 @@ atcommand_charkillableid(const int fd, struct map_session_data* sd,const char* c
 		if((pl_sd = (struct map_session_data *)session[session_id]->session_data) == NULL)
                    return -1;
 
-      pl_sd->special_state.killable = !pl_sd->special_state.killable;
+      pl_sd->state.killable = !pl_sd->state.killable;
 
-      if(pl_sd->special_state.killable)
+      if(pl_sd->state.killable)
         clif_displaymessage(fd, "The player is now killable");
            else
         clif_displaymessage(fd, "The player is no longer killable");
@@ -8869,9 +8878,9 @@ atcommand_charkillableid2(const int fd, struct map_session_data* sd, const char*
 		if((pl_sd = (struct map_session_data *)session[session_id]->session_data) == NULL)
                    return -1;
 
-      pl_sd->special_state.killable = !pl_sd->special_state.killable;
+      pl_sd->state.killable = !pl_sd->state.killable;
 
-      if(pl_sd->special_state.killable)
+      if(pl_sd->state.killable)
         clif_displaymessage(fd, "The player is now killable");
            else
         clif_displaymessage(fd, "The player is no longer killable");

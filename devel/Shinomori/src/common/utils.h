@@ -12,6 +12,7 @@
 #endif
 
 
+int config_switch(const char *str);
 int e_mail_check(char *email);
 int remove_control_chars(char *str);
 
@@ -26,7 +27,6 @@ extern inline FILE* savefopen(const char*name, const char*option)
 	checkpath(namebuf,name);
 	return fopen( namebuf, option);
 }
-
 
 
 #define CREATE(result, type, number)  do {\

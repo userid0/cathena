@@ -142,43 +142,46 @@ struct square;
 struct map_session_data {
 	struct block_list bl;
 	struct {
-		unsigned auth : 1;
-		unsigned change_walk_target : 1;
-		unsigned attack_continue : 1;
-		unsigned menu_or_input : 1;
-		unsigned dead_sit : 2;
-		unsigned skillcastcancel : 1;
-		unsigned waitingdisconnect : 1;
-		unsigned lr_flag : 2;
-		unsigned connect_new : 1;
-		unsigned arrow_atk : 1;
-		unsigned attack_type : 3;
-		unsigned skill_flag : 1;
-		unsigned gangsterparadise : 1;
-		unsigned produce_flag : 1;
-		unsigned make_arrow_flag : 1;
-		unsigned potionpitcher_flag : 1;
-		unsigned storage_flag : 1;
-		unsigned snovice_flag : 4;
-		int gmaster_flag;
+		unsigned auth : 1;							// 0
+		unsigned change_walk_target : 1;			// 1
+		unsigned attack_continue : 1;				// 2
+		unsigned menu_or_input : 1;					// 3
+		unsigned dead_sit : 2;						// 4,5
+		unsigned skillcastcancel : 1;				// 6
+		unsigned waitingdisconnect : 1;				// 7 - byte 1
+		unsigned lr_flag : 2;						// 8,9 
+		unsigned connect_new : 1;					// 10
+		unsigned arrow_atk : 1;						// 11
+		unsigned attack_type : 3;					// 12,13,14
+		unsigned skill_flag : 1;					// 15 - byte 2
+		unsigned gangsterparadise : 1;				// 16 
+		unsigned produce_flag : 1;					// 17
+		unsigned make_arrow_flag : 1;				// 18
+		unsigned potionpitcher_flag : 1;			// 19
+		unsigned storage_flag : 1;					// 20
+		unsigned snovice_flag : 4;					// 21,22,23,24 - byte 3
+
 		// originally by Qamera, adapted by celest
-		unsigned event_death : 1;
-		unsigned event_kill : 1;
-		unsigned event_disconnect : 1;
-		unsigned event_onconnect : 1;
+		unsigned event_death : 1;					// 25
+		unsigned event_kill : 1;					// 26
+		unsigned event_disconnect : 1;				// 27
+		unsigned event_onconnect : 1;				// 28
+
+		unsigned killer : 1;						// 29
+		unsigned killable : 1;						// 30
+		unsigned restart_full_recover : 1;			// 31 - byte 4
+		unsigned no_castcancel : 1;					// 32
+		unsigned no_castcancel2 : 1;				// 33
+		unsigned no_sizefix : 1;					// 34
+		unsigned no_magic_damage : 1;				// 35
+		unsigned no_weapon_damage : 1;				// 36
+		unsigned no_gemstone : 1;					// 37
+		unsigned infinite_endure : 1;				// 38
+		unsigned autoloot : 1; //by Upa-Kun			// 39  - byte 5
+													// 0 bit left
 	} state;
-	struct {
-		unsigned killer : 1;
-		unsigned killable : 1;
-		unsigned restart_full_recover : 1;
-		unsigned no_castcancel : 1;
-		unsigned no_castcancel2 : 1;
-		unsigned no_sizefix : 1;
-		unsigned no_magic_damage : 1;
-		unsigned no_weapon_damage : 1;
-		unsigned no_gemstone : 1;
-		unsigned infinite_endure : 1;
-	} special_state;
+
+	int gmaster_flag;
 	int char_id;
 	int login_id1;
 	int login_id2;
@@ -236,13 +239,14 @@ struct map_session_data {
 	int attacktarget;
 	short attacktarget_lv;
 	unsigned int attackabletime;
-
-        int followtimer; // [MouseJstr]
-        int followtarget;
+	
+	int followtimer; // [MouseJstr]
+	int followtarget;
 
 	time_t emotionlasttime; // to limit flood with emotion packets
 
-	short attackrange,attackrange_;
+	short attackrange;
+	short attackrange_;
 	int skilltimer;
 	int skilltarget;
 	short skillx;
@@ -284,19 +288,61 @@ struct map_session_data {
 	short view_class;
 	short weapontype1,weapontype2;
 	short disguiseflag,disguise; // [Valaris]
-	int paramb[6],paramc[6],parame[6],paramcard[6];
-	int hit,flee,flee2,aspd,amotion,dmotion;
-	int watk,watk2,atkmods[3];
-	int def,def2,mdef,mdef2,critical,matk1,matk2;
-	int atk_ele,def_ele,star,overrefine;
-	int castrate,delayrate,hprate,sprate,dsprate;
-	int addele[10],addrace[12],addsize[3],subele[10],subrace[12];
-	int addeff[10],addeff2[10],reseff[10];
-	int watk_,watk_2,atkmods_[3],addele_[10],addrace_[12],addsize_[3];	//ìÒìÅó¨ÇÃÇΩÇﬂÇ…í«â¡
-	int atk_ele_,star_,overrefine_;				//ìÒìÅó¨ÇÃÇΩÇﬂÇ…í«â¡
-	int base_atk,atk_rate;
-	int weapon_atk[16],weapon_atk_rate[16];
-	int arrow_atk,arrow_ele,arrow_cri,arrow_hit,arrow_range;
+	int paramb[6];
+	int paramc[6];
+	int parame[6];
+	int paramcard[6];
+	int hit;
+	int flee;
+	int flee2;
+	int aspd;
+	int amotion;
+	int dmotion;
+	int watk;
+	int watk2;
+	int atkmods[3];
+	int def;
+	int def2;
+	int mdef;
+	int mdef2;
+	int critical;
+	int matk1;
+	int matk2;
+	int atk_ele;
+	int def_ele;
+	int star;
+	int overrefine;
+	int castrate;
+	int delayrate;
+	int hprate;
+	int sprate;
+	int dsprate;
+	int addele[10];
+	int addrace[12];
+	int addsize[3];
+	int subele[10];
+	int subrace[12];
+	int addeff[10];
+	int addeff2[10];
+	int reseff[10];
+	int watk_;
+	int watk_2;
+	int atkmods_[3];
+	int addele_[10];
+	int addrace_[12];
+	int addsize_[3];	//ìÒìÅó¨ÇÃÇΩÇﬂÇ…í«â¡
+	int atk_ele_;
+	int star_;
+	int overrefine_;				//ìÒìÅó¨ÇÃÇΩÇﬂÇ…í«â¡
+	int base_atk;
+	int atk_rate;
+	int weapon_atk[16];
+	int weapon_atk_rate[16];
+	int arrow_atk;
+	int arrow_ele;
+	int arrow_cri;
+	int arrow_hit;
+	int arrow_range;
 	int arrow_addele[10],arrow_addrace[12],arrow_addsize[3],arrow_addeff[10],arrow_addeff2[10];
 	int nhealhp,nhealsp,nshealhp,nshealsp,nsshealhp,nsshealsp;
 	int aspd_rate,speed_rate,hprecov_rate,sprecov_rate,critical_def,double_rate;
@@ -364,9 +410,14 @@ struct map_session_data {
 	short hp_loss_value, hp_loss_type;
 	int addrace2[6],addrace2_[6];
 	int subsize[3];
-	short unequip_damage;
+	short unequip_losehp[11];
+	short unequip_losesp[11];
 	int itemid;
 	int itemhealrate[6];
+	//--- 03/15's new card effects
+	int expaddrace[6];
+	int subrace2[6];
+	short sp_gain_race[6];
 
 	short spiritball;
 	short spiritball_old;
@@ -386,7 +437,7 @@ struct map_session_data {
 	struct script_regstr *regstr;
 
 	struct status_change sc_data[MAX_STATUSCHANGE];
-	short sc_count;
+//!!	short sc_count;
 	struct square dev;
 
 	int trade_partner;
@@ -432,7 +483,6 @@ struct map_session_data {
 	unsigned short eventcount; // [celest]
 
 	unsigned short change_level;	// [celest]
-	int autoloot : 1; //by Upa-Kun
 
 #ifndef TXT_ONLY
 	int mail_counter;	// mail counter for mail system [Valaris]
@@ -572,7 +622,7 @@ struct mob_data {
 	short lootitem_count;
 
 	struct status_change sc_data[MAX_STATUSCHANGE];
-	short sc_count;
+//!!	short sc_count;
 	short opt1;
 	short opt2;
 	short opt3;
@@ -854,7 +904,8 @@ enum {
 	SP_CRIT_ATK_RATE, SP_CRITICAL_ADDRACE, SP_NO_REGEN, SP_ADDEFF_WHENHIT, SP_AUTOSPELL_WHENHIT, // 2013-2017
 	SP_SKILL_ATK, SP_UNSTRIPABLE, SP_ADD_DAMAGE_BY_CLASS, // 2018-2020
 	SP_SP_GAIN_VALUE, SP_IGNORE_DEF_MOB, SP_HP_LOSS_RATE, SP_ADDRACE2, SP_HP_GAIN_VALUE, // 2021-2025
-	SP_SUBSIZE, SP_DAMAGE_WHEN_UNEQUIP, SP_ADD_ITEM_HEAL_RATE	// 2026-2028
+	SP_SUBSIZE, SP_DAMAGE_WHEN_UNEQUIP, SP_ADD_ITEM_HEAL_RATE, SP_LOSESP_WHEN_UNEQUIP, SP_EXP_ADDRACE,	// 2026-2030
+	SP_SP_GAIN_RACE, SP_SUBRACE2,
 };
 
 enum {
@@ -971,6 +1022,8 @@ int path_search_long(struct shootpath_data *,int,int,int,int,int);
 int path_blownpos(int m,int x0,int y0,int dx,int dy,int count);
 
 int map_who(int fd);
+
+int cleanup_sub(struct block_list *bl, va_list ap);
 
 void map_helpscreen(); // [Valaris]
 int map_delmap(char *mapname);

@@ -90,8 +90,14 @@ time_t tick_;
 time_t stall_time_ = 60;
 ///////////////////////////////////////////////////////////////////////////////
 
-int rfifo_size = 65536;
-int wfifo_size = 65536;
+//int rfifo_size = 65536;
+//int wfifo_size = 65536;
+
+// from freya, playing around with that a bit
+
+#define RFIFO_SIZE (2*1024) /* a player that send more than 2k is probably a hacker without be parsed */
+                            /* biggest known packet: S 0153 <len>.w <emblem data>.?B -> 24x24 256 color .bmp (0153 + len.w + 1618/1654/1756 bytes) */
+#define WFIFO_SIZE (4*1024)
 
 ///////////////////////////////////////////////////////////////////////////////
 #ifndef TCP_FRAME_LEN
@@ -324,6 +330,354 @@ SOCKET SessionGetSocket(const size_t pos)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// 
+// DDoS 攻撃対策
+// derived from jAthena 
+//
+///////////////////////////////////////////////////////////////////////////////
+
+class DDoS
+{
+public:
+	enum {
+		ACO_DENY_ALLOW=0,
+		ACO_ALLOW_DENY,
+		ACO_MUTUAL_FAILTURE,
+	};
+
+	struct _access_control {
+		unsigned long ip;
+		unsigned long mask;
+	};
+	struct _connect_history {
+		struct _connect_history *next;
+		struct _connect_history *prev;
+		int    status;
+		int    count;
+		ulong ip;
+		unsigned long tick;
+	};
+
+	struct _access_control *access_allow;
+	struct _access_control *access_deny;
+	int access_order;
+	int access_allownum;
+	int access_denynum;
+	bool access_debug;
+	int ddos_count;
+	int ddos_interval;
+	int ddos_autoreset;
+
+	struct _connect_history *connect_history[0x10000];
+
+	DDoS() :
+			access_allow(NULL),
+			access_deny(NULL),
+			access_order(ACO_DENY_ALLOW),
+			access_allownum(0),
+			access_denynum(0),
+			access_debug(false),
+			ddos_count(0),
+			ddos_interval(3000),
+			ddos_autoreset(600*1000)
+	{}
+
+	~DDoS()
+	{
+		struct _connect_history *hist , *hist2;
+		for(size_t i=0; i<0x10000; i++) 
+		{
+			hist = connect_history[i];
+			while(hist) {
+				hist2 = hist->next;
+				aFree(hist);
+				hist = hist2;
+			}
+		}
+		if (access_allow)
+			aFree(access_allow);
+		if (access_deny)
+			aFree(access_deny);
+	}
+
+
+	// 接続できるかどうかの確認
+	//   false : 接続OK
+	//   true  : 接続NG
+
+	// ip is host byte order
+	int connect_check(ulong ip) 
+	{
+		int result = connect_check_(ip);
+		if(access_debug) {
+			ShowMessage("connect_check: connection from %d.%d.%d.%d %s\n",
+				(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF,result ? "allowed" : "denied");
+		}
+		return result;
+	}
+	// ip is host byte order
+	int connect_check_(ulong ip) 
+	{
+		struct _connect_history *hist     = connect_history[ip & 0xFFFF];
+		struct _connect_history *hist_new;
+		int    i,is_allowip = 0,is_denyip = 0,connect_ok = 0;
+
+		// allow , deny リストに入っているか確認
+		for(i = 0;i < access_allownum; i++) {
+			if((ip & access_allow[i].mask) == (access_allow[i].ip & access_allow[i].mask)) {
+				if(access_debug) {
+					ShowMessage("connect_check: match allow list from:%08x ip:%08x mask:%08x\n",
+						ip,access_allow[i].ip,access_allow[i].mask);
+				}
+				is_allowip = 1;
+				break;
+			}
+		}
+		for(i = 0;i < access_denynum; i++) {
+			if((ip & access_deny[i].mask) == (access_deny[i].ip & access_deny[i].mask)) {
+				if(access_debug) {
+					printf("connect_check: match deny list  from:%08lx ip:%08lx mask:%08lx\n",
+						ip,access_deny[i].ip,access_deny[i].mask);
+				}
+				is_denyip = 1;
+				break;
+			}
+		}
+		// コネクト出来るかどうか確認
+		// connect_ok
+		//   0 : 無条件に拒否
+		//   1 : 田代砲チェックの結果次第
+		//   2 : 無条件に許可
+		switch(access_order) {
+		case ACO_DENY_ALLOW:
+		default:
+			if(is_allowip) {
+				connect_ok = 2;
+			} else if(is_denyip) {
+				connect_ok = 0;
+			} else {
+				connect_ok = 1;
+			}
+			break;
+		case ACO_ALLOW_DENY:
+			if(is_denyip) {
+				connect_ok = 0;
+			} else if(is_allowip) {
+				connect_ok = 2;
+			} else {
+				connect_ok = 1;
+			}
+			break;
+		case ACO_MUTUAL_FAILTURE:
+			if(is_allowip) {
+				connect_ok = 2;
+			} else {
+				connect_ok = 0;
+			}
+			break;
+		}
+
+		// 接続履歴を調べる
+		while(hist) {
+			if(ip == hist->ip) {
+				// 同じIP発見
+				if(hist->status) {
+					// ban フラグが立ってる
+					return (connect_ok == 2 ? 1 : 0);
+				} else if(DIFF_TICK(gettick(),hist->tick) < ddos_interval) {
+					// ddos_interval秒以内にリクエスト有り
+					hist->tick = gettick();
+					if(hist->count++ >= ddos_count) {
+						// ddos 攻撃を検出
+						hist->status = 1;
+						ShowMessage("connect_check: ddos attack detected (%d.%d.%d.%d)\n",
+							(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF);
+						return (connect_ok == 2 ? 1 : 0);
+					} else {
+						return connect_ok;
+					}
+				} else {
+					// ddos_interval秒以内にリクエスト無いのでタイマークリア
+					hist->tick  = gettick();
+					hist->count = 0;
+					return connect_ok;
+				}
+			}
+			hist = hist->next;
+		}
+		// IPリストに無いので新規作成
+		hist_new = (struct _connect_history *)aCalloc(1,sizeof(struct _connect_history));
+		hist_new->ip   = ip;
+		hist_new->tick = gettick();
+		if(connect_history[ip & 0xFFFF] != NULL) {
+			hist = connect_history[ip & 0xFFFF];
+			hist->prev = hist_new;
+			hist_new->next = hist;
+		}
+		connect_history[ip & 0xFFFF] = hist_new;
+		return connect_ok;
+	}
+
+	int connect_check_clear(int tid,unsigned long tick,int id,int data) {
+		int i;
+		int clear = 0;
+		int list  = 0;
+		struct _connect_history *hist , *hist2;
+		for(i = 0;i < 0x10000 ; i++) {
+			hist = connect_history[i];
+			while(hist) {
+				if(
+					(DIFF_TICK(tick,hist->tick) > ddos_interval * 3 && !hist->status) ||
+					(DIFF_TICK(tick,hist->tick) > ddos_autoreset && hist->status)
+				) {
+					// clear data
+					hist2 = hist->next;
+					if(hist->prev) {
+						hist->prev->next = hist->next;
+					} else {
+						connect_history[i] = hist->next;
+					}
+					if(hist->next) {
+						hist->next->prev = hist->prev;
+					}
+					aFree(hist);
+					hist = hist2;
+					clear++;
+				} else {
+					hist = hist->next;
+					list++;
+				}
+			}
+		}
+		if(access_debug) {
+			ShowMessage("connect_check_clear: clear = %d list = %d\n",clear,list);
+		}
+		return list;
+	}
+
+
+	// IPマスクチェック
+	int access_ipmask(const char *str,struct _access_control* acc)
+	{
+		unsigned int mask=0,i=0,m,ip, a0,a1,a2,a3;
+		if( !strcmp(str,"all") ) {
+			ip   = 0;
+			mask = 0;
+		} else {
+			if( sscanf(str,"%d.%d.%d.%d%n",&a0,&a1,&a2,&a3,&i)!=4 || i==0) {
+				printf("access_ipmask: unknown format %s\n",str);
+				return 0;
+			}
+			ip = (a3 << 24) | (a2 << 16) | (a1 << 8) | a0;
+
+			if(sscanf(str+i,"/%d.%d.%d.%d",&a0,&a1,&a2,&a3)==4 ){
+				mask = (a3 << 24) | (a2 << 16) | (a1 << 8) | a0;
+			} else if(sscanf(str+i,"/%d",&m) == 1) {
+				for(i=0;i<m;i++) {
+					mask = (mask >> 1) | 0x80000000;
+				}
+				mask = ntohl(mask);
+			} else {
+				mask = 0xFFFFFFFF;
+			}
+		}
+		if(access_debug) {
+			ShowMessage("access_ipmask: ip:%08x mask:%08x %s\n",ip,mask,str);
+		}
+		acc->ip   = ip;
+		acc->mask = mask;
+		return 1;
+	}
+
+	int socket_config_read(const char *cfgName) {
+		int i;
+		char line[1024],w1[1024],w2[1024];
+		FILE *fp;
+
+		fp=fopen(cfgName, "r");
+		if(fp==NULL){
+			ShowMessage("File not found: %s\n", cfgName);
+			return 1;
+		}
+		while(fgets(line,1020,fp)){
+			if(line[0] == '/' && line[1] == '/')
+				continue;
+			i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
+			if(i!=2)
+				continue;
+			if(strcasecmp(w1,"stall_time")==0){
+				stall_time_ = atoi(w2);
+			} else if(strcasecmp(w1,"order")==0){
+				access_order=atoi(w2);
+				if(strcasecmp(w2,"deny,allow")==0) access_order=ACO_DENY_ALLOW;
+				if(strcasecmp(w2,"allow,deny")==0) access_order=ACO_ALLOW_DENY;
+				if(strcasecmp(w2,"mutual-failture")==0) access_order=ACO_MUTUAL_FAILTURE;
+			} else if(strcasecmp(w1,"allow")==0){
+				access_allow = (struct _access_control*)aRealloc(access_allow,(access_allownum+1)*sizeof(struct _access_control));
+				if(access_ipmask(w2,&access_allow[access_allownum])) {
+					access_allownum++;
+				}
+			} else if(strcasecmp(w1,"deny")==0){
+				access_deny = (struct _access_control*)aRealloc(access_deny,(access_denynum+1)*sizeof(struct _access_control));
+				if(access_ipmask(w2,&access_deny[access_denynum])) {
+					access_denynum++;
+				}
+			} else if(!strcasecmp(w1,"ddos_interval")){
+				ddos_interval = atoi(w2);
+			} else if(!strcasecmp(w1,"ddos_count")){
+				ddos_count = atoi(w2);
+			} else if(!strcasecmp(w1,"ddos_autoreset")){
+				ddos_autoreset = atoi(w2);
+			} else if(!strcasecmp(w1,"debug")){
+				access_debug = (config_switch(w2)!=0);
+			} else if (strcasecmp(w1, "import") == 0)
+				socket_config_read(w2);
+		}
+		fclose(fp);
+		return 0;
+	}
+};
+
+static DDoS ddos;
+
+int connect_check_clear(int tid,unsigned long tick,int id,int data)
+{
+	return ddos.connect_check_clear(tid, tick, id, data);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Parse Functions
@@ -379,110 +733,24 @@ void socket_setopts(SOCKET sock)
 #ifdef SO_REUSEPORT
 	setsockopt(sock,SOL_SOCKET,SO_REUSEPORT,(char *)&yes,sizeof yes);
 #endif
+	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&yes, sizeof yes); // reuse fix
 
-	setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &wfifo_size , sizeof(rfifo_size ));
-	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &rfifo_size , sizeof(rfifo_size ));
+//	setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &wfifo_size , sizeof(rfifo_size ));
+//	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &rfifo_size , sizeof(rfifo_size ));
 }
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// FIFO Reading/Sending Functions
-//
-///////////////////////////////////////////////////////////////////////////////
-#ifdef SOCKET_DEBUG_PRINT
-void dumpx(unsigned char *buf, int len)
-{	int i;
-	if(len>0)
-	{
-		for(i=0; i<len; i++)
-			printf("%02X ", buf[i]);
-	}
-	printf("\n");
-}
-#endif
 
-int recv_to_fifo(int fd)
-{
-	int len;
-	unsigned long arg = 0;
-	int rv;
-
-	//ShowMessage("recv_to_fifo : %d\n",fd);
-	if( !session_isActive(fd) )
-		return -1;
-
-	// check for incoming data and the amount
-	rv = ioctlsocket(SessionGetSocket(fd), FIONREAD, &arg);
-	if( (rv == 0) && (arg > 0) )
-	{	// we are reading 'arg' bytes of data from the socket
-		if( arg > (unsigned long)RFIFOSPACE(fd) ) arg = RFIFOSPACE(fd);
-
-		len=read(SessionGetSocket(fd),(char*)(session[fd]->rdata+session[fd]->rdata_size),arg);
-
-//		ShowMessage (":::RECEIVE:::\n");
-//		dump(session[fd]->rdata, len); ShowMessage ("\n");
-#ifdef SOCKET_DEBUG_PRINT
-		dumpx(session[fd]->rdata, len);
-#endif
-		if(len>0){
-			session[fd]->rdata_size+=len;
-			session[fd]->rdata_tick = tick_;
-		} else if(len<=0){
-			session[fd]->flag.connected = false;
-		}
-	} else {	
-		// the socket has been terminated
-		session[fd]->flag.connected = false;
-	}
-	return 0;
-}
-
-int send_from_fifo(int fd)
-{
-	int len;
-
-	//ShowMessage("send_from_fifo : %d\n",fd);
-	if(fd<0 || fd > FD_SETSIZE || !session[fd])
-		return -1;
-
-	if (session[fd]->wdata_size == 0)
-		return 0;
-
-	// clear buffer if not connected
-	if( !session[fd]->flag.connected )
-	{
-		session[fd]->wdata_size = 0;
-		return 0;
-	}
-
-	len=write(SessionGetSocket(fd),(char*)(session[fd]->wdata),session[fd]->wdata_size);
-
-//	ShowMessage (":::SEND:::\n");
-//	dump(session[fd]->wdata, len); ShowMessage ("\n");
-#ifdef SOCKET_DEBUG_PRINT
-	dumpx(session[fd]->wdata, len);
-#endif
-	//{ int i; ShowMessage("send %d : ",fd);  for(i=0;i<len;i++){ ShowMessage("%02x ",session[fd]->wdata[i]); } ShowMessage("\n");}
-	if(len>0){
-		if(len<session[fd]->wdata_size){
-			memmove(session[fd]->wdata,session[fd]->wdata+len,session[fd]->wdata_size-len);
-			session[fd]->wdata_size-=len;
-		} else {
-			session[fd]->wdata_size=0;
-		}
-	} else if (errno != EAGAIN) {
-//		ShowMessage("set eof :%d\n",fd);
-		session[fd]->flag.connected = false;	
-	}
-	return 0;
-}
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Fifo Control
 //
 ///////////////////////////////////////////////////////////////////////////////
+
+int recv_to_fifo(int fd);
+int send_from_fifo(int fd);
+
 
 void flush_fifos() 
 {
@@ -525,7 +793,7 @@ void flush_fifos()
 #endif
 				if(len>0)
 				{
-					if(len < session[fd]->wdata_size)
+					if((size_t)len < session[fd]->wdata_size)
 					{
 						memmove(session[fd]->wdata,session[fd]->wdata+len,session[fd]->wdata_size-len);
 						session[fd]->wdata_size-=len;
@@ -556,7 +824,58 @@ void flush_fifos()
 		select(fd_max,NULL,&wfd,NULL,NULL);
 	}//end while
 }
-int realloc_fifo(int fd,int rfifo_size,int wfifo_size)
+
+int realloc_readfifo(int fd, size_t addition)
+{
+	size_t newsize;
+
+	if( !session_isValid(fd) ) // might not happen
+		return 0;
+
+	if( session[fd]->rdata_size + addition  >= session[fd]->rdata_max )
+	{	// grow rule
+		newsize = RFIFO_SIZE;
+		while( session[fd]->rdata_size + addition > newsize ) newsize += newsize;
+	}
+	else if( session[fd]->rdata_max>RFIFO_SIZE && (session[fd]->rdata_size+addition)*4 < session[fd]->rdata_max )
+	{	// shrink rule
+		newsize = session[fd]->rdata_max/2;
+	}
+	else // no change
+		return 0;
+
+	RECREATE(session[fd]->rdata, unsigned char, newsize);
+	session[fd]->rdata_max  = newsize;
+
+	return 0;
+}
+
+int realloc_writefifo(int fd, size_t addition)
+{
+	size_t newsize;
+
+	if( !session_isValid(fd) ) // might not happen
+		return 0;
+
+	if( session[fd]->wdata_size + addition  >= session[fd]->wdata_max )
+	{	// grow rule
+		newsize = WFIFO_SIZE;
+		while( session[fd]->wdata_size + addition > newsize ) newsize += newsize;
+	}
+	else if( session[fd]->wdata_max>WFIFO_SIZE && (session[fd]->wdata_size+addition)*4 < session[fd]->wdata_max )
+	{	// shrink rule
+		newsize = session[fd]->wdata_max/2;
+	}
+	else // no change
+		return 0;
+
+	RECREATE(session[fd]->wdata, unsigned char, newsize);
+	session[fd]->wdata_max  = newsize;
+
+	return 0;
+}
+
+int realloc_fifo(int fd, size_t rfifo_size, size_t wfifo_size)
 {
 	struct socket_data *s;
 	
@@ -565,53 +884,160 @@ int realloc_fifo(int fd,int rfifo_size,int wfifo_size)
 
 	s =session[fd];
 
-	if( s->max_rdata != rfifo_size && s->rdata_size < rfifo_size){
+	if( s->rdata_max != rfifo_size && s->rdata_size < rfifo_size){
 		RECREATE(s->rdata, unsigned char, rfifo_size);
-		s->max_rdata  = rfifo_size;
+		s->rdata_max  = rfifo_size;
 	}
-	if( s->max_wdata != wfifo_size && s->wdata_size < wfifo_size){
+	if( s->wdata_max != wfifo_size && s->wdata_size < wfifo_size){
 		RECREATE(s->wdata, unsigned char, wfifo_size);
-		s->max_wdata  = wfifo_size;
+		s->wdata_max  = wfifo_size;
 	}
 	return 0;
 }
 
-int WFIFOSET(int fd,int len)
+int WFIFOSET(int fd,size_t len)
 {
 	struct socket_data *s;
+	size_t newreserve;
 	
-	if( !session_isActive(fd) )
+	if( !session_isValid(fd) )
 		return 0;
 
 	s =session[fd];
-	if (s == NULL  || s->wdata == NULL)
+	if( s == NULL  || s->wdata == NULL )
 		return 0;
-	if( s->wdata_size+len+16384 > s->max_wdata ){
-		//unsigned char *sin_addr = (unsigned char *)&s->client_addr.sin_addr;
+
+	// we have written len bytes to the buffer already
+	s->wdata_size += len;
+
+	if( s->wdata_size > s->wdata_max )
+	{	// we had a buffer overflow already
 		unsigned long ip = s->client_ip;
-		realloc_fifo(fd,s->max_rdata, s->max_wdata <<1 );
-		//ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, sin_addr[0], sin_addr[1], sin_addr[2], sin_addr[3], s->max_wdata);
-		ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, s->max_wdata);
-	}
-	s->wdata_size=(s->wdata_size+(len)+2048 < s->max_wdata) ?
-		 s->wdata_size+len : (ShowMessage("socket: %d wdata lost !!\n",fd),s->wdata_size);
-	if (s->wdata_size > (TCP_FRAME_LEN)) 
-		send_from_fifo(fd);
-	return 0;
-}
-
-int RFIFOSKIP(int fd, int len)
-{
-	struct socket_data *s=session[fd];
-
-	if (s->rdata_size < s->rdata_pos + len) {
-		fprintf(stderr,"too many skip\n");
+		ShowError("socket: Buffer Overflow. Connection %d (%d.%d.%d.%d). has written %d bytes (%d allowed).\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, s->wdata_size, s->wdata_max);
 		exit(1);
 	}
-	s->rdata_pos += len;
+
+	newreserve = s->wdata_size + WFIFO_SIZE; // always keep a WFIFO_SIZE reserve in the buffer
+
+	send_from_fifo(fd);
+
+	// realloc after sending
+	realloc_writefifo(fd, newreserve); 
+
 	return 0;
 }
 
+int RFIFOSKIP(int fd, size_t len)
+{
+	struct socket_data *s=session[fd];
+	if( s->rdata_pos + len > s->rdata_size ) 
+	{	// this should not happen
+		ShowError("Read FIFO is skipping more data then it has.\n");
+		s->rdata_pos = s->rdata_size;
+	}
+	else
+	{
+		s->rdata_pos += len;
+	}
+	return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// FIFO Reading/Sending Functions
+//
+///////////////////////////////////////////////////////////////////////////////
+
+#ifdef SOCKET_DEBUG_PRINT
+void dumpx(unsigned char *buf, int len)
+{	int i;
+	if(len>0)
+	{
+		for(i=0; i<len; i++)
+			printf("%02X ", buf[i]);
+	}
+	printf("\n");
+}
+#endif
+
+int recv_to_fifo(int fd)
+{
+	int len;
+	unsigned long arg = 0;
+	int rv;
+
+	//ShowMessage("recv_to_fifo : %d\n",fd);
+	if( !session_isActive(fd) )
+		return -1;
+
+	// check for incoming data and the amount
+	rv = ioctlsocket(SessionGetSocket(fd), FIONREAD, &arg);
+	if( (rv == 0) && (arg > 0) )
+	{	// we are reading 'arg' bytes of data from the socket
+
+		// if there is more on the socket, limit the read size
+		// socket should be sized that the message with max expected len fit in
+		if( arg > (unsigned long)RFIFOSPACE(fd) ) arg = RFIFOSPACE(fd);
+
+		len=read(SessionGetSocket(fd),(char*)(session[fd]->rdata+session[fd]->rdata_size),arg);
+
+//		ShowMessage (":::RECEIVE:::\n");
+//		dump(session[fd]->rdata, len); ShowMessage ("\n");
+#ifdef SOCKET_DEBUG_PRINT
+		dumpx(session[fd]->rdata, len);
+#endif
+		if(len>0){
+			session[fd]->rdata_size+=len;
+			session[fd]->rdata_tick = tick_;
+		} else if(len<=0){
+			session[fd]->flag.connected = false;
+		}
+	} else {	
+		// the socket has been terminated
+		session[fd]->flag.connected = false;
+	}
+	return 0;
+}
+
+int send_from_fifo(int fd)
+{
+	int len;
+
+	//ShowMessage("send_from_fifo : %d\n",fd);
+	if( !session_isValid(fd) )
+		return -1;
+
+	if (session[fd]->wdata_size == 0)
+		return 0;
+
+	// clear buffer if not connected
+	if( !session[fd]->flag.connected )
+	{
+		session[fd]->wdata_size = 0;
+		return 0;
+	}
+
+	len=write(SessionGetSocket(fd),(char*)(session[fd]->wdata),session[fd]->wdata_size);
+
+//	ShowMessage (":::SEND:::\n");
+//	dump(session[fd]->wdata, len); ShowMessage ("\n");
+#ifdef SOCKET_DEBUG_PRINT
+	dumpx(session[fd]->wdata, len);
+#endif
+	//{ int i; ShowMessage("send %d : ",fd);  for(i=0;i<len;i++){ ShowMessage("%02x ",session[fd]->wdata[i]); } ShowMessage("\n");}
+	if(len>0){
+		if((size_t)len<session[fd]->wdata_size){
+			memmove(session[fd]->wdata,session[fd]->wdata+len,session[fd]->wdata_size-len);
+			session[fd]->wdata_size -= len;
+		} else {
+			session[fd]->wdata_size=0;
+		}
+	} else if (errno != EAGAIN) {
+//		ShowMessage("set eof :%d\n",fd);
+		session[fd]->flag.connected = false;	
+	}
+	return 0;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -627,6 +1053,7 @@ static int connect_client(int listen_fd)
 	socklen_t len = sizeof(client_address);
 
 	// quite dangerous, app is dead in this case
+	// should exit or restart the listener
 	if( !session_isActive(listen_fd) )
 		return -1;
 
@@ -636,6 +1063,12 @@ static int connect_client(int listen_fd)
 		perror("accept");
 		return -1;
 	}
+	else if( !ddos.connect_check(ntohl(client_address.sin_addr.s_addr)) )
+	{
+		closesocket(sock);
+		return -1;
+	} else
+
 #ifndef WIN32
 	// on unix a socket can only be in range from 1 to FD_SETSIZE
 	// otherwise it would not fit into the fd_set structure and 
@@ -662,15 +1095,15 @@ static int connect_client(int listen_fd)
 	}
 
 	CREATE(session[fd], struct socket_data, 1);
-	CREATE(session[fd]->rdata, unsigned char, rfifo_size);
-	CREATE(session[fd]->wdata, unsigned char, wfifo_size);
+	CREATE(session[fd]->rdata, unsigned char, RFIFO_SIZE);
+	CREATE(session[fd]->wdata, unsigned char, WFIFO_SIZE);
 
 	session[fd]->flag.connected   = true;
 	session[fd]->flag.remove      = false;
 	session[fd]->flag.marked      = false;
 
-	session[fd]->max_rdata   = rfifo_size;
-	session[fd]->max_wdata   = wfifo_size;
+	session[fd]->rdata_max   = RFIFO_SIZE;
+	session[fd]->wdata_max   = WFIFO_SIZE;
 	session[fd]->func_recv   = recv_to_fifo;
 	session[fd]->func_send   = send_from_fifo;
 	session[fd]->func_parse  = default_func_parse;
@@ -795,15 +1228,15 @@ int make_connection(unsigned long ip, unsigned short port)
 	}
 
 	CREATE(session[fd], struct socket_data, 1);
-	CREATE(session[fd]->rdata, unsigned char, rfifo_size);
-	CREATE(session[fd]->wdata, unsigned char, wfifo_size);
+	CREATE(session[fd]->rdata, unsigned char, RFIFO_SIZE);
+	CREATE(session[fd]->wdata, unsigned char, WFIFO_SIZE);
 
 	session[fd]->flag.connected   = true;
 	session[fd]->flag.remove      = false;
 	session[fd]->flag.marked      = false;
 
-	session[fd]->max_rdata  = rfifo_size;
-	session[fd]->max_wdata  = wfifo_size;
+	session[fd]->rdata_max  = RFIFO_SIZE;
+	session[fd]->wdata_max  = WFIFO_SIZE;
 	session[fd]->func_recv  = recv_to_fifo;
 	session[fd]->func_send  = send_from_fifo;
 	session[fd]->func_parse = default_func_parse;
@@ -1303,8 +1736,15 @@ void socket_init(void)
 	}
 #endif//not W32
 	
+
+	ddos.socket_config_read("conf/packet_athena.conf");
+
+	// とりあえず５分ごとに不要なデータを削除する
+	add_timer_interval(gettick()+1000,300*1000,connect_check_clear,0,0);
+
+
 	add_timer_func_list(session_WaitClose, "session_WaitClose");
-	
+
 }
 
 void socket_final(void)

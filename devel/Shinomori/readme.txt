@@ -1,11 +1,20 @@
 my personal kingdom
 
-based on svn1229
+based on svn1269
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
 some of the latest branch updates broke multimap, 
 still recovering
+*working again
+///////////////////////////////////////////////////////////
+generally have the anti-freeze system enabled 
+in char and login; I'll dig to that problem 
+when I can afford some time
+///////////////////////////////////////////////////////////
+changes on map.gat structures and access
+planning on reducing memory usage for this even more
+but still testing the possibilities/effort
 ///////////////////////////////////////////////////////////
 (not online)
 preparing a new script machine that pre-compiles the text 

@@ -31,7 +31,7 @@ struct npc_src_list {
 	struct npc_src_list * next;
 //	struct npc_src_list * prev; //[Shinomori]
 	char name[4];
-} ;
+};
 
 static struct npc_src_list *npc_src_first=NULL;
 static struct npc_src_list *npc_src_last=NULL;
@@ -1041,7 +1041,7 @@ int npc_buysellsel(struct map_session_data *sd,int id,int type)
 int npc_buylist(struct map_session_data *sd,int n,unsigned char *itemlist)
 {
 	struct npc_data *nd;
-	double z;
+	long z;
 	int i,j,w,skill,itemamount=0,new_=0;
 	short amount,itemid;
 
@@ -1073,9 +1073,9 @@ int npc_buylist(struct map_session_data *sd,int n,unsigned char *itemlist)
 			return 3;
 
 		if (itemdb_value_notdc(nd->u.shop_item[j].nameid))
-			z+=(double)(nd->u.shop_item[j].value * amount);
+			z+=(nd->u.shop_item[j].value * amount);
 		else
-			z+=(double)(pc_modifybuyvalue(sd,nd->u.shop_item[j].value) * amount);
+			z+=(pc_modifybuyvalue(sd,nd->u.shop_item[j].value) * amount);
 		itemamount+=amount;
 
 		switch(pc_checkadditem(sd,itemid,amount)) {
@@ -1090,14 +1090,14 @@ int npc_buylist(struct map_session_data *sd,int n,unsigned char *itemlist)
 
 		w+=itemdb_weight(itemid) * amount;
 	}
-	if (z > (double)sd->status.zeny)
+	if (z > sd->status.zeny)
 		return 1;	// zeny不足
 	if (w+sd->weight > sd->max_weight)
 		return 2;	// 重量超過
 	if (pc_inventoryblank(sd)<new_)
 		return 3;	// 種類数超過
 
-	pc_payzeny(sd,(int)z);
+	pc_payzeny(sd, z);
 	for(i=0;i<n;i++) {
 		struct item item_tmp;
 		amount = RBUFW(itemlist,2*(i*2));
@@ -1119,10 +1119,10 @@ int npc_buylist(struct map_session_data *sd,int n,unsigned char *itemlist)
 		if (sd->status.skill[MC_DISCOUNT].flag != 0)
 			skill = sd->status.skill[MC_DISCOUNT].flag - 2;
 		if (skill > 0) {
-			z = (log(z * (double)skill) * (double)battle_config.shop_exp/100.);
+			z = z * skill * battle_config.shop_exp/10000;
 			if (z < 1)
 				z = 1;
-			pc_gainexp(sd,0,(int)z);
+			pc_gainexp(sd,0,z);
 		}
 	}
 
@@ -1135,7 +1135,7 @@ int npc_buylist(struct map_session_data *sd,int n,unsigned char *itemlist)
  */
 int npc_selllist(struct map_session_data *sd,int n,unsigned char *itemlist)
 {
-	double z;
+	long z;
 	int i,skill,itemamount=0;
 	short amount,itemid;
 
@@ -1163,14 +1163,14 @@ int npc_selllist(struct map_session_data *sd,int n,unsigned char *itemlist)
 		   sd->status.inventory[itemid].amount < amount)
 			return 1;
 		if (itemdb_value_notoc(nameid))
-			z+=(double)itemdb_value_sell(nameid) * amount;
+			z+=itemdb_value_sell(nameid) * amount;
 		else
-			z+=(double)pc_modifysellvalue(sd,itemdb_value_sell(nameid)) * amount;
+			z+=pc_modifysellvalue(sd,itemdb_value_sell(nameid)) * amount;
 		itemamount+=amount;
 	}
 
 	if (z > MAX_ZENY) z = MAX_ZENY;
-	pc_getzeny(sd,(int)z);
+	pc_getzeny(sd,z);
 	for(i=0;i<n;i++) {
 		amount = RBUFW(itemlist,2*(i*2+1));
 		itemid = RBUFW(itemlist,2*(i*2))-2;
@@ -1192,10 +1192,10 @@ int npc_selllist(struct map_session_data *sd,int n,unsigned char *itemlist)
 		if (sd->status.skill[MC_OVERCHARGE].flag != 0)
 			skill = sd->status.skill[MC_OVERCHARGE].flag - 2;
 		if (skill > 0) {
-			z = (log(z * (double)skill) * (double)battle_config.shop_exp/100.);
+			z = z * skill * battle_config.shop_exp/10000;
 			if (z < 1)
 				z = 1;
-			pc_gainexp(sd,0,(int)z);
+			pc_gainexp(sd,0,z);
 		}
 	}
 
@@ -1336,7 +1336,7 @@ int npc_changestate(struct npc_data *nd,int state,int type)
 	if(nd->walktimer != -1)
 	{
 		delete_timer(nd->walktimer,npc_walktimer);
-		nd->walktimer=-1;
+	nd->walktimer=-1;
 	}
 
 	nd->state.state=state;
@@ -1744,13 +1744,13 @@ int npc_convertlabel_db(void *key,void *data,va_list ap)
 		lst=(struct npc_label_list *)aRealloc(lst,(num+1)*sizeof(struct npc_label_list));
 	}
 	*p='\0';
-
-	if( strlen(lname)>23 ) {
+	
+	if (strlen(lname)>23) { 
 		ShowError("npc_parse_script: label name longer than 23 chars! '%s'\n", lname);
 		exit(1);
 	}
 	memcpy(lst[num].labelname,lname,strlen(lname)+1);
-
+	
 	*p=':';
 	lst[num].pos=pos;
 	nd->u.scr.ref->label_list    = lst;
@@ -1963,7 +1963,7 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 
 		if ((lname[0]=='O' || lname[0]=='o')&&(lname[1]=='N' || lname[1]=='n')) {
 			// エクスポートされる
-			if (strlen(lname)>23) {
+			if (strlen(lname)>23) { 
 				ShowError("npc_parse_script: label name longer than 23 chars! '%s'\n", lname);
 				exit(1);
 			}else{
@@ -2132,16 +2132,13 @@ int npc_parse_mob(char *w1,char *w2,char *w3,char *w4)
 		md->bl.x=x;
 		md->bl.y=y;
 
-		if(sscanf(w3,"%[^,],%d",mobname,&level) > 1) {
+		if(sscanf(w3,"%[^,],%d",mobname,&level) > 1)
+			md->level=level;
 			if(strcmp(mobname,"--en--")==0)
 				memcpy(md->name,mob_db[class_].name,24);
 			else if(strcmp(mobname,"--ja--")==0)
 				memcpy(md->name,mob_db[class_].jname,24);
-			md->level=level;
-		}
-
-		else
-		memcpy(md->name,w3,24);
+		else memcpy(md->name,mobname,24);		
 
 		md->n = i;
 		md->base_class = md->class_ = class_;

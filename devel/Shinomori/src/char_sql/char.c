@@ -332,8 +332,8 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 
 	//map inventory data
 	for(i=0;i<MAX_INVENTORY;i++){
-	        if (!compare_item(&p->inventory[i], &cp->inventory[i]))
-		        diff = 1;
+			if (!compare_item(&p->inventory[i], &cp->inventory[i]))
+				diff = 1;
 		if(p->inventory[i].nameid>0){
 			mapitem[count].flag=0;
 			mapitem[count].id = p->inventory[i].id;
@@ -348,8 +348,8 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 			mapitem[count].card[2] = p->inventory[i].card[2];
 			mapitem[count].card[3] = p->inventory[i].card[3];
 			count++;
-			}
-			}
+		}
+	}
 	//ShowMessage("- Save item data to MySQL!\n");
 	if (diff)
 		  memitemdata_to_sql(mapitem, count, p->char_id,TABLE_INVENTORY);
@@ -378,8 +378,8 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 			mapitem[count].card[2] = p->cart[i].card[2];
 			mapitem[count].card[3] = p->cart[i].card[3];
 			count++;
-			}
-			}
+		}
+	}
 
 	//ShowMessage("- Save cart data to MySQL!\n");
 	if (diff)
@@ -614,7 +614,7 @@ int memitemdata_to_sql(struct itemtmp mapitem[], int count, int char_id, int tab
 	char *tablename;
 	char selectoption[16];
 
-	switch (tableswitch){
+	switch (tableswitch) {
 	case TABLE_INVENTORY:
 		tablename = inventory_db; // no need for sprintf here as *_db are char*.
 		sprintf(selectoption,"char_id");
@@ -663,41 +663,41 @@ int memitemdata_to_sql(struct itemtmp mapitem[], int count, int char_id, int tab
 						(mapitem[i].card[2] == atoi(sql_row[9])) &&
 						(mapitem[i].card[3] == atoi(sql_row[10]))) {
 							//ShowMessage("the same item : %d , equip : %d , i : %d , flag :  %d\n", mapitem.equip[i].nameid,mapitem.equip[i].equip , i, mapitem.equip[i].flag); //DEBUG-STRING
-						} else {
+					} else {
 //==============================================Memory data > SQL ===============================
 						if(itemdb_isequip(mapitem[i].nameid) || (mapitem[i].card[0] == atoi(sql_row[7]))) {
 							sprintf(tmp_sql,"UPDATE `%s` SET `equip`='%d', `identify`='%d', `refine`='%d',"
-							"`attribute`='%d', `card0`='%d', `card1`='%d', `card2`='%d', `card3`='%d', `amount`='%d' WHERE `id`='%d' LIMIT 1",
+								"`attribute`='%d', `card0`='%d', `card1`='%d', `card2`='%d', `card3`='%d', `amount`='%d' WHERE `id`='%d' LIMIT 1",
 								tablename, mapitem[i].equip, mapitem[i].identify, mapitem[i].refine, mapitem[i].attribute, mapitem[i].card[0],
 								mapitem[i].card[1], mapitem[i].card[2], mapitem[i].card[3], mapitem[i].amount, id);
 							if(mysql_query(&mysql_handle, tmp_sql))
 								ShowMessage("DB server Error (UPdate `equ %s`)- %s\n", tablename, mysql_error(&mysql_handle));
 						}
 							//ShowMessage("not the same item : %d ; i : %d ; flag :  %d\n", mapitem.equip[i].nameid, i, mapitem.equip[i].flag);
-						}
+					}
 					flag = mapitem[i].flag = 1;
 					break;
-					}
 				}
+			}
 			if(!flag) {
 				sprintf(tmp_sql,"DELETE from `%s` where `id`='%d'", tablename, id);
-				if(mysql_query(&mysql_handle, tmp_sql))
+					if(mysql_query(&mysql_handle, tmp_sql))
 					ShowMessage("DB server Error (DELETE `equ %s`)- %s\n", tablename ,mysql_error(&mysql_handle));
 			}
 		}
 		mysql_free_result(sql_res);
-			}
+	}
 
 	for(i = 0; i < count; i++) {
 		if(!mapitem[i].flag) {
-				sprintf(tmp_sql,"INSERT INTO `%s`( `%s`, `nameid`, `amount`, `equip`, `identify`, `refine`, `attribute`, `card0`, `card1`, `card2`, `card3`)"
-				" VALUES ('%d','%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
+			sprintf(tmp_sql,"INSERT INTO `%s`(`%s`, `nameid`, `amount`, `equip`, `identify`, `refine`, `attribute`, `card0`, `card1`, `card2`, `card3` )"
+				" VALUES ( '%d','%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d' )",
 				tablename, selectoption,  char_id, mapitem[i].nameid, mapitem[i].amount, mapitem[i].equip, mapitem[i].identify, mapitem[i].refine,
 				mapitem[i].attribute, mapitem[i].card[0], mapitem[i].card[1], mapitem[i].card[2], mapitem[i].card[3]);
-				if(mysql_query(&mysql_handle, tmp_sql))
+			if(mysql_query(&mysql_handle, tmp_sql))
 					ShowMessage("DB server Error (INSERT `notequ %s`)- %s\n", tablename, mysql_error(&mysql_handle));
-			}
 		}
+	}
 
 		//======================================DEBUG=================================================
 
@@ -1131,17 +1131,19 @@ int make_new_char_sql(int fd, unsigned char *dat) {
 		// check individual stat value
 		for(i = 24; i <= 29; i++) {
 			if (dat[i] < 1 || dat[i] > 9) {
-                        ShowMessage("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
+				ShowMessage("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
         		return -2;
 			}
 		}
 
-		// char.log to charlog
-		sprintf(tmp_sql,"INSERT INTO `%s` (`time`, `char_msg`,`account_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
-			"VALUES (NOW(), '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
-			charlog_db,"make new char error", sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
-		//query
-		mysql_query(&mysql_handle, tmp_sql);
+		if (log_char) {
+			// char.log to charlog
+			sprintf(tmp_sql,"INSERT INTO `%s` (`time`, `char_msg`,`account_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
+				"VALUES (NOW(), '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
+				charlog_db,"make new char error", sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
+			//query
+			mysql_query(&mysql_handle, tmp_sql);
+		}
 		//ShowMessage("make new char error %d-%d %s %d, %d, %d, %d, %d, %d %d, %d" RETCODE,
 		//	fd, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
 		
@@ -1149,13 +1151,15 @@ int make_new_char_sql(int fd, unsigned char *dat) {
 		return -2;
 	}
 
-	// char.log to charlog
-	sprintf(tmp_sql,"INSERT INTO `%s`(`time`, `char_msg`,`account_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
-		"VALUES (NOW(), '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
-		charlog_db,"make new char", sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
-	//query
-	if (mysql_query(&mysql_handle, tmp_sql)) {
-		ShowMessage("fail(log error), SQL error: %s\n", mysql_error(&mysql_handle));
+	if (log_char) {
+		// char.log to charlog
+		sprintf(tmp_sql,"INSERT INTO `%s`(`time`, `char_msg`,`account_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
+			"VALUES (NOW(), '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
+			charlog_db,"make new char", sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
+		//query
+		if (mysql_query(&mysql_handle, tmp_sql)) {
+			ShowMessage("fail(log error), SQL error: %s\n", mysql_error(&mysql_handle));
+		}
 	}
 	//ShowMessage("make new char %d-%d %s %d, %d, %d, %d, %d, %d - %d, %d" RETCODE,
 	//	fd, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
@@ -1541,6 +1545,35 @@ int parse_tologin(int fd) {
 			RFIFOSKIP(fd,2);
 			break;
 
+		// Receiving authentification from Freya-type login server (to avoid char->login->char)
+		case 0x2719:
+			if (RFIFOREST(fd) < 18)
+				return 0;
+			// to conserv a maximum of authentification, search if account is already authentified and replace it
+			// that will reduce multiple connection too
+			for(i = 0; i < AUTH_FIFO_SIZE; i++)
+				if (auth_fifo[i].account_id == (int)RFIFOL(fd,2))
+					break;
+			// if not found, use next value
+			if (i == AUTH_FIFO_SIZE) {
+				if (auth_fifo_pos >= AUTH_FIFO_SIZE)
+					auth_fifo_pos = 0;
+				i = auth_fifo_pos;
+				auth_fifo_pos++;
+			}
+			//ShowMessage("auth_fifo set (auth #%d) - account: %d, secure: %08x-%08x\n", i, RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10));
+			auth_fifo[i].account_id = RFIFOL(fd,2);
+			auth_fifo[i].char_id = 0;
+			auth_fifo[i].login_id1 = RFIFOL(fd,6);
+			auth_fifo[i].login_id2 = RFIFOL(fd,10);
+			auth_fifo[i].delflag = 2; // 0: auth_fifo canceled/void, 2: auth_fifo received from login/map server in memory, 1: connection authentified
+			auth_fifo[i].char_pos = 0;
+			auth_fifo[i].connect_until_time = 0; // unlimited/unknown time by default (not display in map-server)
+			auth_fifo[i].ip = RFIFOL(fd,14);
+			//auth_fifo[i].map_auth = 0;
+			RFIFOSKIP(fd,18);
+			break;
+
 /*		case 0x2721:	// gm reply. I don't want to support this function.
 			ShowMessage("0x2721:GM reply\n");
 		  {
@@ -1691,6 +1724,61 @@ int parse_tologin(int fd) {
 				}
 			}
 			RFIFOSKIP(fd,11);
+			break;
+
+		// Receive GM accounts [Freya login server packet by Yor]
+		case 0x2733:
+		// add test here to remember that the login-server is Freya-type
+		// sprintf (login_server_type, "Freya");
+			if (RFIFOREST(fd) < 7)
+				return 0;
+			{
+				unsigned char buf[32000];
+				int new_level = 0;
+				for(i = 0; i < GM_num; i++)
+					if (gm_account[i].account_id == (int)RFIFOL(fd,2)) {
+						if (gm_account[i].level != (int)RFIFOB(fd,6)) {
+							gm_account[i].level = (int)RFIFOB(fd,6);
+							new_level = 1;
+						}
+						break;
+					}
+				// if not found, add it
+				if (i == GM_num) {
+					// limited to 4000, because we send information to char-servers (more than 4000 GM accounts???)
+					// int (id) + int (level) = 8 bytes * 4000 = 32k (limit of packets in windows)
+					if (((int)RFIFOB(fd,6)) > 0 && GM_num < 4000) {
+						if (GM_num == 0) {
+							gm_account = (struct gm_account*)aMalloc(sizeof(struct gm_account));
+						} else {
+							gm_account = (struct gm_account*)aRealloc(gm_account, sizeof(struct gm_account) * (GM_num + 1));						
+						}
+						gm_account[GM_num].account_id = RFIFOL(fd,2);
+						gm_account[GM_num].level = (int)RFIFOB(fd,6);
+						new_level = 1;
+						GM_num++;
+						if (GM_num >= 4000)
+							ShowMessage("***WARNING: 4000 GM accounts found. Next GM accounts are not readed.\n");
+						}
+					}
+				if (new_level == 1) {
+					int len;
+					ShowMessage("From login-server: receiving a GM account information (%ld: level %d).\n", RFIFOL(fd,2), (int)RFIFOB(fd,6));
+					//create_online_files(); // not change online file for only 1 player (in next timer, that will be done
+					// send gm acccounts level to map-servers
+					len = 4;
+					WBUFW(buf,0) = 0x2b15;
+				
+					for(i = 0; i < GM_num; i++) {
+						WBUFL(buf, len) = gm_account[i].account_id;
+						WBUFB(buf, len+4) = (unsigned char)gm_account[i].level;
+						len += 5;
+					}
+					WBUFW(buf, 2) = len;
+					mapif_sendall(buf, len);
+				}
+			}
+			RFIFOSKIP(fd,7);
 			break;
 
 		default:
@@ -2425,11 +2513,13 @@ int parse_char(int fd) {
 				break;
 			}
 
-			sprintf(tmp_sql,"INSERT INTO `%s`(`time`, `account_id`,`char_num`,`name`) VALUES (NOW(), '%d', '%d', '%s')",
-				charlog_db, sd->account_id, RFIFOB(fd, 2), char_dat[0].name);
-			//query
-			if(mysql_query(&mysql_handle, tmp_sql)) {
-				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+			if (log_char) {
+				sprintf(tmp_sql,"INSERT INTO `%s`(`time`, `account_id`,`char_num`,`name`) VALUES (NOW(), '%d', '%d', '%s')",
+					charlog_db, sd->account_id, RFIFOB(fd, 2), char_dat[0].name);
+				//query
+				if(mysql_query(&mysql_handle, tmp_sql)) {
+					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+				}
 			}
 			ShowMessage("("CL_BT_BLUE"%d"CL_NORM") char selected ("CL_BT_GREEN"%d"CL_NORM") "CL_BT_GREEN"%s"CL_NORM RETCODE, sd->account_id, RFIFOB(fd, 2), char_dat[0].name);
 
@@ -2959,22 +3049,10 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		WFIFOW(login_fd,84) = char_new;
 		WFIFOSET(login_fd,86);
 	}
-	}
-	return 0;
 }
-
-//----------------------------------------------------------
-// Return numerical value of a switch configuration by [Yor]
-// on/off, english, français, deutsch, español
-//----------------------------------------------------------
-int config_switch(const char *str) {
-	if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0 || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0 || strcasecmp(str, "si") == 0)
-		return 1;
-	if (strcasecmp(str, "off") == 0 || strcasecmp(str, "no") == 0 || strcasecmp(str, "non") == 0 || strcasecmp(str, "nein") == 0)
 		return 0;
-
-	return atoi(str);
 }
+
 
 // Lan Support conf reading added by Kashy
 int char_lan_config_read(const char *lancfgName){

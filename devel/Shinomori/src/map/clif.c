@@ -938,7 +938,7 @@ int clif_mob_equip(struct mob_data *md, int nameid) {
  */
 static int clif_mob0078(struct mob_data *md, unsigned char *buf)
 {
-	int level;
+	int level, i;
 
 	memset(buf,0,packet_len_table[0x78]);
 
@@ -951,7 +951,7 @@ static int clif_mob0078(struct mob_data *md, unsigned char *buf)
 	WBUFW(buf,10)=md->opt2;
 	WBUFW(buf,12)=md->option;
 	WBUFW(buf,14)=mob_get_viewclass(md->class_);
-	if((mob_get_viewclass(md->class_) <= 23) || (mob_get_viewclass(md->class_) == 812) || (mob_get_viewclass(md->class_) >= 4001)) {
+	if((i=mob_get_viewclass(md->class_)) <= 23 || i == 812 || i >= 4001) {
 		WBUFW(buf,12)= WBUFW(buf,12) | mob_db[md->class_].option;
 		WBUFW(buf,16)=mob_get_hair(md->class_);
 		WBUFW(buf,18)=mob_get_weapon(md->class_);
@@ -1329,7 +1329,7 @@ int clif_spawnmob(struct mob_data *md)
 
 	nullpo_retr(0, md);
 
-	if (mob_get_viewclass(md->class_) > 23 ) {
+	if (mob_get_viewclass(md->class_) > 23) {
 		memset(buf,0,packet_len_table[0x7c]);
 
 		WBUFW(buf,0)=0x7c;
@@ -3754,7 +3754,7 @@ int clif_damage(struct block_list *src,struct block_list *dst,unsigned int tick,
 
 	sc_data = status_get_sc_data(dst);
 
-	if(type != 4 && dst->type == BL_PC && ((struct map_session_data *)dst)->special_state.infinite_endure)
+	if(type != 4 && dst->type == BL_PC && ((struct map_session_data *)dst)->state.infinite_endure)
 		type = 9;
 	if(sc_data) {
 		if(type != 4 && sc_data[SC_ENDURE].timer != -1)
@@ -4431,7 +4431,7 @@ int clif_skill_damage(struct block_list *src,struct block_list *dst,unsigned lon
 
 	sc_data = status_get_sc_data(dst);
 
-	if(type != 5 && dst->type == BL_PC && ((struct map_session_data *)dst)->special_state.infinite_endure)
+	if(type != 5 && dst->type == BL_PC && ((struct map_session_data *)dst)->state.infinite_endure)
 		type = 9;
 	if(sc_data) {
 		if(type != 5 && sc_data[SC_ENDURE].timer != -1)
@@ -4483,7 +4483,7 @@ int clif_skill_damage2(struct block_list *src,struct block_list *dst,unsigned lo
 
 	sc_data = status_get_sc_data(dst);
 
-	if(type != 5 && dst->type == BL_PC && ((struct map_session_data *)dst)->special_state.infinite_endure)
+	if(type != 5 && dst->type == BL_PC && ((struct map_session_data *)dst)->state.infinite_endure)
 		type = 9;
 	if(sc_data) {
 		if(type != 5 && sc_data[SC_ENDURE].timer != -1)
@@ -7813,7 +7813,7 @@ int clif_parse_LoadEndAck(int fd,struct map_session_data *sd)
 		status_change_end(&sd->bl,SC_TRICKDEAD,-1);
 	if(sd->sc_data[SC_SIGNUMCRUCIS].timer != -1 && !battle_check_undead(7,sd->def_ele))
 		status_change_end(&sd->bl,SC_SIGNUMCRUCIS,-1);
-	if(sd->special_state.infinite_endure && sd->sc_data[SC_ENDURE].timer == -1)
+	if(sd->state.infinite_endure && sd->sc_data[SC_ENDURE].timer == -1)
 		status_change_start(&sd->bl,SC_ENDURE,10,1,0,0,0,0);
 	for(i=0;i<MAX_INVENTORY;i++){
 		if(sd->status.inventory[i].equip && sd->status.inventory[i].equip & 0x0002 && sd->status.inventory[i].attribute==1)
@@ -9371,7 +9371,8 @@ int clif_parse_UseSkillToId(int fd, struct map_session_data *sd) {
 			return 0;
 	} else if (DIFF_TICK(tick, sd->canact_tick) < 0 &&
 		// allow monk combos to ignore this delay [celest]
-		!(sd->sc_count && sd->sc_data[SC_COMBO].timer!=-1 &&
+		!(//!!sd->sc_count && 
+		sd->sc_data[SC_COMBO].timer!=-1 &&
 		(skillnum == MO_EXTREMITYFIST ||
 		skillnum == MO_CHAINCOMBO ||
 		skillnum == MO_COMBOFINISH ||
@@ -9562,7 +9563,8 @@ int clif_parse_UseSkillToPos(int fd, struct map_session_data *sd) {
 		return 0;
 	else if (DIFF_TICK(tick, sd->canact_tick) < 0 &&
 		// allow monk combos to ignore this delay [celest]
-		!(sd->sc_count && sd->sc_data[SC_COMBO].timer!=-1 &&
+		!(//!!sd->sc_count && 
+		sd->sc_data[SC_COMBO].timer!=-1 &&
 		(skillnum == MO_EXTREMITYFIST ||
 		skillnum == MO_CHAINCOMBO ||
 		skillnum == MO_COMBOFINISH ||
@@ -11201,10 +11203,10 @@ int clif_terminate(int fd)
 			if( sd->state.event_disconnect )
 				npc_event_doall_attached("OnDisconnect",sd);   
 
+			
 			if (sd->state.auth) 
 			{	// the function doesn't send to inter-server/char-server if it is not connected [Yor]
 				map_quit(sd);
-
 				if (sd->status.name != NULL)
 					ShowInfo("%sCharacter '"CL_WHITE"%s"CL_RESET"' logged off.\n", (pc_isGM(sd))?"GM ":"",sd->status.name); // Player logout display [Valaris]
 				else
@@ -11231,11 +11233,13 @@ int clif_terminate(int fd)
  *------------------------------------------
  */
 static int clif_parse(int fd) {
-	int packet_len = 0, cmd, packet_ver, dump = 0;
+	int packet_len = 0, cmd, packet_ver;
 	struct map_session_data *sd;
 
 	if( !session_isValid(fd) )
 		return 0;
+
+	sd = (struct map_session_data*)session[fd]->session_data;
 
 	// 接続が切れてるので後始末
 	// char鯖に繋がってない間は接続禁止 (!chrif_isconnect())
@@ -11245,7 +11249,7 @@ static int clif_parse(int fd) {
 		// wait some time (10sec) before removing the pc after a forced logout
 		// other disconnections get a different WaitClose time
 
-		if( session_isMarked(fd) )
+		if( session_isMarked(fd) || sd->state.waitingdisconnect )
 			// removing marked sessons might be no thread 
 			// even if the timer is not removed and called on an empty or reused session
 			session_Remove(fd); 
@@ -11254,7 +11258,7 @@ static int clif_parse(int fd) {
 		return 0;
 	}
 
-	sd = (struct map_session_data*)session[fd]->session_data;
+	
 
 	while(RFIFOREST(fd) >= 2)
 	{
@@ -11291,7 +11295,7 @@ static int clif_parse(int fd) {
 		else {
 			// packet DB
 			if (IS_PACKET_DB_VER (cmd)) {
-				if (RFIFOREST(fd) >= packet_db[clif_config.packet_db_ver][cmd].len &&
+				if(RFIFOREST(fd) >= packet_db[clif_config.packet_db_ver][cmd].len &&
 					(RFIFOB(fd,packet_db[clif_config.packet_db_ver][cmd].pos[4]) == 0 ||
 					RFIFOB(fd,packet_db[clif_config.packet_db_ver][cmd].pos[4]) == 1)) {// 00 = Female, 01 = Male
 					packet_ver = clif_config.packet_db_ver;
@@ -11383,12 +11387,9 @@ static int clif_parse(int fd) {
 				return 0;
 			}
 		}
-		if (RFIFOREST(fd) < packet_len)
+		if(RFIFOREST(fd) < packet_len)
 			return 0; // まだ1パケット分データが揃ってない
 
-		#if DUMP_ALL_PACKETS
-			dump = 1;
-		#endif
 
 		if (sd && sd->state.auth == 1 && sd->state.waitingdisconnect == 1) { // 切断待ちの場合パケットを処理しない
 
@@ -11397,46 +11398,42 @@ static int clif_parse(int fd) {
 			packet_db[packet_ver][cmd].func(fd, sd);
 		} else {
 			// 不明なパケット
-			if (battle_config.error_log) {
-#if DUMP_UNKNOWN_PACKET
-				int i;
-				FILE *fp;
-				char packet_txt[256] = "save/packet.txt";
-				time_t now;
-				dump = 1;
-				
-				if ((fp = savefopen(packet_txt, "a")) == NULL) {
-					ShowMessage("clif.c: cant write [%s] !!! data is lost !!!\n", packet_txt);
-					return 1;
-				} else {
-					time(&now);
-					if (sd && sd->state.auth) {
-						if (sd->status.name != NULL)
-							fprintf(fp, "%sPlayer with account ID %d (character ID %d, player name %s) sent wrong packet:\n",
-							        asctime(localtime(&now)), sd->status.account_id, sd->status.char_id, sd->status.name);
-						else
-							fprintf(fp, "%sPlayer with account ID %d sent wrong packet:\n", asctime(localtime(&now)), sd->bl.id);
-					} else if (sd) // not authentified! (refused by char-server or disconnect before to be authentified)
+#if DUMP_UNKNOWN_PACKET == 1
+			int i;
+			FILE *fp;
+			char packet_txt[256] = "save/packet.txt";
+			time_t now;
+			
+			if ((fp = savefopen(packet_txt, "a")) == NULL) {
+				ShowMessage("clif.c: cant write [%s] !!! data is lost !!!\n", packet_txt);
+				return 1;
+			} else {
+				time(&now);
+				if (sd && sd->state.auth) {
+					if (sd->status.name != NULL)
+						fprintf(fp, "%sPlayer with account ID %d (character ID %d, player name %s) sent wrong packet:\n",
+							    asctime(localtime(&now)), sd->status.account_id, sd->status.char_id, sd->status.name);
+					else
 						fprintf(fp, "%sPlayer with account ID %d sent wrong packet:\n", asctime(localtime(&now)), sd->bl.id);
+				} else if (sd) // not authentified! (refused by char-server or disconnect before to be authentified)
+					fprintf(fp, "%sPlayer with account ID %d sent wrong packet:\n", asctime(localtime(&now)), sd->bl.id);
 
-					fprintf(fp, "\t---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
-					for(i = 0; i < packet_len; i++) {
-						if ((i & 15) == 0)
-							fprintf(fp, "\n\t%04X ", i);
-						fprintf(fp, "%02X ", RFIFOB(fd,i));
-					}
-					fprintf(fp, "\n\n");
-					fclose(fp);
+				fprintf(fp, "\t---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
+				for(i = 0; i < packet_len; i++) {
+					if ((i & 15) == 0)
+						fprintf(fp, "\n\t%04X ", i);
+					fprintf(fp, "%02X ", RFIFOB(fd,i));
 				}
-#endif
+				fprintf(fp, "\n\n");
+				fclose(fp);
 			}
+#endif
 		}
-
-		if (dump) {
+#if DUMP_ALL_PACKETS == 1
+		{
 			int i;
 			if (fd)
-					ShowMessage("\nclif_parse: session #%d, packet 0x%x, lenght %d\n", fd, cmd, packet_len);
-				ShowMessage("---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
+				ShowMessage("\nclif_parse: session #%d, packet 0x%x, lenght %d\n", fd, cmd, packet_len);
 			for(i = 0; i < packet_len; i++) {
 				if ((i & 15) == 0)
 						ShowMessage("\n%04X ",i);
@@ -11451,7 +11448,7 @@ static int clif_parse(int fd) {
 			} else if (sd) // not authentified! (refused by char-server or disconnect before to be authentified)
 					ShowMessage("\nAccount ID %d.\n", sd->bl.id);
 		}
-
+#endif
 		RFIFOSKIP(fd, packet_len);
 	}// end while
 

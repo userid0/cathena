@@ -1,4 +1,5 @@
 #include "base.h"
+#include "../common/nullpo.h"
 #include "clif.h"
 #include "itemdb.h"
 #include "map.h"
@@ -28,7 +29,10 @@ void trade_traderequest(struct map_session_data *sd, int target_id) {
 				return;
 			}
 		}
-		if ((target_sd->trade_partner != 0) || (sd->trade_partner != 0)) {
+		if(pc_isGM(sd) && pc_isGM(sd) < battle_config.gm_can_drop_lv) {
+			clif_displaymessage(sd->fd, msg_txt(246));
+			trade_tradecancel(sd); // GM is not allowed to trade
+		} else if ((target_sd->trade_partner != 0) || (sd->trade_partner != 0)) {
 			trade_tradecancel(sd); // person is in another trade
 		} else {
 			if (sd->bl.m != target_sd->bl.m ||
@@ -52,7 +56,7 @@ void trade_traderequest(struct map_session_data *sd, int target_id) {
  */
 void trade_tradeack(struct map_session_data *sd, int type) {
 	struct map_session_data *target_sd;
-
+	struct pc_storage *stor;
 	nullpo_retv(sd);
 
 	if ((target_sd = map_id2sd(sd->trade_partner)) != NULL) {
@@ -68,6 +72,15 @@ void trade_tradeack(struct map_session_data *sd, int type) {
 			npc_event_dequeue(sd);
 		if (target_sd->npc_id != 0)
 			npc_event_dequeue(target_sd);
+
+		//close STORAGE window if it's open. It protects from spooffing packets [Lupus]
+		stor=account2storage2(sd->status.account_id);
+		if(stor!=NULL && stor->storage_status == 1) {
+			if (sd->state.storage_flag) //is it Guild Storage or Common
+				storage_guild_storageclose(sd);
+			else
+				storage_storageclose(sd);
+		}//END OF STORAGE CLOSE
 	}
 }
 

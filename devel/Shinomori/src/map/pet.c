@@ -608,10 +608,10 @@ int pet_remove_map(struct map_session_data *sd)
 			pet_hungry_timer_delete(sd);
 		clif_clearchar_area(&sd->pd->bl,0);
 		map_delblock(&sd->pd->bl);
-		aFree(sd->pd->lootitem);
+		if (sd->pd->lootitem)
+			aFree(sd->pd->lootitem);
 		map_deliddb(&sd->pd->bl);
 		
-		aFree(sd->pd->lootitem);
 		map_freeblock(sd->pd);
 	}
 	return 0;
@@ -1598,6 +1598,7 @@ int read_petdb()
 	char line[1024];
 	int i;
 	int j=0;
+	int lines;
 	char *filename[]={"db/pet_db.txt","db/pet_db2.txt"};
 	
 	memset(pet_db,0,sizeof(pet_db));
@@ -1609,7 +1610,9 @@ int read_petdb()
 			ShowMessage("can't read %s\n",filename[i]);
 			return -1;
 		}
+		lines = 0;
 		while(fgets(line,1020,fp)){
+			lines++;
 			int nameid,i;
 			char *str[32],*p,*np;
 
@@ -1657,7 +1660,7 @@ int read_petdb()
 			pet_db[j].script = NULL;
 			if((np=strchr(p,'{'))==NULL)
 				continue;
-			pet_db[j].script = (char*)parse_script((unsigned char*)np,0);
+			pet_db[j].script = parse_script((unsigned char*)np,lines);
 			j++;
 		}
 		fclose(fp);

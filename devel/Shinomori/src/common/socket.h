@@ -9,7 +9,7 @@
 
 extern unsigned long ticks;
 extern time_t tick_;
-extern time_t stall_time_;
+//extern time_t stall_time_;
 
 
 
@@ -781,12 +781,6 @@ public:
 
 
 
-
-
-
-
-#ifdef __cplusplus
-
 // Class for assigning/reading words from a buffer
 class objW
 {
@@ -964,15 +958,15 @@ public:
 #define RFIFOW(fd,pos) (objW(session[fd]->rdata+session[fd]->rdata_pos+(pos)))
 #define RFIFOL(fd,pos) (objL(session[fd]->rdata+session[fd]->rdata_pos+(pos)))
 #define RFIFOLIP(fd,pos) (objLIP(session[fd]->rdata+session[fd]->rdata_pos+(pos)))
-#define RFIFOREST(fd) (session[fd]->rdata_size-session[fd]->rdata_pos)
-#define RFIFOSPACE(fd) (session[fd]->max_rdata-session[fd]->rdata_size)
+#define RFIFOREST(fd) ((int)(session[fd]->rdata_size-session[fd]->rdata_pos))
+#define RFIFOSPACE(fd) ((int)(session[fd]->rdata_max-session[fd]->rdata_size))
 #define RBUFP(p,pos) (((unsigned char*)(p))+(pos))
 #define RBUFB(p,pos) (*((unsigned char*)RBUFP((p),(pos))))
 #define RBUFW(p,pos) (objW(p,pos))
 #define RBUFL(p,pos) (objL(p,pos))
 #define RBUFLIP(p,pos) (objLIP(p,pos))
 
-#define WFIFOSPACE(fd) (session[fd]->max_wdata-session[fd]->wdata_size)
+#define WFIFOSPACE(fd) (session[fd]->wdata_max-session[fd]->wdata_size)
 #define WFIFOP(fd,pos) (session[fd]->wdata+session[fd]->wdata_size+(pos))
 #define WFIFOB(fd,pos) (*((unsigned char*)(session[fd]->wdata+session[fd]->wdata_size+(pos))))
 #define WFIFOW(fd,pos) (objW(session[fd]->wdata+session[fd]->wdata_size+(pos)))
@@ -984,48 +978,6 @@ public:
 #define WBUFL(p,pos) (objL((p),(pos)))
 #define WBUFLIP(p,pos) (objLIP((p),(pos)))
 
-#else// !__cplusplus
-
-// added ..IP defines for compatibility
-#define RFIFOP(fd,pos) (session[fd]->rdata+session[fd]->rdata_pos+(pos))
-
-#define RFIFOB(fd,pos) (*((unsigned char*)(session[fd]->rdata+session[fd]->rdata_pos+(pos))))
-#define RFIFOW(fd,pos) (*((unsigned short*)(session[fd]->rdata+session[fd]->rdata_pos+(pos))))
-#define RFIFOL(fd,pos) (*((unsigned int*)(session[fd]->rdata+session[fd]->rdata_pos+(pos))))
-	
-#define RFIFOLIP(fd,pos) (*((unsigned int*)(session[fd]->rdata+session[fd]->rdata_pos+(pos))))
-
-//#define RFIFOSKIP(fd,len) ((session[fd]->rdata_size-session[fd]->rdata_pos-(len)<0) ? (fprintf(stderr,"too many skip\n"),exit(1)) : (session[fd]->rdata_pos+=(len)))
-#define RFIFOREST(fd) (session[fd]->rdata_size-session[fd]->rdata_pos)
-#define RFIFOSPACE(fd) (session[fd]->max_rdata-session[fd]->rdata_size)
-#define RBUFP(p,pos) (((unsigned char*)(p))+(pos))
-#define RBUFB(p,pos) (*((unsigned char*)RBUFP((p),(pos))))
-#define RBUFW(p,pos) (*((unsigned short*)RBUFP((p),(pos))))
-#define RBUFL(p,pos) (*((unsigned int*)RBUFP((p),(pos))))
-
-#define RBUFLIP(p,pos) (*((unsigned int*)RBUFP((p),(pos))))
-
-#define WFIFOSPACE(fd) (session[fd]->max_wdata-session[fd]->wdata_size)
-#define WFIFOP(fd,pos) (session[fd]->wdata+session[fd]->wdata_size+(pos))
-#define WFIFOB(fd,pos) (*((unsigned char*)(session[fd]->wdata+session[fd]->wdata_size+(pos))))
-#define WFIFOW(fd,pos) (*((unsigned short*)(session[fd]->wdata+session[fd]->wdata_size+(pos))))
-#define WFIFOL(fd,pos) (*((unsigned int*)(session[fd]->wdata+session[fd]->wdata_size+(pos))))
-
-#define WFIFOLIP(fd,pos) (*((unsigned int*)(session[fd]->wdata+session[fd]->wdata_size+(pos))))
-
-// use function instead of macro.
-//#define WFIFOSET(fd,len) (session[fd]->wdata_size = (session[fd]->wdata_size+(len)+2048 < session[fd]->max_wdata) ? session[fd]->wdata_size+len : session[fd]->wdata_size)
-#define WBUFP(p,pos) (((unsigned char*)(p))+(pos))
-#define WBUFB(p,pos) (*((unsigned char*)WBUFP((p),(pos))))
-#define WBUFW(p,pos) (*((unsigned short*)WBUFP((p),(pos))))
-
-#define WBUFL(p,pos) (*((unsigned int*)WBUFP((p),(pos))))
-
-#define WBUFLIP(p,pos) (*((unsigned int*)WBUFP((p),(pos))))
-
-#endif//__cplusplus
-
-
 
 
 #ifdef __INTERIX
@@ -1035,24 +987,25 @@ public:
 
 /* Removed Cygwin FD_SETSIZE declarations, now are directly passed on to the compiler through Makefile [Valaris] */
 
+
 // Struct declaration
 struct socket_data{
 	struct {
-		bool connected : 1;	// true when connected
-		bool remove : 1;	// true when to be removed
-		bool marked : 1;	// true when deleayed removal is initiated (optional)
+		bool connected : 1;			// true when connected
+		bool remove : 1;			// true when to be removed
+		bool marked : 1;			// true when deleayed removal is initiated (optional)
 	}flag;
 
-	unsigned char *rdata;
-	int max_rdata;
-	int rdata_size;
-	int rdata_pos;
+	unsigned char *rdata;		// buffer
+	size_t rdata_max;			// size of buffer
+	size_t rdata_size;			// size of data
+	size_t rdata_pos;			// iterator within data
 
-	time_t rdata_tick;
+	time_t rdata_tick;			// tick of last read
 
-	unsigned char *wdata;
-	int max_wdata;
-	int wdata_size;
+	unsigned char *wdata;		// buffer
+	size_t wdata_max;			// size of buffer
+	size_t wdata_size;			// size of data
 
 	unsigned long client_ip;	// just an ip in host byte order is enough (4byte instead of 16)
 
@@ -1074,7 +1027,6 @@ struct socket_data{
 extern struct socket_data *session[FD_SETSIZE];
 extern int fd_max;
 
-extern int rfifo_size,wfifo_size;
 
 
 extern inline bool session_isValid(int fd)
@@ -1114,9 +1066,10 @@ bool session_Delete(int fd);
 int make_listen    (unsigned long ip, unsigned short port);
 int make_connection(unsigned long ip, unsigned short port);
 
-int realloc_fifo(int fd,int rfifo_size,int wfifo_size);
-int WFIFOSET(int fd,int len);
-int RFIFOSKIP(int fd,int len);
+int realloc_fifo(int fd, size_t rfifo_size,size_t wfifo_size);
+
+int WFIFOSET(int fd, size_t len);
+int RFIFOSKIP(int fd, size_t len);
 
 int do_sendrecv(int next);
 

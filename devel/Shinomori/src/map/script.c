@@ -8,6 +8,7 @@
 #include "timer.h"
 #include "malloc.h"
 #include "lock.h"
+#include "db.h"
 
 #include "map.h"
 #include "clif.h"
@@ -21,18 +22,17 @@
 #include "npc.h"
 #include "pet.h"
 #include "intif.h"
-#include "db.h"
 #include "skill.h"
 #include "chat.h"
 #include "battle.h"
 #include "party.h"
 #include "guild.h"
-#include "lock.h"
 #include "atcommand.h"
 #include "socket.h"
 #include "showmsg.h"
 #include "utils.h"
 #include "log.h"
+#include "showmsg.h"
 
 
 #ifdef MEMWATCH
@@ -303,6 +303,7 @@ int buildin_isday(struct script_state *st); // [celest]
 int buildin_isequipped(struct script_state *st); // [celest]
 int buildin_isequippedcnt(struct script_state *st); // [celest]
 int buildin_cardscnt(struct script_state *st); // [Lupus]
+int buildin_getrefine(struct script_state *st); // [celest]
 int buildin_getusersname(struct script_state *st); //jA commands added [Lupus]
 int buildin_dispbottom(struct script_state *st);
 int buildin_recovery(struct script_state *st);
@@ -555,6 +556,7 @@ struct {
 	{buildin_isequipped,"isequipped","i*"}, // check whether another item/card has been equipped [Celest]
 	{buildin_isequippedcnt,"isequippedcnt","i*"}, // check how many items/cards are being equipped [Celest]
 	{buildin_cardscnt,"cardscnt","i*"}, // check how many items/cards are being equipped in the same arm [Lupus]
+	{buildin_getrefine,"getrefine",""}, // returns the refined number of the current item, or an item with index specified [celest]
 #ifdef PCRE_SUPPORT
         {buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
         {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
@@ -862,7 +864,7 @@ static void disp_error_message(const char *mes,const char *pos)
 			*lineend=0;
 		}
 		if(lineend==NULL || pos<lineend){
-			ShowMessage("%s line %d : ",mes,line);
+			ShowMessage("%s line "CL_WHITE"\'%d\'"CL_RESET" : ", mes, line);
 			for(i=0;(linestart[i]!='\r') && (linestart[i]!='\n') && linestart[i];i++){
 				if(linestart+i!=pos)
 					ShowMessage("%c",linestart[i]);
@@ -7022,6 +7024,19 @@ int buildin_cardscnt(struct script_state *st)
 	return 0;
 }
 
+/*=======================================================
+ * Returns the refined number of the current item, or an
+ * item with inventory index specified
+ *-------------------------------------------------------
+ */
+int buildin_getrefine(struct script_state *st)
+{
+	struct map_session_data *sd;
+	if ((sd = script_rid2sd(st))!= NULL)
+		push_val(st->stack, C_INT, sd->status.inventory[current_equip_item_index].refine);
+	return 0;
+}
+
 //
 // é¿çsïîmain
 //
@@ -7830,11 +7845,11 @@ int do_final_script()
 	if (script_config.die_event_name)
 		aFree(script_config.die_event_name);
 	if (script_config.kill_event_name)
-		aFree(script_config.die_event_name);
+		aFree(script_config.kill_event_name);
 	if (script_config.login_event_name)
-		aFree(script_config.die_event_name);
+		aFree(script_config.login_event_name);
 	if (script_config.logout_event_name)
-		aFree(script_config.die_event_name);
+		aFree(script_config.logout_event_name);
 
 	return 0;
 }

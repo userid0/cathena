@@ -29,10 +29,8 @@
 
 #define MOB_LAZYMOVEPERC 50	// Move probability in the negligent mode MOB (rate of 1000 minute)
 #define MOB_LAZYWARPPERC 20	// Warp probability in the negligent mode MOB (rate of 1000 minute)
-#define MAX_MOB_DB 2000		/* Change this to increase the table size in your mob_db to accomodate
-								numbers more than 2000 for mobs if you want to (and know what you're doing).
-								Be sure to note that 4001 to 4047 are for advanced classes. */
-struct mob_db mob_db[2001];
+
+struct mob_db mob_db[MAX_MOB_DB+1];
 
 #define CLASSCHANGE_BOSS_NUM 21
 
@@ -1014,7 +1012,7 @@ int mob_spawn(int id)
 		md->sc_data[i].timer=-1;
 		md->sc_data[i].val1 = md->sc_data[i].val2 = md->sc_data[i].val3 = md->sc_data[i].val4 =0;
 	}
-	md->sc_count=0;
+//!!	md->sc_count=0;
 	md->opt1=md->opt2=md->opt3=md->option=0;
 
 	memset(md->skillunit,0,sizeof(md->skillunit));
@@ -2030,7 +2028,7 @@ static int mob_delay_item_drop(int tid,unsigned long tick,int id,int data)
 			}
 		} else
 		#endif
-		if(battle_config.item_auto_get || ditem->first_sd->autoloot){//Autoloot added by Upa-Kun
+		if(battle_config.item_auto_get || ditem->first_sd->state.autoloot){//Autoloot added by Upa-Kun
 			drop_flag = 0;
 			if((flag = pc_additem(ditem->first_sd,&temp_item,ditem->amount))){
 				clif_additem(ditem->first_sd,0,0,flag);
@@ -2085,7 +2083,7 @@ static int mob_delay_item_drop2(int tid,unsigned long tick,int id,int data)
 			}
 		} else
 		#endif
-		if(battle_config.item_auto_get || ditem->first_sd->autoloot){//Autoloot added by Upa-Kun
+		if(battle_config.item_auto_get || ditem->first_sd->state.autoloot){//Autoloot added by Upa-Kun
 			drop_flag = 0;
 			if((flag = pc_additem(ditem->first_sd,&ditem->item_data,ditem->item_data.amount))){
 				clif_additem(ditem->first_sd,0,0,flag);
@@ -2203,10 +2201,12 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 	struct item item;
 	int ret;
 	int drop_rate;
+	int race;
 	
 	nullpo_retr(0, md); //srcはNULLで呼ばれる場合もあるので、他でチェック
 
 	max_hp = status_get_max_hp(&md->bl);
+	race = status_get_race(&md->bl);
 
 	if(src && src->type == BL_PC) {
 		sd = (struct map_session_data *)src;
@@ -2430,6 +2430,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			sp += (status_get_lv(&md->bl))*(65+15*i)/100;
 		}
 		sp += sd->sp_gain_value;
+		sp += sd->sp_gain_race[race];
 		hp += sd->hp_gain_value;
 		if (sp > 0) {
 			if(sd->status.sp + sp > sd->status.max_sp)
@@ -2517,21 +2518,25 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			if(job_exp < 1) job_exp = 1;
 		}
 
-		if(sd && battle_config.pk_mode && (mob_db[md->class_].lv - sd->status.base_level >= 20)) {
-			base_exp = (int)(1.15*base_exp); // pk_mode additional exp if monster >20 levels [Valaris]
-		}
-		if(sd && battle_config.pk_mode && (mob_db[md->class_].lv - sd->status.base_level >= 20)) {
-			job_exp = (int)(1.15*job_exp); // pk_mode additional exp if monster >20 levels [Valaris]
+		if(sd) {
+			int rate;
+			if ((rate = sd->expaddrace[race]) > 0) {
+				base_exp += base_exp* rate/100;
+				job_exp  += job_exp * rate/100;
+			}
+			if (battle_config.pk_mode && (mob_db[md->class_].lv - sd->status.base_level >= 20)) {
+				// pk_mode additional exp if monster >20 levels [Valaris]
+				base_exp += base_exp* 15/100;
+				job_exp  += job_exp * 15/100;
+			}			
 		}
 		if(md->master_id) {
-			master = map_id2bl(md->master_id);
-		}
-		if((master && status_get_mode(master)&0x20) ||	// check if its master is a boss (MVP's and minibosses)
-			(md->state.special_mob_ai >= 1 && battle_config.alchemist_summon_reward != 1)) { // for summoned creatures [Valaris]
-			base_exp = 0;
-			job_exp = 0;
-		}
-		else {
+			if(((master = map_id2bl(md->master_id)) && status_get_mode(master)&0x20) ||	// check if its master is a boss (MVP's and minibosses)
+				(md->state.special_mob_ai >= 1 && battle_config.alchemist_summon_reward != 1)) { // for summoned creatures [Valaris]
+				base_exp = 0;
+				job_exp = 0;
+			}
+		} else {
 			if(battle_config.zeny_from_mobs) {
 				if(md->level > 0) zeny = (int)((md->level+rand()%md->level)*per/256); // zeny calculation moblv + random moblv [Valaris]
 				if(mob_db[md->class_].mexp > 0)
@@ -2644,7 +2649,6 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 		if(sd && sd->state.attack_type == BF_WEAPON) {
 			for(i=0;i<sd->monster_drop_item_count;i++) {
 				struct delay_item_drop *ditem;
-				int race = status_get_race(&md->bl);
 				if(sd->monster_drop_itemid[i] <= 0)
 					continue;
 				if(sd->monster_drop_race[i] & (1<<race) ||
@@ -4063,21 +4067,24 @@ static int mob_readdb_mobavail(void)
 				*np=0;
 				p=np+1;
 			} else
-					str[j]=p;
-			}
+				str[j]=p;
+		}
 
 		if(str[0]==NULL)
 			continue;
 
 		class_=atoi(str[0]);
-
 		if(class_<=1000 || class_>MAX_MOB_DB)	// 値が異常なら処理しない。
 			continue;
-		k=atoi(str[1]);
-		if(k >= 0)
-			mob_db[class_].view_class=k;
 
-		if((mob_db[class_].view_class < 24) || (mob_db[class_].view_class > 4000)) {
+		k=atoi(str[1]);
+		if(k < 0)
+			continue;
+		if (j > 3 && k > 23 && k < 69)
+			k += 3977;	// advanced job/baby class
+		mob_db[class_].view_class=k;
+
+		if((k < 24) || (k > 4000)) {
 			mob_db[class_].sex=atoi(str[2]);
 			mob_db[class_].hair=atoi(str[3]);
 			mob_db[class_].hair_color=atoi(str[4]);
@@ -4089,7 +4096,6 @@ static int mob_readdb_mobavail(void)
 			mob_db[class_].option=atoi(str[10])&~0x46;
 			mob_db[class_].clothes_color=atoi(str[11]); // Monster player dye option - Valaris
 		}
-
 		else if(atoi(str[2]) > 0) mob_db[class_].equip=atoi(str[2]); // mob equipment [Valaris]
 
 		ln++;
@@ -4354,17 +4360,7 @@ static int mob_readdb_race(void)
 	return 0;
 }
 
-void mob_reload(void)
-{
-	/*
 
-	<empty monster database>
-	mob_read();
-
-	*/
-
-	do_init_mob();
-}
 
 #ifndef TXT_ONLY
 /*==========================================
@@ -4528,6 +4524,23 @@ static int mob_read_sqldb(void)
 }
 
 #endif /* not TXT_ONLY */
+
+
+void mob_reload(void)
+{
+#ifndef TXT_ONLY
+    if(db_use_sqldbs)
+        mob_read_sqldb();
+    else
+#endif /* TXT_ONLY */
+	mob_readdb();
+
+	mob_readdb_mobavail();
+	mob_read_randommonster();
+	mob_readskilldb();
+	mob_readdb_race();
+}
+
 /*==========================================
  * Circumference initialization of mob
  *------------------------------------------

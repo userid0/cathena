@@ -183,6 +183,14 @@ char * StringBuf_Value(struct StringBuf *sbuf)
 }
 
 
+int config_switch(const char *str) {
+	if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0 || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0 || strcasecmp(str, "si") == 0)
+		return 1;
+	if (strcasecmp(str, "off") == 0 || strcasecmp(str, "no" ) == 0 || strcasecmp(str, "non") == 0 || strcasecmp(str, "nein") == 0)
+		return 0;
+
+	return atoi(str);
+}
 
 
 //-----------------------------------------------------

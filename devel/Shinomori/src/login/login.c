@@ -1400,7 +1400,7 @@ int parse_fromchar(int fd) {
 			break;
 
 		case 0x2720:	// To become GM request
-			if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2))
+			if( RFIFOREST(fd) < 4 || RFIFOREST(fd) < (int)RFIFOW(fd,2))
 				return 0;
 			  {
 				unsigned char buf[10];
@@ -3174,19 +3174,6 @@ int parse_console(char *buf) {
 	return 0;
 }
 
-
-//-------------------------------------------------
-// Return numerical value of a switch configuration
-// on/off, english, français, deutsch, español
-//-------------------------------------------------
-int config_switch(const char *str) {
-	if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0 || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0 || strcasecmp(str, "si") == 0)
-		return 1;
-	if (strcasecmp(str, "off") == 0 || strcasecmp(str, "no") == 0 || strcasecmp(str, "non") == 0 || strcasecmp(str, "nein") == 0)
-		return 0;
-
-	return atoi(str);
-}
 
 //----------------------------------
 // Reading Lan Support configuration
