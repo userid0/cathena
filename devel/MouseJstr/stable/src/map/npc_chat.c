@@ -30,6 +30,33 @@
 
 #include "pcre.h"
 
+/**
+ *  Written by MouseJstr in a vision... (2/21/2005)
+ *
+ *  This allows you to make npc listen for spoken text (global
+ *  messages) and pattern match against that spoken text using perl
+ *  regular expressions.
+ *
+ *  Please feel free to copy this code into your own personal ragnarok
+ *  servers or distributions but please leave my name.  Also, please
+ *  wait until I've put it into the main eA branch which means I
+ *  believe it is ready for distribution.
+ *
+ *  So, how do people use this?
+ *
+ *  The first and most important function is defpattern
+ *
+ *  ....
+ *
+ *  TODO:
+ *    Memory management has not been finished.. ie, it leaks like
+ *    my brothers car...
+ *
+ */
+
+/* Structure containing all info associated with a single pattern
+   block */
+
 struct pcrematch_entry {
     struct pcrematch_entry *next_;
     char *pattern_;
@@ -37,7 +64,10 @@ struct pcrematch_entry {
     pcre_extra *pcre_extra_;
     char *label_;
 };
-	
+
+/* A set of patterns that can be activated and deactived with a single
+   command */
+
 struct pcrematch_set {
     struct pcrematch_set *next_, *prev_;
     struct pcrematch_entry *head_;
@@ -45,11 +75,25 @@ struct pcrematch_set {
     int setid_;
 };
 
+/* 
+ * Entire data structure hung off a NPC
+ *
+ * The reason I have done it this way (a void * in npc_data and then
+ * this) was to reduce the number of patches that needed to be applied
+ * to another ragnarok distribution to bring this code online.  I
+ * also wanted people to be able to grab this one file to get updates
+ * without having to do a large number of changes.
+ */
+
 struct npc_parse {
     struct pcrematch_set *active_;
     struct pcrematch_set *inactive_;
 };
 
+
+/**
+ * Lookup (and possibly create) a new set of patterns by the set id
+ */
 static struct pcrematch_set * lookup_pcreset(struct npc_data *nd,int setid) 
 {
     struct pcrematch_set *pcreset;
@@ -89,6 +133,12 @@ static struct pcrematch_set * lookup_pcreset(struct npc_data *nd,int setid)
     return pcreset;
 }
 
+/**
+ * activate a set of patterns.
+ *
+ * if the setid does not exist, this will silently return
+ */
+
 static void activate_pcreset(struct npc_data *nd,int setid) {
     struct pcrematch_set *pcreset;
     struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
@@ -115,6 +165,12 @@ static void activate_pcreset(struct npc_data *nd,int setid) {
         pcreset->next_->prev_ = pcreset;
     npcParse->active_ = pcreset;
 }
+
+/**
+ * deactivate a set of patterns.
+ *
+ * if the setid does not exist, this will silently return
+ */
 
 static void deactivate_pcreset(struct npc_data *nd,int setid) {
     struct pcrematch_set *pcreset;
@@ -143,6 +199,9 @@ static void deactivate_pcreset(struct npc_data *nd,int setid) {
     npcParse->inactive_ = pcreset;
 }
 
+/**
+ * delete a set of patterns.
+ */
 static void delete_pcreset(struct npc_data *nd,int setid) {
     struct pcrematch_set *pcreset;
     struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
@@ -172,13 +231,39 @@ static void delete_pcreset(struct npc_data *nd,int setid) {
     aFree(pcreset);
 }
 
+/**
+ * create a new pattern entry 
+ */
 static struct pcrematch_entry *create_pcrematch_entry(struct pcrematch_set * set) {
     struct pcrematch_entry * e =  (struct pcrematch_entry *)
         aCalloc(sizeof(struct pcrematch_entry), 1);
-    e->next_ = set->head_;
-    set->head_ = e;
+    struct pcrematch_entry * last = set->head_;
+
+    // Normally we would have just stuck it at the end of the list but
+    // this doesn't sink up with peoples usage pattern.  They wanted
+    // the items defined first to have a higher priority then the
+    // items defined later.. as a result, we have to do some work up
+    // front..
+
+    /*  if we are the first pattern, stick us at the end */
+    if (last == NULL) {
+        set->head_ = e;
+        return e;
+    }
+
+    /* Look for the last entry */
+    while (last->next_ != NULL)
+        last = last->next_;
+
+    last->next_ = e;
+    e->next_ = NULL;
+
     return e;
 }
+
+/**
+ * define/compile a new pattern
+ */
 
 void npc_chat_def_pattern(struct npc_data *nd, int setid, 
     const char *pattern, const char *label)
@@ -194,6 +279,12 @@ void npc_chat_def_pattern(struct npc_data *nd, int setid,
     e->pcre_extra_ = pcre_study(e->pcre_, 0, &err);
 }
 
+/**
+ * delete everythign associated with a entry
+ *
+ * This does NOT do the list management
+ */
+
 void finalize_pcrematch_entry(struct pcrematch_entry *e) {
     free(e->pcre_);
     free(e->pcre_extra_);
@@ -201,12 +292,19 @@ void finalize_pcrematch_entry(struct pcrematch_entry *e) {
     aFree(e->label_);
 }
 
+/**
+ * Delete everything associated with a NPC concerning the pattern
+ * matching code 
+ */
 void npc_chat_finalize(struct npc_data *nd)
 {
     if (nd->chatdb == NULL)
         return;
 }
 
+/**
+ * Handler called whenever a global message is spoken in a NPC's area
+ */
 int npc_chat_sub(struct block_list *bl, va_list ap)
 {
     unsigned char *msg;
@@ -217,6 +315,7 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
     struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
     struct pcrematch_set *pcreset;
 
+    // Not interested in anything you might have to say...
     if (npcParse == NULL || npcParse->active_ == NULL)
         return 0;
 
@@ -224,16 +323,21 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
     len = va_arg(ap,int);
     sd = va_arg(ap,struct map_session_data *);
 
+    // grab the active list
     pcreset = npcParse->active_;
 
+    // interate across all active sets
     while (pcreset != NULL) {
         struct pcrematch_entry *e = pcreset->head_;
+        // interate across all patterns in that set
         while (e != NULL) {
             int offsets[20];
             char buf[255];
+            // perform pattern match
             int r = pcre_exec(e->pcre_, e->pcre_extra_, msg, len, 0, 
                 0, offsets, sizeof(offsets) / sizeof(offsets[0]));
             if (r >= 0) {
+                // save out the matched strings
                 switch (r) {
                 case 10:
                     memcpy(buf, &msg[offsets[18]], offsets[19]);
@@ -277,6 +381,7 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
                     set_var(sd, "$p0$", buf);
                 }
 
+                // find the target label
                 lst=nd->u.scr.label_list;
                 pos = -1;
                 for (i = 0; i < nd->u.scr.label_list_num; i++) {
@@ -290,6 +395,7 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
                     // unable to find label... do something..
                     return 0;
                 }
+                // run the npc script
                 run_script(nd->u.scr.script,pos,sd->bl.id,nd->bl.id);
                 return 0;
             }
@@ -300,6 +406,8 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
 
     return 0;
 }
+
+// Various script builtins used to support these functions
 
 int buildin_defpattern(struct script_state *st) {
     int setid=conv_num(st,& (st->stack->stack_data[st->start+2]));
