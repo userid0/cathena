@@ -5086,13 +5086,13 @@ int buildin_agitcheck(struct script_state *st)
 	struct map_session_data *sd;
 	int cond;
 
-	sd=script_rid2sd(st);
 	cond=conv_num(st,& (st->stack->stack_data[st->start+2]));
 
 	if(cond == 0) {
 		if (agit_flag==1) push_val(st->stack,C_INT,1);
 		if (agit_flag==0) push_val(st->stack,C_INT,0);
 	} else {
+		sd=script_rid2sd(st);
 		if (agit_flag==1) pc_setreg(sd,add_str("@agit_flag"),1);
 		if (agit_flag==0) pc_setreg(sd,add_str("@agit_flag"),0);
 	}
@@ -5897,9 +5897,11 @@ int buildin_petrecovery(struct script_state *st)
 	if(pd==NULL)
 		return 0;
 
-	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+3]));
-
+	pd->skilltype    =conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->skilltimer   =conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->skillval     =0;
+	pd->skillduration=0;
+	
 	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_recovery_timer,sd->bl.id,0);
 
 	return 0;
@@ -5923,9 +5925,10 @@ int buildin_petheal(struct script_state *st)
 	if(pd==NULL)
 		return 0;
 
-	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skillval=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->skilltype    =conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->skillval     =conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->skilltimer   =conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->skillduration=0;
 
 	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_heal_timer,sd->bl.id,0);
 
@@ -5949,10 +5952,10 @@ int buildin_petmag(struct script_state *st)
 	if(pd==NULL)
 		return 0;
 
-	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->skilltype    =conv_num(st,& (st->stack->stack_data[st->start+2]));
 	pd->skillduration=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	pd->skillval=conv_num(st,& (st->stack->stack_data[st->start+4]));
-	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+5]));
+	pd->skillval     =conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->skilltimer   =conv_num(st,& (st->stack->stack_data[st->start+5]));
 
 	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_mag_timer,sd->bl.id,0);
 
@@ -5976,10 +5979,10 @@ int buildin_petskillattack(struct script_state *st)
 	if(pd==NULL)
 		return 0;
 
-	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skillval=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->skilltype    =conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->skillval     =conv_num(st,& (st->stack->stack_data[st->start+3]));
 	pd->skillduration=conv_num(st,& (st->stack->stack_data[st->start+4]));
-	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+5]));
+	pd->skilltimer   =conv_num(st,& (st->stack->stack_data[st->start+5]));
 
 	pd->skillbonustimer=add_timer(gettick()+100,pet_skillattack_timer,sd->bl.id,0);
 

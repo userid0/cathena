@@ -347,7 +347,9 @@ template<class T> class autoptr
 };
 
 
-
+template <class T> inline void swap(T &i1, T &i2)
+{	T dummy = i1; i1=i2; i2=dummy;
+}
 
 
 
@@ -358,7 +360,10 @@ typedef int bool;
 #define false	(1==0)
 #define true	(1==1)
 
-
+#ifndef swap
+#define swap(a,b) ((a == b) || ((a ^= b), (b ^= a), (a ^= b)))
+//#define swap(a,b) { int temp=a; a=b; b=temp;}
+#endif swap
 
 #endif // not cplusplus
 

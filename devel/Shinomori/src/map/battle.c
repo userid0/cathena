@@ -3060,10 +3060,10 @@ static struct Damage battle_calc_pc_weapon_attack(
 		damage += atkmax;
 		damage2 += atkmax_;
 		if(sd->atk_rate != 100 || sd->weapon_atk_rate != 0) {
-                    if (sd->status.weapon < 16) {
-			damage = (damage * (sd->atk_rate + sd->weapon_atk_rate[sd->status.weapon]))/100;
-			damage2 = (damage2 * (sd->atk_rate + sd->weapon_atk_rate[sd->status.weapon]))/100;
-                    }
+			if (sd->status.weapon < 16) {
+				damage = (damage * (sd->atk_rate + sd->weapon_atk_rate[sd->status.weapon]))/100;
+				damage2 = (damage2 * (sd->atk_rate + sd->weapon_atk_rate[sd->status.weapon]))/100;
+			}
 		}
 		if(sd->state.arrow_atk)
 			damage += sd->arrow_atk;
@@ -3813,7 +3813,6 @@ static struct Damage battle_calc_pc_weapon_attack(
 		}
 	}
 	if(!no_cardfix)
-
 		damage2=damage2*cardfix/100;
 //カード補正による左手ダメージ増加
 //カードによるダメージ増加処理(左手)ここまで
@@ -4599,7 +4598,8 @@ int battle_weapon_attack( struct block_list *src,struct block_list *target,
 	 unsigned int tick,int flag)
 {
 	struct map_session_data *sd=NULL;
-	struct status_change *sc_data = status_get_sc_data(src),*t_sc_data=status_get_sc_data(target);
+	struct status_change *sc_data  = status_get_sc_data(src);
+	struct status_change *t_sc_data= status_get_sc_data(target);
 	short *opt1;
 	int race = 7, ele = 0;
 	int damage,rdamage = 0;
@@ -4939,15 +4939,22 @@ int battle_check_target( struct block_list *src, struct block_list *target,int f
 
 				// スキルユニットの場合、親を求める
 	if( src->type==BL_SKILL) {
-		int inf2 = skill_get_inf2(((struct skill_unit *)src)->group->skill_id);
-		if( (ss=map_id2bl( ((struct skill_unit *)src)->group->src_id))==NULL )
+		struct skill_unit *su = (struct skill_unit *)src;
+		int skillid, inf2;
+
+		nullpo_retr (-1, su);
+		nullpo_retr (-1, su->group);
+		skillid = su->group->skill_id;
+		inf2 = skill_get_inf2(skillid);
+		if( (ss=map_id2bl( su->group->src_id))==NULL )
 			return -1;
 		if(ss->prev == NULL)
 			return -1;
 		if(inf2&0x80 && 
-                   (map[src->m].flag.pvp || pc_iskiller((struct map_session_data *)src, (struct map_session_data *)target)) &&  // [MouseJstr]
-                   !(target->type == BL_PC && pc_isinvisible((struct map_session_data *)target)))
-			return 0;
+			(map[src->m].flag.pvp ||
+			(skillid >= 115 && skillid <= 125 && map[src->m].flag.gvg)) &&
+			!(target->type == BL_PC && pc_isinvisible((struct map_session_data *)target)))
+				return 0;
 		if(ss == target) {
 			if(inf2&0x100)
 				return 0;

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "base.h"
 #include "map.h"
 #include "battle.h"
 #include "nullpo.h"
@@ -247,7 +248,7 @@ int path_blownpos(int m,int x0,int y0,int dx,int dy,int count)
  *  êÀËå×îÍô?ª¬Ê¦Òöª«ªÉª¦ª«ªòÚ÷ª¹
  *------------------------------------------
  */
-#define swap(x,y) { int t; t = x; x = y; y = t; }
+
 int path_search_long(int m,int x0,int y0,int x1,int y1)
 {
 	int dx, dy;

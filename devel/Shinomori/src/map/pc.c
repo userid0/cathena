@@ -47,7 +47,7 @@
 #define PVP_CALCRANK_INTERVAL 1000	// PVP順位計算の間隔
 
 static int exp_table[14][MAX_LEVEL];
-static char statp[255][7];
+static short statp[MAX_LEVEL];
 
 // h-files are for declarations, not for implementations... [Shinomori]
 struct skill_tree_entry skill_tree[3][25][MAX_SKILL_TREE];
@@ -562,9 +562,9 @@ int pc_isequip(struct map_session_data *sd,int n)
 		return 0;
 //	if(((1<<sd->status.class_)&item->class_) == 0)
 //		return 0;
-	if(map[sd->bl.m].flag.pvp && (item->flag.no_equip==1 || item->flag.no_equip==3))
+	if(map[sd->bl.m].flag.pvp && (item->flag.no_equip&1)) //optimized by Lupus
 		return 0;
-	if(map[sd->bl.m].flag.gvg && (item->flag.no_equip==2 || item->flag.no_equip==3))
+	if(map[sd->bl.m].flag.gvg && (item->flag.no_equip>1)) //optimized by Lupus
 		return 0;
 	if(item->equip & 0x0002 && sc_data && sc_data[SC_STRIPWEAPON].timer != -1)
 		return 0;
@@ -585,12 +585,12 @@ int pc_break_equip(struct map_session_data *sd, unsigned short where)
 	int sc;
 	char output[255];	
 
-	if(sd == NULL)
-		return -1;
+	nullpo_retr(-1, sd);
 	
 	if(sd->unbreakable_equip & where)
 		return 0;
-	
+	if(sd->unbreakable >= rand()%100)
+		return 0;
 	switch (where) {
 		case EQP_WEAPON:
 			sc = SC_CP_WEAPON;
@@ -607,16 +607,17 @@ int pc_break_equip(struct map_session_data *sd, unsigned short where)
 		default:
 			return 0;
 	}
-	if( sd->sc_data && sd->sc_data[sc].timer != -1 )
+	if(sd->sc_count && sd->sc_data[sc].timer != -1)
 		return 0;
 
 	for (i=0;i<MAX_INVENTORY;i++) {
-		if (sd->status.inventory[i].equip & where) {
+		if (sd->status.inventory[i].equip & where &&
+			!sd->status.inventory[i].attribute == 1) {
 			item=sd->inventory_data[i];
 			if(item)
 			{
 			sd->status.inventory[i].attribute = 1;
-			pc_unequipitem(sd,i,0);
+			pc_unequipitem(sd,i,3);
 			sprintf(output, "%s has broken.",item->jname);
 			clif_emotion(&sd->bl,23);
 			clif_displaymessage(sd->fd, output);
@@ -626,76 +627,9 @@ int pc_break_equip(struct map_session_data *sd, unsigned short where)
 			return 1;
 	}
 	}
-	return 0;
+	return 1;
 }
 
-/*==========================================
- * Weapon Breaking [Valaris]
- *------------------------------------------
- */
-int pc_breakweapon(struct map_session_data *sd)
-{
-	struct item_data* item;
-	char output[255];
-	int i;
-
-	if(sd==NULL)
-		return -1;
-	if(sd->unbreakable>=rand()%100)
-		return 0;
-	if(sd->sc_count && sd->sc_data[SC_CP_WEAPON].timer != -1)
-		return 0;
-
-	for(i=0;i<MAX_INVENTORY;i++){
-		if(sd->status.inventory[i].equip && sd->status.inventory[i].equip & 0x0002 && !sd->status.inventory[i].attribute==1){
-			item=sd->inventory_data[i];
-			if(item)
-			{
-			sd->status.inventory[i].attribute=1;
-			pc_unequipitem(sd,i,3);
-			sprintf(output, "%s has broken.",item->jname);
-			clif_emotion(&sd->bl,23);
-			clif_displaymessage(sd->fd, output);
-			clif_equiplist(sd);
-				break;
-			}
-			return 1;
-		}
-	}
-	
-	return 0;
-}
-/*==========================================
- * Armor Breaking [Valaris]
- *------------------------------------------
- */
-int pc_breakarmor(struct map_session_data *sd)
-{
-	struct item_data* item;
-	char output[255];
-	int i;
-
-	if(sd==NULL)
-		return -1;
-	if(sd->unbreakable>=rand()%100)
-		return 0;
-	if(sd->sc_count && sd->sc_data[SC_CP_ARMOR].timer != -1)
-		return 0;
-
-	for(i=0;i<MAX_INVENTORY;i++){
-		if(sd->status.inventory[i].equip && sd->status.inventory[i].equip & 0x0010 && !sd->status.inventory[i].attribute==1){
-			item=sd->inventory_data[i];
-			sd->status.inventory[i].attribute=1;
-			pc_unequipitem(sd,i,3);
-			sprintf(output, "%s has broken.",item->jname);
-			clif_emotion(&sd->bl,23);
-			clif_displaymessage(sd->fd, output);
-			clif_equiplist(sd);
-		}
-	}
-
-	return 0;
-}
 /*==========================================
  * session idに問題無し
  * char鯖から送られてきたステ?タスを設定
@@ -2304,6 +2238,9 @@ int pc_useitem(struct map_session_data *sd,int n)
 			sd->status.inventory[n].amount <= 0 ||
 			sd->sc_data[SC_BERSERK].timer!=-1 ||
 			sd->sc_data[SC_MARIONETTE].timer!=-1 ||
+			//added item_noequip.txt items check by Maya&[Lupus]
+			(map[sd->bl.m].flag.pvp && (sd->inventory_data[n]->flag.no_equip&1) ) || // PVP
+			(map[sd->bl.m].flag.gvg && (sd->inventory_data[n]->flag.no_equip>1) ) || // GVG
 			!pc_isUseitem(sd,n) ) {
 			clif_useitemack(sd,n,0,0);
 			return 1;
@@ -4317,11 +4254,14 @@ int pc_resetstate(struct map_session_data* sd)
 {
 	#define sumsp(a) ((a)*((a-2)/10+2) - 5*((a-2)/10)*((a-2)/10) - 6*((a-2)/10) -2)
 //	int add=0; // Removed by Dexity
+	int lv;
 
 	nullpo_retr(0, sd);
+	// allow it to just read the last entry [celest]
+	lv = sd->status.base_level < MAX_LEVEL ? sd->status.base_level : MAX_LEVEL - 1;
 
 //	New statpoint table used here - Dexity
-	sd->status.status_point = atoi (statp[sd->status.base_level - 1]);
+	sd->status.status_point = statp[lv];
 	if(sd->status.class_ >= 4001 && sd->status.class_ <= 4024)
 		sd->status.status_point+=52;	// extra 52+48=100 stat points
 //	End addition 
@@ -6045,10 +5985,10 @@ int pc_checkitem(struct map_session_data *sd)
 			calc_flag = 1;
 		}
 		//?備制限チェック
-		if(sd->status.inventory[i].equip && map[sd->bl.m].flag.pvp && (it->flag.no_equip==1 || it->flag.no_equip==3)){//PvP制限
+		if(sd->status.inventory[i].equip && map[sd->bl.m].flag.pvp && (it->flag.no_equip&1)){//PVP check for forbiden items. optimized by [Lupus]
 			sd->status.inventory[i].equip=0;
 			calc_flag = 1;
-		}else if(sd->status.inventory[i].equip && map[sd->bl.m].flag.gvg && (it->flag.no_equip==2 || it->flag.no_equip==3)){//GvG制限
+		}else if(sd->status.inventory[i].equip && map[sd->bl.m].flag.gvg && (it->flag.no_equip>1)){//GvG optimized by [Lupus]
 			sd->status.inventory[i].equip=0;
 			calc_flag = 1;
 		}
@@ -6930,40 +6870,25 @@ int pc_readdb(void)
 	fclose(fp);
 	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/attr_fix.txt");
 
+	// スキルツリ?
+	memset(statp,0,sizeof(statp));
+	fp=savefopen("db/statpoint.txt","r");
+	if(fp==NULL){
+		ShowError("can't read db/statpoint.txt\n");
+		return 1;
+	}
+	i=0;
+	while(fgets(line, sizeof(line)-1, fp)){
+		if(line[0]=='/' && line[1]=='/')
+			continue;
+		if ((j=atoi(line))<0)
+			j=0;
+		statp[i]=j;
+		i++;
+	}
+	fclose(fp);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/statpoint.txt");
 	return 0;
-}
-
-static void pc_statpointdb(void)
-{
-	char * buf_stat;
-	int i=0,j=0,k=0,l=0, end = 0;
-	FILE *stp;
-
-	stp = savefopen("db/statpoint.txt","r");
-	if(stp==NULL){
-		ShowMessage("can't read %s\n", "db/statpoint.txt");
-                return;
-	}
-
-        fseek(stp, 0, SEEK_END);
-        end = ftell(stp);
-        rewind(stp);
-
-	buf_stat = (char *)aMalloc( (end+1) * sizeof(char));
-	l = fread(buf_stat,1,end,stp);
-	fclose(stp);
-		ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"' (size=%d)\n","db/statpoint.txt",l);
-
-	for(i=0;i<255;i++) {
-            j=0;
-            while (*(buf_stat+k)!='\n') { 
-                    statp[i][j]=*(buf_stat+k);
-                    j++;k++;
-                }
-            statp[i][j+1]='\0';
-            k++;
-	}
-        aFree(buf_stat);
 }
 
 /*==========================================
@@ -6972,7 +6897,6 @@ static void pc_statpointdb(void)
  */
 int do_init_pc(void) {
 	pc_readdb();
-	pc_statpointdb();
 
 //	gm_account_db = numdb_init();
 

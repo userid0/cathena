@@ -35,7 +35,7 @@
 
 #define SKILLUNITTIMER_INVERVAL	100
 #define STATE_BLIND 0x10
-#define swap(x,y) { int t; t = x; x = y; y = t; }
+
 
 /* スキル番?＝＞ステ?タス異常番??換テ?ブル */
 int SkillStatusChangeTable[]={	/* skill.hのenumのSC_***とあわせること */
@@ -808,8 +808,9 @@ int skill_count_target(struct block_list *bl, va_list ap );
 
 // [MouseJstr] - skill ok to cast? and when?
 int skillnotok(int skillid, struct map_session_data *sd) {
+
 	if (sd == 0)
-		return 0;
+		return 1;// skill not allowed when no sd
 
 	if (!(skillid >= 10000 && skillid < 10015))
 		if ((skillid > MAX_SKILL) || (skillid < 0))
@@ -948,10 +949,13 @@ int skill_get_unit_id(int id,int flag)
 int skill_additional_effect( struct block_list* src, struct block_list *bl,int skillid,int skilllv,int attack_type,unsigned int tick)
 {
 	/* MOB追加?果スキル用 */
-	const int sc[]={
-		SC_POISON, SC_BLIND, SC_SILENCE, SC_STAN,
-		SC_STONE, SC_CURSE, SC_SLEEP
-	};
+// dangerous reverse access
+//	this structure here depends on an extern enum
+//	const int sc[]={
+//		SC_POISON, SC_BLIND, SC_SILENCE, SC_STAN,
+//		SC_STONE, SC_CURSE, SC_SLEEP
+//	};
+	// this is ok, access is by index
 	const int sc2[]={
 		MG_STONECURSE,MG_FROSTDIVER,NPC_STUNATTACK,
 		NPC_SLEEPATTACK,TF_POISON,NPC_CURSEATTACK,
@@ -973,7 +977,7 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,int s
 	nullpo_retr(0, src);
 	nullpo_retr(0, bl);
 
-	//if(skilllv <= 0) return 0;
+	if(skillid < 0) return 0;
 	if(skillid > 0 && skilllv <= 0) return 0;	// don't forget auto attacks! - celest
 
 	if (src->type == BL_PC){
@@ -1167,24 +1171,38 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,int s
 
 	case NPC_PETRIFYATTACK:
 		if(rand()%100 < sc_def_mdef)
-			status_change_start(bl,sc[skillid-NPC_POISON],skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+			//status_change_start(bl,sc[skillid-NPC_POISON],skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+			status_change_start(bl,SC_STONE,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		break;
 	case NPC_POISON:
-	case NPC_SILENCEATTACK:
-	case NPC_STUNATTACK:
-		if(rand()%100 < sc_def_vit && src->type!=BL_PET)
-			status_change_start(bl,sc[skillid-NPC_POISON],skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		if(src->type==BL_PET)
-			status_change_start(bl,sc[skillid-NPC_POISON],skilllv,0,0,0,skilllv*1000,0);
+			status_change_start(bl,SC_POISON,skilllv,0,0,0,skilllv*1000,0);
+		else if(rand()%100 < sc_def_vit)
+			status_change_start(bl,SC_POISON,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+		break;
+	case NPC_SILENCEATTACK:
+		if(src->type==BL_PET)
+			status_change_start(bl,SC_SILENCE,skilllv,0,0,0,skilllv*1000,0);
+		else if(rand()%100 < sc_def_vit)
+			status_change_start(bl,SC_SILENCE,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+		break;
+	case NPC_STUNATTACK:
+		if(src->type==BL_PET)
+			status_change_start(bl,SC_STAN,skilllv,0,0,0,skilllv*1000,0);
+		else if(rand()%100 < sc_def_vit)
+			status_change_start(bl,SC_STAN,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		break;
 	case NPC_CURSEATTACK:
 		if(rand()%100 < sc_def_luk)
-			status_change_start(bl,sc[skillid-NPC_POISON],skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+			status_change_start(bl,SC_CURSE,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		break;
 	case NPC_SLEEPATTACK:
+		if(rand()%100 < sc_def_int)
+			status_change_start(bl,SC_SLEEP,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+		break;
 	case NPC_BLINDATTACK:
 		if(rand()%100 < sc_def_int)
-			status_change_start(bl,sc[skillid-NPC_POISON],skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+			status_change_start(bl,SC_BLIND,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		break;
 	case NPC_MENTALBREAKER:
 		if(dstsd) {
@@ -1484,7 +1502,7 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 		return 0;
 	if(bl->type == BL_PC && pc_isdead((struct map_session_data *)bl)) //?象がPCですでに死んでいたら何もしない
 		return 0;
-	if(bl->type == BL_PC && skillnotok(skillid, (struct map_session_data *)  bl))
+	if(bl->type == BL_PC && skillnotok(skillid, (struct map_session_data *)bl))
 	        return 0; // [MouseJstr]
 	if(sc_data && sc_data[SC_HIDING].timer != -1) { //ハイディング?態で
 		if(skill_get_pl(skillid) != 2) //スキルの?性が地?性でなければ何もしない
@@ -2295,62 +2313,11 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,int s
 		break;
 
 	case SN_SHARPSHOOTING:			/* シャ?プシュ?ティング */
-		{
-		#if 0	// temporarily keeping this block for future reference [celest]
-			/*int dx, dy, wx = 0, wy = 0;
-			int weight, num = 0;
-			int x1 = src->x, y1 = src->y;
-			int x0 = bl->x, y0 = bl->y;
-			int *xs, *ys;
-
-			dx = (x1 - x0);
-			if (dx < 0) {
-				swap(x0, x1);
-				swap(y0, y1);
-				dx = -dx;
-			}
-			dy = (y1 - y0);
-			weight = dx > abs(dy) ? dx : abs(y1 - y0);
-			xs = (int *)aCallocA(weight, sizeof(int));
-			ys = (int *)aCallocA(weight, sizeof(int));
-			while ((x0 != x1 || y0 != y1) && num < skill_get_range(skillid,skilllv)) { // fixed [Shinomori]
-				wx += dx;
-				wy += dy;
-				if (wx >= weight) {
-					wx -= weight; x0 ++;
-				}
-				if (wy >= weight) {
-					wy -= weight; y0 ++;
-				} else if (wy < 0) {
-					wy += weight; y0 --;
-				}
-				if (x0 == x1) {
-					if (dy > 0) { y0++; }
-					else { y0--; }
-				}
-				//xs[number] = x0;
-				//ys[number] = y0
-				printf ("%d - %d %d\n", weight, x0, y0);
-				//map_foreachinarea (skill_attack_area,src->m,x0,y0,x0,y0,0,
-						//BF_WEAPON,src,src,skillid,skilllv,tick,flag,BCT_ENEMY);
-				num++;	// make sure it doesn't run infinitely
-			}
-			//for num = 0; num < weight; num++
-			//map_foreach skill attack area
-			//if last of xs || ys != x y, manually skill attack
-			clif_skill_nodamage(src,bl,skillid,skilllv,1);
-			aFree (xs);
-			aFree (ys);*/
-		#endif
-
-		#if 0	// change 0 to 1 to switch to the this system [celest]
-			skill_attack(BF_WEAPON,src,src,bl,skillid,skilllv,tick,flag);
-		#else
-			map_foreachinpath (skill_attack_area,src->m,src->x,src->y,bl->x,bl->y,
-				2,skill_get_range(skillid,skilllv),0,
-				BF_WEAPON,src,src,skillid,skilllv,tick,flag,BCT_ENEMY);
-		#endif
-		}
+			map_foreachinpath (skill_attack_area,src->m,					// function, map
+					src->x,src->y,											// source xy
+					bl->x,bl->y,											// target xy
+					2,0,													// range, type
+					BF_WEAPON,src,src,skillid,skilllv,tick,flag,BCT_ENEMY);	// varargs		
 		break;
 
 	case PA_PRESSURE:	/* プレッシャ? */
@@ -2894,7 +2861,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,int s
 		break;
 
 	default:
-		ShowMessage("Unknown skill used:%d\n",skillid);
+		ShowMessage("Unknown skill used (skill_castend_damage_id):%d\n",skillid);
 		map_freeblock_unlock();
 		return 1;
 	}
@@ -2911,7 +2878,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,int s
  * スキル使用（詠唱完了、ID指定支援系）
  *------------------------------------------
  */
-int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int skillid,int skilllv,unsigned int tick,int flag )
+int skill_castend_nodamage_id(struct block_list *src, struct block_list *bl,int skillid,int skilllv,unsigned int tick,int flag )
 {
 	struct map_session_data *sd=NULL;
 	struct map_session_data *dstsd=NULL;
@@ -2925,7 +2892,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 				,1157,1159,1190,1272,1312,1373,1492};
 	int poringclass[]={1002};
 
-	//if(skilllv <= 0) return 0;
+	if(skillid < 0) return 0;
 	if(skillid > 0 && skilllv <= 0) return 0;	// celest
 
 	nullpo_retr(1, src);
@@ -2955,7 +2922,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 		return 1;
 	if(status_get_class(bl) == 1288)
 		return 1;
-	if (skillnotok(skillid, (struct map_session_data *)bl)) // [MouseJstr]
+	if (bl->type==BL_PC && skillnotok(skillid, (struct map_session_data *)bl)) // [MouseJstr]
 		return 0;
 
 	map_freeblock_lock();
@@ -4734,7 +4701,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 		break;
 
 	default:
-		ShowMessage("Unknown skill used:%d\n",skillid);
+		ShowMessage("Unknown skill used (skill_castend_nodamage_id):%d\n",skillid);
 		map_freeblock_unlock();
 		return 1;
 	}
@@ -4884,27 +4851,30 @@ int skill_castend_id( int tid, unsigned int tick, int id,int data )
  * スキル使用（詠唱完了、場所指定の?際の?理）
  *------------------------------------------
  */
-int skill_castend_pos2( struct block_list *src, int x,int y,int skillid,int skilllv,unsigned int tick,int flag)
+int skill_castend_pos2(struct block_list *src, int x,int y,int skillid,int skilllv,unsigned int tick,int flag)
 {
 	struct map_session_data *sd=NULL;
 	int i,tmpx = 0,tmpy = 0, x1 = 0, y1 = 0;
 
-	//if(skilllv <= 0) return 0;
+	if(skillid < 0) return 0;
 	if(skillid > 0 && skilllv <= 0) return 0;	// celest
 
 	nullpo_retr(0, src);
 
 	if(src->type==BL_PC){
-		nullpo_retr(0, sd=(struct map_session_data *)src);
+		sd=(struct map_session_data *)src;
+		nullpo_retr(0, sd);
+		// can be also called from others then BL_PC
+		// so check only here since we need a real map_session_data
+		if (skillnotok(skillid, sd)) // [MouseJstr]
+			return 0;
 	}
+
 	if( skillid != WZ_METEOR &&
 		skillid != WZ_SIGHTRASHER &&
 		skillid != AM_CANNIBALIZE &&
 		skillid != AM_SPHEREMINE)
 		clif_skill_poseffect(src,skillid,skilllv,x,y,tick);
-
-        if (skillnotok(skillid, sd)) // [MouseJstr]
-             return 0;
 
 	switch(skillid)
 	{
@@ -5120,8 +5090,8 @@ int skill_castend_map( struct map_session_data *sd,int skill_num, const char *ma
 	if( sd->bl.prev == NULL || pc_isdead(sd) )
 		return 0;
 
-        if(skillnotok(skill_num, sd))
-            return 0;
+	if(skillnotok(skill_num, sd))
+		return 0;
 
 	if( sd->opt1>0 || sd->status.option&2 )
 		return 0;

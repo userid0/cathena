@@ -1317,6 +1317,7 @@ int mapif_parse_GuildCastleDataLoad(int fd, int castle_id, int index) {
 	struct guild_castle *gc = (struct guild_castle *)numdb_search(castle_db, castle_id);
 
 	if (gc == NULL) {
+		// this is causing the loadack error
 		return mapif_guild_castle_dataload(castle_id, 0, 0);
 	}
 	switch(index) {

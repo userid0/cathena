@@ -4305,8 +4305,8 @@ int clif_skill_fail(struct map_session_data *sd,int skill_id,int type,int btype)
 	fd=sd->fd;
 
 	// reset all variables [celest]
-	sd->skillx = sd->skilly = -1;
-	sd->skillid = sd->skilllv = -1;
+	sd->skillx    = sd->skilly      = -1;
+	sd->skillid   = sd->skilllv     = -1;
 	sd->skillitem = sd->skillitemlv = -1;
 
 	if(type==0x4 && battle_config.display_delay_skill_fail==0){
@@ -5827,11 +5827,13 @@ int clif_update_mobhp(struct mob_data *md)
 
 	nullpo_retr(0, md);
 
+	memset(buf,0,102);
 	WBUFW(buf,0) = 0x95;
 	WBUFL(buf,2) = md->bl.id;
 
 	memcpy(WBUFP(buf,6), md->name, 24);
 	sprintf(mobhp, "hp: %d/%d", md->hp, mob_db[md->class_].max_hp);
+
 	WBUFW(buf, 0) = 0x195;
 	memcpy(WBUFP(buf,30), mobhp, 24);
 	WBUFL(buf,54) = 0;
@@ -7943,8 +7945,7 @@ void clif_parse_GlobalMessage(int fd, struct map_session_data *sd) { // S 008c <
 	// Celest
 	if (pc_calc_base_job2 (sd->status.class_) == 23 ) {
 		int next = pc_nextbaseexp(sd)>0 ? pc_nextbaseexp(sd) : sd->status.base_exp;
-
-		if ((next == 0) || ((sd->status.base_exp*100/next)%10 == 0)) {
+		if (next > 0 && (sd->status.base_exp*100/next)%10 == 0) {
 			estr_lower((char*)RFIFOP(fd,4));
 			if (sd->state.snovice_flag == 0 && strstr((char*)RFIFOP(fd,4), msg_txt(540)))
 				sd->state.snovice_flag = 1;

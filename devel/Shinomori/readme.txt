@@ -1,6 +1,6 @@
 my personal kingdom
 
-based on svn1073
+based on svn1104
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////

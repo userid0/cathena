@@ -166,8 +166,8 @@ int skill_arrow_create( struct map_session_data *sd,int nameid);
 
 // mobスキルのため
 int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int skillid,int skilllv,unsigned int tick,int flag );
-int skill_castend_damage_id( struct block_list* src, struct block_list *bl,int skillid,int skilllv,unsigned int tick,int flag );
-int skill_castend_pos2( struct block_list *src, int x,int y,int skillid,int skilllv,unsigned int tick,int flag);
+int skill_castend_damage_id  ( struct block_list* src, struct block_list *bl,int skillid,int skilllv,unsigned int tick,int flag );
+int skill_castend_pos2       ( struct block_list *src, int x,int y,int skillid,int skilllv,unsigned int tick,int flag);
 
 // スキル攻?一括?理
 int skill_attack( int attack_type, struct block_list* src, struct block_list *dsrc,
@@ -881,24 +881,6 @@ enum {
 	WS_WEAPONREFINE,
 	CR_SLIMPITCHER,
 	CR_FULLPROTECTION,
-	
-
-//	moved to common/mmo.h
-/*	GD_APPROVAL=10000,
-	GD_KAFRACONTACT=10001,
-	GD_GUARDIANRESEARCH=10002,
-	GD_GUARDUP=10003,
-	GD_EXTENSION=10004,
-	GD_GLORYGUILD=10005,
-	GD_LEADERSHIP=10006,
-	GD_GLORYWOUNDS=10007,
-	GD_SOULCOLD=10008,
-	GD_HAWKEYES=10009,
-	GD_BATTLEORDER=10010,
-	GD_REGENERATION=10011,
-	GD_RESTORE=10012,
-	GD_EMERGENCYCALL=10013,
-	GD_DEVELOPMENT=10014,*/
 };
 
 #endif

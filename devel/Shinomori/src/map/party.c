@@ -586,8 +586,11 @@ int party_exp_share(struct party *p,int map,int base_exp,int job_exp,int zeny)
 	nullpo_retr(0, p);
 	
 	for(i=c=0;i<MAX_PARTY;i++)
+	{
 		if((sd=p->member[i].sd)!=NULL && sd->bl.m==map)
 			c++;
+	}
+
 	if(c==0)
 		return 0;
 	for(i=0;i<MAX_PARTY;i++)

@@ -173,8 +173,6 @@ struct map_session_data {
 		unsigned no_weapon_damage : 1;
 		unsigned no_gemstone : 1;
 		unsigned infinite_endure : 1;
-		unsigned unbreakable_weapon : 1;
-		unsigned unbreakable_armor : 1;
 		unsigned infinite_autospell : 1;
 	} special_state;
 	int char_id;
@@ -186,6 +184,7 @@ struct map_session_data {
 	struct item_data *inventory_data[MAX_INVENTORY];
 	short equip_index[11];
 	unsigned short unbreakable_equip;
+	unsigned short unbreakable;	// chance to prevent equipment breaking [celest]
 	int weight;
 	int max_weight;
 	int cart_weight;
@@ -350,7 +349,6 @@ struct map_session_data {
 	int random_attack_increase_add;
 	int random_attack_increase_per; // [Valaris]
 	int perfect_hiding; // [Valaris]
-	int unbreakable;
 	int classchange; // [Valaris]
 
 	int die_counter;
@@ -833,7 +831,7 @@ void map_foreachinarea(int (*)(struct block_list*,va_list),int,int,int,int,int,i
 // -- moonsoul (added map_foreachincell)
 void map_foreachincell(int (*)(struct block_list*,va_list),int,int,int,int,...);
 void map_foreachinmovearea(int (*)(struct block_list*,va_list),int,int,int,int,int,int,int,int,...);
-void map_foreachinpath(int (*)(struct block_list*,va_list),int,int,int,int,int,int,int,int,...); // Celest
+void map_foreachinpath(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int range,int type,...); // Celest
 int map_countnearpc(int,int,int);
 //blockŠÖ˜A‚É’Ç‰Á
 int map_count_oncell(int m,int x,int y);

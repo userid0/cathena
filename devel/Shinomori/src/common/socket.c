@@ -28,10 +28,12 @@
 // message convention for gnu compilers
 #warning "INFO: Building standard C"
 #warning "INFO: This build will not work on big endian machines even if it compiles successfully, build C++ instead"
+#warning "INFO: Since I generally changed IP byte order this build will not work at all, build C++ instead"
 #else
 // message convention for visual c compilers
 #pragma message ( "INFO: Building standard C" )
 #pragma message ( "INFO: This build will not work on big endian machines even if it compiles successfully, build C++ instead" )
+#pragma message ( "INFO: Since I generally changed IP byte order this build will not work at all, build C++ instead" )
 #endif
 
 #endif//__cplusplus
