@@ -1,4 +1,4 @@
-ayothaya.gat,76,145,5	script	MouseJstr	763,{
+prontera.gat,152,181,5	script	MouseJstr	763,{
 
 //  hello
 Lquote0:
@@ -654,48 +654,49 @@ Lquote41f:
         npctalk "Do you feel strongly about discussing such things?";
         break;
 OnInit:
-        defpattern 1, "([^:]+):.*\shello.*", Lquote0;
-        defpattern 1, "([^:]+):.*\scomputer.*", Lquote1;
-        defpattern 1, "([^:]+):.*\sname.*", Lquote2;
-        defpattern 1, "([^:]+):.*\ssorry.*", Lquote3;
-        defpattern 1, "([^:]+):.*\si\s+remember\s+(.*)", Lquote4;
-        defpattern 1, "([^:]+):.*\sdo\s+you\s+remember\s+(.*)", Lquote5;
-        defpattern 1, "([^:]+):.*\sif\s+(.*)", Lquote6;
-        defpattern 1, "([^:]+):.*\si\s+dreamt\s+(.*)", Lquote7;
-        defpattern 1, "([^:]+):.*\sdream\s+about\s+(.*)", Lquote8;
-        defpattern 1, "([^:]+):.*\sdream\s+(.*)", Lquote9;
-        defpattern 1, "([^:]+):.*\smy\s+mother\s+(.*)", Lquote10;
-        defpattern 1, "([^:]+):.*\smy\s+father\s+(.*)", Lquote11;
-        defpattern 1, "([^:]+):.*\si\s+want\s+(.*)", Lquote12;
-        defpattern 1, "([^:]+):.*\si\s+am\s+glad\s+(.*)", Lquote13;
-        defpattern 1, "([^:]+):\s+(.*)\s+i\s+am\s+sad\s+(.*)", Lquote14;
-        defpattern 1, "([^:]+):\s+(.*)\s+are\s+like\s+(.*)", Lquote15;
-        defpattern 1, "([^:]+):\s+(.*)\s+is\s+like\s+(.*)", Lquote16;
-        defpattern 1, "([^:]+):.*\salike\s+(.*)", Lquote17;
-        defpattern 1, "([^:]+):.*\ssame\s+(.*)", Lquote18;
-        defpattern 1, "([^:]+):.*\si\s+was\s+(.*)", Lquote19;
-        defpattern 1, "([^:]+):.*\swas\s+i\s+(.*)", Lquote20;
-        defpattern 1, "([^:]+):.*\si\s+am\s+(.*)", Lquote21;
-        defpattern 1, "([^:]+):.*\sam\s+i\s+(.*)", Lquote22;
-        defpattern 1, "([^:]+):.*\sam\s+(.*)", Lquote23;
-        defpattern 1, "([^:]+):.*\sare\s+you\s+(.*)", Lquote24;
-        defpattern 1, "([^:]+):.*\syou\s+are\s+(.*)", Lquote25;
-        defpattern 1, "([^:]+):.*\sbecause\s+(.*)", Lquote26;
-        defpattern 1, "([^:]+):.*\swere\s+you\s+(.*)", Lquote27;
-        defpattern 1, "([^:]+):.*\si\s+(cant|can't|cannot)\s+(.*)", Lquote28;
-        defpattern 1, "([^:]+):.*\si\s+feel\s+(.*)", Lquote29;
-        defpattern 1, "([^:]+):.*\si\s+felt\s+(.*)", Lquote30;
-        defpattern 1, "([^:]+):.*\si\s+(.*)\s+you\s+(.*)", Lquote31;
-        defpattern 1, "([^:]+):.*\swhy\s+(don't|dont)\s+you\s+(.*)", Lquote32;
-        defpattern 1, "([^:]+):.*\syes\s+(.*)", Lquote33;
-        defpattern 1, "([^:]+):.*\sno\s+(.*)", Lquote34;
-        defpattern 1, "([^:]+):.*\ssomeone\s+(.*)", Lquote35;
-        defpattern 1, "([^:]+):.*\severyone\s+(.*)", Lquote36;
-        defpattern 1, "([^:]+):.*\salways\s+(.*)", Lquote37;
-        defpattern 1, "([^:]+):.*\swhat\s+(.*)", Lquote38;
-        defpattern 1, "([^:]+):.*\sperhaps\s+(.*)", Lquote39;
-        defpattern 1, "([^:]+):.*\sare\s+(.*)", Lquote40;
-        defpattern 1, "([^:]+):(.*)", Lquote41;
+        defpattern 1, "([^:]+):.*\\shello.*", "Lquote0";
+        defpattern 1, "([^:]+):.*\\scomputer.*", "Lquote1";
+        defpattern 1, "([^:]+):.*\\sname.*", "Lquote2";
+        defpattern 1, "([^:]+):.*\\ssorry.*", "Lquote3";
+        defpattern 1, "([^:]+):.*\\si\\s+remember\\s+(.*)", "Lquote4";
+        defpattern 1, "([^:]+):.*\\sdo\\s+you\\s+remember\\s+(.*)", "Lquote5";
+        defpattern 1, "([^:]+):.*\\sif\\s+(.*)", "Lquote6";
+        defpattern 1, "([^:]+):.*\\si\\s+dreamt\\s+(.*)", "Lquote7";
+        defpattern 1, "([^:]+):.*\\sdream\\s+about\\s+(.*)", "Lquote8";
+        defpattern 1, "([^:]+):.*\\sdream\\s+(.*)", "Lquote9";
+        defpattern 1, "([^:]+):.*\\smy\\s+mother\\s+(.*)", "Lquote10";
+        defpattern 1, "([^:]+):.*\\smy\\s+father\\s+(.*)", "Lquote11";
+        defpattern 1, "([^:]+):.*\\si\\s+want\\s+(.*)", "Lquote12";
+        defpattern 1, "([^:]+):.*\\si\\s+am\\s+glad\\s+(.*)", "Lquote13";
+        defpattern 1, "([^:]+):\\s+(.*)\\s+i\\s+am\\s+sad\\s+(.*)", "Lquote14";
+        defpattern 1, "([^:]+):\\s+(.*)\\s+are\\s+like\\s+(.*)", "Lquote15";
+        defpattern 1, "([^:]+):\\s+(.*)\\s+is\\s+like\\s+(.*)", "Lquote16";
+        defpattern 1, "([^:]+):.*\\salike\\s+(.*)", "Lquote17";
+        defpattern 1, "([^:]+):.*\\ssame\\s+(.*)", "Lquote18";
+        defpattern 1, "([^:]+):.*\\si\\s+was\\s+(.*)", "Lquote19";
+        defpattern 1, "([^:]+):.*\\swas\\s+i\\s+(.*)", "Lquote20";
+        defpattern 1, "([^:]+):.*\\si\\s+am\\s+(.*)", "Lquote21";
+        defpattern 1, "([^:]+):.*\\sam\\s+i\\s+(.*)", "Lquote22";
+        defpattern 1, "([^:]+):.*\\sam\\s+(.*)", "Lquote23";
+        defpattern 1, "([^:]+):.*\\sare\\s+you\\s+(.*)", "Lquote24";
+        defpattern 1, "([^:]+):.*\\syou\\s+are\\s+(.*)", "Lquote25";
+        defpattern 1, "([^:]+):.*\\sbecause\\s+(.*)", "Lquote26";
+        defpattern 1, "([^:]+):.*\\swere\\s+you\\s+(.*)", "Lquote27";
+        defpattern 1, "([^:]+):.*\\si\\s+(cant|can't|cannot)\\s+(.*)", "Lquote28";
+        defpattern 1, "([^:]+):.*\\si\\s+feel\\s+(.*)", "Lquote29";
+        defpattern 1, "([^:]+):.*\\si\\s+felt\\s+(.*)", "Lquote30";
+        defpattern 1, "([^:]+):.*\\si\\s+(.*)\\s+you\\s+(.*)", "Lquote31";
+        defpattern 1, "([^:]+):.*\\swhy\\s+(don't|dont)\\s+you\\s+(.*)", "Lquote32";
+        defpattern 1, "([^:]+):.*\\syes\\s+(.*)", "Lquote33";
+        defpattern 1, "([^:]+):.*\\sno\\s+(.*)", "Lquote34";
+        defpattern 1, "([^:]+):.*\\ssomeone\\s+(.*)", "Lquote35";
+        defpattern 1, "([^:]+):.*\\severyone\\s+(.*)", "Lquote36";
+        defpattern 1, "([^:]+):.*\\salways\\s+(.*)", "Lquote37";
+        defpattern 1, "([^:]+):.*\\swhat\\s+(.*)", "Lquote38";
+        defpattern 1, "([^:]+):.*\\sperhaps\\s+(.*)", "Lquote39";
+        defpattern 1, "([^:]+):.*\\sare\\s+(.*)", "Lquote40";
+        defpattern 1, "([^:]+):(.*)", "Lquote41";
+
         activatepset 1;
         break;
 }

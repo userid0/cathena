@@ -206,6 +206,9 @@ prontera.gat,156,179,4	script	Aria	805,{
 	mes "^FF00FFAge^000000: 13 years";
 	mes "^FF00FFWhat I do^000000: Graphics and NPCs";
 	mes "^FF00FFWhy I'm here^000000: Cuz eAthena ROX";
+
+        defpattern 1, "(.*) loves (.*)", "Loved";
+        activatepset 1;
 	close;
 OnTimer15000:
 	npcwalkto 150+rand(17),169+rand(16);
@@ -278,6 +281,9 @@ Lquote10:
 	setnpctimer 0;
 	break;
 
+Loved:
+        npctalk "Who is loved? "+$p2$+" is loved?";
+        break;
 OnInit:
  	initnpctimer;
         break;
