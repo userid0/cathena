@@ -10,6 +10,53 @@
 extern time_t tick_;
 extern time_t stall_time_;
 
+
+///////////////////////////////////////////////////////////////////////////////
+// IP number stuff
+///////////////////////////////////////////////////////////////////////////////
+class ipaddress
+{
+public:
+    union
+    {
+        uchar   data[4];
+        ulong   ldata;
+    };
+    ipaddress():ldata(INADDR_LOOPBACK)          {}
+    ipaddress(ulong a):ldata(a)                 {}
+    ipaddress(const ipaddress& a):ldata(a.ldata){}
+    ipaddress(int a, int b, int c, int d)
+	{
+		data[0] = uchar(a);
+		data[1] = uchar(b);
+		data[2] = uchar(c);
+		data[3] = uchar(d);
+	}
+    ipaddress& operator= (ulong a)              { ldata = a; return *this; }
+    ipaddress& operator= (const ipaddress& a)   { ldata = a.ldata; return *this; }
+    uchar& operator [] (int i)                  
+	{ 
+#ifdef CHECK_BOUNDS
+		if( (i>=4) || (i<0) )
+		{
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("ipaddress: out of bound access");
+#else//!CHECK_EXCEPTIONS
+			static uchar dummy;
+			return dummy=0;
+#endif//!CHECK_EXCEPTIONS
+		}
+#endif//CHECK_BOUNDS
+		return data[i]; 
+	}
+    operator ulong() const                      { return ldata; }
+};
+
+
+
+
+
+
 #ifdef __cplusplus
 
 // Class for assigning/reading words from a buffer

@@ -273,7 +273,7 @@ int mapif_party_info(int fd, struct party *pparty) {
 
 	WBUFW(buf,0) = 0x3821;
 	WBUFW(buf,2) = 4 + sizeof(struct party);
-//	memcpy(buf + 4, pparty, sizeof(struct party));
+	//memcpy(buf + 4, pparty, sizeof(struct party));
 	party_tobuffer(pparty, buf+4);
 
 	if (fd < 0)

@@ -8,15 +8,15 @@
 
 // assuming call convention ...(string1)
 // string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
-unsigned char* jstrescape (unsigned char* pt) {
+char* jstrescape (char* pt) {
 	//copy from here
-	unsigned char *spt,*sp;
-	unsigned char *p=pt;
+	char *spt,*sp;
+	char *p=pt;
 	if(NULL==pt) return NULL;
 
 	//copy string to temporary
-	CREATE(spt, unsigned char, strlen((char*)pt)+1);
-	strcpy ((char*)spt,(char*)pt);
+	CREATE(spt, char, strlen(pt)+1);
+	strcpy (spt,pt);
 	
 	sp=spt;
 	while (*sp) {
@@ -40,9 +40,9 @@ unsigned char* jstrescape (unsigned char* pt) {
 
 // assuming call convention ...(string1, string2)
 // string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
-unsigned char* jstrescapecpy (unsigned char* pt,unsigned char* sp) {
+char* jstrescapecpy (char* pt,char* sp) {
 	//copy from here
-	unsigned char *p =pt;
+	char *p =pt;
 	if( (NULL==pt) || (NULL==sp) ) return NULL;
 	while(*sp) {
 		switch (*sp) {
@@ -64,10 +64,10 @@ unsigned char* jstrescapecpy (unsigned char* pt,unsigned char* sp) {
 
 // assuming call convention ...(string1, string2, max_chars_to_copy)
 // string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
-size_t jmemescapecpy (unsigned char* pt,unsigned char* spt, int size) {
+size_t jmemescapecpy (char* pt,char* spt, int size) {
 	//copy from here
-	unsigned char *p  =pt;
-	unsigned char *sp =spt;
+	char *p  =pt;
+	char *sp =spt;
 	if( (NULL==pt) || (NULL==spt) ) return 0;
 	
 	while ( (sp < spt+size) && *sp) {

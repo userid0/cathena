@@ -5,9 +5,9 @@
 // String function library.
 // code by Jioh L. Jung (ziozzang@4wish.net)
 // This code is under license "BSD"
-unsigned char* jstrescape (unsigned char* pt);
-unsigned char* jstrescapecpy (unsigned char* pt,unsigned char* spt);
-size_t jmemescapecpy (unsigned char* pt,unsigned char* spt, int size);
+char* jstrescape (char* pt);
+char* jstrescapecpy (char* pt, char* spt);
+size_t jmemescapecpy (char* pt, char* spt, int size);
 
 
 #endif

@@ -167,7 +167,7 @@ int mapif_pet_info(int fd,int account_id,struct s_pet *pet)
 	WFIFOW(fd,2)=sizeof(struct s_pet) + 9;
 	WFIFOL(fd,4)=account_id;
 	WFIFOB(fd,8)=0;
-//	memcpy(WFIFOP(fd,9),pet,sizeof(struct s_pet));
+	//memcpy(WFIFOP(fd,9),pet,sizeof(struct s_pet));
 	s_pet_tobuffer(pet, WFIFOP(fd,9));
 
 	WFIFOSET(fd,WFIFOW(fd,2));

@@ -311,7 +311,6 @@ int chrif_authreq(struct map_session_data *sd)
 			WFIFOL(char_fd, 6) = sd->char_id;
 			WFIFOL(char_fd,10) = sd->login_id1;
 			WFIFOL(char_fd,14) = sd->login_id2;
-			//WFIFOLIP(char_fd,18) = ntohl(session[i]->client_addr.sin_addr.s_addr);
 			WFIFOLIP(char_fd,18) = session[i]->client_ip;
 			WFIFOSET(char_fd,22);
 			break;

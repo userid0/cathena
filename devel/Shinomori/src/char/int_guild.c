@@ -705,7 +705,7 @@ int mapif_guild_info(int fd, struct guild *g) {
 
 	WBUFW(buf,0) = 0x3831;
 	WBUFW(buf,2) = 4 + sizeof(struct guild);
-//	memcpy(WBUFP(buf,4), g, sizeof(struct guild));
+	//memcpy(WBUFP(buf,4), g, sizeof(struct guild));
 	guild_tobuffer(g, WBUFP(buf,4));
 //	ShowMessage("int_guild: sizeof(guild)=%d\n", sizeof(struct guild));
 	if (fd < 0)
@@ -858,7 +858,7 @@ int mapif_guild_position(struct guild *g, int idx) {
 	WBUFW(buf,2) = sizeof(struct guild_position) + 12;
 	WBUFL(buf,4) = g->guild_id;
 	WBUFL(buf,8) = idx;
-//	memcpy(WBUFP(buf,12), &g->position[idx], sizeof(struct guild_position));
+	//memcpy(WBUFP(buf,12), &g->position[idx], sizeof(struct guild_position));
 	guild_position_tobuffer(&g->position[idx], WBUFP(buf,12));
 
 	mapif_sendall(buf, WBUFW(buf,2));
@@ -921,7 +921,7 @@ int mapif_guild_castle_alldataload_sub(void *key, void *data, va_list ap) {
 	int fd = va_arg(ap, int);
 	int *offset = va_arg(ap, int*);
 
-//	memcpy(WFIFOP(fd,*offset), (struct guild_castle*)data, sizeof(struct guild_castle));
+	//memcpy(WFIFOP(fd,*offset), (struct guild_castle*)data, sizeof(struct guild_castle));
 	guild_castle_tobuffer((struct guild_castle*)data, WFIFOP(fd,*offset));
 
 	(*offset) += sizeof(struct guild_castle);
@@ -963,7 +963,7 @@ int mapif_parse_CreateGuild(int fd, int account_id, char *name, unsigned char *b
 	g = (struct guild*)aCalloc(1, sizeof(struct guild));
 	g->guild_id = guild_newid++;
 	memcpy(g->name, name, 24);
-//	memcpy(&g->member[0], buf, sizeof(struct guild_member));
+	//memcpy(&g->member[0], buf, sizeof(struct guild_member));
 	guild_member_frombuffer(&g->member[0], buf);
 	memcpy(g->master, g->member[0].name, 24);
 
@@ -1221,7 +1221,7 @@ int mapif_parse_GuildPosition(int fd, int guild_id, int idx, unsigned char *buf)
 	if (g == NULL || idx < 0 || idx >= MAX_GUILDPOSITION) {
 		return 0;
 	}
-//	memcpy(&g->position[idx], buf, sizeof(struct guild_position));
+	//memcpy(&g->position[idx], buf, sizeof(struct guild_position));
 	guild_position_frombuffer(&g->position[idx],buf);
 
 	mapif_guild_position(g, idx);

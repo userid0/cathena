@@ -830,12 +830,12 @@ static int itemdb_read_sqldb(void)
 
 				if (sql_row[17] != NULL)
 				{
-                                        if (sql_row[17][0] == '{')
-					  id->use_script = parse_script(sql_row[17], 0);
-                                        else {
-					  sprintf(script, "{%s}", sql_row[17]);
-					  id->use_script = parse_script(script, 0);
-                                        }
+					if (sql_row[17][0] == '{')
+						id->use_script = parse_script((unsigned char*)sql_row[17], 0);
+					else {
+						sprintf(script, "{%s}", sql_row[17]);
+						id->use_script = parse_script((unsigned char*)script, 0);
+					}
 				}
 				else
 				{
@@ -845,10 +845,10 @@ static int itemdb_read_sqldb(void)
 				if (sql_row[18] != NULL)
 				{
                                         if (sql_row[18][0] == '{')
-					  id->equip_script = parse_script(sql_row[18], 0);
+					  id->equip_script = parse_script((unsigned char*)sql_row[18], 0);
                                         else {
 					  sprintf(script, "{%s}", sql_row[18]);
-					  id->equip_script = parse_script(script, 0);
+					  id->equip_script = parse_script((unsigned char*)script, 0);
                                         }
 				}
 				else
@@ -874,7 +874,6 @@ static int itemdb_read_sqldb(void)
 		{
 			ShowMessage("MySQL error (storing query result for %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
 		}
-
 		// Free the query result
 		mysql_free_result(sql_res);
 	}

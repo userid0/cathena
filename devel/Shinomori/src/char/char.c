@@ -2,7 +2,7 @@
 // original : char2.c 2003/03/14 11:58:35 Rev.1.5
 
 #include "base.h"
-#include "../common/strlib.h"
+#include "strlib.h"
 #include "core.h"
 #include "socket.h"
 #include "timer.h"
@@ -2044,7 +2044,7 @@ int parse_frommap(int fd) {
 					WFIFOL(fd,8) = auth_fifo[i].login_id2;
 					WFIFOL(fd,12) = (unsigned long)auth_fifo[i].connect_until_time;
 					char_dat[auth_fifo[i].char_pos].sex = auth_fifo[i].sex;
-//					memcpy(WFIFOP(fd,16), &char_dat[auth_fifo[i].char_pos], sizeof(struct mmo_charstatus));
+					//memcpy(WFIFOP(fd,16), &char_dat[auth_fifo[i].char_pos], sizeof(struct mmo_charstatus));
 					mmo_charstatus_tobuffer(&char_dat[auth_fifo[i].char_pos], WFIFOP(fd,16));
 					WFIFOSET(fd, WFIFOW(fd,2));
 					//ShowMessage("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, RFIFOL(fd,2), RFIFOL(fd,6));
@@ -2950,25 +2950,28 @@ int send_users_tologin(int tid, unsigned long tick, int id, int data) {
 }
 
 int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
-	if (login_fd <= 0 || session[login_fd] == NULL) {
+
+	if( !session_isActive(login_fd) ) {
 		ShowMessage("Attempt to connect to login-server...\n");
 		login_fd = make_connection(login_ip, login_port);
-		session[login_fd]->func_parse = parse_tologin;
-		realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-		WFIFOW(login_fd,0) = 0x2710;
-		memset(WFIFOP(login_fd,2), 0, 24);
-		memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
-		memset(WFIFOP(login_fd,26), 0, 24);
-		memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
-		WFIFOL(login_fd,50) = 0;
-		WFIFOLIP(login_fd,54) = char_ip;
-		WFIFOL(login_fd,58) = char_port;
-		memset(WFIFOP(login_fd,60), 0, 20);
-		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
-		WFIFOW(login_fd,80) = 0;
-		WFIFOW(login_fd,82) = char_maintenance;
-		WFIFOW(login_fd,84) = char_new;
-		WFIFOSET(login_fd,86);
+		if( session_isActive(login_fd) ) {
+			session[login_fd]->func_parse = parse_tologin;
+			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+			WFIFOW(login_fd,0) = 0x2710;
+			memset(WFIFOP(login_fd,2), 0, 24);
+			memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
+			memset(WFIFOP(login_fd,26), 0, 24);
+			memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
+			WFIFOL(login_fd,50) = 0;
+			WFIFOLIP(login_fd,54) = char_ip;
+			WFIFOL(login_fd,58) = char_port;
+			memset(WFIFOP(login_fd,60), 0, 20);
+			memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
+			WFIFOW(login_fd,80) = 0;
+			WFIFOW(login_fd,82) = char_maintenance;
+			WFIFOW(login_fd,84) = char_new;
+			WFIFOSET(login_fd,86);
+		}
 	}
 	return 0;
 }
@@ -3283,23 +3286,23 @@ int do_init(int argc, char **argv) {
 		ShowMessage("please edit the map_athena.conf file and set it to correct values.\n");
 		ShowMessage("(127.0.0.1 is valid if you have no network interface)\n");    
 	}
-    else if( login_ip == INADDR_LOOPBACK || char_ip == INADDR_ANY ) { 
-          // The char server should know what IP address it is running on
-          //   - MouseJstr
+	else if( login_ip == INADDR_LOOPBACK || char_ip == INADDR_ANY ) {
+		// The char server should know what IP address it is running on
+		//   - MouseJstr
 		unsigned long localaddr = addr_[0]; // host order network address
-          if (naddr_ != 1)
+		if (naddr_ != 1)
 			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n", 
-								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
-          else
+						(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
+		else
 			ShowMessage("Defaulting to %d.%d.%d.%d as our IP address\n", 
-								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
+						(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
 		if (login_ip == INADDR_LOOPBACK)
 			login_ip  = localaddr;
 		if (char_ip == INADDR_ANY)
 			char_ip  = localaddr;
 		if (localaddr&0xFFFF0000 == 0xC0A80000)//192.168.x.x
 			ShowMessage("Private Network detected.. edit lan_support.conf and char_athena.conf\n");
-        }
+	}
 
 	for(i = 0; i < MAX_MAP_SERVERS; i++) {
 		memset(&server[i], 0, sizeof(struct mmo_map_server));

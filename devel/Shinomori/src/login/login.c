@@ -1,7 +1,6 @@
 // $Id: login.c,v 1.1.1.1 2004/09/10 17:26:53 MagicalTux Exp $
 // new version of the login-server by [Yor]
 
-
 #include "core.h"
 #include "socket.h"
 #include "timer.h"
@@ -13,7 +12,7 @@
 #include "malloc.h"
 #include "utils.h"
 #include "showmsg.h"
-#include "../common/strlib.h"
+#include "strlib.h"
 
 #ifdef PASSWORDENC
 #include "md5calc.h"
@@ -1247,12 +1246,11 @@ int parse_fromchar(int fd) {
 	for(id = 0; id < MAX_SERVERS; id++)
 		if (server_fd[id] == fd)
 			break;
-
 	if (id == MAX_SERVERS) {	
 		session_Remove(fd);
 		return 0;
 	}
-
+	// else it is char server id
 	if( !session_isActive(fd) ) {
 		// check if a char server is disconnecting
 		ShowMessage("Char-server '%s' has disconnected.\n", server[id].name);
@@ -3243,8 +3241,8 @@ int login_lan_config_read(const char *lancfgName) {
 				strcpy(ip_str, w2);
 			subnet_mask = ntohl(inet_addr(ip_str));
 			ShowMessage("Sub-network mask of the char-server: %d.%d.%d.%d.\n", (subnet_mask>>24)&0xFF,(subnet_mask>>16)&0xFF,(subnet_mask>>8)&0xFF,(subnet_mask)&0xFF);
-			}
 		}
+	}
 	fclose(fp);
 
 	// log the LAN configuration

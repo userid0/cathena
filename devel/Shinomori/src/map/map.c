@@ -2864,36 +2864,36 @@ int map_sql_init(void){
     mysql_init(&mmysql_handle);
 
 	//DB connection start
-	SendMessage("Connect Map DB Server....\n");
+	ShowMessage("Connect Map DB Server....\n");
 	if(!mysql_real_connect(&mmysql_handle, map_server_ip, map_server_id, map_server_pw,
 		map_server_db ,map_server_port, (char *)NULL, 0)) {
 			//pointer check
-			SendMessage("%s\n",mysql_error(&mmysql_handle));
+			ShowMessage("%s\n",mysql_error(&mmysql_handle));
 			exit(1);
 	}
 	else {
-		SendMessage ("connect success! (Map Server Connection)\n");
+		ShowMessage ("connect success! (Map Server Connection)\n");
 	}
 
     mysql_init(&lmysql_handle);
 
     //DB connection start
-    SendMessage("Connect Login DB Server....\n");
+    ShowMessage("Connect Login DB Server....\n");
     if(!mysql_real_connect(&lmysql_handle, login_server_ip, login_server_id, login_server_pw,
         login_server_db ,login_server_port, (char *)NULL, 0)) {
 	        //pointer check
-			SendMessage("%s\n",mysql_error(&lmysql_handle));
+			ShowMessage("%s\n",mysql_error(&lmysql_handle));
 			exit(1);
 	}
 	 else {
-		SendMessage ("connect success! (Login Server Connection)\n");
+		ShowMessage ("connect success! (Login Server Connection)\n");
 	 }
 
 	if(battle_config.mail_system) { // mail system [Valaris]
 		mysql_init(&mail_handle);
 		if(!mysql_real_connect(&mail_handle, map_server_ip, map_server_id, map_server_pw,
 			map_server_db ,map_server_port, (char *)NULL, 0)) {
-				SendMessage("%s\n",mysql_error(&mail_handle));
+				ShowMessage("%s\n",mysql_error(&mail_handle));
 				exit(1);
 		}
 	}
@@ -2903,10 +2903,10 @@ int map_sql_init(void){
 
 int map_sql_close(void){
 	mysql_close(&mmysql_handle);
-	SendMessage("Close Map DB Connection....\n");
+	ShowMessage("Close Map DB Connection....\n");
 
 	mysql_close(&lmysql_handle);
-	SendMessage("Close Login DB Connection....\n");
+	ShowMessage("Close Login DB Connection....\n");
 	return 0;
 }
 
@@ -2915,14 +2915,14 @@ int log_sql_init(void){
     mysql_init(&mmysql_handle);
 
 	//DB connection start
-	SendMessage(""CL_WHITE"[SQL]"CL_RESET": Connecting to Log Database "CL_WHITE"%s"CL_RESET" At "CL_WHITE"%s"CL_RESET"...\n",log_db,log_db_ip);
+	ShowMessage(""CL_WHITE"[SQL]"CL_RESET": Connecting to Log Database "CL_WHITE"%s"CL_RESET" At "CL_WHITE"%s"CL_RESET"...\n",log_db,log_db_ip);
 	if(!mysql_real_connect(&mmysql_handle, log_db_ip, log_db_id, log_db_pw,
 		log_db ,log_db_port, (char *)NULL, 0)) {
 			//pointer check
-			SendMessage(""CL_WHITE"[SQL Error]"CL_RESET": %s\n",mysql_error(&mmysql_handle));
+			ShowMessage(""CL_WHITE"[SQL Error]"CL_RESET": %s\n",mysql_error(&mmysql_handle));
 			exit(1);
 	} else {
-		SendMessage(""CL_WHITE"[SQL]"CL_RESET": Successfully '"CL_GREEN"connected"CL_RESET"' to Database '"CL_WHITE"%s"CL_RESET"'.\n", log_db);
+		ShowMessage(""CL_WHITE"[SQL]"CL_RESET": Successfully '"CL_GREEN"connected"CL_RESET"' to Database '"CL_WHITE"%s"CL_RESET"'.\n", log_db);
 	}
 
 	return 0;

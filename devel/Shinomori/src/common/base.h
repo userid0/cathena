@@ -1,6 +1,26 @@
 #ifndef	_BASE_H_
 #define _BASE_H_
 
+//////////////////////////////////////////////////////////////////////////
+// basic include for all basics
+// introduces types and global functions
+//////////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////////
+// some global switches
+//////////////////////////////////////////////////////////////////////////
+
+#define COUNT_GLOBALS		// enables countage of created objects
+#define CHECK_BOUNDS		// enables boundary check for arrays and lists
+#define CHECK_LOCKS			// enables check of locking/unlocking sync objects
+//#define SINGLETHREAD		// builds without multithread guards
+//#define CHECK_EXCEPTIONS	// use exceptions for "exception" handling
+
+
+//////////////////////////////////////////////////////////////////////////
+// includes
+//////////////////////////////////////////////////////////////////////////
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -17,13 +37,6 @@
 #include <signal.h>
 
 #include <assert.h>
-
-
-#if (defined(__WIN32__) || defined(__WIN32) || defined(_WIN32) || defined(_MSC_VER) || defined(__BORLANDC__)) && !defined(WIN32)
-#define WIN32
-#endif
-
-
 
 //////////////////////////////
 #ifdef WIN32
@@ -51,7 +64,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #ifndef FIONREAD
-#include <sys/filio.h>	// FIONREAD on Solaris, might be 
+#include <sys/filio.h>	// FIONREAD on Solaris, might conflict on other systems
 #endif
 #ifndef SIOCGIFCONF
 #include <sys/sockio.h> // SIOCGIFCONF on Solaris, maybe others?
@@ -63,8 +76,66 @@
 
 
 
+//////////////////////////////////////////////////////////////////////////
+// setting some defines platforms
+//////////////////////////////////////////////////////////////////////////
+#if (defined(__WIN32__) || defined(__WIN32) || defined(_WIN32) || defined(_MSC_VER) || defined(__BORLANDC__)) && !defined(WIN32)
+#define WIN32
+#endif
 
-//////////////////////////////
+// __APPLE__ is the only predefined macro on MacOS X
+#if defined(__APPLE__)
+#define __DARWIN__
+#endif
+
+#if defined(_DEBUG) && !defined(DEBUG)
+#define DEBUG
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////
+// no c support anymore
+//////////////////////////////////////////////////////////////////////////
+#ifndef __cplusplus
+#  error "this is C++ source"
+#endif
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////
+// setting some defines for compile modes
+//////////////////////////////////////////////////////////////////////////
+// check global objects count and array boundaries in debug mode
+#if defined(DEBUG) && !defined(COUNT_GLOBALS)
+#define COUNT_GLOBALS
+#endif
+#if defined(DEBUG) && !defined(CHECK_BOUNDS)
+#define CHECK_BOUNDS
+#endif
+#if defined(DEBUG) && !defined(CHECK_LOCKS)
+#define CHECK_LOCKS
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////
+// useful typedefs
+//////////////////////////////////////////////////////////////////////////
+typedef unsigned int    uint;
+typedef unsigned long   ulong;
+typedef unsigned short  ushort;
+typedef unsigned char   uchar;
+typedef signed char     schar;
+typedef char*           pchar;
+typedef const char*     cchar;
+typedef void*           ptr;
+typedef int*            pint;
+
+
+
+
+/////////////////////////////
 #ifdef __cplusplus
 //////////////////////////////
 
@@ -253,10 +324,10 @@ extern inline unsigned long GetTickCount() {
 #endif
 
 
+//////////////////////////////////////////////////////////////////////////
+// byte word dword access
+//////////////////////////////////////////////////////////////////////////
 
-/*
-** byte word dword access
-*/
 extern inline unsigned char GetByte(unsigned long val, size_t num)
 {
 	switch(num)
@@ -295,7 +366,6 @@ extern inline unsigned long MakeDWord(unsigned short word0, unsigned short word1
 			| ((unsigned long)word1<<0x10);
 }
 
-#ifdef __cplusplus
 extern inline unsigned long MakeDWord(unsigned char byte0, unsigned char byte1, unsigned char byte2, unsigned char byte3)
 {
 	return 	  ((unsigned long)byte0)
@@ -303,7 +373,6 @@ extern inline unsigned long MakeDWord(unsigned char byte0, unsigned char byte1, 
 			| ((unsigned long)byte2<<0x10)
 			| ((unsigned long)byte3<<0x18);
 }
-#endif
 
 // Check the byte-order of the CPU.
 #define LSB_FIRST        0
@@ -323,13 +392,11 @@ extern inline void SwapTwoBytes(char *p)
 		p[1] = tmp;
 	}
 }
-#ifdef __cplusplus
 extern inline unsigned short SwapTwoBytes(unsigned short w)
 {
     return	  ((w & 0x00FF) << 0x08)
 			| ((w & 0xFF00) >> 0x08);
 }
-#endif
 
 
 // Swap the bytes within a 32-bit DWORD.
@@ -344,7 +411,6 @@ extern inline void SwapFourBytes(char *p)
 		p[2] = tmp;
 	}
 }
-#ifdef __cplusplus
 extern inline unsigned long SwapFourBytes(unsigned long w)
 {
     return	  ((w & 0x000000FF) << 0x18)
@@ -352,7 +418,6 @@ extern inline unsigned long SwapFourBytes(unsigned long w)
 			| ((w & 0x00FF0000) >> 0x08)
 			| ((w & 0xFF000000) >> 0x18);
 }
-#endif
 
 
 

@@ -514,7 +514,7 @@ static int connect_client(int listen_fd)
 	session[fd]->client_ip	 = ntohl(client_address.sin_addr.s_addr);
 	session[fd]->rdata_tick  = tick_;
 
-  //ShowMessage("new_session : %d %d\n",fd,session[fd]->eof);
+printf("get connection from %X:%i",session[fd]->client_ip,ntohs(client_address.sin_port) );
 	return fd;
 }
 
@@ -546,7 +546,7 @@ int make_listen(unsigned long ip, unsigned short port)
 	server_address.sin_family      = AF_INET;
 	server_address.sin_addr.s_addr = htonl( ip );
 	server_address.sin_port        = htons(port);
-
+printf("open listen on %X:%i",ip,port);
 	result = bind(sock, (struct sockaddr*)&server_address, sizeof(server_address));
 	if( result == -1 ) {
 		closesocket(sock);
@@ -581,7 +581,76 @@ int make_listen(unsigned long ip, unsigned short port)
 
 	return fd;
 }
+int make_connection(unsigned long ip, unsigned short port)
+{
+	struct sockaddr_in server_address;
+	int fd;
+	SOCKET sock;
+	int result;
 
+	sock = socket( AF_INET, SOCK_STREAM, 0 );
+#ifndef WIN32
+	// on unix a socket can only be in range from 1 to FD_SETSIZE
+	// otherwise it would not fit into the fd_set structure and 
+	// overwrite data outside that range, so we have to reject them
+	// windows uses a different fd_set structure and is not affected
+	if(sock > FD_SETSIZE)
+	{
+		closesocket(sock);
+		return -1;
+	}
+#endif
+	setsocketopts(sock);
+
+	server_address.sin_family		= AF_INET;
+	server_address.sin_addr.s_addr	= htonl( ip );
+	server_address.sin_port			= htons(port);
+printf("Connecting to %X:%i\n",ip,port );
+	result = connect(sock, (struct sockaddr *)(&server_address),sizeof(struct sockaddr_in));
+
+	if( result < 0 )
+	{
+		closesocket(sock);
+		ShowWarning("Connect failed\n");
+		return -1;
+	}
+	else
+		ShowStatus("Connect ok\n");
+
+	{
+		unsigned long arg = 1;
+		ioctlsocket(sock, FIONBIO, &arg);
+	}
+
+	// insert the socket to the fields and get the position
+	fd = SessionInsertSocket(sock);
+
+	if(fd<0) 
+	{	
+		closesocket(sock);
+		ShowWarning("socket insert failed");
+		return -1;
+	}
+
+	CREATE(session[fd], struct socket_data, 1);
+	CREATE(session[fd]->rdata, unsigned char, rfifo_size);
+	CREATE(session[fd]->wdata, unsigned char, wfifo_size);
+
+	session[fd]->flag.connected   = true;
+	session[fd]->flag.remove      = false;
+	session[fd]->flag.marked      = false;
+
+	session[fd]->max_rdata  = rfifo_size;
+	session[fd]->max_wdata  = wfifo_size;
+	session[fd]->func_recv  = recv_to_fifo;
+	session[fd]->func_send  = send_from_fifo;
+	session[fd]->func_parse = default_func_parse;
+	session[fd]->rdata_tick = tick_;
+
+	return fd;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Console Reciever [Wizputer]
 int console_recieve(int fd) {
 	int n;
@@ -641,66 +710,6 @@ int start_console(void) {
 	
 	return 0;
 }   
-    
-int make_connection(unsigned long ip, unsigned short port)
-{
-	struct sockaddr_in server_address;
-	int fd;
-	SOCKET sock;
-	int result;
-
-	sock = socket( AF_INET, SOCK_STREAM, 0 );
-#ifndef WIN32
-	// on unix a socket can only be in range from 1 to FD_SETSIZE
-	// otherwise it would not fit into the fd_set structure and 
-	// overwrite data outside that range, so we have to reject them
-	// windows uses a different fd_set structure and is not affected
-	if(sock > FD_SETSIZE)
-	{
-		closesocket(sock);
-		return -1;
-	}
-#endif
-	{
-		unsigned long arg = 1;
-		ioctlsocket(sock, FIONBIO, &arg);
-	}
-	setsocketopts(sock);
-
-	server_address.sin_family		= AF_INET;
-	server_address.sin_addr.s_addr	= htonl( ip );
-	server_address.sin_port			= htons(port);
-
-	result = connect(sock, (struct sockaddr *)(&server_address),sizeof(struct sockaddr_in));
-
-	// insert the socket to the fields and get the position
-	fd = SessionInsertSocket(sock);
-
-	if(fd<0) 
-	{	
-		closesocket(sock);
-		ShowWarning("socket insert failed");
-		return -1;
-	}
-
-	CREATE(session[fd], struct socket_data, 1);
-	CREATE(session[fd]->rdata, unsigned char, rfifo_size);
-	CREATE(session[fd]->wdata, unsigned char, wfifo_size);
-
-	session[fd]->flag.connected   = true;
-	session[fd]->flag.remove      = false;
-	session[fd]->flag.marked      = false;
-
-	session[fd]->max_rdata  = rfifo_size;
-	session[fd]->max_wdata  = wfifo_size;
-	session[fd]->func_recv  = recv_to_fifo;
-	session[fd]->func_send  = send_from_fifo;
-	session[fd]->func_parse = default_func_parse;
-	session[fd]->rdata_tick = tick_;
-
-	return fd;
-}
-
 
 ///////////////////////////////////////////////////////////////////////////////
 void process_read(size_t fd)
@@ -1083,13 +1092,55 @@ bool session_Delete(int fd)
 }
 ///////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+// ip address stuff
+///////////////////////////////////////////////////////////////////////////////
+//
+// class that holds all IP addresses in the app
+//
+//
+class app_ipaddresses
+{
+	class ipset
+	{
+	public:
+		ipaddress	lan_ip;
+		ipaddress	lan_sub;
+		ushort		lan_port;
+
+		ipaddress	wan_ip;
+		ushort		wan_port;
+
+		ipset(const ipaddress lip = INADDR_LOOPBACK,	//127.0.0.1
+			  const ipaddress lsu = INADDR_BROADCAST,	//255.255.255.255
+			  const ushort lpt    = 0,
+			  const ipaddress wip = INADDR_LOOPBACK,	//127.0.0.1
+			  const ushort wpt    = 0)
+			: lan_ip(lip),lan_sub(lsu),lan_port(lpt),wan_ip(wip),wan_port(wpt)
+		{}
+		bool isLAN(ipaddress ip)
+		{
+			return ( (lan_ip&lan_sub) == (ip&lan_sub) );
+		}
+		bool isWAN(ipaddress ip)
+		{
+			return ( (lan_ip&lan_sub) != (ip&lan_sub) );
+		}
+	};
+	ipset iplogin;
+	ipset ipchar;
+	ipset ipmap;
+
+public:
+	bool load(const char *filename)
+	{
+		return false;
+	}
+};
 
 
 
-
-
-
-
+///////////////////////////////////////////////////////////////////////////////
 
 unsigned long addr_[16];   // ip addresses of local host (host byte order)
 unsigned int naddr_ = 0;   // # of ip addresses

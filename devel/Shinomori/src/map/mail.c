@@ -2,21 +2,20 @@
 // Created by Valaris
 // moved all strings to msg_athena.conf [Lupus]
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "base.h"
 #include "strlib.h"
 #include "socket.h"
 #include "timer.h"
 #include "nullpo.h"
-
+#include "showmsg.h"
 #include "map.h"
 #include "clif.h"
 #include "chrif.h"
 #include "intif.h"
 #include "pc.h"
 #include "mail.h"
+
+#ifndef TXT_ONLY
 
 char mail_db[32] = "mail";
 
@@ -315,7 +314,7 @@ int mail_check_timer(int tid,unsigned long tick,int id,int data)
 		}
 		while ((mail_row = mysql_fetch_row(mail_res))) {
 			for (i = 0; i < fd_max; i++) {
-				if (session[i] && (sd = session[i]->session_data) && sd->state.auth){
+				if (session[i] && (sd = (map_session_data *)session[i]->session_data) && sd->state.auth){
 					if(pc_isGM(sd) < 80 && sd->mail_counter > 0)
 						sd->mail_counter--;
 					if(sd->status.account_id==atoi(mail_row[0]))
@@ -341,3 +340,4 @@ int do_init_mail(void)
 	return 0;
 }
 
+#endif//TXT_ONLY

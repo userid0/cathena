@@ -26,7 +26,7 @@ int log_branch(struct map_session_data *sd)
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 	#endif
-		if((logfp=fopen(log_config.log_branch,"a+")) != NULL) {
+		if((logfp=savefopen(log_config.log_branch,"a+")) != NULL) {
 			char timestring[255];
 			time_t curtime;
 			time(&curtime);
