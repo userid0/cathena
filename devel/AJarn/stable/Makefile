@@ -1,13 +1,10 @@
+# $Id: Makefile 158 2004-10-01 03:45:15Z PoW $
 
 CC = gcc -pipe
-# CC = g++
+# CC = g++ -pipe
 # CC = gcc -pipe -DGCOLLECT
 # CC = gcc -pipe -DDMALLOC -DDMALLOC_FUNC_CHECK
 # CC = /usr/local/bin/gcc -fbounds-checking -pipe -DBCHECK
-
-# GCLIB = -lgc
-GCLIB =
-# GCLIB = -ldmalloc
 
 PACKETDEF = -DPACKETVER=6 -DNEW_006b -DSO_REUSEPORT
 #PACKETDEF = -DPACKETVER=5 -DNEW_006b
@@ -24,12 +21,12 @@ else
 MAKE = make
 endif
 
-OPT = -g -O2 -ffast-math
+OPT = -g -O6 -ffast-math
 # OPT += -DDUMPSTACK -rdynamic
 
 ifeq ($(findstring CYGWIN,$(PLATFORM)), CYGWIN)
 OS_TYPE = -DCYGWIN
-CFLAGS =  $(OPT) -Wall -DFD_SETSIZE=4096 -I../common $(PACKETDEF) $(OS_TYPE)
+CFLAGS = $(OPT) -Wall -DFD_SETSIZE=4096 -I../common $(PACKETDEF) $(OS_TYPE)
 else
 OS_TYPE =
 CFLAGS =  $(OPT) -Wall -I../common $(PACKETDEF) $(OS_TYPE)
@@ -44,10 +41,10 @@ ifeq ($(findstring /,$(MYSQLFLAG_CONFIG)), /)
 MYSQLFLAG_VERSION = $(shell $(MYSQLFLAG_CONFIG) --version | sed s:\\..*::) 
 endif
 
-ifeq ($(findstring 4,$(MYSQLFLAG_VERSION)), 4)
-MYSQLFLAG_CONFIG_ARGUMENT = --cflags
-endif
 ifeq ($(findstring 5,$(MYSQLFLAG_VERSION)), 5)
+MYSQLFLAG_CONFIG_ARGUMENT = --include
+endif
+ifeq ($(findstring 4,$(MYSQLFLAG_VERSION)), 4)
 MYSQLFLAG_CONFIG_ARGUMENT = --include
 endif
 ifndef MYSQLFLAG_CONFIG_ARGUMENT
@@ -68,11 +65,11 @@ else
 LIB_S = $(LIB_S_DEFAULT)
 endif
 
-MYLIB = CC="$(CC)" CFLAGS="$(CFLAGS) $(MYSQLFLAG_INCLUDE)" LIB_S="$(LIB_S) $(GCLIB)"
+MYLIB = CC="$(CC)" CFLAGS="$(CFLAGS) $(MYSQLFLAG_INCLUDE)" LIB_S="$(LIB_S)"
 
 endif
 
-MKDEF = CC="$(CC)" CFLAGS="$(CFLAGS)" LIB_S="$(GCLIB)"
+MKDEF = CC="$(CC)" CFLAGS="$(CFLAGS)"
 
 all: conf txt
 
