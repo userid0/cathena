@@ -68,7 +68,7 @@ int Firewall_AddPort (char *desc, int portNum)
 		return 0;
 	ShowMessage ("Get ports\n");
 
-	ports->Item(80, NET_FW_IP_PROTOCOL_TCP, &port);
+	ports->Item(portNum, NET_FW_IP_PROTOCOL_TCP, &port);
 	if (port) {
 		ShowMessage("Port found\n");
 		port->get_Enabled(&enabled);
