@@ -41,7 +41,7 @@ static int chrif_state = 0;
  *
  *------------------------------------------
  */
-void chrif_setuserid(char *id)
+void chrif_setuserid(char *id) 
 {
 	memcpy(userid, id, sizeof(userid));
 	userid[sizeof(userid)-1]=0;
@@ -51,7 +51,7 @@ void chrif_setuserid(char *id)
  *
  *------------------------------------------
  */
-void chrif_setpasswd(char *pwd)
+void chrif_setpasswd(char *pwd) 
 {
 	memcpy(passwd, pwd, sizeof(passwd));
 	passwd[sizeof(passwd)-1]=0;
@@ -61,7 +61,7 @@ void chrif_setpasswd(char *pwd)
  *
  *------------------------------------------
  */
-void chrif_setip(unsigned long ip)
+void chrif_setip(unsigned long ip) 
 {
 	char_ip = ip;
 }
@@ -75,7 +75,7 @@ unsigned long chrif_getip()
  *
  *------------------------------------------
  */
-void chrif_setport(int port)
+void chrif_setport(int port) 
 {
 	char_port = port;
 }
@@ -84,7 +84,7 @@ void chrif_setport(int port)
  *
  *------------------------------------------
  */
-int chrif_isconnect(void)
+int chrif_isconnect(void) 
 {
 	return chrif_state == 2;
 }
@@ -93,7 +93,7 @@ int chrif_isconnect(void)
  *
  *------------------------------------------
  */
-int chrif_save(struct map_session_data *sd)
+int chrif_save(struct map_session_data *sd) 
 {
 	nullpo_retr(-1, sd);
 
@@ -116,7 +116,7 @@ int chrif_save(struct map_session_data *sd)
  *
  *------------------------------------------
  */
-int chrif_connect(int fd)
+int chrif_connect(int fd) 
 {
 	WFIFOW(fd,0) = 0x2af8;
 	memcpy(WFIFOP(fd,2), userid, 24);
@@ -133,7 +133,7 @@ int chrif_connect(int fd)
  * マップ送信
  *------------------------------------------
  */
-int chrif_sendmap(int fd)
+int chrif_sendmap(int fd) 
 {
 	int i;
 
@@ -180,16 +180,16 @@ int chrif_recvmap(int fd)
  * マップ鯖間移動のためのデータ準備要求
  *------------------------------------------
  */
-int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y, unsigned long ip, unsigned short port)
+int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y, unsigned long ip, unsigned short port) 
 {
 	int i;
 	unsigned long s_ip;
 
 	nullpo_retr(-1, sd);
-
+	
 	if (!sd || char_fd < 1 )
 		return -1;
-
+		
 	s_ip = 0;
 	for(i = 0; i < fd_max; i++)
 		if (session[i] && session[i]->session_data == sd) {
@@ -219,7 +219,7 @@ int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y,
  * マップ鯖間移動ack
  *------------------------------------------
  */
-int chrif_changemapserverack(int fd)
+int chrif_changemapserverack(int fd) 
 {
 	struct map_session_data *sd = map_id2sd(RFIFOL(fd,2));
 
@@ -241,7 +241,7 @@ int chrif_changemapserverack(int fd)
  *
  *------------------------------------------
  */
-int chrif_connectack(int fd)
+int chrif_connectack(int fd) 
 {
 	static int char_init_done=0;
 
@@ -272,7 +272,7 @@ int chrif_connectack(int fd)
  *
  *------------------------------------------
  */
-int chrif_sendmapack(int fd)
+int chrif_sendmapack(int fd) 
 {
 	if (RFIFOB(fd,2)) {
 		ShowMessage("chrif : send map list to char server failed %d\n", RFIFOB(fd,2));
@@ -290,7 +290,7 @@ int chrif_sendmapack(int fd)
  *
  *------------------------------------------
  */
-int chrif_authreq(struct map_session_data *sd)
+int chrif_authreq(struct map_session_data *sd) 
 {
 	int i;
 
@@ -319,9 +319,9 @@ int chrif_authreq(struct map_session_data *sd)
  *
  *------------------------------------------
  */
-int chrif_charselectreq(struct map_session_data *sd)
+int chrif_charselectreq(struct map_session_data *sd) 
 {
-	int i;
+	int i; 
 	unsigned long s_ip;
 
 	nullpo_retr(-1, sd);
@@ -351,7 +351,7 @@ int chrif_charselectreq(struct map_session_data *sd)
  * キャラ名問い合わせ
  *------------------------------------------
  */
-int chrif_searchcharid(int char_id)
+int chrif_searchcharid(int char_id) 
 {
 	if (!char_id || char_fd < 1)
 		return -1;
@@ -367,11 +367,11 @@ int chrif_searchcharid(int char_id)
  * GMに変化要求
  *------------------------------------------
  */
-int chrif_changegm(int id, const char *pass, int len)
+int chrif_changegm(int id, const char *pass, int len) 
 {
 	if (battle_config.etc_log)
 		ShowMessage("chrif_changegm: account: %d, password: '%s'.\n", id, pass);
-
+	
 	if (char_fd < 1 )
 		return -1;
 
@@ -388,14 +388,14 @@ int chrif_changegm(int id, const char *pass, int len)
  * Change Email
  *------------------------------------------
  */
-int chrif_changeemail(int id, const char *actual_email, const char *new_email)
+int chrif_changeemail(int id, const char *actual_email, const char *new_email) 
 {
 	if (battle_config.etc_log)
 		ShowMessage("chrif_changeemail: account: %d, actual_email: '%s', new_email: '%s'.\n", id, actual_email, new_email);
-
+		
 	if (char_fd < 1 )
 		return -1;
-
+		
 	WFIFOW(char_fd,0) = 0x2b0c;
 	WFIFOL(char_fd,2) = id;
 	memcpy(WFIFOP(char_fd,6), actual_email, 40);
@@ -416,11 +416,11 @@ int chrif_changeemail(int id, const char *actual_email, const char *new_email)
  *   5: changesex
  *------------------------------------------
  */
-int chrif_char_ask_name(int id, char * character_name, short operation_type, int year, int month, int day, int hour, int minute, int second)
+int chrif_char_ask_name(int id, char * character_name, short operation_type, int year, int month, int day, int hour, int minute, int second) 
 {
    	if (char_fd < 1 )
 		return -1;
-
+		
 	WFIFOW(char_fd, 0) = 0x2b0e;
 	WFIFOL(char_fd, 2) = id; // account_id of who ask (for answer) -1 if nobody
 	memcpy(WFIFOP(char_fd,6), character_name, 24);
@@ -472,7 +472,7 @@ int chrif_changesex(int id, int sex) {
  *   3: login-server offline
  *------------------------------------------
  */
-int chrif_char_ask_name_answer(int fd)
+int chrif_char_ask_name_answer(int fd) 
 {
 	int acc;
 	struct map_session_data *sd;
@@ -575,7 +575,7 @@ int chrif_char_ask_name_answer(int fd)
  * End of GM change (@GM) (modified by Yor)
  *------------------------------------------
  */
-int chrif_changedgm(int fd)
+int chrif_changedgm(int fd) 
 {
 	int acc, level;
 	struct map_session_data *sd = NULL;
@@ -601,7 +601,7 @@ int chrif_changedgm(int fd)
  * 性別変化終了 (modified by Yor)
  *------------------------------------------
  */
-int chrif_changedsex(int fd)
+int chrif_changedsex(int fd) 
 {
 	int acc, sex, i;
 	struct map_session_data *sd;
@@ -673,14 +673,14 @@ int chrif_changedsex(int fd)
  * アカウント変数保存要求
  *------------------------------------------
  */
-int chrif_saveaccountreg2(struct map_session_data *sd)
+int chrif_saveaccountreg2(struct map_session_data *sd) 
 {
 	int p, j;
 	nullpo_retr(-1, sd);
-
+	
 	if (char_fd < 1 )
 		return -1;
-
+	
 	p = 8;
 	for(j = 0; j < sd->status.account_reg2_num; j++) {
 		struct global_reg *reg = &sd->status.account_reg2[j];
@@ -702,7 +702,7 @@ int chrif_saveaccountreg2(struct map_session_data *sd)
  * アカウント変数通知
  *------------------------------------------
  */
-int chrif_accountreg2(int fd)
+int chrif_accountreg2(int fd) 
 {
 	int j, p;
 	struct map_session_data *sd;
@@ -724,7 +724,7 @@ int chrif_accountreg2(int fd)
  * 離婚情報同期要求
  *------------------------------------------
  */
-int chrif_divorce(int char_id, int partner_id)
+int chrif_divorce(int char_id, int partner_id) 
 {
 	struct map_session_data *sd = NULL;
 
@@ -750,7 +750,7 @@ int chrif_divorce(int char_id, int partner_id)
  * Disconnection of a player (account has been deleted in login-server) by [Yor]
  *------------------------------------------
  */
-int chrif_accountdeletion(int fd)
+int chrif_accountdeletion(int fd) 
 {
 	int acc;
 	struct map_session_data *sd;
@@ -777,7 +777,7 @@ int chrif_accountdeletion(int fd)
  * Disconnection of a player (account has been banned of has a status, from login-server) by [Yor]
  *------------------------------------------
  */
-int chrif_accountban(int fd)
+int chrif_accountban(int fd) 
 {
 	int acc;
 	struct map_session_data *sd;
@@ -867,7 +867,7 @@ int chrif_chardisconnect(struct map_session_data *sd)
  * Receiving GM accounts and their levels from char-server by [Yor]
  *------------------------------------------
  */
-int chrif_recvgmaccounts(int fd)
+int chrif_recvgmaccounts(int fd) 
 {
 	ShowInfo("From login-server: receiving information of '"CL_WHITE"%d"CL_RESET"' GM accounts.\n", pc_read_gm_account(fd));
 	return 0;
@@ -877,11 +877,11 @@ int chrif_recvgmaccounts(int fd)
  * Request to reload GM accounts and their levels: send to char-server by [Yor]
  *------------------------------------------
  */
-int chrif_reloadGMdb(void)
+int chrif_reloadGMdb(void) 
 {
    	if (char_fd < 1 )
 		return -1;
-
+    
 	WFIFOW(char_fd,0) = 0x2af7;
 	WFIFOSET(char_fd, 2);
 
@@ -892,15 +892,15 @@ int chrif_reloadGMdb(void)
  * Send rates and motd to char server [Wizputer]
  *------------------------------------------
  */
- int chrif_ragsrvinfo(int base_rate, int job_rate, int drop_rate)
+ int chrif_ragsrvinfo(int base_rate, int job_rate, int drop_rate) 
 {
 	char buf[256];
 	FILE *fp;
 	int i;
-
+	
 	if (char_fd < 1 )
 		return -1;
-
+		
 	WFIFOW(char_fd,0) = 0x2b16;
 	WFIFOW(char_fd,2) = base_rate;
 	WFIFOW(char_fd,4) = job_rate;
@@ -933,7 +933,7 @@ int chrif_reloadGMdb(void)
  *-----------------------------------------
  */
 
-int chrif_char_offline(struct map_session_data *sd)
+int chrif_char_offline(struct map_session_data *sd) 
 {
 	if (char_fd < 1)
 		return -1;
@@ -980,7 +980,7 @@ int chrif_char_reset_offline(void) {
  *-----------------------------------------
  */
 
-int chrif_char_online(struct map_session_data *sd)
+int chrif_char_online(struct map_session_data *sd) 
 {
 	if (char_fd < 1)
 		return -1;
@@ -1019,9 +1019,9 @@ int chrif_disconnect(int fd) {
  *
  *------------------------------------------
  */
-int chrif_parse(int fd)
+int chrif_parse(int fd) 
 {
-	int packet_len;
+	int packet_len; 
 	unsigned short cmd;
 	// only char-server can have an access to here.
 	// so, if it isn't the char-server, we disconnect the session (fd != char_fd).
@@ -1081,9 +1081,9 @@ int chrif_parse(int fd)
 		switch(cmd) {
 		case 0x2af9: chrif_connectack(fd); break;
 		case 0x2afb: chrif_sendmapack(fd); break;
-		case 0x2afd:
+		case 0x2afd: 
 		{
-			pc_authok(RFIFOL(fd,4), RFIFOL(fd,8), (time_t)RFIFOL(fd,12), RFIFOP(fd,16));
+			pc_authok(RFIFOL(fd,4), RFIFOL(fd,8), (time_t)RFIFOL(fd,12), RFIFOP(fd,16)); 
 			// typecast is bad but only memcopied internaly
 			break;
 		}

@@ -6,7 +6,7 @@ COMMON_OBJ = ../common/core.o ../common/socket.o ../common/timer.o ../common/db.
 COMMON_H = ../common/core.h ../common/socket.h ../common/timer.h ../common/mmo.h ../common/version.h ../common/db.h ../common/malloc.h ../common/utils.h ../common/showmsg.h ../common/strlib.h ../common/md5calc.h
 
 ladmin: ladmin.o $(COMMON_OBJ)
-	$(CC) -o ../../$@ ladmin.o $(COMMON_OBJ)
+	$(CC) -lsocket -o ../../$@ ladmin.o $(COMMON_OBJ)
 ladmin.o: ladmin.c ladmin.h $(COMMON_H)
 
 clean:
