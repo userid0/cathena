@@ -2051,6 +2051,18 @@ int parse_frommap(int fd) {
 	while(RFIFOREST(fd) >= 2) {
 //		ShowMessage("parse_frommap: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, (unsigned short)RFIFOW(fd,0), RFIFOREST(fd));
 		switch(RFIFOW(fd,0)) {
+
+
+		// map-server alive packet
+		case 0x2718:
+			if (RFIFOREST(fd) < 2)
+				return 0;
+			// do whatever it's supposed to do here?
+
+			RFIFOSKIP(fd,2);
+			break;
+
+
 		// request from map-server to reload GM accounts. Transmission to login-server (by Yor)
 		case 0x2af7:
 			if( session_isActive(login_fd) )
