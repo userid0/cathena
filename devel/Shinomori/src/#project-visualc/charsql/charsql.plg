@@ -1,0 +1,57 @@
+<html>
+<body>
+<pre>
+<h1>Erstellungsprotokoll</h1>
+<h3>
+--------------------Konfiguration: charsql - Win32 Release--------------------
+</h3>
+<h3>Befehlszeilen</h3>
+Erstellen der temporaren Datei  "C:\DOKUME~1\ich\LOKALE~1\Temp\RSPA12.tmp" mit Inhalten
+[
+/nologo /ML /W3 /GX /O2 /I "../../common" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /FR"Release/" /Fp"Release/charsql.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c     
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\char.c"
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\int_guild.c"
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\int_party.c"
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\int_pet.c"
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\int_storage.c"
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\inter.c"
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\itemdb.c"
+]
+Creating command line "cl.exe @C:\DOKUME~1\ich\LOKALE~1\Temp\RSPA12.tmp" 
+Erstellen der temporaren Datei  "C:\DOKUME~1\ich\LOKALE~1\Temp\RSPA13.tmp" mit Inhalten
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:no /pdb:"Release/charsql.pdb" /machine:I386 /out:"Release/charsql.exe" 
+".\Release\char.obj"
+".\Release\int_guild.obj"
+".\Release\int_party.obj"
+".\Release\int_pet.obj"
+".\Release\int_storage.obj"
+".\Release\inter.obj"
+".\Release\itemdb.obj"
+]
+Erstellen der Befehlzeile "link.exe @C:\DOKUME~1\ich\LOKALE~1\Temp\RSPA13.tmp"
+<h3>Ausgabefenster</h3>
+Kompilierung lauft...
+char.c
+D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\inter.h(4) : fatal error C1083: Include-Datei kann nicht geoeffnet werden: 'mysql.h': No such file or directory
+int_guild.c
+D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\inter.h(4) : fatal error C1083: Include-Datei kann nicht geoeffnet werden: 'mysql.h': No such file or directory
+int_party.c
+D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\inter.h(4) : fatal error C1083: Include-Datei kann nicht geoeffnet werden: 'mysql.h': No such file or directory
+int_pet.c
+D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\inter.h(4) : fatal error C1083: Include-Datei kann nicht geoeffnet werden: 'mysql.h': No such file or directory
+int_storage.c
+D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\inter.h(4) : fatal error C1083: Include-Datei kann nicht geoeffnet werden: 'mysql.h': No such file or directory
+inter.c
+D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\inter.h(4) : fatal error C1083: Include-Datei kann nicht geoeffnet werden: 'mysql.h': No such file or directory
+itemdb.c
+D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\char_sql\inter.h(4) : fatal error C1083: Include-Datei kann nicht geoeffnet werden: 'mysql.h': No such file or directory
+Fehler beim Ausfuhren von cl.exe.
+
+
+
+<h3>Ergebnisse</h3>
+charsql.exe - 7 Fehler, 0 Warnung(en)
+</pre>
+</body>
+</html>

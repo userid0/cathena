@@ -1,0 +1,36 @@
+<html>
+<body>
+<pre>
+<h1>Erstellungsprotokoll</h1>
+<h3>
+--------------------Konfiguration: login - Win32 Release--------------------
+</h3>
+<h3>Befehlszeilen</h3>
+Erstellen der temporaren Datei  "C:\DOKUME~1\ich\LOKALE~1\Temp\RSPC8B.tmp" mit Inhalten
+[
+/nologo /ML /W3 /GX /O2 /I "../../common" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /FR"Release/" /Fp"Release/login.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c     
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\login\login.c"
+]
+Creating command line "cl.exe @C:\DOKUME~1\ich\LOKALE~1\Temp\RSPC8B.tmp" 
+Erstellen der temporaren Datei  "C:\DOKUME~1\ich\LOKALE~1\Temp\RSPC8C.tmp" mit Inhalten
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib common.lib /nologo /subsystem:console /incremental:no /pdb:"Release/login.pdb" /machine:I386 /nodefaultlib:"libcmt.lib msvcrt.lib libcd.lib libcmtd.lib msvcrtd.lib" /out:"../login.exe" /libpath:".." 
+".\Release\login.obj"
+"\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\#PROJECT-VISUALC\common.lib"
+]
+Erstellen der Befehlzeile "link.exe @C:\DOKUME~1\ich\LOKALE~1\Temp\RSPC8C.tmp"
+<h3>Ausgabefenster</h3>
+Kompilierung lauft...
+login.c
+Linker-Vorgang lauft...
+Erstellen der Befehlzeile "bscmake.exe /nologo /o"Release/login.bsc"  ".\Release\login.sbr""
+Browse-Informationsdatei wird erstellt...
+<h3>Ausgabefenster</h3>
+
+
+
+<h3>Ergebnisse</h3>
+login.exe - 0 Fehler, 0 Warnung(en)
+</pre>
+</body>
+</html>

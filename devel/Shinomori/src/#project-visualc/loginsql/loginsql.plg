@@ -1,0 +1,33 @@
+<html>
+<body>
+<pre>
+<h1>Erstellungsprotokoll</h1>
+<h3>
+--------------------Konfiguration: loginsql - Win32 Release--------------------
+</h3>
+<h3>Befehlszeilen</h3>
+Erstellen der temporaren Datei  "C:\DOKUME~1\ich\LOKALE~1\Temp\RSPBDB.tmp" mit Inhalten
+[
+/nologo /ML /W3 /GX /O2 /I "../../common" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /FR"Release/" /Fp"Release/loginsql.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c     
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\login_sql\login.c"
+]
+Creating command line "cl.exe @C:\DOKUME~1\ich\LOKALE~1\Temp\RSPBDB.tmp" 
+Erstellen der temporaren Datei  "C:\DOKUME~1\ich\LOKALE~1\Temp\RSPBDC.tmp" mit Inhalten
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:no /pdb:"Release/loginsql.pdb" /machine:I386 /out:"Release/loginsql.exe" 
+".\Release\login.obj"
+]
+Erstellen der Befehlzeile "link.exe @C:\DOKUME~1\ich\LOKALE~1\Temp\RSPBDC.tmp"
+<h3>Ausgabefenster</h3>
+Kompilierung lauft...
+login.c
+D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\login_sql\login.c(26) : fatal error C1083: Include-Datei kann nicht geoeffnet werden: 'mysql.h': No such file or directory
+Fehler beim Ausfuhren von cl.exe.
+
+
+
+<h3>Ergebnisse</h3>
+loginsql.exe - 1 Fehler, 0 Warnung(en)
+</pre>
+</body>
+</html>

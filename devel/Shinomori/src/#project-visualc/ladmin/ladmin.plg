@@ -1,0 +1,33 @@
+<html>
+<body>
+<pre>
+<h1>Erstellungsprotokoll</h1>
+<h3>
+--------------------Konfiguration: ladmin - Win32 Release--------------------
+</h3>
+<h3>Befehlszeilen</h3>
+Erstellen der temporaren Datei  "C:\DOKUME~1\ich\LOKALE~1\Temp\RSPA14.tmp" mit Inhalten
+[
+/nologo /ML /W3 /GX /O2 /I "../../common" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /FR"Release/" /Fp"Release/ladmin.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c     
+/Tp "D:\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\ladmin\ladmin.c"
+]
+Creating command line "cl.exe @C:\DOKUME~1\ich\LOKALE~1\Temp\RSPA14.tmp" 
+Erstellen der temporaren Datei  "C:\DOKUME~1\ich\LOKALE~1\Temp\RSPA15.tmp" mit Inhalten
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib common.lib /nologo /subsystem:console /incremental:no /pdb:"Release/ladmin.pdb" /machine:I386 /nodefaultlib:"libcmt.lib msvcrt.lib libcd.lib libcmtd.lib msvcrtd.lib" /out:"../ladmin.exe" /libpath:".." 
+".\Release\ladmin.obj"
+"\TEMP\PRIVAT\EATHENA\EATHENA-SVN-700\SRC\#PROJECT-VISUALC\common.lib"
+]
+Erstellen der Befehlzeile "link.exe @C:\DOKUME~1\ich\LOKALE~1\Temp\RSPA15.tmp"
+<h3>Ausgabefenster</h3>
+Kompilierung lauft...
+ladmin.c
+Linker-Vorgang lauft...
+
+
+
+<h3>Ergebnisse</h3>
+ladmin.exe - 0 Fehler, 0 Warnung(en)
+</pre>
+</body>
+</html>

@@ -3853,7 +3853,7 @@ int parse_fromlogin(int fd) {
 					strftime(tmpstr, 24, date_format, localtime(&timestamp));
 					if (defaultlanguage == 'F') {
 						ShowMessage("Date finale de banissement du compte [%s][id: %ld] changée avec succès pour être jusqu'au %s.\n", RFIFOP(fd,6), (unsigned long)RFIFOL(fd,2), tmpstr);
-						ladmin_log("Date finale de banissement du compte [%s][id: %d] changée avec succès pour être jusqu'au %s." RETCODE, RFIFOP(fd,6), RFIFOL(fd,2), tmpstr);
+						ladmin_log("Date finale de banissement du compte [%s][id: %ld] changée avec succès pour être jusqu'au %s." RETCODE, RFIFOP(fd,6), (unsigned long)RFIFOL(fd,2), tmpstr);
 					} else {
 						ShowMessage("Final date of banishment of the account [%s][id: %ld] successfully changed to be until %s.\n", RFIFOP(fd,6), (unsigned long)RFIFOL(fd,2), tmpstr);
 						ladmin_log("Final date of banishment of the account [%s][id: %ld] successfully changed to be until %s." RETCODE, RFIFOP(fd,6), (unsigned long)RFIFOL(fd,2), tmpstr);
@@ -3867,7 +3867,7 @@ int parse_fromlogin(int fd) {
 		case 0x794f:	// answer of a broadcast
 			if (RFIFOREST(fd) < 4)
 				return 0;
-			if ((int)RFIFOW(fd,2) == -1) {
+			if ( RFIFOW(fd,2) == ~0) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec de l'envoi du message. Aucun server de char en ligne.\n");
 					ladmin_log("Echec de l'envoi du message. Aucun server de char en ligne." RETCODE);
@@ -3906,12 +3906,12 @@ int parse_fromlogin(int fd) {
 						ShowMessage("Limite de validité du compte [%s][id: %ld] inchangée.\n", RFIFOP(fd,6), (unsigned long)RFIFOL(fd,2));
 						ShowMessage("Le compte a une validité illimitée ou\n");
 						ShowMessage("la modification est impossible avec les ajustements demandés.\n");
-						ladmin_log("Limite de validité du compte [%s][id: %d] inchangée. Le compte a une validité illimitée ou la modification est impossible avec les ajustements demandés." RETCODE, RFIFOP(fd,6), RFIFOL(fd,2));
+						ladmin_log("Limite de validité du compte [%s][id: %ld] inchangée. Le compte a une validité illimitée ou la modification est impossible avec les ajustements demandés." RETCODE, RFIFOP(fd,6), (unsigned long)RFIFOL(fd,2));
 					} else {
 						ShowMessage("Validity limit of the account [%s][id: %ld] unchanged.\n", RFIFOP(fd,6), (unsigned long)RFIFOL(fd,2));
 						ShowMessage("The account have an unlimited validity limit or\n");
 						ShowMessage("the changing is impossible with the proposed adjustments.\n");
-						ladmin_log("Validity limit of the account [%s][id: %d] unchanged. The account have an unlimited validity limit or the changing is impossible with the proposed adjustments." RETCODE, RFIFOP(fd,6), RFIFOL(fd,2));
+						ladmin_log("Validity limit of the account [%s][id: %ld] unchanged. The account have an unlimited validity limit or the changing is impossible with the proposed adjustments." RETCODE, RFIFOP(fd,6), (unsigned long)RFIFOL(fd,2));
 					}
 				} else {
 					char tmpstr[128];

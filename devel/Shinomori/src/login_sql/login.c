@@ -1317,7 +1317,7 @@ int parse_login(int fd) {
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
 				ShowMessage("server connection request %s @ %d.%d.%d.%d:%d (%d.%d.%d.%d)\n",
-					RFIFOP(fd, 60), RFIFOB(fd, 54), RFIFOB(fd, 55), RFIFOB(fd, 56), RFIFOB(fd, 57), RFIFOW(fd, 58),
+					RFIFOP(fd, 60), RFIFOB(fd, 54), RFIFOB(fd, 55), RFIFOB(fd, 56), RFIFOB(fd, 57), (unsigned short)RFIFOW(fd, 58),
 					p[0], p[1], p[2], p[3]);
 				account.userid = (char*)RFIFOP(fd, 2);
 				account.passwd = (char*)RFIFOP(fd, 26);
