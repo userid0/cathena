@@ -7,15 +7,9 @@
 #include "malloc.h"
 #include "timer.h"
 
+
 extern unsigned long ticks;
 extern time_t tick_;
-//extern time_t stall_time_;
-
-
-
-// just kill the exeption here, will port the exeptions later
-#define exception_bound 
-#define exception_memory
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -109,14 +103,14 @@ public:
 
 
 
-
+/*
 
 /////////////////////////////////////////////////////////////////////
 //
 //  Basic FIFO Template
 //
 /////////////////////////////////////////////////////////////////////
-template<class T> class TFIFO// : public global, public noncopyable		!!todo!! dont forget to remove when merging with base objects
+template<class T> class TFIFO : public global, public noncopyable
 {
 public:
 	TFIFO()				{}
@@ -774,6 +768,442 @@ public:
 
 	///////////////////////////////////////////////////////////////////////////
 };
+
+*/
+
+
+class streamable;
+class buffer_iterator
+{
+	unsigned char *ipp;
+	const unsigned char *end;
+public:
+	buffer_iterator(const unsigned char* b, size_t sz)
+		: ipp(const_cast<unsigned char*>(b)), end(b+sz)
+	{}
+
+	bool eof()
+	{	
+		return !(ipp && ipp<end);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	unsigned char operator = (const unsigned char ch)
+	{	// no check push will throw anyway
+		if( ipp && ipp<end)
+			*ipp++ = ch;
+		return ch;
+	}
+	char operator = (const char ch)
+	{	
+		if( ipp && ipp<end)
+			*ipp++ = (unsigned char)ch;
+		return ch;
+
+	}
+	///////////////////////////////////////////////////////////////////////////
+	unsigned short operator = (const unsigned short sr)
+	{	// implement little endian buffer format
+
+		if( ipp && ipp+1<end)
+		{
+			*ipp++ = (unsigned char)(sr         ); 
+			*ipp++ = (unsigned char)(sr  >> 0x08);
+		}
+		return sr;
+	}
+	short operator = (const short sr)
+	{	// implement little endian buffer format
+		if( ipp && ipp+1<end)
+		{
+			*ipp++ = (unsigned char)(sr         ); 
+			*ipp++ = (unsigned char)(sr  >> 0x08);
+		}
+		return sr;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	unsigned long operator = (const unsigned long ln)
+	{	// implement little endian buffer format
+		if( ipp && ipp+3<end)
+		{
+			*ipp++ = (unsigned char)(ln          );
+			*ipp++ = (unsigned char)(ln  >> 0x08 );
+			*ipp++ = (unsigned char)(ln  >> 0x10 );
+			*ipp++ = (unsigned char)(ln  >> 0x18 );
+		}
+		return ln;
+	}
+	long operator = (const long ln)
+	{	// implement little endian buffer format
+		if( ipp && ipp+3<end)
+		{
+			*ipp++ = (unsigned char)(ln          );
+			*ipp++ = (unsigned char)(ln  >> 0x08 );
+			*ipp++ = (unsigned char)(ln  >> 0x10 );
+			*ipp++ = (unsigned char)(ln  >> 0x18 );
+		}
+		return ln;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	ipaddress operator = (const ipaddress ip)
+	{	// implement little endian buffer format
+		// IPs are given in network byte order to the buffer
+		if( ipp && ipp+3<end)
+		{
+			*ipp++ = (unsigned char)(ip[3]);
+			*ipp++ = (unsigned char)(ip[2]);
+			*ipp++ = (unsigned char)(ip[1]);
+			*ipp++ = (unsigned char)(ip[0]);
+		}
+		return ip;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	int64 operator = (const int64 lx)
+	{	// implement little endian buffer format
+		if( ipp && ipp+7<end)
+		{
+			*ipp++ = (unsigned char)(lx          );
+			*ipp++ = (unsigned char)(lx  >> 0x08 );
+			*ipp++ = (unsigned char)(lx  >> 0x10 );
+			*ipp++ = (unsigned char)(lx  >> 0x18 );
+			*ipp++ = (unsigned char)(lx  >> 0x20 );
+			*ipp++ = (unsigned char)(lx  >> 0x28 );
+			*ipp++ = (unsigned char)(lx  >> 0x30 );
+			*ipp++ = (unsigned char)(lx  >> 0x38 );
+		}
+		return lx;
+	}
+	uint64 operator = (const uint64 lx)
+	{	// implement little endian buffer format
+		if( ipp && ipp+7<end)
+		{
+			*ipp++ = (unsigned char)(lx          );
+			*ipp++ = (unsigned char)(lx  >> 0x08 );
+			*ipp++ = (unsigned char)(lx  >> 0x10 );
+			*ipp++ = (unsigned char)(lx  >> 0x18 );
+			*ipp++ = (unsigned char)(lx  >> 0x20 );
+			*ipp++ = (unsigned char)(lx  >> 0x28 );
+			*ipp++ = (unsigned char)(lx  >> 0x30 );
+			*ipp++ = (unsigned char)(lx  >> 0x38 );
+		}
+		return lx;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	operator unsigned char ()
+	{	
+		if( ipp && ipp<end)
+			return *ipp++;
+		return 0;
+	}
+	operator char()
+	{	
+		if( ipp && ipp<end)
+			return *ipp++;
+		return 0;
+
+	}
+	///////////////////////////////////////////////////////////////////////////
+	operator unsigned short()
+	{	// implement little endian buffer format
+		unsigned short sr=0;
+		if( ipp && ipp+1<end)
+		{	
+			sr  = ((unsigned short)(*ipp++)        ); 
+			sr |= ((unsigned short)(*ipp++) << 0x08);
+		}
+		return sr;
+	}
+	operator short ()
+	{	// implement little endian buffer format
+		short sr=0;
+		if( ipp && ipp+1<end)
+		{	
+			sr  = ((unsigned short)(*ipp++)        ); 
+			sr |= ((unsigned short)(*ipp++) << 0x08);
+		}
+		return sr;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	operator unsigned long ()
+	{	// implement little endian buffer format
+		unsigned long ln=0;
+		if( ipp && ipp+3<end)
+		{	
+			ln  = ((unsigned long)(*ipp++)        ); 
+			ln |= ((unsigned long)(*ipp++) << 0x08);
+			ln |= ((unsigned long)(*ipp++) << 0x10);
+			ln |= ((unsigned long)(*ipp++) << 0x18);
+		}
+		return ln;
+	}
+	operator long ()
+	{	// implement little endian buffer format
+		long ln=0;
+		if( ipp && ipp+3<end)
+		{	
+			ln  = ((unsigned long)(*ipp++)        ); 
+			ln |= ((unsigned long)(*ipp++) << 0x08);
+			ln |= ((unsigned long)(*ipp++) << 0x10);
+			ln |= ((unsigned long)(*ipp++) << 0x18);
+		}
+		return ln;
+	}
+	///////////////////////////////////////////////////////////////////////////
+
+	operator ipaddress ()
+	{	// implement little endian buffer format
+
+		if( ipp && ipp+3<end)
+		{
+			ipaddress ip( ipp[0],ipp[1],ipp[2],ipp[3] );
+			ipp+=4;
+			return  ip;
+		}
+		return 0;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	operator int64 ()
+	{	// implement little endian buffer format
+		int64 lx=0;
+		if( ipp && ipp+7<end)
+		{	
+			lx  = ((uint64)(*ipp++)        ); 
+			lx |= ((uint64)(*ipp++) << 0x08);
+			lx |= ((uint64)(*ipp++) << 0x10);
+			lx |= ((uint64)(*ipp++) << 0x18);
+			lx |= ((uint64)(*ipp++) << 0x20);
+			lx |= ((uint64)(*ipp++) << 0x28);
+			lx |= ((uint64)(*ipp++) << 0x30);
+			lx |= ((uint64)(*ipp++) << 0x38);
+		}
+		return lx;
+	}
+	operator uint64 ()
+	{	// implement little endian buffer format
+		uint64 lx=0;
+		if( ipp && ipp+7<end)
+		{	
+			lx  = ((uint64)(*ipp++)        ); 
+			lx |= ((uint64)(*ipp++) << 0x08);
+			lx |= ((uint64)(*ipp++) << 0x10);
+			lx |= ((uint64)(*ipp++) << 0x18);
+			lx |= ((uint64)(*ipp++) << 0x20);
+			lx |= ((uint64)(*ipp++) << 0x28);
+			lx |= ((uint64)(*ipp++) << 0x30);
+			lx |= ((uint64)(*ipp++) << 0x38);
+		}
+		return lx;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// direct assignements of strings to buffers should be avoided
+	// if a fixed buffer scheme is necessary;
+	// use str2buffer / buffer2str instead
+	///////////////////////////////////////////////////////////////////////////
+
+	const char* operator = (const char * c)
+	{	
+		if( c && ipp+strlen(c)+1 < end )
+		{
+			memcpy(ipp, c, strlen(c)+1);
+			ipp+=strlen(c)+1;
+		}
+		return c;
+	}
+	operator const char*()
+	{	// find the EOS
+		// cannot do anything else then going through the array
+		unsigned char *ix = ipp;
+		while( ipp<end && ipp);
+		if(ipp<end)
+		{	
+			ipp++;// skip the eos
+			return (char*)ix;
+		}
+		else
+		{	
+			ipp = ix;
+			return NULL;
+		}
+	}
+
+	bool str2buffer(const char *c, size_t sz)
+	{
+		if( c && ipp+sz < end )
+		{	
+			size_t cpsz=sz;
+			if( cpsz > strlen(c) )
+				cpsz = strlen(c);
+			memcpy(ipp, c, cpsz);
+			ipp[cpsz-1] = 0;	// force an EOS
+			ipp+=sz;
+			return true;
+		}
+		return false;
+	}
+	bool buffer2str(char *c, size_t sz)
+	{
+		if( c && ipp+sz < end )
+		{	
+			memcpy(c,ipp, sz);
+			c[sz-1] = 0;	// force an EOS
+			ipp+=sz;
+			return true;
+		}
+		return false;
+	}
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// direct access to the buffer and "manual" contol
+	// use with care
+	///////////////////////////////////////////////////////////////////////////
+
+	unsigned char* operator()()	{ return ipp; }
+
+	bool step(int i)
+	{	// can go to backwards with negative offset
+		// but this cannot handled by error checks
+		if(ipp+i <= end)
+		{
+			ipp+=i;
+			return true;
+		}
+		return false;
+	}
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// I explicitely exclude int operators since the usage of ints 
+	// should be generally banned from any portable storage scheme
+	//
+	// assigning an int will now cause an ambiquity 
+	// which has to be solved by casting to a proper type with fixed size
+	///////////////////////////////////////////////////////////////////////////
+/*
+
+	int operator = (const int i)
+	{	// implement little endian buffer format
+		switch(sizeof(int))
+		{
+		case 1:	// 8bit systems should be quite rare
+			(*this) = (char)i;
+			break;
+		case 2:	// 16bits might be not that common
+			(*this) = (short)i;
+			break;
+		case 4:	// 32bits (still) exist
+			(*this) = (long)i;
+			break;
+		case 8:	// 64bits are rising
+			(*this) = (int64)i;
+			break;
+				// the rest is far future
+		}
+		return i;
+	}
+	operator int ()
+	{	// implement little endian buffer format
+		switch(sizeof(int))
+		{
+		case 1:
+			return (char)(*this);
+		case 2:
+			return (short)(*this);
+		case 4:
+			return (long)(*this);
+		case 8:
+			return (int64)(*this);
+		}
+	}
+	unsigned int operator = (const unsigned int i)
+	{	// implement little endian buffer format
+		switch(sizeof(int))
+		{
+		case 1:
+			(*this) = (char)i;
+			break;
+		case 2:
+			(*this) = (short)i;
+			break;
+		case 4:
+			(*this) = (long)i;
+			break;
+		case 8:
+			(*this) = (int64)i;
+			break;
+		}
+		return i;
+	}
+	operator unsigned int ()
+	{	// implement little endian buffer format
+		switch(sizeof(int))
+		{
+		case 1:
+			return (char)(*this);
+		case 2:
+			return (short)(*this);
+		case 4:
+			return (long)(*this);
+		case 8:
+			return (int64)(*this);
+		}
+	}
+*/
+
+
+
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// the next will combine the buffer_iterator with the 
+	// virtual streamable class allowing to derive
+	// classes that are auto-assignable to buffers
+	///////////////////////////////////////////////////////////////////////////
+
+	const streamable& operator = (const streamable& s);
+
+};
+///////////////////////////////////////////////////////////////////////////////
+// 
+//
+///////////////////////////////////////////////////////////////////////////////
+
+class streamable
+{
+public:
+	streamable()			{}
+	virtual ~streamable()	{}
+
+	buffer_iterator& operator=(buffer_iterator& bi)
+	{
+		this->fromBuffer(bi);
+		return bi;
+	}
+
+
+	virtual bool toBuffer(buffer_iterator& bi) const   = 0;
+	virtual bool fromBuffer(buffer_iterator& bi) = 0;
+};
+
+
+inline const streamable& buffer_iterator::operator = (const streamable& s)
+{
+	s.toBuffer(*this);
+	return s;
+}
+
+
+
+
+
+
+
+
+
+
 
 
 

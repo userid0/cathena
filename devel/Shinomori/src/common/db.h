@@ -15,11 +15,14 @@ struct dbn {
 	void *key;
 	void *data;
 	int deleted;	// íœÏ‚İƒtƒ‰ƒO(db_foreach)
+	struct dbn *next;
+	struct dbn *prev;
 };
 struct db_free {
-	struct dbn *z;
-	struct dbn **root;
+  struct dbn *z;
+  struct dbn **root;
 };
+
 struct dbt {
 	int (*cmp)(struct dbt*,void*,void*);
 	unsigned int (*hash)(struct dbt*,void*);
@@ -60,5 +63,6 @@ struct dbn* db_insert(struct dbt *table,void* key,void* data);
 void* db_erase(struct dbt *table,void* key);
 void db_foreach(struct dbt*,int(*)(void*,void*,va_list),...);
 void db_final(struct dbt*,int(*)(void*,void*,va_list),...);
+void exit_dbn(void);
 
 #endif

@@ -21,9 +21,6 @@
 
 static struct dbt *guild_db_;
 static struct dbt *castle_db_;
-static struct dbt *guild_expcache_db_;
-static struct dbt *guild_infoevent_db_;
-static struct dbt *guild_castleinfoevent_db_;
 
 static struct guild *guild_pt;
 static struct guild *guild_pt2;
@@ -376,11 +373,13 @@ struct guild * inter_guild_fromsql(int guild_id)
 		g->emblem_len=atoi(sql_row[13]);
 		g->emblem_id=atoi(sql_row[14]);
 		strncpy(emblem_data,sql_row[15],4096);
-		for(i=0,pstr=emblem_data;i<g->emblem_len;i++,pstr+=2){
+		for(i=0,pstr=emblem_data;i<g->emblem_len;i++,pstr+=2)
+		{
 			int c1=pstr[0],c2=pstr[1],x1=0,x2=0;
 			if(c1>='0' && c1<='9')x1=c1-'0';
 			if(c1>='a' && c1<='f')x1=c1-'a'+10;
 			if(c1>='A' && c1<='F')x1=c1-'A'+10;
+
 			if(c2>='0' && c2<='9')x2=c2-'0';
 			if(c2>='a' && c2<='f')x2=c2-'a'+10;
 			if(c2>='A' && c2<='F')x2=c2-'A'+10;
@@ -662,9 +661,6 @@ int inter_guild_sql_init()
 	
 	guild_db_=numdb_init();
 	castle_db_=numdb_init();
-	guild_expcache_db_=numdb_init();
-	guild_infoevent_db_=numdb_init();
-	guild_castleinfoevent_db_=numdb_init();
 
 	ShowMessage("interserver guild memory initialize.... (%d byte)\n",sizeof(struct guild));
 	guild_pt = (struct guild*)aCalloc(sizeof(struct guild), 1);
@@ -703,6 +699,29 @@ int inter_guild_sql_init()
 	return 0;
 }
 
+int guild_db_final (void *k, void *data, va_list ap)
+{
+	struct guild *g = (struct guild *)data;
+	if (g) aFree(g);
+	return 0;
+}
+int castle_db_final (void *k, void *data, va_list ap)
+{
+	struct guild_castle *gc = (struct guild_castle *)data;
+	if (gc) aFree(gc);
+	return 0;
+}
+void inter_guild_sql_final()
+{
+	if (guild_pt) aFree(guild_pt);
+	if (guild_pt2) aFree(guild_pt2);
+	if (guildcastle_pt) aFree(guildcastle_pt);
+	
+	numdb_final(guild_db_, guild_db_final);
+	numdb_final(castle_db_, castle_db_final);
+
+	return;
+}
 
 // Get guild by its name
 struct guild* search_guildname(char *str)

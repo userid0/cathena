@@ -13,8 +13,8 @@
 
 
 int config_switch(const char *str);
-int e_mail_check(char *email);
-int remove_control_chars(char *str);
+bool e_mail_check(const char *email);
+bool remove_control_chars(char *str);
 
 void dump(unsigned char *buffer, int num);
 

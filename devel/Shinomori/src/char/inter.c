@@ -235,7 +235,8 @@ int inter_log(char *fmt,...) {
 }
 
 // セーブ
-int inter_save(void) {
+int inter_save(void) 
+{
 	inter_party_save();
 	inter_guild_save();
 	inter_storage_save();
@@ -259,6 +260,29 @@ int inter_init(const char *file) {
 	inter_accreg_init();
 
 	return 0;
+}
+
+// finalize
+int accreg_db_final (void *k, void *data, va_list ap) {	
+	struct accreg *p = (struct accreg *)data;
+	if (p) aFree(p);
+	return 0;
+}
+int wis_db_final (void *k, void *data, va_list ap) {
+	struct WisData *p = (struct WisData *)data;
+	if (p) aFree(p);
+	return 0;
+}
+void inter_final() {
+	numdb_final(accreg_db, accreg_db_final);
+	numdb_final(wis_db, wis_db_final);
+
+	inter_party_final();
+	inter_guild_final();
+	inter_storage_final();
+	inter_pet_final();
+
+	return;
 }
 
 // マップサーバー接続

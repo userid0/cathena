@@ -609,7 +609,7 @@ public:
 		char line[1024],w1[1024],w2[1024];
 		FILE *fp;
 
-		fp=fopen(cfgName, "r");
+		fp=savefopen(cfgName, "r");
 		if(fp==NULL){
 			ShowMessage("File not found: %s\n", cfgName);
 			return 1;
@@ -717,6 +717,7 @@ int null_parse(int fd)
 ///////////////////////////////////////////////////////////////////////////////
 
 void socket_nonblocking(SOCKET sock, unsigned long yes) {
+	// I don't think we need this
 	// TCP_NODELAY BOOL Disables the Nagle algorithm for send coalescing. 
 	//setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&yes,sizeof yes);
 	
@@ -729,11 +730,11 @@ void socket_setopts(SOCKET sock)
 {
 	int yes = 1; // reuse fix
 
-	setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,(char *)&yes,sizeof yes);
+	setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,(char *)&yes,sizeof(yes));
 #ifdef SO_REUSEPORT
-	setsockopt(sock,SOL_SOCKET,SO_REUSEPORT,(char *)&yes,sizeof yes);
+	setsockopt(sock,SOL_SOCKET,SO_REUSEPORT,(char *)&yes,sizeof(yes));
 #endif
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&yes, sizeof yes); // reuse fix
+	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&yes, sizeof(yes)); // reuse fix
 
 //	setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &wfifo_size , sizeof(rfifo_size ));
 //	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &rfifo_size , sizeof(rfifo_size ));
@@ -751,6 +752,18 @@ void socket_setopts(SOCKET sock)
 int recv_to_fifo(int fd);
 int send_from_fifo(int fd);
 
+#ifdef SOCKET_DEBUG_PRINT
+void dumpx(unsigned char *buf, int len)
+{	int i;
+	if(len>0)
+	{
+		for(i=0; i<len; i++)
+			printf("%02X ", buf[i]);
+	}
+	printf("\n");
+	fflush(stdout);
+}
+#endif
 
 void flush_fifos() 
 {
@@ -783,14 +796,16 @@ void flush_fifos()
 		{
 			if( session_isActive(fd) && session[fd]->func_send == send_from_fifo && session[fd]->wdata_size > 0)
 			{
+
 				// try to write the data nonblocking
 				len=write(SessionGetSocket(fd),(char*)(session[fd]->wdata),session[fd]->wdata_size);
-
 				//ShowMessage (":::SEND:::\n");
 				//dump(session[fd]->wdata, len); ShowMessage ("\n");
 #ifdef SOCKET_DEBUG_PRINT
+				printf("->");
 				dumpx(session[fd]->wdata, len);
 #endif
+
 				if(len>0)
 				{
 					if((size_t)len < session[fd]->wdata_size)
@@ -947,19 +962,6 @@ int RFIFOSKIP(int fd, size_t len)
 // FIFO Reading/Sending Functions
 //
 ///////////////////////////////////////////////////////////////////////////////
-
-#ifdef SOCKET_DEBUG_PRINT
-void dumpx(unsigned char *buf, int len)
-{	int i;
-	if(len>0)
-	{
-		for(i=0; i<len; i++)
-			printf("%02X ", buf[i]);
-	}
-	printf("\n");
-}
-#endif
-
 int recv_to_fifo(int fd)
 {
 	int len;
@@ -984,6 +986,7 @@ int recv_to_fifo(int fd)
 //		ShowMessage (":::RECEIVE:::\n");
 //		dump(session[fd]->rdata, len); ShowMessage ("\n");
 #ifdef SOCKET_DEBUG_PRINT
+		printf("<-");
 		dumpx(session[fd]->rdata, len);
 #endif
 		if(len>0){
@@ -1018,12 +1021,13 @@ int send_from_fifo(int fd)
 	}
 
 	len=write(SessionGetSocket(fd),(char*)(session[fd]->wdata),session[fd]->wdata_size);
-
 //	ShowMessage (":::SEND:::\n");
 //	dump(session[fd]->wdata, len); ShowMessage ("\n");
 #ifdef SOCKET_DEBUG_PRINT
+	printf("->");
 	dumpx(session[fd]->wdata, len);
 #endif
+
 	//{ int i; ShowMessage("send %d : ",fd);  for(i=0;i<len;i++){ ShowMessage("%02x ",session[fd]->wdata[i]); } ShowMessage("\n");}
 	if(len>0){
 		if((size_t)len<session[fd]->wdata_size){
@@ -1496,13 +1500,13 @@ int do_sendrecv(int next)
 			printf("(%i,%i%i%i)",fd,session[fd]->flag.connected,session[fd]->flag.marked,session[fd]->flag.remove);
 			fflush(stdout);
 #endif
-			if ((session[fd]->rdata_tick != 0) && ((tick_ - session[fd]->rdata_tick) > stall_time_)) 
+			if( (session[fd]->rdata_tick > 0) && (tick_ > session[fd]->rdata_tick + stall_time_) ) 
 			{	// emulate a disconnection
 				session[fd]->flag.connected = false;
 				// and call the read function
 				process_read(fd);
 				// it should come out with a set remove or marked flag
-				// and will be deleted immediately  or on the next loops
+				// and will be deleted immediately or on the next loops
 			}
 
 			if( session[fd]->flag.remove )
@@ -1527,6 +1531,9 @@ int do_sendrecv(int next)
 			cnt = fd; 
 		}
 	}
+#ifdef SOCKET_DEBUG_PRINT
+	printf("\n");
+#endif
 	fd_max = (int)(cnt+1);
 
 	timeout.tv_sec  = next/1000;
@@ -1767,15 +1774,6 @@ void socket_final(void)
 
 
 
-class streamable
-{
-public:
-	streamable()			{}
-	virtual ~streamable()	{}
-
-	virtual void toBuffer(uchar *buf) const   = 0;
-	virtual void fromBuffer(const uchar *buf) = 0;
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -1956,12 +1954,16 @@ public:
 	ushort& LANPort()		{return lan_port;}
 	ushort& WANPort()		{return wan_port;}
 
+	
+	
 
-	virtual void toBuffer(uchar *buf) const
+	virtual bool toBuffer(buffer_iterator& bi) const
 	{
+		return false;
 	}
-	virtual void fromBuffer(const uchar *buf)
+	virtual bool fromBuffer(buffer_iterator& bi)
 	{
+		return false;
 	}
 
 };

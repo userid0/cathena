@@ -196,13 +196,14 @@ int config_switch(const char *str) {
 //-----------------------------------------------------
 // Function to suppress control characters in a string.
 //-----------------------------------------------------
-int remove_control_chars(char *str) {
-	int change = 0;
+bool remove_control_chars(char *str)
+{
+	bool change = false;
 	if(str)
 	while( *str ) {
 		 if ( (*str<32) && (*str>0) ) {
 			*str = '_';
-			change = 1;
+			change = true;
 		}
 		str++;
 	}
@@ -212,39 +213,39 @@ int remove_control_chars(char *str) {
 //------------------------------------------------------------
 // E-mail check: return 0 (not correct) or 1 (valid). by [Yor]
 //------------------------------------------------------------
-int e_mail_check(char *email) {
+bool e_mail_check(const char *email) {
 	char ch;
 	char* last_arobas;
 
 	// athena limits
 	if (!email || strlen(email) < 3 || strlen(email) > 39)
-		return 0;
+		return false;
 
 	// part of RFC limits (official reference of e-mail description)
 	if (strchr(email, '@') == NULL || email[strlen(email)-1] == '@')
-		return 0;
+		return false;
 
 	if (email[strlen(email)-1] == '.')
-		return 0;
+		return false;
 
 	last_arobas = strrchr(email, '@');
 
 	if (strstr(last_arobas, "@.") != NULL ||
 	    strstr(last_arobas, "..") != NULL)
-		return 0;
+		return false;
 
 	for(ch = 1; ch < 32; ch++) {
 		if (strchr(last_arobas, ch) != NULL) {
-			return 0;
+			return false;
 		}
 	}
 
 	if (strchr(last_arobas, ' ') != NULL ||
 	    strchr(last_arobas, ';') != NULL)
-		return 0;
+		return false;
 
 	// all correct
-	return 1;
+	return true;
 }
 
 

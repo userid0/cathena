@@ -134,6 +134,10 @@ int inter_pet_sql_init(){
 
 	return 0;
 }
+void inter_pet_sql_final(){
+	if (pet_pt) aFree(pet_pt);
+	return;
+}
 //----------------------------------
 int inter_pet_delete(int pet_id){
 	ShowMessage("request delete pet: %d.......\n",pet_id);

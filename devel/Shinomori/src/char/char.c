@@ -26,9 +26,6 @@
 
 struct mmo_map_server server[MAX_MAP_SERVERS];
 int server_fd[MAX_MAP_SERVERS];
-int server_freezeflag[MAX_MAP_SERVERS]; // Map-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-int anti_freeze_enable = 0;
-int ANTI_FREEZE_INTERVAL = 6;
 
 int login_fd= -1;
 int char_fd = -1;
@@ -251,7 +248,7 @@ int mmo_char_tostr(char *str, struct mmo_charstatus *p) {
 
 	str_p += sprintf(str_p, "%d\t%d,%d\t%s\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
 	  "\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-	  "\t%s,%d,%d\t%s,%d,%d,%d\t",
+	  "\t%s,%d,%d\t%s,%d,%d,%d,%d,%d,%d\t",
 	  p->char_id, p->account_id, p->char_num, p->name, //
 	  p->class_, p->base_level, p->job_level,
 	  p->base_exp, p->job_exp, p->zeny,
@@ -264,7 +261,7 @@ int mmo_char_tostr(char *str, struct mmo_charstatus *p) {
 	  p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
 	  p->last_point.map, p->last_point.x, p->last_point.y, //
 	  p->save_point.map, p->save_point.x, p->save_point.y,
-	  p->partner_id);
+	  p->partner_id,p->father_id,p->mother_id,p->child_id);
 	for(i = 0; i < 10; i++)
 		if (p->memo_point[i].map[0]) {
 			str_p += sprintf(str_p, "%s,%d,%d", p->memo_point[i].map, p->memo_point[i].x, p->memo_point[i].y);
@@ -313,8 +310,28 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 
 	// initilialise character
 	memset(p, '\0', sizeof(struct mmo_charstatus));
-
-	// If it's not char structure of version 1008 and after
+	
+	// If it's not char structure of version 1363 and after
+	if ((set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
+	   "\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+	   "\t%[^,],%d,%d\t%[^,],%d,%d,%d,%d,%d,%d%n",
+	   &tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
+	   &tmp_int[3], &tmp_int[4], &tmp_int[5],
+           &tmp_int[6], &tmp_int[7], &tmp_int[8],
+           &tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+           &tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+           &tmp_int[19], &tmp_int[20],
+           &tmp_int[21], &tmp_int[22], &tmp_int[23], //
+           &tmp_int[24], &tmp_int[25], &tmp_int[26],
+           &tmp_int[27], &tmp_int[28], &tmp_int[29],
+           &tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+           p->last_point.map, &tmp_int[35], &tmp_int[36], //
+           p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
+	   &tmp_int[40], &tmp_int[41], &tmp_int[42], &next)) != 46) {
+		tmp_int[40] = 0; // father
+		tmp_int[41] = 0; // mother
+		tmp_int[42] = 0; // child
+	// If it's not char structure of version 1008 and before 1363
 	if ((set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
 	   "\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
 	   "\t%[^,],%d,%d\t%[^,],%d,%d,%d%n",
@@ -372,10 +389,15 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 			//ShowMessage("char: old char data ver.2\n");
 		}
 	// Char structure of version 1008+
+		} else {
+			set+=3;
+			//ShowMessage("char: new char data ver.3\n");
+		}
+	// Char structture of version 1363+
 	} else {
-		//ShowMessage("char: new char data ver.3\n");
+		//ShowMessage("char: new char data ver.4\n");
 	}
-	if (set != 43)
+	if (set != 46)
 		return 0;
 
 	p->char_id = tmp_int[0];
@@ -418,6 +440,9 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	p->save_point.x = tmp_int[37];
 	p->save_point.y = tmp_int[38];
 	p->partner_id = tmp_int[39];
+	p->father_id = tmp_int[40];
+	p->mother_id = tmp_int[41];
+	p->child_id = tmp_int[42];
 
 	// Some checks
 	for(i = 0; i < char_num; i++) {
@@ -819,7 +844,7 @@ int make_new_char(int fd, char *dat) {
 
 	// remove control characters from the name
 	dat[23] = '\0';
-	if (remove_control_chars((char*)dat)) {
+	if (remove_control_chars(dat)) {
 		char_log("Make new char error (control char received in the name): (connection #%d, account: %d)." RETCODE,
 		         fd, sd->account_id);
 		return -1;
@@ -1317,8 +1342,9 @@ void create_online_files(void) {
 			if (players == 0) {
 				fprintf(fp2, "    <p>No user is online.</p>\n");
 				fprintf(fp, "No user is online.\n");
-			// no display if only 1 player
 			} else if (players == 1) {
+				fprintf(fp2, "    <p>%d user is online.</p>\n", players);
+				fprintf(fp, "%d user is online.\n", players);
 			} else {
 				fprintf(fp2, "    <p>%d users are online.</p>\n", players);
 				fprintf(fp, "%d users are online.\n", players);
@@ -1529,16 +1555,18 @@ int parse_tologin(int fd) {
 
 	// only login-server can have an access to here.
 	// so, if it isn't the login-server, we disconnect the session (fd != login_fd).
-	if (fd != login_fd) {
+	if (fd != login_fd)
+	{
 		session_Remove(fd);
 		return 0;
-		}
+	}
 	// else it is the login_fd
-	if( !session_isActive(fd) ) {
+	if( !session_isActive(fd) )
+	{
 		// login is disconnecting
 		ShowMessage("Connection to login-server dropped (connection #%d).\n", fd);
-		login_fd = -1;
 		session_Remove(fd);// have it removed by do_sendrecv
+		login_fd = -1;
 		return 0;
 	}
 
@@ -1631,6 +1659,7 @@ int parse_tologin(int fd) {
 			if (RFIFOREST(fd) < 2)
 				return 0;
 			// do whatever it's supposed to do here?
+
 			RFIFOSKIP(fd,2);
 			break;
 
@@ -1995,26 +2024,7 @@ int parse_tologin(int fd) {
 	return 0;
 }
 
-//--------------------------------
-// Map-server anti-freeze system
-//--------------------------------
-int map_anti_freeze_system(int tid, unsigned long tick, int id, int data) {
-	int i;
 
-	//ShowMessage("Entering in map_anti_freeze_system function to check freeze of servers.\n");
-	for(i = 0; i < MAX_MAP_SERVERS; i++) {
-		if (server_fd[i] >= 0) {// if map-server is online
-			//ShowMessage("map_anti_freeze_system: server #%d, flag: %d.\n", i, server_freezeflag[i]);
-			if (server_freezeflag[i]-- < 1) { // Map-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-				ShowMessage("Map-server anti-freeze system: char-server #%d is freezed -> disconnection.\n", i);
-				char_log("Map-server anti-freeze system: char-server #%d is freezed -> disconnection." RETCODE,i);
-				session_Remove(server_fd[i]);
-			}
-		}
-	}
-
-	return 0;
-}
 
 int parse_frommap(int fd) {
 	int i, j;
@@ -2043,7 +2053,8 @@ int parse_frommap(int fd) {
 		switch(RFIFOW(fd,0)) {
 		// request from map-server to reload GM accounts. Transmission to login-server (by Yor)
 		case 0x2af7:
-			if (login_fd > 0) { // don't send request if no login-server
+			if( session_isActive(login_fd) )
+			{	// don't send request if no login-server
 				WFIFOW(login_fd,0) = 0x2709;
 				WFIFOSET(login_fd, 2);
 //				ShowMessage("char : request from map-server to reload GM accounts -> login-server.\n");
@@ -2153,8 +2164,7 @@ int parse_frommap(int fd) {
 			if (RFIFOREST(fd) < 6 || RFIFOREST(fd) < RFIFOW(fd,2))
 				return 0;
 			server[id].users = RFIFOW(fd,4);
-			if(anti_freeze_enable)
-				server_freezeflag[id] = 5; // Map anti-freeze system. Counter. 5 ok, 4...0 freezed
+
 			// remove all previously online players of the server
 			for(i = 0; i < online_players_max; i++)
 				if (online_chars[i].server == id) {
@@ -2286,11 +2296,14 @@ int parse_frommap(int fd) {
 			if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2))
 				return 0;
 //			ShowMessage("parse_frommap: change gm -> login, account: %d, pass: '%s'.\n", RFIFOL(fd,4), RFIFOP(fd,8));
-			if (login_fd > 0) { // don't send request if no login-server
+			if( session_isActive(login_fd) )
+			{	// don't send request if no login-server
 				WFIFOW(login_fd,0) = 0x2720;
 				memcpy(WFIFOP(login_fd,2), RFIFOP(fd,2), RFIFOW(fd,2)-2);
 				WFIFOSET(login_fd, RFIFOW(fd,2));
-			} else {
+			}
+			else
+			{
 				WFIFOW(fd,0) = 0x2b0b;
 				WFIFOL(fd,2) = RFIFOL(fd,4);
 				WFIFOL(fd,6) = 0;
@@ -2303,7 +2316,8 @@ int parse_frommap(int fd) {
 		case 0x2b0c:
 			if (RFIFOREST(fd) < 86)
 				return 0;
-			if (login_fd > 0) { // don't send request if no login-server
+			if( session_isActive(login_fd) )
+			{	// don't send request if no login-server
 				memcpy(WFIFOP(login_fd,0), RFIFOP(fd,0), 86); // 0x2722 <account_id>.L <actual_e-mail>.40B <new_e-mail>.40B
 				WFIFOW(login_fd,0) = 0x2722;
 				WFIFOSET(login_fd, 86);
@@ -2332,20 +2346,24 @@ int parse_frommap(int fd) {
 				switch(RFIFOW(fd, 30)) {
 				case 1: // block
 					if (acc == -1 || isGM(acc) >= isGM(char_dat[i].account_id)) {
-						if (login_fd > 0) { // don't send request if no login-server
+						if( session_isActive(login_fd) )
+						{	// don't send request if no login-server
 							WFIFOW(login_fd,0) = 0x2724;
 							WFIFOL(login_fd,2) = char_dat[i].account_id; // account value
 							WFIFOL(login_fd,6) = 5; // status of the account
 							WFIFOSET(login_fd, 10);
 //							ShowMessage("char : status -> login: account %d, status: %d \n", char_dat[i].account_id, 5);
-						} else
+						}
+						else
 							WFIFOW(fd,32) = 3; // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-					} else
+					}
+					else
 						WFIFOW(fd,32) = 2; // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
 					break;
 				case 2: // ban
 					if (acc == -1 || isGM(acc) >= isGM(char_dat[i].account_id)) {
-						if (login_fd > 0) { // don't send request if no login-server
+						if( session_isActive(login_fd) )
+						{	// don't send request if no login-server
 							WFIFOW(login_fd, 0) = 0x2725;
 							WFIFOL(login_fd, 2) = char_dat[i].account_id; // account value
 							WFIFOW(login_fd, 6) = RFIFOW(fd,32); // year
@@ -2357,14 +2375,17 @@ int parse_frommap(int fd) {
 							WFIFOSET(login_fd,18);
 //							ShowMessage("char : status -> login: account %d, ban: %dy %dm %dd %dh %dmn %ds\n",
 //							       char_dat[i].account_id, (short)RFIFOW(fd,32), (short)RFIFOW(fd,34), (short)RFIFOW(fd,36), (short)RFIFOW(fd,38), (short)RFIFOW(fd,40), (short)RFIFOW(fd,42));
-						} else
+						}
+						else
 							WFIFOW(fd,32) = 3; // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-					} else
+					}
+					else
 						WFIFOW(fd,32) = 2; // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
 					break;
 				case 3: // unblock
 					if (acc == -1 || isGM(acc) >= isGM(char_dat[i].account_id)) {
-						if (login_fd > 0) { // don't send request if no login-server
+						if( session_isActive(login_fd) )
+						{	// don't send request if no login-server
 							WFIFOW(login_fd,0) = 0x2724;
 							WFIFOL(login_fd,2) = char_dat[i].account_id; // account value
 							WFIFOL(login_fd,6) = 0; // status of the account
@@ -2377,26 +2398,32 @@ int parse_frommap(int fd) {
 					break;
 				case 4: // unban
 					if (acc == -1 || isGM(acc) >= isGM(char_dat[i].account_id)) {
-						if (login_fd > 0) { // don't send request if no login-server
+						if( session_isActive(login_fd) )
+						{	// don't send request if no login-server
 							WFIFOW(login_fd, 0) = 0x272a;
 							WFIFOL(login_fd, 2) = char_dat[i].account_id; // account value
 							WFIFOSET(login_fd, 6);
 //							ShowMessage("char : status -> login: account %d, unban request\n", char_dat[i].account_id);
-						} else
+						}
+						else
 							WFIFOW(fd,32) = 3; // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-					} else
+					}
+					else
 						WFIFOW(fd,32) = 2; // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
 					break;
 				case 5: // changesex
 					if (acc == -1 || isGM(acc) >= isGM(char_dat[i].account_id)) {
-						if (login_fd > 0) { // don't send request if no login-server
+						if( session_isActive(login_fd) )
+						{	// don't send request if no login-server
 							WFIFOW(login_fd, 0) = 0x2727;
 							WFIFOL(login_fd, 2) = char_dat[i].account_id; // account value
 							WFIFOSET(login_fd, 6);
 //							ShowMessage("char : status -> login: account %d, change sex request\n", char_dat[i].account_id);
-						} else
+						}
+						else
 							WFIFOW(fd,32) = 3; // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-					} else
+					}
+					else
 						WFIFOW(fd,32) = 2; // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
 					break;
 				}
@@ -2429,7 +2456,8 @@ int parse_frommap(int fd) {
 			}
 			set_account_reg2(acc, j, reg);
 			// loginサーバーへ送る
-			if (login_fd > 0) { // don't send request if no login-server
+			if( session_isActive(login_fd) )
+			{	// don't send request if no login-server
 				WFIFOW(login_fd, 0) = 0x2728;
 				memcpy(WFIFOP(login_fd,0), RFIFOP(fd,0), RFIFOW(fd,2));
 				WFIFOSET(login_fd, WFIFOW(login_fd,2));
@@ -2586,7 +2614,8 @@ int parse_char(int fd) {
 				    auth_fifo[i].delflag == 2) {
 					auth_fifo[i].delflag = 1;
 					if (max_connect_user == 0 || count_users() < max_connect_user) {
-						if (login_fd > 0) { // don't send request if no login-server
+						if( session_isActive(login_fd) )
+						{	// don't send request if no login-server
 							// request to login-server to obtain e-mail/time limit
 							WFIFOW(login_fd,0) = 0x2716;
 							WFIFOL(login_fd,2) = sd->account_id;
@@ -2605,7 +2634,7 @@ int parse_char(int fd) {
 			}
 			// authentification not found
 			if (i == AUTH_FIFO_SIZE) {
-				if (login_fd > 0) { // don't send request if no login-server
+				if( session_isActive(login_fd) ) { // don't send request if no login-server
 					WFIFOW(login_fd,0) = 0x2712; // ask login-server to authentify an account
 					WFIFOL(login_fd,2) = sd->account_id;
 					WFIFOL(login_fd,6) = sd->login_id1;
@@ -2628,7 +2657,9 @@ int parse_char(int fd) {
 				return 0;
 
 			// if we activated email creation and email is default email
-			if (email_creation != 0 && strcmp(sd->email, "a@a.com") == 0 && login_fd > 0) { // to modify an e-mail, login-server must be online
+			if (email_creation != 0 && strcmp(sd->email, "a@a.com") == 0
+				&& session_isActive(login_fd) )
+			{	// to modify an e-mail, login-server must be online
 				WFIFOW(fd, 0) = 0x70;
 				WFIFOB(fd, 2) = 0; // 00 = Incorrect Email address
 				WFIFOSET(fd, 3);
@@ -2788,7 +2819,9 @@ int parse_char(int fd) {
 				strncpy(email, "a@a.com", 40); // default e-mail
 
 			// if we activated email creation and email is default email
-			if (email_creation != 0 && strcmp(sd->email, "a@a.com") == 0 && login_fd > 0) { // to modify an e-mail, login-server must be online
+			if (email_creation != 0 && strcmp(sd->email, "a@a.com") == 0
+				&& session_isActive(login_fd) )
+			{	// to modify an e-mail, login-server must be online
 				// if sended email is incorrect e-mail
 				if (strcmp(email, "a@a.com") == 0) {
 					WFIFOW(fd, 0) = 0x70;
@@ -2894,8 +2927,7 @@ int parse_char(int fd) {
 				WFIFOB(fd,2) = 0;
 				session[fd]->func_parse = parse_frommap;
 				server_fd[i] = fd;
-				if(anti_freeze_enable)
-					server_freezeflag[i] = 5; // Map anti-freeze system. Counter. 5 ok, 4...0 freezed
+
 				server[i].ip	= RFIFOLIP(fd,54);
 				server[i].port = RFIFOW(fd,58);
 				server[i].users = 0;
@@ -3021,7 +3053,8 @@ int send_users_tologin(int tid, unsigned long tick, int id, int data) {
 	int users = count_users();
 	unsigned char buf[16];
 
-	if ( session_isActive(login_fd) ) {
+	if( session_isActive(login_fd) )
+	{
 		// send number of user to login server
 		WFIFOW(login_fd,0) = 0x2714;
 		WFIFOL(login_fd,2) = users;
@@ -3037,10 +3070,12 @@ int send_users_tologin(int tid, unsigned long tick, int id, int data) {
 
 int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 
-	if( !session_isActive(login_fd) ) {
+	if( !session_isActive(login_fd) )
+	{
 		ShowMessage("Attempt to connect to login-server...\n");
 		login_fd = make_connection(login_ip, login_port);
-		if( session_isActive(login_fd) ) {
+		if( session_isActive(login_fd) )
+		{
 			session[login_fd]->func_parse = parse_tologin;
 			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
 			WFIFOW(login_fd,0) = 0x2710;
@@ -3276,12 +3311,6 @@ int char_config_read(const char *cfgName) {
 				online_refresh_html = 1;
 		} else if(strcasecmp(w1,"db_path")==0) {
 			strcpy(db_path,w2);
-		} else if(strcasecmp(w1,"anti_freeze_enable")==0){
-			anti_freeze_enable = config_switch(w2);
-		} else if (strcasecmp(w1, "anti_freeze_interval") == 0) {
-			ANTI_FREEZE_INTERVAL = atoi(w2);
-			if (ANTI_FREEZE_INTERVAL < 5)
-				ANTI_FREEZE_INTERVAL = 5; // minimum 5 seconds
 		} else if (strcasecmp(w1, "import") == 0) {
 			char_config_read(w2);
 		} else if (strcasecmp(w1, "console") == 0) {
@@ -3390,7 +3419,6 @@ int do_init(int argc, char **argv) {
 		online_chars[i].server = -1;
 	}
 
-
 	mmo_char_init();
 
 	update_online = time(NULL);
@@ -3420,12 +3448,6 @@ int do_init(int argc, char **argv) {
 		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
 
 
-
-	if(anti_freeze_enable > 0) {
-		add_timer_func_list(map_anti_freeze_system, "map_anti_freeze_system");
-		add_timer_interval(gettick() + 1000, ANTI_FREEZE_INTERVAL * 1000, map_anti_freeze_system, 0, 0); // checks every X seconds user specifies
-	}
-
 	if(console) {
 	    set_defaultconsoleparse(parse_console);
 	   	start_console();
@@ -3436,4 +3458,20 @@ int do_init(int argc, char **argv) {
 	ShowMessage("The char-server is "CL_BT_GREEN"ready"CL_NORM" (Server is listening on the port %d).\n\n", char_port);
 
 	return 0;
+}
+
+int char_married(int pl1,int pl2) {
+	if (char_dat[pl1].char_id == char_dat[pl2].partner_id && char_dat[pl2].char_id == char_dat[pl1].partner_id)
+		return 1;
+	else 
+		return 0;
+}
+
+int char_child(int parent_id, int child_id) {
+	if (char_dat[parent_id].child_id == char_dat[child_id].char_id && 
+	((char_dat[parent_id].char_id == char_dat[child_id].father_id) || 
+	(char_dat[parent_id].char_id == char_dat[child_id].mother_id)))
+		return 1;
+	else
+		return 0;
 }

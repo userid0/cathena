@@ -14,7 +14,7 @@
 #define COUNT_GLOBALS		// enables countage of created objects
 #define CHECK_BOUNDS		// enables boundary check for arrays and lists
 #define CHECK_LOCKS			// enables check of locking/unlocking sync objects
-//#define SINGLETHREAD		// builds without multithread guards
+#define SINGLETHREAD		// builds without multithread guards
 //#define CHECK_EXCEPTIONS	// use exceptions for "exception" handling
 #define _USE_32BIT_TIME_T	// use 32 bit time variables on windows
 
@@ -146,6 +146,7 @@ typedef unsigned short  ushort;
 typedef unsigned char   uchar;
 typedef signed char     schar;
 typedef char*           pchar;
+typedef unsigned char*  puchar;
 typedef const char*     cchar;
 typedef void*           ptr;
 typedef int*            pint;
@@ -498,6 +499,1123 @@ extern inline unsigned long log2(unsigned long v)
 	return c;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////
+// empty base classes
+//////////////////////////////////////////////////////////////////////////
+class noncopyable
+{
+public:
+	noncopyable()	{}
+};
+class global
+{
+public:
+	global()	{}
+};
+
+
+
+
+
+
+
+
+
+//!!todo!! replace with full headers when switching to multithread
+
+//////////////////////////////////////////////////////////////////////////
+// empty sync classes for single thread 
+//////////////////////////////////////////////////////////////////////////
+class Mutex: public noncopyable
+{
+public:
+    Mutex()					{}
+    ~Mutex()				{}
+	bool trylock() const	{return false;}
+    void enter() const		{}
+    void leave() const		{}
+    void lock() const 		{}
+    void unlock() const		{}
+};
+
+class ScopeLock: public noncopyable
+{
+public:
+    ScopeLock(const Mutex& imtx)	{}
+    ~ScopeLock()					{}
+};
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////
+// the basic exception class. 
+//////////////////////////////////////////////////////////////////////////
+class exception : public global
+{
+protected:
+    char *message;
+public:
+    exception(const char*   e):message(NULL)
+	{
+		if(e)
+		{	// c function will just fail on memory error
+			message = strdup( e );
+		}
+	}
+
+    virtual ~exception()				{ free(message); }
+	operator const char *()				{ return message; }
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+// exception for 'out of bound array access'
+//////////////////////////////////////////////////////////////////////////
+class exception_bound : public exception
+{
+public:
+	exception_bound(const char*   e) : exception(e) {}
+	virtual ~exception_bound()						{}
+};
+
+//////////////////////////////////////////////////////////////////////////
+// exception for 'memory allocation failed'
+//////////////////////////////////////////////////////////////////////////
+class exception_memory : public exception
+{
+public:
+	exception_memory(const char*   e) : exception(e)	{}
+	virtual ~exception_memory()							{}
+};
+
+//////////////////////////////////////////////////////////////////////////
+// exception for 'failed conversion'
+//////////////////////////////////////////////////////////////////////////
+class exception_convert: public exception
+{
+public:
+	exception_convert(const char*   e) : exception(e)	{}
+    virtual ~exception_convert()						{}
+};
+
+
+
+//////////////////////////////////////////////////////////////////////////
+// variant exception class; 
+// may be thrown when a variant is being typecasted to 32-bit int 
+// and the value is out of range
+//////////////////////////////////////////////////////////////////////////
+class exception_variant: public exception
+{
+public:
+	exception_variant(const char*   e) : exception(e)	{}
+    virtual ~exception_variant()						{}
+};
+
+//////////////////////////////////////////////////////////////////////////
+// exception for 'socket failed'
+//////////////////////////////////////////////////////////////////////////
+class exception_socket : public exception
+{
+public:
+	exception_socket(const char*   e) : exception(e)	{}
+	virtual ~exception_socket()							{}
+};
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// basic interface for arrays
+///////////////////////////////////////////////////////////////////////////////
+template <class T> class TArray : public Mutex, public global
+{
+	///////////////////////////////////////////////////////////////////////////
+	// friends
+	friend class Iterator;
+	friend class String;
+	friend class SubString;
+	virtual const T* array() const=0;
+
+protected:
+	///////////////////////////////////////////////////////////////////////////
+	// copy, move, compare
+	virtual void copy(T* tar, const T* src, size_t cnt) = 0;
+	virtual void move(T* tar, const T* src, size_t cnt) = 0;
+	virtual int  compare(const T* a, const T* b) = 0;
+
+public:
+	virtual void realloc(size_t newsize) = 0;
+
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// constructor / destructor
+	TArray()							{}
+	virtual ~TArray()					{}
+
+	///////////////////////////////////////////////////////////////////////////
+	// direct access to the buffer
+	virtual const T* getreadbuffer(size_t &maxcnt) const=0;
+	virtual T* getwritebuffer(size_t &maxcnt)			=0;
+
+	virtual bool setreadsize(size_t cnt)				=0;
+	virtual bool setwritesize(size_t cnt)				=0;
+
+	///////////////////////////////////////////////////////////////////////////
+	// copy cnt elements from list to buf, return number of copied elements
+	virtual size_t copytobuffer(T* buf, size_t cnt)		=0;
+
+	///////////////////////////////////////////////////////////////////////////
+	// access to element[inx]
+	virtual const T& operator[](size_t inx) const 	=0;
+	virtual T& operator[](size_t inx)		=0;	
+
+	///////////////////////////////////////////////////////////////////////////
+	// (re)allocates a list of cnt elements [0...cnt-1], 
+	// leave new elements uninitialized/default constructed
+	virtual bool resize(size_t cnt)			=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// returns number of elements
+	virtual size_t size() const				=0;	
+	virtual size_t freesize() const				=0;	
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// push/pop access
+	virtual bool push(const T& elem)		{ return append(elem); }
+	virtual bool push(const TArray<T>& list){ return append(list); }
+	virtual bool push(const T* elem, size_t cnt){ return append(elem,cnt); }
+	///////////////////////////////////////////////////////////////////////////
+	// return the first element and remove it from list
+	virtual T& pop()						=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// as above but with check if element exist
+	virtual bool pop(T& elem)				=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// return the first element and do not remove it from list
+	virtual T& top() const					=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// as above but with check if element exist
+	virtual bool top(T& elem) const			=0;	
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool append(const T& elem, size_t cnt=1) =0;	
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool append(const TArray<T>& list) 		=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool append(const T* elem, size_t cnt) =0;	
+
+	///////////////////////////////////////////////////////////////////////////
+	// remove elements from end of list
+	virtual bool remove(size_t cnt=1) 		=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// remove element [inx]
+	virtual bool removeindex(size_t inx)	=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// remove cnt elements starting from inx
+	virtual bool removeindex(size_t inx, size_t cnt)	=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// remove all elements
+	virtual bool clear()					=0;	
+
+	virtual bool move(size_t tarpos, size_t srcpos) = 0;
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool insert(const T& elem, size_t cnt=1, size_t pos=~0) 		=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// add cnt elements at position pos (at the end by default)
+	virtual bool insert(const T* elem, size_t cnt, size_t pos=~0) 		=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// add an list of elements at position pos (at the end by default)
+	virtual bool insert(const TArray<T>& list, size_t pos=~0)	=0;	
+
+	///////////////////////////////////////////////////////////////////////////
+	// copy the given list
+	virtual bool copy(const TArray<T>& list, size_t pos=0)	=0;
+	///////////////////////////////////////////////////////////////////////////
+	// copy the given list
+	virtual bool copy(const T* elem, size_t cnt,size_t pos=0)	=0;
+
+	///////////////////////////////////////////////////////////////////////////
+	// replace poscnt elements at pos with list
+	virtual bool replace(const TArray<T>& list, size_t pos, size_t poscnt)	=0;	
+	///////////////////////////////////////////////////////////////////////////
+	// replace poscnt elements at pos with cnt elements
+	virtual bool replace(const T* elem, size_t cnt, size_t pos, size_t poscnt) 	=0;	
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// find an element in the list
+	virtual bool find(const T& elem, size_t startpos, size_t& pos) const =0;
+	virtual int  find(const T& elem, size_t startpos=0) const =0;
+};
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// dynamic size arrays
+///////////////////////////////////////////////////////////////////////////////
+template <class T> class TArrayDST : public TArray<T>
+{
+	///////////////////////////////////////////////////////////////////////////
+	// friends
+	friend class String;
+	friend class SubString;
+	virtual const T* array() const	{return cField;}
+protected:
+	///////////////////////////////////////////////////////////////////////////
+	// data elements
+	T		*cField;	// array
+	size_t	cSZ;		// allocates array size
+	size_t	cCnt;		// used elements
+
+	///////////////////////////////////////////////////////////////////////////
+	// copy and move for simple data types
+	virtual void copy(T* tar, const T* src, size_t cnt)
+	{
+		memcpy(tar,src,cnt*sizeof(T));
+	}
+	virtual void move(T* tar, const T* src, size_t cnt)
+	{
+		memmove(tar,src,cnt*sizeof(T));
+	}
+	virtual int  compare(const T* a, const T* b)	
+	{	// dont have a working compare here
+		// overload at slist
+		return 0;
+	}
+
+public:
+	void realloc(size_t newsize)
+	{	
+		ScopeLock scopelock(*this);
+
+		if(  cSZ < newsize )
+		{	// grow rule
+			size_t tarsize = newsize;
+			newsize = 32;
+			while( newsize < tarsize ) newsize *= 2;
+		}
+		else if( cSZ>32 && cCnt < cSZ/4 && newsize < cSZ/2)
+		{	// shrink rule
+			newsize = cSZ/2;
+		}
+		else // no change
+			return;
+
+
+		T *newfield = new T[newsize];
+		if(newfield==NULL)
+			throw exception_memory("TArrayDST: memory allocation failed");
+
+		if(cField)
+		{
+			copy(newfield, cField, cCnt); // between read ptr and write ptr
+			delete[] cField;
+		}
+		cSZ = newsize;
+		cField = newfield;
+
+	}
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// constructor / destructor
+	TArrayDST() : cField(NULL),cSZ(0),cCnt(0)	{}
+	TArrayDST(size_t sz) : cField(NULL),cSZ(0),cCnt(0)	{ resize(sz); }
+	virtual ~TArrayDST()	{}
+
+	///////////////////////////////////////////////////////////////////////////
+	// copy constructor and assign (cannot be derived)
+	TArrayDST(const TArray<T>& arr) : cField(NULL),cSZ(0),cCnt(0)	{ ScopeLock scopelock(*this); copy(arr); }
+	const TArrayDST& operator=(const TArray<T>& arr)				{ ScopeLock scopelock(*this); copy(arr); return *this;}
+
+	///////////////////////////////////////////////////////////////////////////
+	// put a element to the list
+	virtual bool push(const T& elem)			{ return append(elem); }
+	virtual bool push(const TArray<T>& list)	{ return append(list); }
+	virtual bool push(const T* elem, size_t cnt){ return append(elem,cnt); }
+	///////////////////////////////////////////////////////////////////////////
+	// return the last element and remove it from list
+	virtual T& pop()
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt > 0 )
+		{
+			cCnt--;
+			return cField[cCnt];
+		}
+#ifdef CHECK_BOUNDS
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TArrayDST underflow");
+#else
+			static T dummy;
+			return dummy;
+#endif
+#else
+			return cField[0];
+#endif
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// as above but with check if element exist
+	virtual bool pop(T& elem)
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt > 0 )
+		{
+			cCnt--;
+			elem = cField[cCnt];
+			return true;
+		}
+		else
+		{
+#ifdef CHECK_BOUNDS
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TArrayDST underflow");
+#endif
+#endif
+		}
+		return false;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// return the first element and do not remove it from list
+	virtual T& top() const
+	{
+		ScopeLock scopelock(*this);
+#ifdef CHECK_BOUNDS
+		if( cCnt == 0 )
+		{
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TArrayDST underflow");
+#else
+			static T dummy;
+			return dummy;
+#endif
+		}
+#endif
+			return const_cast<T&>(cField[0]);
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// as above but with check if element exist
+	virtual bool top(T& elem) const
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt > 0 )
+		{
+			elem = cField[0];
+			return true;
+		}
+		return false;
+	}
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// direct access to the buffer, return Pointer and max buffer size
+	virtual const T* getreadbuffer(size_t &maxcnt) const
+	{
+		Mutex::lock();
+		if( cCnt >0 )
+		{
+			maxcnt = cCnt;
+			// keep the mutex locked
+			return const_cast<T*>(cField);
+		}
+		maxcnt = 0;
+		Mutex::unlock();
+		return NULL;
+	}
+	virtual T* getwritebuffer(size_t &maxcnt)
+	{
+		Mutex::lock();
+		if( cCnt+maxcnt > cSZ )
+			realloc( maxcnt+cCnt );
+		return const_cast<T*>(cField+cCnt);
+	}
+	virtual bool setreadsize(size_t cnt)
+	{
+		bool ret = false;
+		if( cnt <= cCnt)
+		{
+			if( cnt >0 )
+			{
+				move(cField+0, cField+cnt,cCnt-cnt);
+				cCnt -= cnt;
+			}
+			ret = true;
+		}
+		Mutex::unlock();
+		return ret;
+	}
+	virtual bool setwritesize(size_t cnt)
+	{
+		bool ret = false;
+		if( cCnt+cnt < cSZ )
+		{
+			cCnt += cnt;
+			ret = true;
+		}
+		Mutex::unlock();
+		return ret;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// copy cnt elements from list to buf, return number of copied elements
+	virtual size_t copytobuffer(T* buf, size_t cnt)
+	{
+		ScopeLock scopelock(*this);
+		if(buf)
+		{
+			if(cnt>cCnt) cnt = cCnt;
+			copy(buf,cField,cnt);
+			return cnt;
+		}
+		return 0;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// access to element[inx]
+	virtual const T& operator[](size_t inx) const
+	{
+		ScopeLock scopelock(*this);
+#ifdef CHECK_BOUNDS
+		// check for access to outside memory
+		if( inx >= cSZ )
+		{
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TArrayDST out of bound");
+#else
+			static T dummy;
+			return dummy;
+#endif
+		}
+#endif
+		return cField[inx];
+	}
+	virtual T &operator[](size_t inx)
+	{
+		ScopeLock scopelock(*this);
+#ifdef CHECK_BOUNDS
+		// check for access to outside memory
+		if( inx >= cSZ )
+		{
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TArrayDST out of bound");
+#else
+			static T dummy;
+			return dummy;
+#endif
+		}
+#endif
+		return cField[inx];
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// (re)allocates a list of cnt elements [0...cnt-1], 
+	// leave new elements uninitialized/default constructed
+	virtual bool resize(size_t cnt)			
+	{
+		ScopeLock scopelock(*this);
+		if(cCnt>cnt) cCnt = cnt;	// shrink
+		realloc(cnt);
+		cCnt = cnt;					// growing
+		return true;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// returns number of used elements
+	virtual size_t size() const				{ScopeLock scopelock(*this); return cCnt;}	
+	virtual size_t freesize() const			{ScopeLock scopelock(*this); return cSZ-cCnt;}	
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool append(const T& elem, size_t cnt=1)
+	{
+		ScopeLock scopelock(*this);
+		if(cCnt+cnt > cSZ)
+			realloc(cCnt+cnt);
+		while(cnt--) cField[cCnt++] = elem;
+		return true;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool append(const TArray<T>& list)
+	{	
+		ScopeLock scopelock(*this);
+		size_t cnt;
+		const T* elem = list.getreadbuffer(cnt);
+		return append(elem, cnt);
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool append(const T* elem, size_t cnt)
+	{
+		ScopeLock scopelock(*this);
+		if( elem )
+		{
+			if( cCnt+cnt > cSZ)
+				realloc( cCnt+cnt );
+			copy(cField+cCnt,elem,cnt);
+			cCnt += cnt;
+			return true;
+		}
+		return false;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// remove elements from end of list
+	virtual bool remove(size_t cnt=1)
+	{
+		ScopeLock scopelock(*this);
+		if( cnt <= cCnt )
+		{
+			cCnt -= cnt;
+			return true;
+		}
+		return false;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// remove element [inx]
+	virtual bool removeindex(size_t inx)
+	{
+		ScopeLock scopelock(*this);
+		if(inx < cCnt)
+		{
+			move(cField+inx,cField+inx+1,cCnt-inx-1);
+			cCnt--;
+			return true;
+		}
+		return false;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// remove cnt elements starting from inx
+	virtual bool removeindex(size_t inx, size_t cnt)
+	{
+		ScopeLock scopelock(*this);
+		if(inx < cCnt)
+		{
+			if(inx+cnt > cCnt)	cnt = cCnt-inx;
+			move(cField+inx,cField+inx+cnt,cCnt-inx-cnt);
+			cCnt -= cnt;
+			return true;
+		}
+		return false;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// remove all elements
+	virtual bool clear()
+	{
+		ScopeLock scopelock(*this);
+		cCnt = 0;
+		return true;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool insert(const T& elem, size_t cnt=1, size_t pos=~0)
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt+cnt > cSZ )
+			realloc(cSZ+cnt);
+
+		if(pos >= cCnt) 
+			pos = cCnt;
+		else
+			move(cField+pos+cnt, cField+pos, cCnt-pos);
+		while(cnt--) cField[pos+cnt] = elem;
+		cCnt+=cnt;
+		return true;
+
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// add cnt elements at position pos (at the end by default)
+	virtual bool insert(const T* elem, size_t cnt, size_t pos=~0)
+	{
+		ScopeLock scopelock(*this);
+		if( elem )
+		{	
+			if( cCnt+cnt > cSZ )
+				realloc(cCnt+cnt);
+
+			if(pos >= cCnt) 
+				pos=cCnt;
+			else
+				move(cField+pos+cnt, cField+pos, cCnt-pos);
+			copy(cField+pos,elem,cnt);
+			cCnt += cnt;
+			return true;
+		}
+		return false;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// add an list of elements at position pos (at the end by default)
+	virtual bool insert(const TArray<T>& list, size_t pos=~0)
+	{	
+		ScopeLock scopelock(*this);
+		size_t cnt;
+		const T* elem = list.getreadbuffer(cnt);
+		return insert(elem,cnt, pos);
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// copy cnt elements at position pos (at the end by default) overwriting existing elements
+	virtual bool copy(const T* elem, size_t cnt, size_t pos=0)
+	{
+		ScopeLock scopelock(*this);
+		if( elem )
+		{	
+			if(pos > cCnt) pos = cCnt;
+
+			if( pos+cnt > cSZ )
+				realloc(pos+cnt);
+			copy(cField+pos,elem,cnt);
+			cCnt = pos+cnt;
+			return true;
+		}
+		return false;
+	}
+	virtual bool copy(const TArray<T>& list, size_t pos=0)
+	{	
+		ScopeLock scopelock(*this);
+		size_t cnt;
+		const T* elem = list.getreadbuffer(cnt);
+		return copy(elem,cnt, pos);
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// Moving elements inside the buffer
+	// always take the elements from 'from' up to 'cElements'
+
+	virtual bool move(size_t tarpos, size_t srcpos)
+	{	
+		ScopeLock scopelock(*this);
+		if(srcpos>cCnt) srcpos=cCnt; 
+		if( cCnt+tarpos > cSZ+srcpos )
+			realloc(cCnt+tarpos-srcpos);
+		move(cField+tarpos,cField+srcpos,cCnt-srcpos);
+		cCnt += tarpos-srcpos;
+		return true;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// replace poscnt elements at pos with cnt elements
+	virtual bool replace(const T* elem, size_t cnt, size_t pos, size_t poscnt)
+	{
+		ScopeLock scopelock(*this);
+		if(pos > cCnt)
+		{
+			pos = cCnt;
+			poscnt = 0;
+		}
+		if(pos+poscnt > cCnt) 
+		{
+			poscnt=cCnt-pos;
+		}
+		if( elem )
+		{
+			if( cCnt+cnt > cSZ+poscnt)
+				realloc(cCnt+cnt-poscnt);
+
+			move(cField+pos+cnt, cField+pos+poscnt,cCnt-pos-poscnt);
+			copy(cField+pos,elem,cnt);
+			cCnt += cnt-poscnt;
+			return true;
+		}
+		return false;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// replace poscnt elements at pos with list
+	virtual bool replace(const TArray<T>& list, size_t pos, size_t poscnt)
+	{	
+		ScopeLock scopelock(*this);
+		size_t cnt;
+		const T* elem = list.getreadbuffer(cnt);
+		return replace(elem,cnt, pos, poscnt);
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// find an element in the list
+	virtual bool find(const T& elem, size_t startpos, size_t& pos) const
+	{
+		ScopeLock scopelock(*this);
+		for(size_t i=startpos; i<cCnt; i++)
+		{
+			if( elem == cField[i] )
+			{	pos = i;
+				return true;
+			}
+		}
+		return false;
+	}
+	virtual int  find(const T& elem, size_t startpos=0) const
+	{
+		ScopeLock scopelock(*this);
+		for(size_t i=startpos; i<cCnt; i++)
+		{
+			if( elem == cField[i] )
+			{	
+				return i;
+			}
+		}
+		return -1;
+	}
+};
+///////////////////////////////////////////////////////////////////////////////
+template <class T> class TFifoDST : public TArrayDST<T>
+{
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// constructor / destructor
+	TFifoDST()	{}
+	virtual ~TFifoDST()	{}
+	///////////////////////////////////////////////////////////////////////////
+	// copy constructor and assign (cannot be derived)
+	TFifoDST(const TArray<T>& arr)					{ ScopeLock scopelock(*this); copy(arr); }
+	const TFifoDST& operator=(const TArray<T>& arr)	{ ScopeLock scopelock(*this); copy(arr); return *this; }
+
+	///////////////////////////////////////////////////////////////////////////
+	// return the first element and remove it from list
+	virtual T& pop()
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt > 0 )
+		{
+			static T elem = cField[0];
+			cCnt--;
+			move(cField+0, cField+1,cCnt);
+			return elem;
+		}
+#ifdef CHECK_BOUNDS
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TArrayDST underflow");
+#else
+			static T dummy;
+			return dummy;
+#endif
+#else
+			return cField[0];
+#endif
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// as above but with check if element exist
+	virtual bool pop(T& elem)
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt > 0 )
+		{
+			elem = cField[0];
+			cCnt--;
+			move(cField+0, cField+1,cCnt);
+			return true;
+		}
+		else
+		{
+#ifdef CHECK_BOUNDS
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TfifoFST underflow");
+#endif
+#endif
+		}
+		return false;
+	}
+
+};
+///////////////////////////////////////////////////////////////////////////////
+template <class T> class TStackDST : public TArrayDST<T>
+{
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// constructor / destructor
+	TStackDST()				{}
+	virtual ~TStackDST()	{}
+	///////////////////////////////////////////////////////////////////////////
+	// copy constructor and assign (cannot be derived)
+	TStackDST(const TArray<T>& arr)						{ ScopeLock scopelock(*this); copy(arr); }
+	const TStackDST& operator=(const TArray<T>& arr)	{ ScopeLock scopelock(*this); copy(arr); return *this; }
+
+	///////////////////////////////////////////////////////////////////////////
+	// return the first element and do not remove it from list
+	virtual T& top() const
+	{
+		ScopeLock scopelock(*this);
+#ifdef CHECK_BOUNDS
+		// check for access to outside memory
+		if( cCnt == 0 )
+		{
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TArrayDST underflow");
+#else
+			static T dummy;
+			return dummy;
+#endif
+		}
+#endif
+		return const_cast<T&>(cField[cCnt]);
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// as above but with check if element exist
+	virtual bool top(T& elem) const
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt > 0 )
+		{
+			elem = cField[cCnt];
+			return true;
+		}
+		else
+		{
+#ifdef CHECK_BOUNDS
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TStackDST underflow");
+#endif
+#endif
+		}
+		return false;
+	}
+
+};
+///////////////////////////////////////////////////////////////////////////////
+// basic interface for sorted lists
+///////////////////////////////////////////////////////////////////////////////
+template <class T> class TslistDST : public TFifoDST<T>
+{
+	bool cAllowDup;	// allow duplicate entries (find might then not find specific elems)
+	bool cAscending;// sorting order
+
+	int compare(const T&a, const T&b)
+	{
+		if( a>b )		return (cAscending) ?  1:-1;
+		else if( a<b )	return (cAscending) ? -1: 1;
+		else			return 0;
+	}
+	virtual int  compare(const T* a, const T* b)	
+	{	// no NULL test here
+		if(*a > *b)
+			return 1;
+		else if(*a < *b)
+			return -1;
+		else
+			return 0;
+	}
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// destructor
+	TslistDST(bool as=true, bool ad=false):cAscending(as),cAllowDup(ad) {}
+	virtual ~TslistDST() {}
+	///////////////////////////////////////////////////////////////////////////
+	// copy constructor and assign (cannot be derived)
+	TslistDST(const TArray<T>& arr,bool ad=false):cAllowDup(ad)		{ copy(arr); }
+	const TslistDST& operator=(const TArray<T>& arr)				{ copy(arr); return *this; }
+
+	///////////////////////////////////////////////////////////////////////////
+	// add an element to the list
+	virtual bool push(const T& elem) 				{ return insert(elem); }
+	virtual bool push(const TArray<T>& list)		{ return insert(list); }
+	virtual bool push(const T* elem, size_t cnt)	{ return insert(elem,cnt); }
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos at the end by default
+	virtual bool append(const T& elem)				{ return insert(elem); }
+	virtual bool append(const TArray<T>& list) 		{ return insert(list); }
+	virtual bool append(const T* elem, size_t cnt) 	{ return insert(elem,cnt); }
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// add an element at position pos (at the end by default)
+	virtual bool insert(const T& elem, size_t pos=~0)
+	{
+		ScopeLock scopelock(*this);
+
+		// ignore position, insert sorted
+		if( cCnt >= cSZ )
+			realloc(cSZ+1);
+
+		bool f = find(elem, 0, pos);
+		if( !f || cAllowDup )
+		{
+			move(cField+pos+1, cField+pos, cCnt-pos);
+			cCnt++;
+			cField[pos] = elem;
+			return true;
+		}
+		return false;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// add cnt elements at position pos (at the end by default)
+	virtual bool insert(const T* elem, size_t cnt, size_t pos=~0)
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt+cnt>cSZ )
+			realloc(cCnt+cnt);
+
+		for(size_t i=0; i<cnt; i++)
+		{	
+			insert( elem[i] );
+		}
+		return true;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// add an list of elements at position pos (at the end by default)
+	virtual bool insert(const TArray<T>& list, size_t pos=~0)
+	{
+		ScopeLock scopelock(*this);
+		if( cCnt+list.size()>cSZ )
+			realloc(cCnt+list.size());
+
+		for(size_t i=0; i<list.size(); i++)
+		{
+			insert( list[i] );
+		}
+		return true;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// copy the given list
+	virtual bool copy(const TArray<T>& list)
+	{
+		ScopeLock scopelock(*this);
+		clear();
+		return insert(list);
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// copy the given list
+	virtual bool copy(const T* elem, size_t cnt)
+	{
+		ScopeLock scopelock(*this);
+		clear();
+		return insert(elem, cnt);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// replace poscnt elements at pos with list
+	virtual bool replace(const TArray<T>& list, size_t pos, size_t poscnt)
+	{
+		ScopeLock scopelock(*this);
+		removeindex(pos,poscnt);
+		return insert(list);
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// replace poscnt elements at pos with cnt elements
+	virtual bool replace(const T* elem, size_t cnt, size_t pos, size_t poscnt)
+	{
+		ScopeLock scopelock(*this);
+		removeindex(pos,poscnt);
+		return insert(elem, cnt);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// find an element in the list
+	virtual bool find(const T& elem, size_t startpos, size_t& pos) const
+	{	
+		ScopeLock scopelock(*this);
+		// do a binary search
+		// make some initial stuff
+		bool ret = false;
+		size_t a= (startpos>=cCnt) ? 0 : startpos;
+		size_t b=cCnt-1;
+		size_t c;
+		pos = 0;
+
+		if( NULL==cField || cCnt < 1)
+			ret = false;
+		else if( elem == cField[a] ) 
+		{	pos=a;
+			ret = true;
+		}
+		else if( elem == cField[b] )
+		{	pos = b;
+			ret = true;
+		}
+		else if( cAscending )
+		{	//smallest element first
+			if( elem < cField[a] )
+			{	pos = a;
+				ret = false; //less than lower
+			}
+			else if( elem > cField[b] )
+			{	pos = b+1;
+				ret = false; //larger than upper
+			}
+			else
+			{	// binary search
+				do
+				{
+					c=(a+b)/2;
+					if( elem == cField[c] )
+					{	b=c;
+						ret = true;
+						break;
+					}
+					else if( elem < cField[c] )
+						b=c;
+					else
+						a=c;
+				}while( (a+1) < b );
+				pos = b;//return the next larger element to the given or the found element
+			}
+		}
+		else // descending
+		{	//smallest element last
+			if( elem > cField[a] )
+			{	pos = a;
+				ret = false; //larger than lower
+			}
+			else if( elem < cField[b] )	// v1
+			{	pos = b+1;
+				ret = false; //less than upper
+			}
+			else
+			{	// binary search
+				do
+				{
+					c=(a+b)/2;
+					if( elem == cField[c] )
+					{	b=c;
+						ret = true;
+						break;
+					}
+					else if( elem > cField[c] )
+						b=c;
+					else
+						a=c;
+				}while( (a+1) < b );
+				pos = b;//return the next smaller element to the given or the found element
+			}
+		}
+		return ret;
+	}
+	virtual int  find(const T& elem, size_t startpos=0) const
+	{
+		ScopeLock scopelock(*this);
+		size_t pos;
+		if( find(elem,startpos, pos) )
+			return pos;
+		return -1;
+	}
+
+};
+///////////////////////////////////////////////////////////////////////////////
 
 
 

@@ -24,6 +24,7 @@ static const int packet_len_table[0x20] = {
 	-1,-1,10, 6,11,-1, 0, 0,	// 2b10-2b17
 };
 
+int chrif_connected;
 int char_fd = -1;
 int srvinfo =  0;
 
@@ -1081,7 +1082,7 @@ int chrif_parse(int fd)
 			break;
 		}
 		case 0x2afe: pc_authfail(RFIFOL(fd,2)); break;
-		case 0x2b00: map_setusers(RFIFOL(fd,2)); break;
+		case 0x2b00: map_setusers(fd); break;
 		case 0x2b03: clif_charselectok(RFIFOL(fd,2)); break;
 		case 0x2b04: chrif_recvmap(fd); break;
 		case 0x2b06: chrif_changemapserverack(fd); break;

@@ -3,8 +3,9 @@
 #define _INT_STORAGE_H_
 
 int inter_storage_init(void);
-int inter_storage_save(void);
-int inter_guild_storage_save(void);
+void inter_storage_final();
+int inter_storage_save();
+int inter_guild_storage_save();
 int inter_storage_delete(int account_id);
 int inter_guild_storage_delete(int guild_id);
 

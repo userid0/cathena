@@ -29,8 +29,6 @@
 
 static char command_symbol = '#';
 
-extern char msg_table[1000][256]; // Server messages (0-499 reserved for GM commands, 500-999 reserved for others)
-
 #define CCMD_FUNC(x) int charcommand_ ## x (const int fd, struct map_session_data* sd, const char* command, const char* message)
 
 CCMD_FUNC(jobchange);
@@ -48,6 +46,8 @@ CCMD_FUNC(storagelist);
 CCMD_FUNC(item);
 CCMD_FUNC(warp);
 CCMD_FUNC(zeny);
+CCMD_FUNC(showexp);
+CCMD_FUNC(showdelay);
 
 #ifdef TXT_ONLY
 /* TXT_ONLY */
@@ -85,6 +85,9 @@ static CharCommandInfo charcommand_info[] = {
 	{ CharCommandWarp,					"#rura",					60, charcommand_warp },
 	{ CharCommandWarp,					"#rura+",					60, charcommand_warp },
 	{ CharCommandZeny,					"#zeny",					60, charcommand_zeny },
+	{ CharCommandShowExp,					"#showexp", 					0, charcommand_showexp},
+	{ CharCommandShowDelay,					"#showdelay",					0, charcommand_showdelay},
+
 
 #ifdef TXT_ONLY
 /* TXT_ONLY */
@@ -336,21 +339,21 @@ int charcommand_jobchange(
 						pc_unequipitem(pl_sd, j, 3);
 				}
 				if (pc_jobchange(pl_sd, job, upper) == 0)
-					clif_displaymessage(fd, msg_table[48]); // Character's job changed.
+					clif_displaymessage(fd, msg_txt(48)); // Character's job changed.
 				else {
-					clif_displaymessage(fd, msg_table[192]); // Impossible to change the character's job.
+					clif_displaymessage(fd, msg_txt(192)); // Impossible to change the character's job.
 					return -1;
 				}
 			} else {
-				clif_displaymessage(fd, msg_table[49]); // Invalid job ID.
+				clif_displaymessage(fd, msg_txt(49)); // Invalid job ID.
 				return -1;
 			}
 		} else {
-			clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
+			clif_displaymessage(fd, msg_txt(81)); // Your GM level don't authorise you to do this action on this player.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
@@ -381,13 +384,13 @@ int charcommand_petrename(
 				pl_sd->pet.rename_flag = 0;
 				intif_save_petdata(pl_sd->status.account_id, &pl_sd->pet);
 				clif_send_petstatus(pl_sd);
-				clif_displaymessage(fd, msg_table[189]); // This player can now rename his/her pet.
+				clif_displaymessage(fd, msg_txt(189)); // This player can now rename his/her pet.
 			} else {
-				clif_displaymessage(fd, msg_table[190]); // This player can already rename his/her pet.
+				clif_displaymessage(fd, msg_txt(190)); // This player can already rename his/her pet.
 				return -1;
 			}
 		} else {
-			clif_displaymessage(fd, msg_table[191]); // Sorry, but this player has no pet.
+			clif_displaymessage(fd, msg_txt(191)); // Sorry, but this player has no pet.
 			return -1;
 		}
 	} else {
@@ -436,14 +439,14 @@ int charcommand_petfriendly(
 								status_calc_pc(pl_sd, 2);
 						}
 					}
-					clif_displaymessage(pl_sd->fd, msg_table[182]); // Pet friendly value changed!
-					clif_displaymessage(sd->fd, msg_table[182]); // Pet friendly value changed!
+					clif_displaymessage(pl_sd->fd, msg_txt(182)); // Pet friendly value changed!
+					clif_displaymessage(sd->fd, msg_txt(182)); // Pet friendly value changed!
 				} else {
-					clif_displaymessage(fd, msg_table[183]); // Pet friendly is already the good value.
+					clif_displaymessage(fd, msg_txt(183)); // Pet friendly is already the good value.
 					return -1;
 				}
 			} else {
-				clif_displaymessage(fd, msg_table[37]); // An invalid number was specified.
+				clif_displaymessage(fd, msg_txt(37)); // An invalid number was specified.
 				return -1;
 			}
 		} else {
@@ -501,14 +504,14 @@ int charcommand_stats(
 			{ NULL, 0 }
 		};
 		sprintf(job_jobname, "Job - %s %s", job_name(pl_sd->status.class_), "(level %d)");
-		sprintf(output, msg_table[53], pl_sd->status.name); // '%s' stats:
+		sprintf(output, msg_txt(53), pl_sd->status.name); // '%s' stats:
 		clif_displaymessage(fd, output);
 		for (i = 0; output_table[i].format != NULL; i++) {
 			sprintf(output, output_table[i].format, output_table[i].value);
 			clif_displaymessage(fd, output);
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
@@ -539,14 +542,14 @@ int charcommand_reset(
 		if (pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can reset a character only for lower or same GM level
 			pc_resetstate(pl_sd);
 			pc_resetskill(pl_sd);
-			sprintf(output, msg_table[208], character); // '%s' skill and stats points reseted!
+			sprintf(output, msg_txt(208), character); // '%s' skill and stats points reseted!
 			clif_displaymessage(fd, output);
 		} else {
-			clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
+			clif_displaymessage(fd, msg_txt(81)); // Your GM level don't authorise you to do this action on this player.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
@@ -611,13 +614,13 @@ int charcommand_option(
 			}
 			clif_changeoption(&pl_sd->bl);
 			status_calc_pc(pl_sd, 0);
-			clif_displaymessage(fd, msg_table[58]); // Character's options changed.
+			clif_displaymessage(fd, msg_txt(58)); // Character's options changed.
 		} else {
-			clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
+			clif_displaymessage(fd, msg_txt(81)); // Your GM level don't authorise you to do this action on this player.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
@@ -653,7 +656,7 @@ int charcommand_save(
 		if (pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can change save point only to lower or same gm level
 			m = map_mapname2mapid(map_name);
 			if (m < 0) {
-				clif_displaymessage(fd, msg_table[1]); // Map not found.
+				clif_displaymessage(fd, msg_txt(1)); // Map not found.
 				return -1;
 			} else {
 				if (m >= 0 && map[m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
@@ -661,14 +664,14 @@ int charcommand_save(
 					return -1;
 				}
 				pc_setsavepoint(pl_sd, map_name, x, y);
-				clif_displaymessage(fd, msg_table[57]); // Character's respawn point changed.
+				clif_displaymessage(fd, msg_txt(57)); // Character's respawn point changed.
 			}
 		} else {
-			clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
+			clif_displaymessage(fd, msg_txt(81)); // Your GM level don't authorise you to do this action on this player.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
@@ -709,11 +712,11 @@ int charcommand_stats_all(const int fd, struct map_session_data* sd, const char*
 	}
 
 	if (count == 0)
-		clif_displaymessage(fd, msg_table[28]); // No player found.
+		clif_displaymessage(fd, msg_txt(28)); // No player found.
 	else if (count == 1)
-		clif_displaymessage(fd, msg_table[29]); // 1 player found.
+		clif_displaymessage(fd, msg_txt(29)); // 1 player found.
 	else {
-		sprintf(output, msg_table[30], count); // %d players found.
+		sprintf(output, msg_txt(30), count); // %d players found.
 		clif_displaymessage(fd, output);
 	}
 
@@ -746,17 +749,17 @@ int charcommand_spiritball(const int fd, struct map_session_data* sd,const char*
 				clif_spiritball(pl_sd);
 				// no message, player can look the difference
 				if (spirit > 1000)
-					clif_displaymessage(fd, msg_table[204]); // WARNING: more than 1000 spiritballs can CRASH your server and/or client!
+					clif_displaymessage(fd, msg_txt(204)); // WARNING: more than 1000 spiritballs can CRASH your server and/or client!
 			} else {
-				clif_displaymessage(fd, msg_table[205]); // You already have this number of spiritballs.
+				clif_displaymessage(fd, msg_txt(205)); // You already have this number of spiritballs.
 				return -1;
 			}
 		} else {
-			clif_displaymessage(fd, msg_table[37]); // An invalid number was specified.
+			clif_displaymessage(fd, msg_txt(37)); // An invalid number was specified.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 	return 0;
@@ -865,11 +868,11 @@ charcommand_itemlist(
 				clif_displaymessage(fd, output);
 			}
 		} else {
-			clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
+			clif_displaymessage(fd, msg_txt(81)); // Your GM level don't authorise you to do this action on this player.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
@@ -900,7 +903,7 @@ charcommand_effect(const int fd, struct map_session_data* sd,
 		return -1;
 
 	clif_specialeffect(&pl_sd->bl, type, 0);
-	clif_displaymessage(fd, msg_table[229]); // Your effect has changed.
+	clif_displaymessage(fd, msg_txt(229)); // Your effect has changed.
 
 	return 0;
 }
@@ -979,11 +982,11 @@ charcommand_storagelist(
 				return 0;
 			}
 		} else {
-			clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
+			clif_displaymessage(fd, msg_txt(81)); // Your GM level don't authorise you to do this action on this player.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
@@ -1071,13 +1074,13 @@ int charcommand_item(
 						memset(&item_tmp, 0, sizeof(item_tmp));
 						item_tmp.nameid = item_id;
 						item_tmp.identify = 1;
-						if ((flag = pc_additem((struct map_session_data*)sd, &item_tmp, get_count)))
-							clif_additem((struct map_session_data*)sd, 0, 0, flag);
+						if ((flag = pc_additem(pl_sd, &item_tmp, get_count)))
+							clif_additem(pl_sd, 0, 0, flag);
 					}
 				}
-				clif_displaymessage(fd, msg_table[18]); // Item created.
+				clif_displaymessage(fd, msg_txt(18)); // Item created.
 			} else {
-				clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
+				clif_displaymessage(fd, msg_txt(81)); // Your GM level don't authorise you to do this action on this player.
 				return -1;
 			}
 		} else if(/* from jA's @giveitem */strcasecmp(character,"all")==0 || strcasecmp(character,"everyone")==0){
@@ -1092,11 +1095,11 @@ int charcommand_item(
 			snprintf(buf, sizeof(buf), "%s received %s %d.","Everyone",item_name,number);
 			clif_displaymessage(fd, buf);
 		} else {
-			clif_displaymessage(fd, msg_table[3]); // Character not found.
+			clif_displaymessage(fd, msg_txt(3)); // Character not found.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[19]); // Invalid item ID or name.
+		clif_displaymessage(fd, msg_txt(19)); // Invalid item ID or name.
 		return -1;
 	}
 
@@ -1147,22 +1150,22 @@ int charcommand_warp(
 					return -1;
 				}
 				if (pc_setpos(pl_sd, map_name, x, y, 3) == 0) {
-					clif_displaymessage(pl_sd->fd, msg_table[0]); // Warped.
-					clif_displaymessage(fd, msg_table[15]); // Player warped (message sends to player too).
+					clif_displaymessage(pl_sd->fd, msg_txt(0)); // Warped.
+					clif_displaymessage(fd, msg_txt(15)); // Player warped (message sends to player too).
 				} else {
-					clif_displaymessage(fd, msg_table[1]); // Map not found.
+					clif_displaymessage(fd, msg_txt(1)); // Map not found.
 					return -1;
 				}
 			} else {
-				clif_displaymessage(fd, msg_table[2]); // Coordinates out of range.
+				clif_displaymessage(fd, msg_txt(2)); // Coordinates out of range.
 				return -1;
 			}
 		} else {
-			clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
+			clif_displaymessage(fd, msg_txt(81)); // Your GM level don't authorise you to do this action on this player.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
@@ -1198,18 +1201,55 @@ int charcommand_zeny(
 		if (new_zeny != pl_sd->status.zeny) {
 			pl_sd->status.zeny = new_zeny;
 			clif_updatestatus(pl_sd, SP_ZENY);
-			clif_displaymessage(fd, msg_table[211]); // Character's number of zenys changed!
+			clif_displaymessage(fd, msg_txt(211)); // Character's number of zenys changed!
 		} else {
 			if (zeny < 0)
-				clif_displaymessage(fd, msg_table[41]); // Impossible to decrease the number/value.
+				clif_displaymessage(fd, msg_txt(41)); // Impossible to decrease the number/value.
 			else
-				clif_displaymessage(fd, msg_table[149]); // Impossible to increase the number/value.
+				clif_displaymessage(fd, msg_txt(149)); // Impossible to increase the number/value.
 			return -1;
 		}
 	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
+		clif_displaymessage(fd, msg_txt(3)); // Character not found.
 		return -1;
 	}
 
 	return 0;
 }
+
+/*===================================
+ * Remove some messages
+ *-----------------------------------
+ */
+int charcommand_showexp(
+       const int fd, struct map_session_data* sd,
+       const char* command, const char* message)
+{
+       if (sd->noexp) {
+               sd->noexp = 0;
+               clif_displaymessage(fd, "Gained exp is now shown");
+               return 0;
+       }
+       else {
+               sd->noexp = 1;
+               clif_displaymessage(fd, "Gained exp is now NOT shown");
+               return 0;
+       }
+}
+
+int charcommand_showdelay(
+       const int fd, struct map_session_data* sd,
+       const char* command, const char* message)
+{
+       if (sd->nodelay) {
+               sd->nodelay = 0;
+               clif_displaymessage(fd, "Skill delay failure is now shown");
+               return 0;
+       }
+       else {
+               sd->nodelay = 1;
+               clif_displaymessage(fd, "Skill delay failure is NOT now shown");
+               return 0;
+       }
+}
+

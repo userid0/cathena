@@ -472,6 +472,24 @@ int inter_guild_init() {
 	return 0;
 }
 
+int castle_db_final (void *k, void *data, va_list ap)
+{
+	struct guild_castle *gc = (guild_castle *)data;
+	if (gc) aFree(gc);
+	return 0;
+}
+int guild_db_final (void *k, void *data, va_list ap)
+{
+	struct guild *g = (struct guild *)data;
+	if (g) aFree(g);
+	return 0;
+}
+void inter_guild_final() {
+	numdb_final(castle_db, castle_db_final);
+	numdb_final(guild_db, guild_db_final);
+	return;
+}
+
 struct guild *inter_guild_search(int guild_id) {
 	struct guild *g;
 
@@ -698,7 +716,7 @@ int mapif_guild_noinfo(int fd, int guild_id) {
 
 // ƒMƒ‹ƒhî•ñ‚Ü‚Æ‚ß‘—‚è
 int mapif_guild_info(int fd, struct guild *g) {
-	unsigned char buf[4 + sizeof(struct guild)];
+	unsigned char buf[16384];
 
 	WBUFW(buf,0) = 0x3831;
 	WBUFW(buf,2) = 4 + sizeof(struct guild);
@@ -849,7 +867,7 @@ int mapif_guild_alliance(int guild_id1, int guild_id2, int account_id1, int acco
 
 // ƒMƒ‹ƒh–ğE•ÏX’Ê’m
 int mapif_guild_position(struct guild *g, int idx) {
-	unsigned char buf[sizeof(struct guild_position) + 12];
+	unsigned char buf[2048];
 
 	WBUFW(buf,0) = 0x383b;
 	WBUFW(buf,2) = sizeof(struct guild_position) + 12;

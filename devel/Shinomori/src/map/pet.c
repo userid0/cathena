@@ -815,7 +815,7 @@ int pet_recv_petdata(int account_id,struct s_pet *p,int flag)
 		pet_birth_process(sd);
 	else {
 		pet_data_init(sd);
-		if(sd->bl.prev != NULL) {
+		if(sd->pd && sd->bl.prev != NULL) {
 			map_addblock(&sd->pd->bl);
 			clif_spawnpet(sd->pd);
 			clif_send_petdata(sd,0,0);
@@ -1596,10 +1596,11 @@ int read_petdb()
 {
 	FILE *fp;
 	char line[1024];
-	int i;
+	int nameid,i,k; 
 	int j=0;
 	int lines;
 	char *filename[]={"db/pet_db.txt","db/pet_db2.txt"};
+	char *str[32],*p,*np;
 	
 	memset(pet_db,0,sizeof(pet_db));
 	for(i=0;i<2;i++){
@@ -1612,20 +1613,19 @@ int read_petdb()
 		}
 		lines = 0;
 		while(fgets(line,1020,fp)){
+			
 			lines++;
-			int nameid,i;
-			char *str[32],*p,*np;
 
 			if(line[0] == '/' && line[1] == '/')
 				continue;
 
-			for(i=0,p=line;i<20;i++){
+			for(k=0,p=line;k<20;k++){
 				if((np=strchr(p,','))!=NULL){
-					str[i]=p;
+					str[k]=p;
 					*np=0;
 					p=np+1;
 				} else {
-					str[i]=p;
+					str[k]=p;
 					p+=strlen(p);
 				}
 			}

@@ -43,6 +43,14 @@ struct guild_expcache {
 	int guild_id, account_id, char_id, exp;
 };
 
+// timer for auto saving guild data during WoE
+#define GUILD_SAVE_INTERVAL 300000
+int guild_save_timer = -1;
+
+int guild_payexp_timer(int tid,unsigned long tick,int id,int data);
+int guild_gvg_eliminate_timer(int tid,unsigned long tick,int id,int data);
+int guild_save_sub(int tid,unsigned long tick,int id,int data);
+
 // ギルドスキルdbのアクセサ（今は直打ちで代用）
 int guild_skill_get_inf(unsigned short id) { // Modified for new skills [Sara]
 	if (id==GD_BATTLEORDER) return 4;
@@ -80,11 +88,6 @@ int guild_checkskill(struct guild *g,unsigned short skillid)
 	return g->skill[idx].lv;
 }
 
-
-int guild_payexp_timer(int tid,unsigned long tick,int id,int data);
-int guild_gvg_eliminate_timer(int tid,unsigned long tick,int id,int data);
-
-
 static int guild_read_castledb(void)
 {
 	FILE *fp;
@@ -112,19 +115,19 @@ static int guild_read_castledb(void)
 		{
 			gc=(struct guild_castle *)aCalloc(1,sizeof(struct guild_castle));
 			// would be not necessary, calloc has cleared the memory already
-		gc->guild_id=0; // <Agit> Clear Data for Initialize
-		gc->economy=0; gc->defense=0; gc->triggerE=0; gc->triggerD=0; gc->nextTime=0; gc->payTime=0;
-		gc->createTime=0; gc->visibleC=0; gc->visibleG0=0; gc->visibleG1=0; gc->visibleG2=0;
-		gc->visibleG3=0; gc->visibleG4=0; gc->visibleG5=0; gc->visibleG6=0; gc->visibleG7=0;
-		gc->Ghp0=0; gc->Ghp1=0; gc->Ghp2=0; gc->Ghp3=0; gc->Ghp4=0; gc->Ghp5=0; gc->Ghp6=0; gc->Ghp7=0; // guardian HP [Valaris]
+			gc->guild_id=0; // <Agit> Clear Data for Initialize
+			gc->economy=0; gc->defense=0; gc->triggerE=0; gc->triggerD=0; gc->nextTime=0; gc->payTime=0;
+			gc->createTime=0; gc->visibleC=0; gc->visibleG0=0; gc->visibleG1=0; gc->visibleG2=0;
+			gc->visibleG3=0; gc->visibleG4=0; gc->visibleG5=0; gc->visibleG6=0; gc->visibleG7=0;
+			gc->Ghp0=0; gc->Ghp1=0; gc->Ghp2=0; gc->Ghp3=0; gc->Ghp4=0; gc->Ghp5=0; gc->Ghp6=0; gc->Ghp7=0; // guardian HP [Valaris]
 
 			if(str[0]) gc->castle_id=atoi(str[0]);
 			if(str[1]) memcpy(gc->map_name,str[1],24); 
 			if(str[2]) memcpy(gc->castle_name,str[2],24);
 			if(str[3]) memcpy(gc->castle_event,str[3],24);
 
-		numdb_insert(castle_db,gc->castle_id,gc);
-		//intif_guild_castle_info(gc->castle_id);
+			numdb_insert(castle_db,gc->castle_id,gc);
+			//intif_guild_castle_info(gc->castle_id);
 		}
 		ln++;
 	}
@@ -146,6 +149,7 @@ void do_init_guild(void)
 
 	add_timer_func_list(guild_gvg_eliminate_timer,"guild_gvg_eliminate_timer");
 	add_timer_func_list(guild_payexp_timer,"guild_payexp_timer");
+	add_timer_func_list(guild_save_sub, "guild_save_sub");
 	add_timer_interval(gettick()+GUILD_PAYEXP_INVERVAL,GUILD_PAYEXP_INVERVAL,guild_payexp_timer,0,0);
 }
 
@@ -437,9 +441,11 @@ int guild_recv_info(struct guild *sg)
 	for(i=bm=m=0;i<g->max_member;i++){	// sdの設定と人数の確認
 		if(g->member[i].account_id>0){
 			struct map_session_data *sd = map_id2sd(g->member[i].account_id);
-			g->member[i].sd=(sd!=NULL &&
-				sd->status.char_id==g->member[i].char_id &&
-				sd->status.guild_id==g->guild_id)?	sd:NULL;
+			if (sd && sd->status.char_id == g->member[i].char_id &&
+				sd->status.guild_id == g->guild_id &&
+				!sd->state.waitingdisconnect)
+				g->member[i].sd = sd;
+			else sd = NULL;
 			m++;
 		}else
 			g->member[i].sd=NULL;
@@ -785,9 +791,11 @@ int guild_recv_memberinfoshort(int guild_id,int account_id,int char_id,int onlin
 
 	for(i=0;i<g->max_member;i++){	// sd再設定
 		struct map_session_data *sd= map_id2sd(g->member[i].account_id);
-		g->member[i].sd=(sd!=NULL &&
-			sd->status.char_id==g->member[i].char_id &&
-			sd->status.guild_id==guild_id)?sd:NULL;
+		if (sd && sd->status.char_id == g->member[i].char_id &&
+			sd->status.guild_id == g->guild_id &&
+			!sd->state.waitingdisconnect)
+			g->member[i].sd = sd;
+		else sd = NULL;
 	}
 
 	// ここにクライアントに送信処理が必要
@@ -886,15 +894,16 @@ int guild_notice_changed(int guild_id,const char *mes1,const char *mes2)
 // ギルドエンブレム変更
 int guild_change_emblem(struct map_session_data *sd,int len,const char *data)
 {
-	struct guild *g = NULL;
-
+	struct guild *g;
 	nullpo_retr(0, sd);
 
-	if ((g = guild_search(sd->status.guild_id)) && guild_checkskill(g, GD_GLORYGUILD)>0)
-		return intif_guild_emblem(sd->status.guild_id,len,data);
+	if (battle_config.require_glory_guild &&
+		!((g = guild_search(sd->status.guild_id)) && guild_checkskill(g, GD_GLORYGUILD)>0)) {
+		clif_skill_fail(sd,GD_GLORYGUILD,0,0);
+		return 0;
+	}
 
-	clif_skill_fail(sd,GD_GLORYGUILD,0,0);
-	return 0;
+	return intif_guild_emblem(sd->status.guild_id,len,data);
 }
 // ギルドエンブレム変更通知
 int guild_emblem_changed(int len,int guild_id,int emblem_id,const char *data)
@@ -1522,6 +1531,8 @@ int guild_agit_start(void)
 {	// Run All NPC_Event[OnAgitStart]
 	int c = npc_event_doall("OnAgitStart");
 	ShowMessage("NPC_Event:[OnAgitStart] Run (%d) Events by @AgitStart.\n",c);
+	// Start auto saving
+	guild_save_timer = add_timer_interval (gettick() + GUILD_SAVE_INTERVAL, GUILD_SAVE_INTERVAL, guild_save_sub, 0, 0);
 	return 0;
 }
 
@@ -1529,6 +1540,8 @@ int guild_agit_end(void)
 {	// Run All NPC_Event[OnAgitEnd]
 	int c = npc_event_doall("OnAgitEnd");
 	ShowMessage("NPC_Event:[OnAgitEnd] Run (%d) Events by @AgitEnd.\n",c);
+	// Stop auto saving
+	delete_timer (guild_save_timer, guild_save_sub);
 	return 0;
 }
 
@@ -1549,6 +1562,60 @@ int guild_gvg_eliminate_timer(int tid,unsigned long tick,int id,int data)
 		ShowMessage("NPC_Event:[%s] Run (%d) Events.\n",evname,c);
 	}
 	if(name) aFree(name);
+	return 0;
+}
+
+static int Ghp[MAX_GUILDCASTLE][8];	// so save only if HP are changed // experimental code [Yor]
+static int Gid[MAX_GUILDCASTLE];
+int guild_save_sub(int tid,unsigned long tick,int id,int data)
+{
+	struct guild_castle *gc;
+	int i;
+
+	for(i = 0; i < MAX_GUILDCASTLE; i++) {	// [Yor]
+		gc = guild_castle_search(i);
+		if (!gc) continue;
+		if (gc->guild_id != Gid[i]) {
+			// Re-save guild id if its owner guild has changed
+			// This should already be done in gldfunc_ev_agit.txt,
+			// but since people have complained... Well x3
+			guild_castledatasave(gc->castle_id, 1, gc->guild_id);
+			Gid[i] = gc->guild_id;
+		}
+		if (gc->visibleG0 == 1 && Ghp[i][0] != gc->Ghp0) {
+			guild_castledatasave(gc->castle_id, 18, gc->Ghp0);
+			Ghp[i][0] = gc->Ghp0;
+		}
+		if (gc->visibleG1 == 1 && Ghp[i][1] != gc->Ghp1) {
+			guild_castledatasave(gc->castle_id, 19, gc->Ghp1);
+			Ghp[i][1] = gc->Ghp1;
+		}
+		if (gc->visibleG2 == 1 && Ghp[i][2] != gc->Ghp2) {
+			guild_castledatasave(gc->castle_id, 20, gc->Ghp2);
+			Ghp[i][2] = gc->Ghp2;
+		}
+		if (gc->visibleG3 == 1 && Ghp[i][3] != gc->Ghp3) {
+			guild_castledatasave(gc->castle_id, 21, gc->Ghp3);
+			Ghp[i][3] = gc->Ghp3;
+		}
+		if (gc->visibleG4 == 1 && Ghp[i][4] != gc->Ghp4) {
+			guild_castledatasave(gc->castle_id, 22, gc->Ghp4);
+			Ghp[i][4] = gc->Ghp4;
+		}
+		if (gc->visibleG5 == 1 && Ghp[i][5] != gc->Ghp5) {
+			guild_castledatasave(gc->castle_id, 23, gc->Ghp5);
+			Ghp[i][5] = gc->Ghp5;
+		}
+		if (gc->visibleG6 == 1 && Ghp[i][6] != gc->Ghp6) {
+			guild_castledatasave(gc->castle_id, 24, gc->Ghp6);
+			Ghp[i][6] = gc->Ghp6;
+		}
+		if (gc->visibleG7 == 1 && Ghp[i][7] != gc->Ghp7) {
+			guild_castledatasave(gc->castle_id, 25, gc->Ghp7);
+			Ghp[i][7] = gc->Ghp7;
+		}		
+	}
+
 	return 0;
 }
 

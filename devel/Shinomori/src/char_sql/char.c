@@ -44,21 +44,17 @@ char party_db[256] = "party";
 char pet_db[256] = "pet";
 char login_db[256] = "login";
 char friend_db[256] = "friends";
+int db_use_sqldbs;
 
 char login_db_account_id[32] = "account_id";
 char login_db_level[32] = "level";
 
-int db_use_sqldbs;
 int lowest_gm_level = 1;
 
 char *SQL_CONF_NAME = "conf/inter_athena.conf";
 
 struct mmo_map_server server[MAX_MAP_SERVERS];
 int server_fd[MAX_MAP_SERVERS];
-int server_freezeflag[MAX_MAP_SERVERS]; // Map-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-
-int anti_freeze_enable = 0;
-int ANTI_FREEZE_INTERVAL = 6;
 
 int login_fd =-1;
 int char_fd = -1;
@@ -175,16 +171,16 @@ void set_all_offline(void) {
 		ShowMessage("DB server Error (select all online)- %s\n", mysql_error(&mysql_handle));
 	}
 	sql_res = mysql_store_result(&mysql_handle);
-	if (sql_res) {
-	    while((sql_row = mysql_fetch_row(sql_res))) {
-	        if ( login_fd > 0 ) {
-	            ShowMessage("send user offline: %d\n",atoi(sql_row[0]));
-	            WFIFOW(login_fd,0) = 0x272c;
-	            WFIFOL(login_fd,2) = atoi(sql_row[0]);
-	            WFIFOSET(login_fd,6);
-            }
-       }
-    }
+	if (sql_res && session_isActive(login_fd) )
+	{
+	    while((sql_row = mysql_fetch_row(sql_res)))
+		{
+	        ShowMessage("send user offline: %d\n",atoi(sql_row[0]));
+	        WFIFOW(login_fd,0) = 0x272c;
+	        WFIFOL(login_fd,2) = atoi(sql_row[0]);
+	        WFIFOSET(login_fd,6);
+		}
+	}
 
    	mysql_free_result(sql_res);
     sprintf(tmp_sql,"UPDATE `%s` SET `online`='0' WHERE `online`='1'", char_db);
@@ -254,6 +250,7 @@ void read_gm_account(void) {
 	}
 
 	mysql_free_result(lsql_res);
+	mapif_send_gmaccounts();
 }
 
 // Insert friends list
@@ -402,7 +399,10 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 	    (p->clothes_color != cp->clothes_color) || (p->weapon != cp->weapon) ||
 	    (p->shield != cp->shield) || (p->head_top != cp->head_top) ||
 	    (p->head_mid != cp->head_mid) || (p->head_bottom != cp->head_bottom) ||
-	    (p->partner_id != cp->partner_id)) {
+	    (p->partner_id != cp->partner_id) || 
+		(p->father_id != cp->father_id) ||
+	    (p->mother_id != cp->mother_id) || 
+		(p->child_id != cp->child_id)) {
 
 //}//---------------------------test count------------------------------
 	//check party_exist
@@ -444,7 +444,7 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 		"`str`='%d',`agi`='%d',`vit`='%d',`int`='%d',`dex`='%d',`luk`='%d',"
 		"`option`='%d',`karma`='%d',`manner`='%d',`party_id`='%d',`guild_id`='%d',`pet_id`='%d',"
 		"`hair`='%d',`hair_color`='%d',`clothes_color`='%d',`weapon`='%d',`shield`='%d',`head_top`='%d',`head_mid`='%d',`head_bottom`='%d',"
-		"`last_map`='%s',`last_x`='%d',`last_y`='%d',`save_map`='%s',`save_x`='%d',`save_y`='%d',`partner_id`='%d' WHERE  `account_id`='%d' AND `char_id` = '%d'",
+		"`last_map`='%s',`last_x`='%d',`last_y`='%d',`save_map`='%s',`save_x`='%d',`save_y`='%d',`partner_id`='%d', `father`='%d', `mother`='%d', `child`='%d' WHERE  `account_id`='%d' AND `char_id` = '%d'",
 		char_db, p->class_, p->base_level, p->job_level,
 		p->base_exp, p->job_exp, p->zeny,
 		p->max_hp, p->hp, p->max_sp, p->sp, p->status_point, p->skill_point,
@@ -453,7 +453,9 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 		p->hair, p->hair_color, p->clothes_color,
 		p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
 		p->last_point.map, p->last_point.x, p->last_point.y,
-		p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id, p->account_id, p->char_id
+		p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id, 
+		p->father_id, p->mother_id, p->child_id, 
+		p->account_id, p->char_id
 	);
 
 	if(mysql_query(&mysql_handle, tmp_sql)) {
@@ -786,7 +788,7 @@ int mmo_char_fromsql(int char_id, struct mmo_charstatus *p, int online){
 
 	sprintf(tmp_sql, "SELECT `option`,`karma`,`manner`,`party_id`,`guild_id`,`pet_id`,`hair`,`hair_color`,"
 		"`clothes_color`,`weapon`,`shield`,`head_top`,`head_mid`,`head_bottom`,"
-		"`last_map`,`last_x`,`last_y`,`save_map`,`save_x`,`save_y`, `partner_id` FROM `%s` WHERE `char_id` = '%d'",char_db, char_id); // TBR
+		"`last_map`,`last_x`,`last_y`,`save_map`,`save_x`,`save_y`, `partner_id`, `father`, `mother`, `child` FROM `%s` WHERE `char_id` = '%d'",char_db, char_id); // TBR
 	if (mysql_query(&mysql_handle, tmp_sql)) {
 		ShowMessage("DB server Error (select `char2`)- %s\n", mysql_error(&mysql_handle));
 	}
@@ -804,7 +806,10 @@ int mmo_char_fromsql(int char_id, struct mmo_charstatus *p, int online){
 		p->head_top = atoi(sql_row[11]);	p->head_mid = atoi(sql_row[12]);	p->head_bottom = atoi(sql_row[13]);
 		strcpy(p->last_point.map,sql_row[14]); p->last_point.x = atoi(sql_row[15]);	p->last_point.y = atoi(sql_row[16]);
 		strcpy(p->save_point.map,sql_row[17]); p->save_point.x = atoi(sql_row[18]);	p->save_point.y = atoi(sql_row[19]);
-		p->partner_id = atoi(sql_row[20]);
+		p->partner_id = atoi(sql_row[20]); 
+		p->father_id = atoi(sql_row[21]); 
+		p->mother_id = atoi(sql_row[22]); 
+		p->child_id = atoi(sql_row[23]);
 
 		//free mysql result.
 		mysql_free_result(sql_res);
@@ -1325,10 +1330,13 @@ int mmo_char_sync_timer(int tid, unsigned long tick, int id, int data) {
 int count_users(void) {
 	int i, users;
 
-	if (login_fd > 0 && session[login_fd]){
+	if( session_isActive(login_fd) )
+	{
 		users = 0;
-		for(i = 0; i < MAX_MAP_SERVERS; i++) {
-			if (server_fd[i] >= 0) {
+		for(i = 0; i < MAX_MAP_SERVERS; i++)
+		{
+			if (server_fd[i] >= 0)
+			{
 				users += server[i].users;
 			}
 		}
@@ -1526,11 +1534,14 @@ int parse_tologin(int fd) {
 		case 0x2717:
 			if (RFIFOREST(fd) < 50)
 				return 0;
-			for(i = 0; i < fd_max; i++) {
-				if (session[i] && (sd = (struct char_session_data*)session[i]->session_data)) {
-					if (sd->account_id == (int)RFIFOL(fd,2)) {
-					sd->connect_until_time = (time_t)RFIFOL(fd,46);
-					break;
+			for(i = 0; i < fd_max; i++)
+			{
+				if (session[i] && (sd = (struct char_session_data*)session[i]->session_data))
+				{
+					if (sd->account_id == (int)RFIFOL(fd,2))
+					{
+						sd->connect_until_time = (time_t)RFIFOL(fd,46);
+						break;
 					}
 				}
 			}
@@ -1542,6 +1553,7 @@ int parse_tologin(int fd) {
 			if (RFIFOREST(fd) < 2)
 				return 0;
 			// do whatever it's supposed to do here?
+	
 			RFIFOSKIP(fd,2);
 			break;
 
@@ -1733,7 +1745,6 @@ int parse_tologin(int fd) {
 			if (RFIFOREST(fd) < 7)
 				return 0;
 			{
-				unsigned char buf[32000];
 				int new_level = 0;
 				for(i = 0; i < GM_num; i++)
 					if (gm_account[i].account_id == (int)RFIFOL(fd,2)) {
@@ -1762,20 +1773,11 @@ int parse_tologin(int fd) {
 						}
 					}
 				if (new_level == 1) {
-					int len;
 					ShowMessage("From login-server: receiving a GM account information (%ld: level %d).\n", RFIFOL(fd,2), (int)RFIFOB(fd,6));
+					mapif_send_gmaccounts();
+
 					//create_online_files(); // not change online file for only 1 player (in next timer, that will be done
 					// send gm acccounts level to map-servers
-					len = 4;
-					WBUFW(buf,0) = 0x2b15;
-				
-					for(i = 0; i < GM_num; i++) {
-						WBUFL(buf, len) = gm_account[i].account_id;
-						WBUFB(buf, len+4) = (unsigned char)gm_account[i].level;
-						len += 5;
-					}
-					WBUFW(buf, 2) = len;
-					mapif_sendall(buf, len);
 				}
 			}
 			RFIFOSKIP(fd,7);
@@ -1790,35 +1792,15 @@ int parse_tologin(int fd) {
 	return 0;
 }
 
-//--------------------------------
-// Map-server anti-freeze system
-//--------------------------------
-int map_anti_freeze_system(int tid, unsigned long tick, int id, int data) {
-	int i;
 
-	for(i = 0; i < MAX_MAP_SERVERS; i++) {
-		if (server_fd[i] >= 0) {// if map-server is online
-			//ShowMessage("map_anti_freeze_system: server #%d, flag: %d.\n", i, server_freezeflag[i]);
-			if (server_freezeflag[i]-- < 1) {// Map-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-				ShowMessage("Map-server anti-freeze system: char-server #%d is frozen -> disconnection.\n", i);
-				session_Remove( server_fd[i] );
-				sprintf(tmp_sql, "DELETE FROM `ragsrvinfo` WHERE `index`='%d'", server_fd[i]);
-				if (mysql_query(&mysql_handle, tmp_sql)) {
-				    ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
-				}
-			}
-		}
-	}
-
-	return 0;
-}
 
 int parse_frommap(int fd) {
 	int i, j;
 	int id;
 
 	// Sometimes fd=0, and it will cause server crash. Don't know why. :(
-	if (fd <= 0) {
+	if (fd <= 0)
+	{
 		ShowMessage("parse_frommap error fd=0\n");
 		return 0;
 	}
@@ -1953,8 +1935,7 @@ int parse_frommap(int fd) {
 			if ( server[id].users != (unsigned short)RFIFOW(fd,4) )
 				ShowMessage("[UserCount]: %d (Server: %d)\n", (unsigned short)RFIFOW(fd,4), id);
 			server[id].users = RFIFOW(fd,4);
-			if(anti_freeze_enable)
-				server_freezeflag[id] = 5; // Map anti-freeze system. Counter. 5 ok, 4...0 freezed
+
 			RFIFOSKIP(fd,RFIFOW(fd,2));
 			break;
 
@@ -2133,7 +2114,8 @@ int parse_frommap(int fd) {
 			}
 			// set_account_reg2(acc,j,reg);
 			// loginサーバーへ送る
-			if (login_fd > 0) { // don't send request if no login-server
+			if( session_isActive(login_fd) )
+			{	// don't send request if no login-server
 				WFIFOW(login_fd, 0) = 0x2728;
 				memcpy(WFIFOP(login_fd,0), RFIFOP(fd,0), RFIFOW(fd,2));
 				WFIFOSET(login_fd, WFIFOW(login_fd,2));
@@ -2151,7 +2133,8 @@ int parse_frommap(int fd) {
 		case 0x2b0c:
 			if (RFIFOREST(fd) < 86)
 				return 0;
-			if (login_fd > 0) { // don't send request if no login-server
+			if( session_isActive(login_fd) )
+			{	// don't send request if no login-server
 				memcpy(WFIFOP(login_fd,0), RFIFOP(fd,0), 86); // 0x2722 <account_id>.L <actual_e-mail>.40B <new_e-mail>.40B
 				WFIFOW(login_fd,0) = 0x2722;
 				WFIFOSET(login_fd, 86);
@@ -2187,7 +2170,8 @@ int parse_frommap(int fd) {
 					switch(RFIFOW(fd, 30)) {
 					case 1: // block
 						if (acc == -1 || isGM(acc) >= isGM(atoi(sql_row[0]))) {
-							if (login_fd > 0) { // don't send request if no login-server
+							if( session_isActive(login_fd) )
+							{	// don't send request if no login-server
 								WFIFOW(login_fd,0) = 0x2724;
 								WFIFOL(login_fd,2) = atoi(sql_row[0]); // account value
 								WFIFOL(login_fd,6) = 5; // status of the account
@@ -2200,7 +2184,8 @@ int parse_frommap(int fd) {
 						break;
 					case 2: // ban
 						if (acc == -1 || isGM(acc) >= isGM(atoi(sql_row[0]))) {
-							if (login_fd > 0) { // don't send request if no login-server
+							if( session_isActive(login_fd) )
+							{	// don't send request if no login-server
 								WFIFOW(login_fd, 0) = 0x2725;
 								WFIFOL(login_fd, 2) = atoi(sql_row[0]); // account value
 								WFIFOW(login_fd, 6) = RFIFOW(fd,32); // year
@@ -2219,7 +2204,8 @@ int parse_frommap(int fd) {
 						break;
 					case 3: // unblock
 						if (acc == -1 || isGM(acc) >= isGM(atoi(sql_row[0]))) {
-							if (login_fd > 0) { // don't send request if no login-server
+							if( session_isActive(login_fd) )
+							{	// don't send request if no login-server
 								WFIFOW(login_fd,0) = 0x2724;
 								WFIFOL(login_fd,2) = atoi(sql_row[0]); // account value
 								WFIFOL(login_fd,6) = 0; // status of the account
@@ -2232,7 +2218,8 @@ int parse_frommap(int fd) {
 						break;
 					case 4: // unban
 						if (acc == -1 || isGM(acc) >= isGM(atoi(sql_row[0]))) {
-							if (login_fd > 0) { // don't send request if no login-server
+							if( session_isActive(login_fd) )
+							{	// don't send request if no login-server
 								WFIFOW(login_fd, 0) = 0x272a;
 								WFIFOL(login_fd, 2) = atoi(sql_row[0]); // account value
 								WFIFOSET(login_fd, 6);
@@ -2244,7 +2231,8 @@ int parse_frommap(int fd) {
 						break;
 					case 5: // changesex
 						if (acc == -1 || isGM(acc) >= isGM(atoi(sql_row[0]))) {
-							if (login_fd > 0) { // don't send request if no login-server
+							if( session_isActive(login_fd) )
+							{	// don't send request if no login-server
 								WFIFOW(login_fd, 0) = 0x2727;
 								WFIFOL(login_fd, 2) = atoi(sql_row[0]); // account value
 								WFIFOSET(login_fd, 6);
@@ -2452,7 +2440,8 @@ int parse_char(int fd) {
 					auth_fifo[i].delflag = 1;
 
 				if (max_connect_user == 0 || count_users() < max_connect_user) {
-					if (login_fd > 0) { // don't send request if no login-server
+					if( session_isActive(login_fd) )
+					{	// don't send request if no login-server
 						// request to login-server to obtain e-mail/time limit
 						WFIFOW(login_fd,0) = 0x2716;
 						WFIFOL(login_fd,2) = sd->account_id;
@@ -2471,7 +2460,8 @@ int parse_char(int fd) {
 				}
 			}
 			if (i == AUTH_FIFO_SIZE) {
-				if (login_fd > 0) { // don't send request if no login-server
+				if( session_isActive(login_fd) )
+				{	// don't send request if no login-server
 					WFIFOW(login_fd,0) = 0x2712; // ask login-server to authentify an account
 					WFIFOL(login_fd,2) = sd->account_id;
 					WFIFOL(login_fd,6) = sd->login_id1;
@@ -2882,8 +2872,7 @@ int parse_char(int fd) {
 				WFIFOSET(fd, 3);
 				session[fd]->func_parse = parse_frommap;
 				server_fd[i] = fd;
-				if(anti_freeze_enable)
-					server_freezeflag[i] = 5; // Map anti-freeze system. Counter. 5 ok, 4...0 freezed
+
 				server[i].ip = RFIFOL(fd, 54);
 				server[i].port = RFIFOW(fd, 58);
 				server[i].users = 0;
@@ -3010,7 +2999,8 @@ int send_users_tologin(int tid, unsigned long tick, int id, int data) {
 	int users = count_users();
 	unsigned char buf[16];
 
-	if (login_fd > 0 && session[login_fd]) {
+	if( session_isActive(login_fd) )
+	{
 		// send number of user to login server
 		WFIFOW(login_fd,0) = 0x2714;
 		WFIFOL(login_fd,2) = users;
@@ -3032,25 +3022,25 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		login_fd = make_connection(login_ip, login_port);
 		if ( session_isActive(login_fd) ) 
 		{
-		session[login_fd]->func_parse = parse_tologin;
-		realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-		WFIFOW(login_fd,0) = 0x2710;
-		memset(WFIFOP(login_fd,2), 0, 24);
-		memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
-		memset(WFIFOP(login_fd,26), 0, 24);
-		memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
-		WFIFOL(login_fd,50) = 0;
-		WFIFOL(login_fd,54) = char_ip;
-		WFIFOL(login_fd,58) = char_port;
-		memset(WFIFOP(login_fd,60), 0, 20);
-		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
-		WFIFOW(login_fd,80) = 0;
-		WFIFOW(login_fd,82) = char_maintenance;
-		WFIFOW(login_fd,84) = char_new;
-		WFIFOSET(login_fd,86);
+			session[login_fd]->func_parse = parse_tologin;
+			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+			WFIFOW(login_fd,0) = 0x2710;
+			memset(WFIFOP(login_fd,2), 0, 24);
+			memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
+			memset(WFIFOP(login_fd,26), 0, 24);
+			memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
+			WFIFOL(login_fd,50) = 0;
+			WFIFOL(login_fd,54) = char_ip;
+			WFIFOL(login_fd,58) = char_port;
+			memset(WFIFOP(login_fd,60), 0, 20);
+			memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
+			WFIFOW(login_fd,80) = 0;
+			WFIFOW(login_fd,82) = char_maintenance;
+			WFIFOW(login_fd,84) = char_new;
+			WFIFOSET(login_fd,86);
+		}
 	}
-}
-		return 0;
+	return 0;
 }
 
 
@@ -3097,6 +3087,12 @@ int char_lan_config_read(const char *lancfgName){
 	return 0;
 }
 
+static int char_db_final(void *key,void *data,va_list ap)
+{
+	struct mmo_charstatus *p = (struct mmo_charstatus *)data;
+	if (p) aFree(p);
+	return 0;
+}
 void do_final(void) {
 	int i;
 	ShowMessage("Doing final stage...\n");
@@ -3133,9 +3129,12 @@ void do_final(void) {
 	login_fd=-1;
 	char_fd=-1;
 	///////////////////////////////////////////////////////////////////////////
+	numdb_final(char_db_, char_db_final);
+	exit_dbn();
 
 	mysql_close(&mysql_handle);
 	mysql_close(&lmysql_handle);
+	timer_final();
 
 	ShowMessage("ok! all done...\n");
 }
@@ -3202,11 +3201,7 @@ void sql_config_read(const char *cfgName){ /* Kalaspuff, to get login_db */
 			strcpy(db_path,w2);
 		//Map server option to use SQL db or not
 		}else if(strcasecmp(w1,"use_sql_db")==0){ // added for sql item_db read for char server [Valaris]
-			if (strcasecmp(w2, "yes")) {
-				db_use_sqldbs = 1;
-			} else if (strcasecmp(w2, "no")) {
-				db_use_sqldbs = 0;
-			}
+			db_use_sqldbs = config_switch(w2);
 			ShowMessage("Using SQL dbs: %s\n",w2);
 		//custom columns for login database
 		}else if(strcasecmp(w1,"login_db_level")==0){
@@ -3355,13 +3350,6 @@ int char_config_read(const char *cfgName) {
 			check_ip_flag = config_switch(w2);
                 } else if (strcasecmp(w1, "chars_per_account") == 0) { //maxchars per account [Sirius]
                         char_per_account = atoi(w2);
-		// anti-freeze options [Valaris]
-		} else if(strcasecmp(w1,"anti_freeze_enable")==0){
-			anti_freeze_enable = config_switch(w2);
-		} else if (strcasecmp(w1, "anti_freeze_interval") == 0) {
-			ANTI_FREEZE_INTERVAL = atoi(w2);
-			if (ANTI_FREEZE_INTERVAL < 5)
-				ANTI_FREEZE_INTERVAL = 5; // minimum 5 seconds
 		} else if (strcasecmp(w1, "import") == 0) {
 			char_config_read(w2);
 		} else if (strcasecmp(w1, "console") == 0) {
@@ -3370,9 +3358,6 @@ int char_config_read(const char *cfgName) {
         }
 	}
 	fclose(fp);
-
-//Read ItemDB
-	do_init_itemdb();
 
 	return 0;
 }
@@ -3409,6 +3394,9 @@ int do_init(int argc, char **argv){
 	sql_config_read(SQL_CONF_NAME);
 
 	ShowMessage("charserver configuration reading done.....\n");
+
+	//Read ItemDB
+	do_init_itemdb();
 
 	inter_init((argc > 2) ? argv[2] : inter_cfgName); // inter server ﾃﾊｱ篳ｭ
 	ShowMessage("interserver configuration reading done.....\n");
@@ -3451,17 +3439,16 @@ int do_init(int argc, char **argv){
 
 	// send ALIVE PING to login server.
 	ShowMessage("add interval tic (check_connect_login_server)....\n");
-	i = add_timer_interval(gettick() + 10, 10 * 1000, check_connect_login_server, 0, 0);
+	add_timer_interval(gettick() + 10, 10 * 1000, check_connect_login_server, 0, 0);
 
 	// send USER COUNT PING to login server.
 	ShowMessage("add interval tic (send_users_tologin)....\n");
-	i = add_timer_interval(gettick() + 10,  5 * 1000, send_users_tologin, 0, 0);
+	add_timer_interval(gettick() + 10,  5 * 1000, send_users_tologin, 0, 0);
 
 	//no need to set sync timer on SQL version.
 	//ShowMessage("add interval tic (mmo_char_sync_timer)....\n");
-	//i = add_timer_interval(gettick() + 10, mmo_char_sync_timer, 0, 0, autosave_interval);
+	//add_timer_interval(gettick() + 10, mmo_char_sync_timer, 0, 0, autosave_interval);
 
-	add_timer_func_list(map_anti_freeze_system, "map_anti_freeze_system");
 	//Added for Mugendais I'm Alive mod
 	if(imalive_on)
 		add_timer_interval(gettick()+10, imalive_time*1000, imalive_timer,0,0);
@@ -3470,10 +3457,6 @@ int do_init(int argc, char **argv){
 	if(flush_on)
 		add_timer_interval(gettick()+10, flush_time, flush_timer,0,0);
 
-	if(anti_freeze_enable > 0) {
-		add_timer_func_list(map_anti_freeze_system, "map_anti_freeze_system");
-		i = add_timer_interval(gettick() + 1000, ANTI_FREEZE_INTERVAL * 1000, map_anti_freeze_system, 0, 0); // checks every X seconds user specifies
-	}
 
 	read_gm_account();
 
@@ -3528,3 +3511,61 @@ int debug_mysql_query(char *file, int line, void *mysql, const char *q) {
 #endif
         return mysql_query((MYSQL *) mysql, q);
 }
+
+int char_child(int parent_id, int child_id) {
+        int tmp_id = 0;
+        sprintf (tmp_sql, "SELECT `child` FROM `%s` WHERE `char_id` = '%d'", char_db, parent_id);
+        if (mysql_query (&mysql_handle, tmp_sql)) {
+                ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
+        }
+        sql_res = mysql_store_result (&mysql_handle);
+        if (sql_res) {
+                sql_row = mysql_fetch_row (sql_res);
+                tmp_id = atoi (sql_row[0]);
+                mysql_free_result (sql_res);
+        }
+        else
+                ShowMessage("CHAR: child Failed!\n");
+        if ( tmp_id == child_id )
+                return 1;
+        else
+                return 0;
+}
+
+int char_married(int pl1,int pl2) {
+        int tmp_id = 0;
+        sprintf (tmp_sql, "SELECT `partner_id` FROM `%s` WHERE `char_id` = '%d'", char_db, pl1);
+        if (mysql_query (&mysql_handle, tmp_sql)) {
+                ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
+        }
+        sql_res = mysql_store_result (&mysql_handle);
+        if (sql_res) {
+                sql_row = mysql_fetch_row (sql_res);
+                tmp_id = atoi (sql_row[0]);
+                mysql_free_result (sql_res);
+        }
+        else
+                ShowMessage("CHAR: married Failed!\n");
+        if ( tmp_id == pl2 )
+                return 1;
+        else
+                return 0;
+}
+
+int char_nick2id (char *name) {
+        int char_id = 0;
+        sprintf (tmp_sql, "SELECT `char_id` FROM `%s` WHERE `name` = '%s'", char_db, name);
+        if (mysql_query (&mysql_handle, tmp_sql)) {
+                ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
+        }
+        sql_res = mysql_store_result (&mysql_handle);
+        if (sql_res) {
+                sql_row = mysql_fetch_row (sql_res);
+                char_id = atoi (sql_row[0]);
+                mysql_free_result (sql_res);
+        }
+        else
+                ShowMessage ("CHAR: nick2id Failed!\n");
+        return char_id;
+}
+

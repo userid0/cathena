@@ -147,6 +147,8 @@ int guild_storage_fromsql(int guild_id, struct guild_storage *p){
 			p->storage[i].card[2]= atoi(sql_row[9]);
 			p->storage[i].card[3]= atoi(sql_row[10]);
 			p->storage_amount = ++i;
+			if (i >= MAX_GUILD_STORAGE)
+				break;
 		}
 		mysql_free_result(sql_res);
 	}
@@ -166,6 +168,13 @@ int inter_storage_sql_init(){
 	memset(guild_storage_pt,0,sizeof(struct guild_storage));
 
 	return 1;
+}
+// storage data finalize
+void inter_storage_sql_final()
+{
+	if (storage_pt) aFree(storage_pt);
+	if (guild_storage_pt) aFree(guild_storage_pt);	 
+	return;
 }
 // q?f[^?
 int inter_storage_delete(int account_id)

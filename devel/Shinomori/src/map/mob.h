@@ -98,8 +98,8 @@ int mob_spawn_guardian(struct map_session_data *sd,char *mapname,	// Spawning Gu
 
 
 int mob_walktoxy(struct mob_data *md,int x,int y,int easy);
-//int mob_randomwalk(struct mob_data *md,unsigned long tick);
-//int mob_can_move(struct mob_data *md);
+int mob_randomwalk(struct mob_data *md,unsigned long tick);
+int mob_can_move(struct mob_data *md);
 
 int mob_target(struct mob_data *md,struct block_list *bl,int dist);
 int mob_stop_walking(struct mob_data *md,int type);
@@ -139,6 +139,7 @@ int mobskill_event(struct mob_data *md,int flag);
 int mobskill_castend_id( int tid, unsigned long tick, int id,int data );
 int mobskill_castend_pos( int tid, unsigned long tick, int id,int data );
 int mob_summonslave(struct mob_data *md2,int *value,int amount,int flag);
+int mob_countslave(struct mob_data *md);
 
 int mob_gvmobcheck(struct map_session_data *sd, struct block_list *bl);
 void mob_reload(void);

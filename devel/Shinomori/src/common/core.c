@@ -221,6 +221,38 @@ void pid_create(const char* file) {
 	}
 }
 
+#define LOG_UPTIME 0
+void log_uptime(void)
+{
+#if LOG_UPTIME
+	time_t curtime;
+	char curtime2[24];
+	FILE *fp;
+	long seconds = 0, day = 24*60*60, hour = 60*60,
+		minute = 60, days = 0, hours = 0, minutes = 0;
+
+	fp = savefopen("log/uptime.log","a");
+	if (fp) {
+		time(&curtime);
+		strftime(curtime2, 24, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+
+		seconds = (gettick()-ticks)/CLOCKS_PER_SEC;
+		days = seconds/day;
+		seconds -= (seconds/day>0)?(seconds/day)*day:0;
+		hours = seconds/hour;
+		seconds -= (seconds/hour>0)?(seconds/hour)*hour:0;
+		minutes = seconds/minute;
+		seconds -= (seconds/minute>0)?(seconds/minute)*minute:0;
+
+		fprintf(fp, "%s: %s uptime - %ld days, %ld hours, %ld minutes, %ld seconds.\n",
+			curtime2, server_type, days, hours, minutes, seconds);
+		fclose(fp);
+	}
+
+	return;
+#endif
+}
+
 int main(int argc,char **argv)
 {
 	int next;
@@ -229,6 +261,7 @@ int main(int argc,char **argv)
 	///////////////////////////////////////////////////////////////////////////
 	// glibc dump
 	compat_signal(SIGPIPE,SIG_IGN);
+	compat_signal(SIGPIPE, sig_ignore);
 	compat_signal(SIGTERM,sig_proc);
 	compat_signal(SIGINT,sig_proc);
 

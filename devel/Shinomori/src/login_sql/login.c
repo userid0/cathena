@@ -26,7 +26,6 @@
 
 #include <mysql.h>
 
-#define J_MAX_MALLOC_SIZE 65535
 
 //-----------------------------------------------------
 // global variable
@@ -47,11 +46,9 @@ unsigned long	subnet_mask	= INADDR_BROADCAST;	//255.255.255.255
 
 struct mmo_char_server server[MAX_SERVERS];
 int server_fd[MAX_SERVERS];
-int server_freezeflag[MAX_SERVERS]; // Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-int anti_freeze_enable = 0;
-int ANTI_FREEZE_INTERVAL = 15;
 
 int login_fd=-1;
+
 
 //Added for Mugendai's I'm Alive mod
 int imalive_on=0;
@@ -63,12 +60,12 @@ int flush_time=100;
 char date_format[32] = "%Y-%m-%d %H:%M:%S";
 int auth_num = 0, auth_max = 0;
 
-int min_level_to_connect = 0; // minimum level of player/GM (0: player, 1-99: gm) to connect on the server
-int check_ip_flag = 1; // It's to check IP of a player between login-server and char-server (part of anti-hacking system)
-int check_client_version = 0; //Client version check ON/OFF .. (sirius)
-int client_version_to_connect = 20; //Client version needed to connect ..(sirius)
+int min_level_to_connect = 0;		// minimum level of player/GM (0: player, 1-99: gm) to connect on the server
+int check_ip_flag = 1;				// It's to check IP of a player between login-server and char-server (part of anti-hacking system)
+int check_client_version = 0;		//Client version check ON/OFF .. (sirius)
+int client_version_to_connect = 20;	//Client version needed to connect ..(sirius)
+int register_users_online = 1;
 
-MYSQL mysql_handle;
 
 int ipban = 1;
 int dynamic_account_ban = 1;
@@ -78,12 +75,18 @@ int dynamic_pass_failure_ban_time = 5;
 int dynamic_pass_failure_ban_how_many = 3;
 int dynamic_pass_failure_ban_how_long = 60;
 
+
+MYSQL mysql_handle;
+
+
 int login_server_port = 3306;
 char login_server_ip[32] = "127.0.0.1";
 char login_server_id[32] = "ragnarok";
 char login_server_pw[32] = "ragnarok";
 char login_server_db[32] = "ragnarok";
 int use_md5_passwds = 0;
+
+
 char login_db[256] = "login";
 char loginlog_db[256] = "loginlog";
 
@@ -126,21 +129,32 @@ struct dbt *online_db = NULL;
 
 void add_online_user(int account_id) {
     int *p;
+    if(register_users_online <= 0)
+	return;
     p = (int*)aMalloc(sizeof(int));
     *p = account_id;
     numdb_insert(online_db, account_id, p);
 }
 
-int is_user_online(int account_id) {
+int is_user_online(int account_id)
+{
+	int *p;
+	if(register_users_online <= 0)
+		return 0;
+	
+	p = (int*)numdb_search(online_db, account_id);
 
-    int *p = (int*)numdb_search(online_db, account_id);
 	if (p == NULL)
 		return 0;
+
 	ShowMessage("Acccount %d\n",*p);
 	return 1;
 }
-void remove_online_user(int account_id) {
+void remove_online_user(int account_id)
+{
     int *p;
+    if(register_users_online <= 0)
+		return;
     p = (int*)numdb_erase(online_db,account_id);
     aFree(p);
 }
@@ -245,8 +259,8 @@ void mmo_db_close(void) {
 		{
 			session_Remove( server_fd[i] );
 			server_fd[i] = -1;
+		}
 	}
-}
 	session_Remove(login_fd);
 	login_fd = -1;
 }
@@ -265,7 +279,8 @@ int mmo_auth_sqldb_new(struct mmo_account* account,const char *tmpstr, char sex)
 //-----------------------------------------------------
 // Make new account
 //-----------------------------------------------------
-int mmo_auth_new(struct mmo_account* account, const char *tmpstr, char sex) {
+int mmo_auth_new(struct mmo_account* account, char sex, char* email)
+{
 
 	return 0;
 }
@@ -286,7 +301,6 @@ int mmo_auth( struct mmo_account* account , int fd){
 
 	MYSQL_RES* 	sql_res;
 	MYSQL_ROW	sql_row;
-	//int sql_fields, sql_cnt;
 	char md5str[64], md5bin[32];
 
 	char ip_str[16];
@@ -559,28 +573,7 @@ int charif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
 	return c;
 }
 
-//--------------------------------
-// Char-server anti-freeze system
-//--------------------------------
-int char_anti_freeze_system(int tid, unsigned long tick, int id, int data) {
-	int i;
 
-	for(i = 0; i < MAX_SERVERS; i++) {
-		if (server_fd[i] >= 0) {// if char-server is online
-//			ShowMessage("char_anti_freeze_system: server #%d '%s', flag: %d.\n", i, server[i].name, server_freezeflag[i]);
-			if (server_freezeflag[i]-- < 1) {// Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-				session_Remove(server_fd[i]);
-				server_fd[i] = -1;
-			} else {
-				// send alive packet to check connection
-				WFIFOW(server_fd[i],0) = 0x2718;
-				WFIFOSET(server_fd[i],2);
-			}
-		}
-	}
-
-	return 0;
-}
 
 //-----------------------------------------------------
 // char-server packet parse
@@ -700,16 +693,22 @@ int parse_fromchar(int fd){
 				return 0;
 			// how many users on world? (update)
 			if (server[id].users != RFIFOL(fd,2))
+			{
 				ShowMessage("set users %s : %ld\n", server[id].name, (unsigned long)RFIFOL(fd,2));
-			server[id].users = RFIFOL(fd,2);
-			if(anti_freeze_enable)
-				server_freezeflag[id] = 5; // Char anti-freeze system. Counter. 5 ok, 4...0 freezed
 
-			sprintf(tmpsql,"UPDATE `sstatus` SET `user` = '%d' WHERE `index` = '%d'", server[id].users, id);
-			// query
-			if (mysql_query(&mysql_handle, tmpsql)) {
-				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+				server[id].users = RFIFOL(fd,2);
+
+				sprintf(tmpsql,"UPDATE `sstatus` SET `user` = '%d' WHERE `index` = '%d'", server[id].users, id);
+				// query
+				if (mysql_query(&mysql_handle, tmpsql)) {
+					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+				}
 			}
+
+			// send some answer
+			WFIFOW(fd,0) = 0x2718;
+			WFIFOSET(fd,2);
+
 			RFIFOSKIP(fd,6);
 			break;
 
@@ -743,6 +742,15 @@ int parse_fromchar(int fd){
 			RFIFOSKIP(fd,6);
 			break;
 
+		// login-server alive packet reply
+		case 0x2718:
+			if (RFIFOREST(fd) < 2)
+				return 0;
+			// do whatever it's supposed to do here?
+
+			RFIFOSKIP(fd,2);
+			break;
+
 		case 0x2720:	// GM
 			if (RFIFOREST(fd) < 4)
 				return 0;
@@ -753,11 +761,12 @@ int parse_fromchar(int fd){
 			ShowMessage("change GM error 0 %s\n", RFIFOP(fd, 8));
 
 			RFIFOSKIP(fd, RFIFOW(fd, 2));
+
 			WFIFOW(fd, 0) = 0x2721;
 			WFIFOL(fd, 2) = RFIFOL(fd,4); // oldacc;
 			WFIFOL(fd, 6) = 0; // newacc;
 			WFIFOSET(fd, 10);
-			return 0;
+			break;
 
 		// Map server send information to change an email of an account via char-server
 		case 0x2722:	// 0x2722 <account_id>.L <actual_e-mail>.40B <new_e-mail>.40B
@@ -832,7 +841,7 @@ int parse_fromchar(int fd){
 			}
 			RFIFOSKIP(fd,10);
 		  }
-			return 0;
+			break;
 
 		case 0x2725: // Receiving of map-server via char-server a ban resquest (by Yor)
 			if (RFIFOREST(fd) < 18)
@@ -886,7 +895,7 @@ int parse_fromchar(int fd){
 			RFIFOSKIP(fd,18);
 			break;
 		  }
-			return 0;
+			break;
 
 		case 0x2727:
 			if (RFIFOREST(fd) < 6)
@@ -897,36 +906,38 @@ int parse_fromchar(int fd){
 				acc=RFIFOL(fd,4);
 				sprintf(tmpsql,"SELECT `sex` FROM `%s` WHERE `%s` = '%d'",login_db,login_db_account_id,acc);
 
-	        if(mysql_query(&mysql_handle, tmpsql)) {
-				  ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
-		    return 0;
-                }
-	        sql_res = mysql_store_result(&mysql_handle) ;
-
-	        if (sql_res)	{
-		        if (mysql_num_rows(sql_res) == 0) {
-				mysql_free_result(sql_res);
-			        return 0;
-			}
-			sql_row = mysql_fetch_row(sql_res);	//row fetching
-	        }
-			  if (strcasecmp(sql_row[0], "M") == 0)
-                    sex = 1;
-                else
-                    sex = 0;
-				sprintf(tmpsql,"UPDATE `%s` SET `sex` = '%c' WHERE `%s` = '%d'", login_db, (sex==0?'M':'F'), login_db_account_id, acc);
-				//query
-				if(mysql_query(&mysql_handle, tmpsql)) {
-				  ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+				if(mysql_query(&mysql_handle, tmpsql)) 
+				{
+					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
-				WBUFW(buf,0) = 0x2723;
-				WBUFL(buf,2) = acc;
-				WBUFB(buf,6) = sex;
-				charif_sendallwos(-1, buf, 7);
+				else
+				{
+					sql_res = mysql_store_result(&mysql_handle);
+					if (sql_res)	
+					{
+						if (mysql_num_rows(sql_res) != 0) 
+						{
+							sql_row = mysql_fetch_row(sql_res);	//row fetching
+							if (strcasecmp(sql_row[0], "M") == 0)
+								sex = 1;
+							else
+								sex = 0;
+							sprintf(tmpsql,"UPDATE `%s` SET `sex` = '%c' WHERE `%s` = '%d'", 
+								login_db, (sex==0?'M':'F'), login_db_account_id, acc);
+							//query
+							if(mysql_query(&mysql_handle, tmpsql)) {
+								ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+							}
+							WBUFW(buf,0) = 0x2723;
+							WBUFL(buf,2) = acc;
+							WBUFB(buf,6) = sex;
+							charif_sendallwos(-1, buf, 7);
+						}
+					}
+				  }
+			}
 				RFIFOSKIP(fd,6);
-			  }
-			  return 0;
-
+				break;
 			case 0x2728:	// save account_reg
 				if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2))
 					return 0;
@@ -987,7 +998,7 @@ int parse_fromchar(int fd){
 				}
 				RFIFOSKIP(fd,6);
 			}
-			return 0;
+			break;
 
     case 0x272b:    // Set account_id to online [Wizputer]
         if (RFIFOREST(fd) < 6)
@@ -1006,7 +1017,7 @@ int parse_fromchar(int fd){
 	default:
 		ShowMessage("login: unknown packet %x! (from char).\n", (unsigned short)RFIFOW(fd,0));
 		session_Remove(fd);
-	return 0;
+		return 0;
 	}
 	}
 
@@ -1299,8 +1310,8 @@ int parse_login(int fd) {
 		break;
 	case 0x01db:	// request password key
 		if (session[fd]->session_data) {
-				ShowMessage("login: abnormal request of MD5 key (already opened session).\n");
-				session_Remove(fd);
+			ShowMessage("login: abnormal request of MD5 key (already opened session).\n");
+			session_Remove(fd);
 			return 0;
 		}
 			ShowMessage("Request Password key -%s\n",md5key);
@@ -1341,8 +1352,7 @@ int parse_login(int fd) {
 					server[account.account_id].maintenance=RFIFOW(fd,82);
 					server[account.account_id].new_=RFIFOW(fd,84);
 					server_fd[account.account_id]=fd;
-					if(anti_freeze_enable)
-						server_freezeflag[account.account_id] = 5; // Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
+
 					sprintf(tmpsql,"DELETE FROM `sstatus` WHERE `index`='%ld'", account.account_id);
 					//query
 					if(mysql_query(&mysql_handle, tmpsql)) {
@@ -1368,7 +1378,7 @@ int parse_login(int fd) {
 				}
 	  }
 				RFIFOSKIP(fd, 86);
-				return 0;
+				break;
 		case 0x7530:	// request Athena information
 			WFIFOW(fd,0)=0x7531;
 			WFIFOB(fd,2)=ATHENA_MAJOR_VERSION;
@@ -1500,6 +1510,7 @@ int login_config_read(const char *cfgName){
 		i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
 		if(i!=2)
 			continue;
+
 		else if (strcasecmp(w1, "bind_ip") == 0) {
 			h = gethostbyname (w2);
 			if (h != NULL) {
@@ -1542,14 +1553,6 @@ int login_config_read(const char *cfgName){
 			dynamic_pass_failure_ban_how_long=atoi(w2);
 			ShowMessage ("set dynamic_pass_failure_ban_how_long : %d\n",dynamic_pass_failure_ban_how_long);
 		}		
-		else if(strcasecmp(w1,"anti_freeze_enable")==0){
-			anti_freeze_enable = config_switch(w2);
-		}
-		else if (strcasecmp(w1, "anti_freeze_interval") == 0) {
-			ANTI_FREEZE_INTERVAL = atoi(w2);
-			if (ANTI_FREEZE_INTERVAL < 5)
-				ANTI_FREEZE_INTERVAL = 5; // minimum 5 seconds
-		}
 		else if (strcasecmp(w1, "import") == 0) {
 			login_config_read(w2);
 		} else if(strcasecmp(w1,"imalive_on")==0) {		//Added by Mugendai for I'm Alive mod
@@ -1612,6 +1615,9 @@ int login_config_read(const char *cfgName){
 			if(strcasecmp(w2,"off") == 0 || strcasecmp(w2,"no") == 0 )
 			        case_sensitive = 0;
         }
+		else if(strcasecmp(w1, "register_users_online") == 0) {
+			register_users_online = config_switch(w2);
+		}
  	}
 	fclose(fp);
 	ShowMessage ("End reading configuration...\n");
@@ -1703,6 +1709,24 @@ int flush_timer(int tid, unsigned long tick, int id, int data){
 	return 0;
 }
 
+//--------------------------------------
+// Function called at exit of the server
+//--------------------------------------
+static int online_db_final(void *key,void *data,va_list ap)
+{
+	int *p = (int*)data;
+	if (p) aFree(p);
+	return 0;
+}
+void do_final(void) {
+	//sync account when terminating.
+	//but no need when you using DBMS (mysql)
+	mmo_db_close();
+	numdb_final(online_db, online_db_final);
+	exit_dbn();
+	timer_final();
+}
+
 int do_init(int argc,char **argv){
 	//initialize login server
 	int i;
@@ -1738,9 +1762,7 @@ int do_init(int argc,char **argv){
 	ShowMessage ("Running mmo_auth_sqldb_init()\n");
 	mmo_auth_sqldb_init();
 	ShowMessage ("finished mmo_auth_sqldb_init()\n");
-	//sync account when terminating.
-	//but no need when you using DBMS (mysql)
-	set_termfunc(mmo_db_close);
+	set_termfunc(do_final);
 
 	//set default parser as parse_login function
 	set_defaultparse(parse_login);
@@ -1753,15 +1775,9 @@ int do_init(int argc,char **argv){
 	if(flush_on)
 		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
 
-
-	if(anti_freeze_enable > 0) {
-		add_timer_func_list(char_anti_freeze_system, "char_anti_freeze_system");
-		i = add_timer_interval(gettick()+1000, ANTI_FREEZE_INTERVAL * 1000, char_anti_freeze_system, 0, 0);
-	}
-
 	// ban deleter timer - 1 minute term
 	ShowMessage("add interval tic (ip_ban_check)....\n");
-	i=add_timer_interval(gettick()+10,60*1000, ip_ban_check,0,0);
+	add_timer_interval(gettick()+10,60*1000, ip_ban_check,0,0);
 
 	if (console) {
 		set_defaultconsoleparse(parse_console);

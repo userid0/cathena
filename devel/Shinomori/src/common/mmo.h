@@ -380,6 +380,9 @@ struct mmo_charstatus {
 	int char_id;
 	int account_id;
 	int partner_id;
+	int father_id;
+	int mother_id;
+	int child_id;
 
 	int base_exp;
 	int job_exp;
@@ -446,6 +449,9 @@ extern inline void _mmo_charstatus_tobuffer(const struct mmo_charstatus *p, unsi
 	_L_tobuffer( (unsigned long*) (&p->char_id),			buf);
 	_L_tobuffer( (unsigned long*) (&p->account_id),		buf);
 	_L_tobuffer( (unsigned long*) (&p->partner_id),		buf);
+	_L_tobuffer( (unsigned long*) (&p->father_id),		buf);
+	_L_tobuffer( (unsigned long*) (&p->mother_id),		buf);
+	_L_tobuffer( (unsigned long*) (&p->child_id),		buf);
 
 	_L_tobuffer( (unsigned long*) (&p->base_exp),		buf);
 	_L_tobuffer( (unsigned long*) (&p->job_exp),			buf);
@@ -545,6 +551,9 @@ extern inline void _mmo_charstatus_frombuffer(struct mmo_charstatus *p, const un
 	_L_frombuffer( (unsigned long*) (&p->char_id),		buf);
 	_L_frombuffer( (unsigned long*) (&p->account_id),	buf);
 	_L_frombuffer( (unsigned long*) (&p->partner_id),	buf);
+	_L_frombuffer( (unsigned long*) (&p->father_id),	buf);
+	_L_frombuffer( (unsigned long*) (&p->mother_id),	buf);
+	_L_frombuffer( (unsigned long*) (&p->child_id),		buf);
 
 	_L_frombuffer( (unsigned long*) (&p->base_exp),		buf);
 	_L_frombuffer( (unsigned long*) (&p->job_exp),		buf);

@@ -40,7 +40,7 @@ char* jstrescape (char* pt) {
 
 // assuming call convention ...(string1, string2)
 // string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
-char* jstrescapecpy (char* pt,char* sp) {
+char* jstrescapecpy (char* pt, const char* sp) {
 	//copy from here
 	char *p =pt;
 	if( (NULL==pt) || (NULL==sp) ) return NULL;
@@ -64,10 +64,10 @@ char* jstrescapecpy (char* pt,char* sp) {
 
 // assuming call convention ...(string1, string2, max_chars_to_copy)
 // string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
-size_t jmemescapecpy (char* pt,char* spt, int size) {
+size_t jmemescapecpy (char* pt, const char* spt, int size) {
 	//copy from here
 	char *p  =pt;
-	char *sp =spt;
+	const char *sp =spt;
 	if( (NULL==pt) || (NULL==spt) ) return 0;
 	
 	while ( (sp < spt+size) && *sp) {

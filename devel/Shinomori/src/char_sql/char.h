@@ -45,6 +45,10 @@ int mapif_sendall(unsigned char *buf,unsigned int len);
 int mapif_sendallwos(int fd,unsigned char *buf,unsigned int len);
 int mapif_send(int fd,unsigned char *buf,unsigned int len);
 
+int char_nick2id (char *name);
+int char_married(int pl1,int pl2);
+int char_child(int parent_id, int child_id);
+
 extern int autosave_interval;
 extern char db_path[];
 extern char char_db[256];
@@ -72,6 +76,8 @@ extern char login_db_level[32];
 extern char login_db_account_id[32];
 
 extern int lowest_gm_level;
+extern int GM_num;
+extern struct gm_account *gm_account;
 
 extern int debug_mysql_query(char *file, int line, void *mysql, const char *q);
 

@@ -397,6 +397,7 @@ struct map_session_data {
 	int critaddrace[12];
 	short no_regen;
 	int addeff3[10];
+	short addeff3_type[10];
 	short autospell2_id,autospell2_lv,autospell2_rate,autospell2_type;
 	int skillatk[2];
 	unsigned short unstripable_equip;
@@ -408,16 +409,16 @@ struct map_session_data {
 	unsigned long hp_loss_tick;
 	int hp_loss_rate;
 	short hp_loss_value, hp_loss_type;
-	int addrace2[6],addrace2_[6];
+	int addrace2[12],addrace2_[12];
 	int subsize[3];
 	short unequip_losehp[11];
 	short unequip_losesp[11];
 	int itemid;
-	int itemhealrate[6];
+	int itemhealrate[7];
 	//--- 03/15's new card effects
-	int expaddrace[6];
-	int subrace2[6];
-	short sp_gain_race[6];
+	int expaddrace[12];
+	int subrace2[12];
+	short sp_gain_race[12];
 
 	short spiritball;
 	short spiritball_old;
@@ -484,6 +485,9 @@ struct map_session_data {
 
 	unsigned short change_level;	// [celest]
 
+	unsigned nodelay :1;
+	unsigned noexp :1;
+	unsigned detach :1;
 #ifndef TXT_ONLY
 	int mail_counter;	// mail counter for mail system [Valaris]
 #endif
@@ -614,7 +618,7 @@ struct mob_data {
 	unsigned long last_thinktime;
 	unsigned long canmove_tick;
 	short move_fail_count;
-	struct {
+	struct mob_damage{
 		int id;
 		int dmg;
 	} dmglog[DAMAGELOG_SIZE];
@@ -650,7 +654,9 @@ struct mob_data {
 	struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
 	char npc_event[50];
 	unsigned char size;
-	int owner;
+	short recall_flag;
+	int recallmob_count;
+	short recallcount;
 };
 
 struct pet_data {
@@ -905,7 +911,8 @@ enum {
 	SP_SKILL_ATK, SP_UNSTRIPABLE, SP_ADD_DAMAGE_BY_CLASS, // 2018-2020
 	SP_SP_GAIN_VALUE, SP_IGNORE_DEF_MOB, SP_HP_LOSS_RATE, SP_ADDRACE2, SP_HP_GAIN_VALUE, // 2021-2025
 	SP_SUBSIZE, SP_DAMAGE_WHEN_UNEQUIP, SP_ADD_ITEM_HEAL_RATE, SP_LOSESP_WHEN_UNEQUIP, SP_EXP_ADDRACE,	// 2026-2030
-	SP_SP_GAIN_RACE, SP_SUBRACE2,
+	SP_SP_GAIN_RACE, SP_SUBRACE2, SP_ADDEFF_WHENHIT_SHORT,	// 2031-2033
+	SP_UNSTRIPABLE_WEAPON,SP_UNSTRIPABLE_ARMOR,SP_UNSTRIPABLE_HELM,SP_UNSTRIPABLE_SHIELD  // 2034-2037
 };
 
 enum {
@@ -958,7 +965,7 @@ extern char talkie_mes[];
 extern char wisp_server_name[];
 
 // éIëSëÃèÓïÒ
-void map_setusers(int);
+void map_setusers(int fd);
 int map_getusers(void);
 // blockçÌèúä÷òA
 int map_freeblock( void *bl );
@@ -997,6 +1004,7 @@ void map_addchariddb(int charid,char *name);
 void map_delchariddb(int charid);
 int map_reqchariddb(struct map_session_data * sd,int charid);
 char * map_charid2nick(int);
+struct map_session_data * map_charid2sd(int);
 
 struct map_session_data * map_id2sd(int);
 struct block_list * map_id2bl(int);
@@ -1028,9 +1036,23 @@ int cleanup_sub(struct block_list *bl, va_list ap);
 void map_helpscreen(); // [Valaris]
 int map_delmap(char *mapname);
 
+extern char *INTER_CONF_NAME;
+extern char *LOG_CONF_NAME;
+extern char *MAP_CONF_NAME;
+extern char *BATTLE_CONF_FILENAME;
+extern char *ATCOMMAND_CONF_FILENAME;
+extern char *CHARCOMMAND_CONF_FILENAME;
+extern char *SCRIPT_CONF_NAME;
+extern char *MSG_CONF_NAME;
+extern char *GRF_PATH_FILENAME;
+
 #ifndef TXT_ONLY
 
 // MySQL
+#ifdef __WIN32
+#include <my_global.h>
+#include <my_sys.h>
+#endif
 #include <mysql.h>
 
 void char_online_check(void); // [Valaris]

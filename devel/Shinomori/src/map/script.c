@@ -42,7 +42,7 @@
 #define SCRIPT_BLOCK_SIZE 256
 
 enum { LABEL_NEXTLINE=1,LABEL_START };
-static char * script_buf;
+static char * script_buf = NULL;
 static int script_pos,script_size;
 
 char *str_buf;
@@ -57,7 +57,7 @@ static struct s_str_data {
 	int (*func)(struct script_state *);
 	int val;
 	int next;
-} *str_data;
+} *str_data = NULL;
 int str_num=LABEL_START,str_data_size;
 int str_hash[16];
 
@@ -1534,7 +1534,7 @@ void push_str(struct script_stack *stack, int type, char *str)
 //	if(battle_config.etc_log)
 //		ShowMessage("push (%d,%x)-> %d\n",type,str,stack->sp);
 	stack->stack_data[stack->sp].type=type;
-	stack->stack_data[stack->sp].u.str=str;
+	stack->stack_data[stack->sp].u.str=(char *) str;
 	stack->sp++;
 }
 
@@ -1549,7 +1549,7 @@ void push_copy(struct script_stack *stack,int pos)
 		push_str(stack,C_CONSTSTR,stack->stack_data[pos].u.str);
 		break;
 	case C_STR:
-		push_str(stack,C_STR,strdup(stack->stack_data[pos].u.str));
+		push_str(stack,C_STR, aStrdup(stack->stack_data[pos].u.str));
 		break;
 	default:
 		push_val(stack,stack->stack_data[pos].type,stack->stack_data[pos].u.num);
@@ -1824,14 +1824,12 @@ int buildin_warp(struct script_state *st)
 		if(map[sd->bl.m].flag.noreturn)	// ’±‹Ö~
 			return 0;
 
-		pc_setpos(sd,sd->status.save_point.map,
-			sd->status.save_point.x,sd->status.save_point.y,3);
+		pc_setpos(sd,sd->status.save_point.map,sd->status.save_point.x,sd->status.save_point.y,3);
 	}else if(strcmp(str,"Save")==0){
 		if(map[sd->bl.m].flag.noreturn)	// ’±‹Ö~
 			return 0;
 
-		pc_setpos(sd,sd->status.save_point.map,
-			sd->status.save_point.x,sd->status.save_point.y,3);
+		pc_setpos(sd,sd->status.save_point.map,sd->status.save_point.x,sd->status.save_point.y,3);
 	}else
 		pc_setpos(sd,str,x,y,0);
 	return 0;
@@ -1964,7 +1962,7 @@ int buildin_input(struct script_state *st)
 				set_reg(sd,num,name,(void*)sd->npc_amount);
 			} else {
 				// ragemuŒİŠ·‚Ì‚½‚ß
-				pc_setreg(sd,add_str("l14"),sd->npc_amount);
+				pc_setreg(sd,add_str( "l14"),sd->npc_amount);
 			}
 		}
 	} else {
@@ -2706,9 +2704,9 @@ int buildin_getpartyname(struct script_state *st)
 	party_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	name=buildin_getpartyname_sub(party_id);
 	if(name!=0)
-		push_str(st->stack,C_STR,name);
+		push_str(st->stack,C_STR, name);
 	else
-		push_str(st->stack,C_CONSTSTR,"null");
+		push_str(st->stack,C_CONSTSTR, "null");
 
 	return 0;
 }
@@ -2728,12 +2726,12 @@ int buildin_getpartymember(struct script_state *st)
 		for(i=0;i<MAX_PARTY;i++){
 			if(p->member[i].account_id){
 //				ShowMessage("name:%s %d\n",p->member[i].name,i);
-				mapreg_setregstr(add_str("$@partymembername$")+(i<<24),p->member[i].name);
+				mapreg_setregstr(add_str( "$@partymembername$")+(i<<24),p->member[i].name);
 				j++;
 			}
 		}
 	}
-	mapreg_setreg(add_str("$@partymembercount"),j);
+	mapreg_setreg(add_str( "$@partymembercount"),j);
 
 	return 0;
 }
@@ -2760,9 +2758,9 @@ int buildin_getguildname(struct script_state *st)
 	int guild_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	name=buildin_getguildname_sub(guild_id);
 	if(name!=0)
-		push_str(st->stack,C_STR,name);
+		push_str(st->stack,C_STR, name);
 	else
-		push_str(st->stack,C_CONSTSTR,"null");
+		push_str(st->stack,C_CONSTSTR, "null");
 	return 0;
 }
 
@@ -2790,9 +2788,9 @@ int buildin_getguildmaster(struct script_state *st)
 	int guild_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	master=buildin_getguildmaster_sub(guild_id);
 	if(master!=0)
-		push_str(st->stack,C_STR,master);
+		push_str(st->stack,C_STR, master);
 	else
-		push_str(st->stack,C_CONSTSTR,"null");
+		push_str(st->stack,C_CONSTSTR, "null");
 	return 0;
 }
 
@@ -2829,23 +2827,23 @@ int buildin_strcharinfo(struct script_state *st)
 		char *buf;
 		buf=(char *)aMalloc(24*sizeof(char));
 		memcpy(buf,sd->status.name, 24);//EOS included
-		push_str(st->stack,C_STR,buf);
+		push_str(st->stack,C_STR, buf);
 	}
 	if(num==1){
 		char *buf;
 		buf=buildin_getpartyname_sub(sd->status.party_id);
 		if(buf!=0)
-			push_str(st->stack,C_STR,buf);
+			push_str(st->stack,C_STR, buf);
 		else
-			push_str(st->stack,C_CONSTSTR,"");
+			push_str(st->stack,C_CONSTSTR, "");
 	}
 	if(num==2){
 		char *buf;
 		buf=buildin_getguildname_sub(sd->status.guild_id);
 		if(buf!=0)
-			push_str(st->stack,C_STR,buf);
+			push_str(st->stack,C_STR, buf);
 		else
-			push_str(st->stack,C_CONSTSTR,"");
+			push_str(st->stack,C_CONSTSTR, "");
 	}
 
 	return 0;
@@ -2907,7 +2905,7 @@ int buildin_getequipname(struct script_state *st)
 	}else{
 		sprintf(buf,"%s-[%s]",pos[num-1],pos[10]);
 	}
-	push_str(st->stack,C_STR,buf);
+	push_str(st->stack,C_STR, buf);
 
 	return 0;
 }
@@ -3670,7 +3668,7 @@ int buildin_gettimestr(struct script_state *st)
 	strftime(tmpstr,maxlen,fmtstr,localtime(&now));
 	tmpstr[maxlen]='\0';
 
-	push_str(st->stack,C_STR,tmpstr);
+	push_str(st->stack,C_STR, tmpstr);
 	return 0;
 }
 
@@ -4739,13 +4737,13 @@ int buildin_getwaitingroomstate(struct script_state *st)
 	case 33: val=(cd->users >= cd->trigger); break;
 
 	case 4:
-		push_str(st->stack,C_CONSTSTR,cd->title);
+		push_str(st->stack,C_CONSTSTR, cd->title);
 		return 0;
 	case 5:
-		push_str(st->stack,C_CONSTSTR,cd->pass);
+		push_str(st->stack,C_CONSTSTR, cd->pass);
 		return 0;
 	case 16:
-		push_str(st->stack,C_CONSTSTR,cd->npc_event);
+		push_str(st->stack,C_CONSTSTR, cd->npc_event);
 		return 0;
 	}
 	push_val(st->stack,C_INT,val);
@@ -4777,7 +4775,7 @@ int buildin_warpwaitingpc(struct script_state *st)
 	for(i=0;i<n;i++){
 		struct map_session_data *sd=cd->usersd[0];	// ƒŠƒXƒgæ“ª‚ÌPC‚ğŸX‚ÉB
 
-		mapreg_setreg(add_str("$@warpwaitingpc")+(i<<24),sd->bl.id);
+		mapreg_setreg(add_str( "$@warpwaitingpc")+(i<<24),sd->bl.id);
 
 		if(strcmp(str,"Random")==0)
 			pc_randomwarp(sd,3);
@@ -4785,12 +4783,11 @@ int buildin_warpwaitingpc(struct script_state *st)
 			if(map[sd->bl.m].flag.noteleport)	// ƒeƒŒƒ|‹Ö~
 				return 0;
 
-			pc_setpos(sd,sd->status.save_point.map,
-				sd->status.save_point.x,sd->status.save_point.y,3);
+			pc_setpos(sd,sd->status.save_point.map,sd->status.save_point.x,sd->status.save_point.y,3);
 		}else
 			pc_setpos(sd,str,x,y,0);
 	}
-	mapreg_setreg(add_str("$@warpwaitingpcnum"),n);
+	mapreg_setreg(add_str( "$@warpwaitingpcnum"),n);
 	return 0;
 }
 /*==========================================
@@ -5197,8 +5194,8 @@ int buildin_agitcheck(struct script_state *st)
 		if (agit_flag==0) push_val(st->stack,C_INT,0);
 	} else {
 		sd=script_rid2sd(st);
-		if (agit_flag==1) pc_setreg(sd,add_str("@agit_flag"),1);
-		if (agit_flag==0) pc_setreg(sd,add_str("@agit_flag"),0);
+		if (agit_flag==1) pc_setreg(sd,add_str( "@agit_flag"),1);
+		if (agit_flag==0) pc_setreg(sd,add_str( "@agit_flag"),0);
 	}
 	return 0;
 }
@@ -5229,9 +5226,9 @@ int buildin_getcastlename(struct script_state *st)
 		}
 	}
 	if(buf)
-	push_str(st->stack,C_STR,buf);
+	push_str(st->stack,C_STR, buf);
 	else
-		push_str(st->stack,C_CONSTSTR,"");
+		push_str(st->stack,C_CONSTSTR, "");
 	return 0;
 }
 
@@ -5543,9 +5540,9 @@ int buildin_cmdothernpc(struct script_state *st)	// Added by RoVeRT
 int buildin_inittimer(struct script_state *st)	// Added by RoVeRT
 {
 //	struct npc_data *nd=(struct npc_data*)map_id2bl(st->oid);
-
 //	nd->lastaction=nd->timer=gettick();
-	npc_do_ontimer(st->oid, map_id2sd(st->rid), 1);
+
+	npc_do_ontimer(st->oid, map_id2sd(st->rid),1);
 
 	return 0;
 }
@@ -5553,9 +5550,9 @@ int buildin_inittimer(struct script_state *st)	// Added by RoVeRT
 int buildin_stoptimer(struct script_state *st)	// Added by RoVeRT
 {
 //	struct npc_data *nd=(struct npc_data*)map_id2bl(st->oid);
-
 //	nd->lastaction=nd->timer=-1;
-	npc_do_ontimer(st->oid, map_id2sd(st->rid), 0);
+
+	npc_do_ontimer(st->oid, map_id2sd(st->rid),0);
 
 	return 0;
 }
@@ -5693,7 +5690,7 @@ int buildin_strmobinfo(struct script_state *st)
 			char *buf;
 		buf = (char*)aMalloc(24*sizeof(char));
 			strcpy(buf,mob_db[class_].name);
-			push_str(st->stack,C_STR,buf);
+			push_str(st->stack,C_STR, buf);
 			break;
 		}
 	case 2:
@@ -5701,7 +5698,7 @@ int buildin_strmobinfo(struct script_state *st)
 			char *buf;
 		buf=(char*)aMalloc(24*sizeof(char));
 			strcpy(buf,mob_db[class_].jname);
-			push_str(st->stack,C_STR,buf);
+			push_str(st->stack,C_STR, buf);
 			break;
 		}
 	case 3:
@@ -5785,7 +5782,7 @@ int buildin_getitemname(struct script_state *st)
 	i_data = itemdb_search(item_id);
 	item_name=(char *)aMalloc(24*sizeof(char));
 	memcpy(item_name,i_data->jname,24);//EOS included
-	push_str(st->stack,C_STR,item_name);
+	push_str(st->stack,C_STR, item_name);
 	return 0;
 }
 
@@ -5868,20 +5865,20 @@ int buildin_getinventorylist(struct script_state *st)
 	if(!sd) return 0;
 	for(i=0;i<MAX_INVENTORY;i++){
 		if(sd->status.inventory[i].nameid > 0 && sd->status.inventory[i].amount > 0){
-			pc_setreg(sd,add_str("@inventorylist_id")+(j<<24),sd->status.inventory[i].nameid);
-			pc_setreg(sd,add_str("@inventorylist_amount")+(j<<24),sd->status.inventory[i].amount);
-			pc_setreg(sd,add_str("@inventorylist_equip")+(j<<24),sd->status.inventory[i].equip);
-			pc_setreg(sd,add_str("@inventorylist_refine")+(j<<24),sd->status.inventory[i].refine);
-			pc_setreg(sd,add_str("@inventorylist_identify")+(j<<24),sd->status.inventory[i].identify);
-			pc_setreg(sd,add_str("@inventorylist_attribute")+(j<<24),sd->status.inventory[i].attribute);
-			pc_setreg(sd,add_str("@inventorylist_card1")+(j<<24),sd->status.inventory[i].card[0]);
-			pc_setreg(sd,add_str("@inventorylist_card2")+(j<<24),sd->status.inventory[i].card[1]);
-			pc_setreg(sd,add_str("@inventorylist_card3")+(j<<24),sd->status.inventory[i].card[2]);
-			pc_setreg(sd,add_str("@inventorylist_card4")+(j<<24),sd->status.inventory[i].card[3]);
+			pc_setreg(sd,add_str( "@inventorylist_id")+(j<<24),sd->status.inventory[i].nameid);
+			pc_setreg(sd,add_str( "@inventorylist_amount")+(j<<24),sd->status.inventory[i].amount);
+			pc_setreg(sd,add_str( "@inventorylist_equip")+(j<<24),sd->status.inventory[i].equip);
+			pc_setreg(sd,add_str( "@inventorylist_refine")+(j<<24),sd->status.inventory[i].refine);
+			pc_setreg(sd,add_str( "@inventorylist_identify")+(j<<24),sd->status.inventory[i].identify);
+			pc_setreg(sd,add_str( "@inventorylist_attribute")+(j<<24),sd->status.inventory[i].attribute);
+			pc_setreg(sd,add_str( "@inventorylist_card1")+(j<<24),sd->status.inventory[i].card[0]);
+			pc_setreg(sd,add_str( "@inventorylist_card2")+(j<<24),sd->status.inventory[i].card[1]);
+			pc_setreg(sd,add_str( "@inventorylist_card3")+(j<<24),sd->status.inventory[i].card[2]);
+			pc_setreg(sd,add_str( "@inventorylist_card4")+(j<<24),sd->status.inventory[i].card[3]);
 			j++;
 		}
 	}
-	pc_setreg(sd,add_str("@inventorylist_count"),j);
+	pc_setreg(sd,add_str( "@inventorylist_count"),j);
 	return 0;
 }
 
@@ -5892,13 +5889,13 @@ int buildin_getskilllist(struct script_state *st)
 	if(!sd) return 0;
 	for(i=0;i<MAX_SKILL;i++){
 		if(sd->status.skill[i].id > 0 && sd->status.skill[i].lv > 0){
-			pc_setreg(sd,add_str("@skilllist_id")+(j<<24),sd->status.skill[i].id);
+			pc_setreg(sd,add_str( "@skilllist_id")+(j<<24),sd->status.skill[i].id);
 			pc_setreg(sd,add_str("@skilllist_lv")+(j<<24),sd->status.skill[i].lv);
 			pc_setreg(sd,add_str("@skilllist_flag")+(j<<24),sd->status.skill[i].flag);
 			j++;
 		}
 	}
-	pc_setreg(sd,add_str("@skilllist_count"),j);
+	pc_setreg(sd,add_str( "@skilllist_count"),j);
 	return 0;
 }
 
@@ -6267,7 +6264,7 @@ int buildin_getpetinfo(struct script_state *st)
 				break;
 			case 2:
 				if(sd->pet.name)
-					push_str(st->stack,C_STR,sd->pet.name);
+					push_str(st->stack,C_STR, sd->pet.name);
 				else
 					push_val(st->stack,C_INT,0);
 				break;
@@ -6364,8 +6361,8 @@ int buildin_select(struct script_state *st)
 		sd->state.menu_or_input=0;
 		st->state=END;
 	} else {
-		pc_setreg(sd,add_str("l15"),sd->npc_menu);
-		pc_setreg(sd,add_str("@menu"),sd->npc_menu);
+		pc_setreg(sd,add_str( "l15"),sd->npc_menu);
+		pc_setreg(sd,add_str( "@menu"),sd->npc_menu);
 		sd->state.menu_or_input=0;
 		push_val(st->stack,C_INT,sd->npc_menu);
 	}
@@ -6986,6 +6983,7 @@ int buildin_cardscnt(struct script_state *st)
 	struct map_session_data *sd;
 	int i, k, id = 1;
 	int ret = 0;
+	int index, type;
 
 	sd = script_rid2sd(st);
 	
@@ -6997,7 +6995,6 @@ int buildin_cardscnt(struct script_state *st)
 		if (id <= 0)
 			continue;
 		
-		int index, type;
 		index = current_equip_item_index; //we get CURRENT WEAPON inventory index from status.c [Lupus]
 		if(index < 0) continue;
 
@@ -7432,7 +7429,7 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 			push_val(stack,c,0);
 			break;
 		case C_STR:
-			push_str(stack,C_CONSTSTR,script+st->pos);
+			push_str(stack,C_CONSTSTR, (script+st->pos));
 			while(script[st->pos++]);
 			break;
 		case C_FUNC:
@@ -7632,14 +7629,14 @@ static int script_load_mapreg()
 			}
 			p=(char *)aMalloc( (strlen(buf2) + 1)*sizeof(char));
 			strcpy(p,buf2);
-			s=add_str(buf1);
+			s= add_str( buf1);
 			numdb_insert(mapregstr_db,(i<<24)|s,p);
 		}else{
 			if( sscanf(line+n,"%d",&v)!=1 ){
 				ShowMessage("%s: %s broken data !\n",mapreg_txt,buf1);
 				continue;
 			}
-			s=add_str(buf1);
+			s= add_str( buf1);
 			numdb_insert(mapreg_db,(i<<24)|s,v);
 		}
 	}
@@ -7827,8 +7824,8 @@ int do_final_script()
 {
 	if(mapreg_dirty>=0)
 		script_save_mapreg();
-	if(script_buf)
-		aFree(script_buf);
+//	if(script_buf)
+//		aFree(script_buf);
 
 	if(mapreg_db)
 		numdb_final(mapreg_db,mapreg_db_final);

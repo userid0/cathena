@@ -4,9 +4,10 @@
 #include <mysql.h>
 
 int inter_init(const char *file);
+void inter_final();
 int inter_parse_frommap(int fd);
 int inter_mapif_init(int fd);
-
+int mapif_send_gmaccounts();
 
 int inter_check_length(int fd,int length);
 

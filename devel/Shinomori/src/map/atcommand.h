@@ -122,6 +122,10 @@ enum AtCommandType {
 	AtCommand_ReloadSkillDB,
 	AtCommand_ReloadScript,
 	AtCommand_ReloadGMDB,
+	AtCommand_ReloadAtcommand,
+	AtCommand_ReloadBattleConf,
+	AtCommand_ReloadStatusDB,
+	AtCommand_ReloadPcDB,
 	AtCommand_MapInfo,
 	AtCommand_Dye,
 	AtCommand_Hstyle,
@@ -241,6 +245,7 @@ enum AtCommandType {
 	AtCommand_ChangeLook,
 	AtCommand_AutoLoot, //by Upa-Kun
 	AtCommand_MobInfo, //by Lupus
+        AtCommand_Adopt, // by Veider
 
 	// end
 	AtCommand_Unknown,
@@ -276,6 +281,7 @@ int atcommand_recall(const int fd, struct map_session_data* sd, const char* comm
 
 int atcommand_config_read(const char *cfgName);
 int msg_config_read(const char *cfgName);
+void do_final_msg();
 
 char *estr_lower(char *str);
 

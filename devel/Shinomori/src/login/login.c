@@ -54,9 +54,6 @@ int display_parse_fromchar = 0; // 0: no, 1: yes (without packet 0x2714), 2: all
 
 struct mmo_char_server server[MAX_SERVERS];
 int server_fd[MAX_SERVERS];
-int server_freezeflag[MAX_SERVERS]; // Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-int anti_freeze_enable = 0;
-int ANTI_FREEZE_INTERVAL = 15;
 
 int login_fd;
 
@@ -876,11 +873,12 @@ void mmo_auth_sync(void) {
 //       immediatly and set  the minimum of
 //       authentifications to its initialization value.
 //-----------------------------------------------------
-int check_auth_sync(int tid, unsigned long tick, int id, int data) {
+int check_auth_sync(int tid, unsigned long tick, int id, int data)
+{
 	// we only save if necessary:
 	// we have do some authentifications without do saving
 	if (auth_before_save_file < AUTH_BEFORE_SAVE_FILE ||
-	    auth_before_save_file < (int)(auth_num / AUTH_SAVE_FILE_DIVIDER))
+	    auth_before_save_file*AUTH_SAVE_FILE_DIVIDER < auth_num )
 		mmo_auth_sync();
 
 	return 0;
@@ -928,21 +926,23 @@ void send_GM_accounts() {
 //-----------------------------------------------------
 // Check if GM file account have been changed
 //-----------------------------------------------------
-int check_GM_file(int tid, unsigned long tick, int id, int data) {
+int check_GM_file(int tid, unsigned long tick, int id, int data)
+{
 	struct stat file_stat;
 	long new_time;
 
 	// if we would not check
-	if (gm_account_filename_check_timer < 1)
+	if( gm_account_filename_check_timer < 1 )
 		return 0;
 
 	// get last modify time/date
-	if (stat(GM_account_filename, &file_stat))
+	if( stat(GM_account_filename, &file_stat) )
 		new_time = 0; // error
 	else
 		new_time = file_stat.st_mtime;
 
-	if (new_time != creation_time_GM_account_file) {
+	if (new_time != creation_time_GM_account_file)
+	{
 		read_gm_account();
 		send_GM_accounts();
 	}
@@ -1207,30 +1207,7 @@ int mmo_auth(struct mmo_account* account, int fd) {
 	return -1; // account OK
 }
 
-//-------------------------------
-// Char-server anti-freeze system
-//-------------------------------
-int char_anti_freeze_system(int tid, unsigned long tick, int id, int data) {
-	int i;
 
-	//ShowMessage("Entering in char_anti_freeze_system function to check freeze of servers.\n");
-	for(i = 0; i < MAX_SERVERS; i++) {
-		if (server_fd[i] >= 0) {// if char-server is online
-			//ShowMessage("char_anti_freeze_system: server #%d '%s', flag: %d.\n", i, server[i].name, server_freezeflag[i]);
-			if (server_freezeflag[i]-- < 1) { // Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-				ShowMessage("Char-server anti-freeze system: char-server #%d '%s' is freezed -> disconnection.\n", i, server[i].name);
-				login_log("Char-server anti-freeze system: char-server #%d '%s' is freezed -> disconnection." RETCODE,i, server[i].name);
-				session_Remove(server_fd[i]);
-			} else {
-				// send alive packet to check connection
-				WFIFOW(server_fd[i],0) = 0x2718;
-				WFIFOSET(server_fd[i],2);
-			}
-		}
-	}
-
-	return 0;
-}
 
 //--------------------------------
 // Packet parsing for char-servers
@@ -1279,22 +1256,24 @@ int parse_fromchar(int fd) {
 			if (RFIFOREST(fd) < 19)
 				return 0;
 		  {
-			int acc;
-			acc = RFIFOL(fd,2); // speed up
-			for(i = 0; i < AUTH_FIFO_SIZE; i++) {
-				if (auth_fifo[i].account_id == acc &&
-				    auth_fifo[i].login_id1 == (int)RFIFOL(fd,6) &&
+			int acc = RFIFOL(fd,2);
+			for(i = 0; i < AUTH_FIFO_SIZE; i++) 
+			{
+				if( auth_fifo[i].account_id == acc &&
+					auth_fifo[i].login_id1 == (int)RFIFOL(fd,6) &&
 #if CMP_AUTHFIFO_LOGIN2 != 0
 				    auth_fifo[i].login_id2 == (int)RFIFOL(fd,10) && // relate to the versions higher than 18
 #endif
 				    auth_fifo[i].sex == RFIFOB(fd,14) &&
 				    (!check_ip_flag || auth_fifo[i].ip == RFIFOLIP(fd,15)) &&
-				    !auth_fifo[i].delflag) {
+				    !auth_fifo[i].delflag) 
+				{
 					int p, k;
 					auth_fifo[i].delflag = 1;
-					login_log("Char-server '%s': authentification of the account %d accepted (ip: %s)." RETCODE,
+					login_log("Char-server '%s': authentification of the account %d accepted (ip: %s)."RETCODE,
 					          server[id].name, acc, ip_str);
-//					ShowMessage("%d\n", i);
+					//ShowMessage("%d\n", i);
+
 					for(k = 0; k < auth_num; k++) {
 						if (auth_dat[k].account_id == acc) {
 							WFIFOW(fd,0) = 0x2729;	// Sending of the account_reg2
@@ -1338,8 +1317,11 @@ int parse_fromchar(int fd) {
 				return 0;
 			//ShowMessage("parse_fromchar: Receiving of the users number of the server '%s': %ld\n", server[id].name, (unsigned long)RFIFOL(fd,2));
 			server[id].users = RFIFOL(fd,2);
-			if(anti_freeze_enable)
-				server_freezeflag[id] = 5; // Char anti-freeze system. Counter. 5 ok, 4...0 freezed
+
+			// send some answer
+			WFIFOW(fd,0) = 0x2718;
+			WFIFOSET(fd,2);
+
 			RFIFOSKIP(fd,6);
 			break;
 
@@ -1381,8 +1363,10 @@ int parse_fromchar(int fd) {
 			if (RFIFOREST(fd) < 6)
 				return 0;
 			//ShowMessage("parse_fromchar: E-mail/limited time request from '%s' server (concerned account: %ld)\n", server[id].name, (unsigned long)RFIFOL(fd,2));
-			for(i = 0; i < auth_num; i++) {
-				if (auth_dat[i].account_id == (int)RFIFOL(fd,2)) {
+			for(i = 0; i < auth_num; i++)
+			{
+				if (auth_dat[i].account_id == (int)RFIFOL(fd,2))
+				{
 					login_log("Char-server '%s': e-mail of the account %d found (ip: %s)." RETCODE,
 					          server[id].name, RFIFOL(fd,2), ip_str);
 					WFIFOW(fd,0) = 0x2717;
@@ -1397,6 +1381,14 @@ int parse_fromchar(int fd) {
 				login_log("Char-server '%s': e-mail of the account %d NOT found (ip: %s)." RETCODE,
 				          server[id].name, RFIFOL(fd,2), ip_str);
 			RFIFOSKIP(fd,6);
+			break;
+
+		// login-server alive packet reply
+		case 0x2718:
+			if (RFIFOREST(fd) < 2)
+				return 0;
+			// do whatever it's supposed to do here?
+			RFIFOSKIP(fd,2);
 			break;
 
 		case 0x2720:	// To become GM request
@@ -1452,7 +1444,7 @@ int parse_fromchar(int fd) {
 				charif_sendallwos(-1, buf, 10);
 			  }
 			RFIFOSKIP(fd, RFIFOW(fd,2));
-			return 0;
+			break;;
 
 		// Map server send information to change an email of an account via char-server
 		case 0x2722:	// 0x2722 <account_id>.L <actual_e-mail>.40B <new_e-mail>.40B
@@ -1538,9 +1530,9 @@ int parse_fromchar(int fd) {
 				}
 				RFIFOSKIP(fd,10);
 			}
-			return 0;
+			break;
 
-		case 0x2725:	// Receiving of map-server via char-server a ban resquest (by Yor)
+		case 0x2725:	// Receiving a ban request from map-server via char-server (by Yor)
 			if (RFIFOREST(fd) < 18)
 				return 0;
 			{
@@ -1602,7 +1594,7 @@ int parse_fromchar(int fd) {
 					          server[id].name, acc, ip_str);
 				RFIFOSKIP(fd,18);
 			}
-			return 0;
+			break;
 
 		case 0x2727:	// Change of sex (sex is reversed)
 			if (RFIFOREST(fd) < 6)
@@ -1643,7 +1635,7 @@ int parse_fromchar(int fd) {
 					          server[id].name, acc, ip_str);
 				RFIFOSKIP(fd,6);
 			}
-			return 0;
+			break;
 
 		case 0x2728:	// We receive account_reg2 from a char-server, and we send them to other char-servers.
 			if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2))
@@ -1707,7 +1699,8 @@ int parse_fromchar(int fd) {
 					          server[id].name, acc, ip_str);
 				RFIFOSKIP(fd,6);
 			}
-			return 0;
+			break;
+
 		case 0x3000: //change sex for chrif_changesex()
 			if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2))
 				return 0;
@@ -1737,7 +1730,7 @@ int parse_fromchar(int fd) {
 				}
 				RFIFOSKIP(fd,RFIFOW(fd,2));
 			}
-			return 0;
+			break;
 
 		default:
 			{
@@ -1784,8 +1777,8 @@ int parse_fromchar(int fd) {
 			session_Remove(fd);
 			ShowMessage("Char-server has been disconnected (unknown packet).\n");
 			return 0;
-		}
-	}
+		}//end case
+	}// end while
 	return 0;
 }
 
@@ -2774,6 +2767,7 @@ int parse_login(int fd) {
 
 	if ( !session_isActive(fd) ) {
 		session_Remove(fd);// have it removed by do_sendrecv
+        memset(&account, 0, sizeof(account));
 		return 0;
 	}
 
@@ -2982,8 +2976,7 @@ int parse_login(int fd) {
 					server[account.account_id].maintenance = RFIFOW(fd,82);
 					server[account.account_id].new_ = RFIFOW(fd,84);
 					server_fd[account.account_id] = fd;
-					if(anti_freeze_enable)
-						server_freezeflag[account.account_id] = 5; // Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
+
 					WFIFOW(fd,0) = 0x2711;
 					WFIFOB(fd,2) = 0;
 					WFIFOSET(fd,3);
@@ -3443,13 +3436,6 @@ int login_config_read(const char *cfgName) {
 				dynamic_pass_failure_ban_how_many = atoi(w2);
 			} else if (strcasecmp(w1, "dynamic_pass_failure_ban_how_long") == 0) {
 				dynamic_pass_failure_ban_how_long = atoi(w2);
-			// Anti-Freeze
-			} else if(strcasecmp(w1,"anti_freeze_enable")==0){
-				anti_freeze_enable = config_switch(w2);
-			} else if (strcasecmp(w1, "anti_freeze_interval") == 0) {
-				ANTI_FREEZE_INTERVAL = atoi(w2);
-				if (ANTI_FREEZE_INTERVAL < 5)
-					ANTI_FREEZE_INTERVAL = 5; // minimum 5 seconds
 			} else if (strcasecmp(w1, "import") == 0) {
 				login_config_read(w2);
 			} else if(strcasecmp(w1,"imalive_on")==0) {	//Added by Mugendai for I'm Alive mod
@@ -3859,17 +3845,9 @@ int do_init(int argc, char **argv) {
 
 	login_fd = make_listen(login_ip,login_port);
 
-	if(anti_freeze_enable > 0) {
-		add_timer_func_list(char_anti_freeze_system, "char_anti_freeze_system");
-		add_timer_interval(gettick() + 1000, ANTI_FREEZE_INTERVAL * 1000, char_anti_freeze_system, 0, 0);
-	}
 	add_timer_func_list(check_auth_sync, "check_auth_sync");
 	add_timer_interval(gettick() + 60000, 60000, check_auth_sync, 0, 0); // every 60 sec we check if we must save accounts file (only if necessary to save)
 
-	// add timer to check GM accounts file modification
-	j = gm_account_filename_check_timer;
-	if (j == 0) // if we would not to check, we check every 60 sec, just to have timer (if we change timer, is was not necessary to check if timer already exists)
-		j = 60;
 
 	//Added for Mugendais I'm Alive mod
 	if(imalive_on)
@@ -3878,6 +3856,12 @@ int do_init(int argc, char **argv) {
 	//Added by Mugendai for GUI support
 	if(flush_on)
 		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
+
+
+	// add timer to check GM accounts file modification
+	j = gm_account_filename_check_timer;
+	if (j <= 0) // if we would not to check, we check every 60 sec, just to have timer (if we change timer, is was not necessary to check if timer already exists)
+		j = 60;
 
 	add_timer_func_list(check_GM_file, "check_GM_file");
 	add_timer_interval(gettick() + j * 1000, j * 1000, check_GM_file, 0, 0); // every x sec we check if gm file has been changed

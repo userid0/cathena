@@ -49,7 +49,6 @@ int do_timer(unsigned long tick);
 
 
 int add_timer_func_list(int (*)(int,unsigned long,int,int),char*);
-void do_final_timer(void);
 char* search_timer_func_list(int (*)(int,unsigned long,int,int));
 
 

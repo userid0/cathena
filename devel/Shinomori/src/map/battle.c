@@ -402,7 +402,7 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 
 	if(class_ == 1288 || class_ == 1287 || class_ == 1286 || class_ == 1285) {
 //	if(class_ == 1288) {
-		if(class_ == 1288 && (flag&BF_SKILL || skill_num == ASC_BREAKER))
+		if(class_ == 1288 && (flag&BF_SKILL || skill_num == ASC_BREAKER || skill_num == PA_SACRIFICE))
 			damage=0;
 		if(src->type == BL_PC) {
 			struct guild *g=guild_search(((struct map_session_data *)src)->status.guild_id);
@@ -741,7 +741,8 @@ static struct Damage battle_calc_pet_weapon_attack(
 				hitrate = (hitrate*(100+5*skill_lv))/100;
 				break;
 			case SM_MAGNUM:		// マグナムブレイク
-				damage = damage*(5*skill_lv + (wflag?65:115))/100;
+				damage = damage*(wflag > 1 ? 5*skill_lv+115 : 30*skill_lv+100)/100;
+				hitrate = (hitrate*(100+10*skill_lv))/100;
 				break;
 			case MC_MAMMONITE:	// メマーナイト
 				damage = damage*(100+ 50*skill_lv)/100;
@@ -928,6 +929,7 @@ static struct Damage battle_calc_pet_weapon_attack(
 				break;
 			case AS_SPLASHER:		/* ベナムスプラッシャー */
 				damage = damage*(200+20*skill_lv)/100;
+				hitrate = 1000000;
 				break;
 			}
 			if (div_flag && div_ > 1) {	// [Skotlex]
@@ -1238,7 +1240,8 @@ static struct Damage battle_calc_mob_weapon_attack(
 				hitrate = (hitrate*(100+5*skill_lv))/100;
 				break;
 			case SM_MAGNUM:		// マグナムブレイク
-				damage = damage*(5*skill_lv +(wflag?65:115))/100;
+				damage = damage*(wflag > 1 ? 5*skill_lv+115 : 30*skill_lv+100)/100;
+				hitrate = (hitrate*(100+10*skill_lv))/100;
 				break;
 			case MC_MAMMONITE:	// メマーナイト
 				damage = damage*(100+ 50*skill_lv)/100;
@@ -1432,6 +1435,7 @@ static struct Damage battle_calc_mob_weapon_attack(
 				break;
 			case AS_SPLASHER:		/* ベナムスプラッシャー */
 				damage = damage*(200+20*skill_lv)/100;
+				hitrate = 1000000;
 				break;
 			}
 			if (div_flag && div_ > 1) {	// [Skotlex]
@@ -1968,8 +1972,10 @@ static struct Damage battle_calc_pc_weapon_attack(
 				hitrate = (hitrate*(100+5*skill_lv))/100;
 				break;
 			case SM_MAGNUM:		// マグナムブレイク
-				damage = damage*(5*skill_lv +(wflag?65:115) )/100;
-				damage2 = damage2*(5*skill_lv +(wflag?65:115) )/100;
+				// 20*skill level+100? i think this will do for now [based on jRO info]
+				damage = damage*(wflag > 1 ? 5*skill_lv+115 : 30*skill_lv+100)/100;
+				damage2 = damage2*(wflag > 1 ? 5*skill_lv+115 : 30*skill_lv+100)/100;
+				hitrate = (hitrate*(100+10*skill_lv))/100;
 				break;
 			case MC_MAMMONITE:	// メマーナイト
 				damage = damage*(100+ 50*skill_lv)/100;
@@ -2289,12 +2295,48 @@ static struct Damage battle_calc_pc_weapon_attack(
 			case AS_SPLASHER:		/* ベナムスプラッシャー */
 				damage = damage*(200+20*skill_lv+20*pc_checkskill(sd,AS_POISONREACT))/100;
 				damage2 = damage2*(200+20*skill_lv+20*pc_checkskill(sd,AS_POISONREACT))/100;
+				no_cardfix = 1;
+				hitrate = 1000000;
 				break;
 			case ASC_BREAKER:		// -- moonsoul (special damage for ASC_BREAKER skill)
 				if(sd){
 					// calculate physical part of damage
+#ifndef TWILIGHT
 					damage = damage * skill_lv;
 					damage2 = damage2 * skill_lv;
+#else /* TWILIGHT */
+					damage = damage * skill_lv * 0.5; //Halved by Krel
+					damage2 = damage2 * skill_lv * 0.5; //Halved by Krel
+					// element modifier added right after this
+
+					// calculate magic part of damage
+					damage3 = skill_lv * status_get_int(src) * 5 * 0.5; //Krel
+					// ignores magic defense now [Celest]
+					/*if(sd->ignore_mdef_ele & (1<<t_ele) || sd->ignore_mdef_race & (1<<t_race))
+						imdef_flag = 1;
+					if(t_mode & 0x20) {
+						if(sd->ignore_mdef_race & (1<<10))
+							imdef_flag = 1;
+					}
+					else {
+						if(sd->ignore_mdef_race & (1<<11))
+							imdef_flag = 1;
+					}
+					if(!imdef_flag){
+						if(battle_config.magic_defense_type) {
+							damage3 = damage3 - (mdef1 * battle_config.magic_defense_type) - mdef2;
+						}
+						else{
+							damage3 = (damage3*(100-mdef1))/100 - mdef2;
+						}
+					}
+
+					if(damage3<1)
+						damage3=1;
+
+					damage3=battle_attr_fix(damage2,s_ele_, status_get_element(target) );*/
+
+#endif /* TWILIGHT */
 					flag=(flag&~BF_RANGEMASK)|BF_LONG;
 				}
 				break;
@@ -2404,6 +2446,8 @@ static struct Damage battle_calc_pc_weapon_attack(
 			hitrate = 1000000;
 			s_ele = 0;
 			s_ele_ = 0;
+			skill_num = PA_SACRIFICE;
+			//clif_skill_nodamage(src,target,skill_num,skill_lv,1);	// this doesn't show effect either.. hmm =/
 			sc_data[SC_SACRIFICE].val2 --;
 			if (sc_data[SC_SACRIFICE].val2 == 0)
 				status_change_end(src, SC_SACRIFICE,-1);
@@ -2428,7 +2472,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 		if(sd->equip_index[9] >= 0) {	//重量で追加ダメージらしいのでシールドブーメランを参考に追加
 			int index = sd->equip_index[9];
 			if(sd->inventory_data[index] && sd->inventory_data[index]->type == 4) {
-				damage += (int)(double)(sd->inventory_data[index]->weight*(0.8*skill_lv*4/10));
+				damage += (sd->inventory_data[index]->weight*(skill_lv*4*4/10/5));
 				damage += sd->status.inventory[index].refine * status_getrefinebonus(0,1);
 			}
 		}
@@ -3585,7 +3629,8 @@ int battle_weapon_attack( struct block_list *src,struct block_list *target,unsig
 		}
 		if (target->type == BL_PC) {
 			struct map_session_data *tsd = (struct map_session_data *)target;
-			if(tsd->autospell2_id > 0 && rand()%100 < tsd->autospell2_rate) {
+			if(tsd && ((sd && !sd->state.arrow_atk) || (status_get_range(src)<=2)) &&
+				tsd->autospell2_id > 0 && rand()%100 < tsd->autospell2_rate) {
 				int skilllv = tsd->autospell_lv,i,f=0,sp;
 				i = rand()%100;
 				if(i >= 50) skilllv -= 2;
@@ -3758,10 +3803,33 @@ int battle_check_target( struct block_list *src, struct block_list *target,int f
 				return -1;
 		}
 	}
-	// Mobでmaster_idがあってspecial_mob_aiなら、召喚主を求める
+	
 	if( src->type==BL_MOB ){
 		struct mob_data *md=(struct mob_data *)src;
-		if(md && md->master_id>0){
+		nullpo_retr (-1, md);
+
+		if(target->type == BL_PC) {
+			struct map_session_data *sd = (struct map_session_data *)target;
+			nullpo_retr (-1, sd);
+
+			if(md->class_ >= 1285 && md->class_ <= 1287){
+				struct guild_castle *gc = guild_mapname2gc (map[target->m].name);
+				if(gc && agit_flag==0)	// Guardians will not attack during non-woe time [Valaris]
+					return 1;  // end addition [Valaris]
+				if(gc && sd->status.guild_id > 0) {
+					struct guild *g=guild_search(sd->status.guild_id);	// don't attack guild members [Valaris]
+					if(g && g->guild_id == gc->guild_id)
+						return 1;
+					if(g && guild_isallied(g,gc))
+						return 1;
+				}
+			}
+			// option to have monsters ignore GMs [Valaris]
+			if (battle_config.monsters_ignore_gm > 0 && pc_isGM(sd) >= battle_config.monsters_ignore_gm)
+				return 1;
+		}
+		// Mobでmaster_idがあってspecial_mob_aiなら、召喚主を求める
+		if(md->master_id>0){
 			if(md->master_id==target->id)	// 主なら肯定
 				return 1;
 			if(md->state.special_mob_ai){
@@ -3911,7 +3979,7 @@ int battle_config_switch(const char *str) {
 
 static const struct {
 	char str[128];
-	int *val;
+	void *val;
 } battle_data[] = {
 	{ "warp_point_debug",                  &battle_config.warp_point_debug			},
 	{ "enemy_critical",                    &battle_config.enemy_critical			},
@@ -4143,6 +4211,10 @@ static const struct {
 	{ "exp_calc_type",          &battle_config.exp_calc_type}, // [celest]
 	{ "min_skill_delay_limit",    &battle_config.min_skill_delay_limit}, // [celest]
 	{ "rainy_waterball",    &battle_config.rainy_waterball}, // [Shinomori]
+	{ "require_glory_guild",    &battle_config.require_glory_guild}, // [celest]
+	{ "idle_no_share",			&battle_config.idle_no_share}, // [celest], for a feature by [MouseJstr]
+
+	
 
 //SQL-only options start
 #ifndef TXT_ONLY
@@ -4155,7 +4227,7 @@ int battle_set_value(char *w1, char *w2) {
 	size_t i;
 	for(i = 0; i < sizeof(battle_data) / (sizeof(battle_data[0])); i++)
 		if (strcasecmp(w1, battle_data[i].str) == 0) {
-			*battle_data[i].val = battle_config_switch(w2);
+			*((unsigned int *) battle_data[i].val) = battle_config_switch(w2);
 			return 1;
 		}
 	return 0;
@@ -4391,6 +4463,8 @@ void battle_set_defaults() {
 	battle_config.exp_calc_type = 1;
 	battle_config.min_skill_delay_limit = 100;
 	battle_config.rainy_waterball = 0;
+	battle_config.require_glory_guild=0;
+	battle_config.idle_no_share = 0;
 
 //SQL-only options start
 #ifndef TXT_ONLY

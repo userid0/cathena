@@ -98,6 +98,16 @@ int check_online_timer=0; // [Valaris]
 
 #endif /* not TXT_ONLY */
 
+char *INTER_CONF_NAME;
+char *LOG_CONF_NAME;
+char *MAP_CONF_NAME;
+char *BATTLE_CONF_FILENAME;
+char *ATCOMMAND_CONF_FILENAME;
+char *CHARCOMMAND_CONF_FILENAME;
+char *SCRIPT_CONF_NAME;
+char *MSG_CONF_NAME;
+char *GRF_PATH_FILENAME;
+
 #define USE_AFM
 #define USE_AF2
 
@@ -159,8 +169,12 @@ int console = 0;
  * (char鯖から送られてくる)
  *------------------------------------------
  */
-void map_setusers(int n) {
-	users = n;
+void map_setusers(int fd) 
+{
+	users = RFIFOL(fd,2);
+	// send some anser
+	WFIFOW(fd,0) = 0x2718;
+	WFIFOSET(fd,2);
 }
 
 /*==========================================
@@ -1536,9 +1550,9 @@ void map_addchariddb(int charid, char *name) {
  * charid_dbへ追加（返信要求のみ）
  *------------------------------------------
  */
-int map_reqchariddb(struct map_session_data * sd,int charid) {
+int map_reqchariddb(struct map_session_data * sd,int charid) 
+{
 	struct charid2nick *p=NULL;
-
 	nullpo_retr(0, sd);
 
 	p = (struct charid2nick*)numdb_search(charid_db,charid);
@@ -1554,9 +1568,9 @@ int map_reqchariddb(struct map_session_data * sd,int charid) {
  * id_dbへblを追加
  *------------------------------------------
  */
-void map_addiddb(struct block_list *bl) {
+void map_addiddb(struct block_list *bl) 
+{
 	nullpo_retv(bl);
-
 	numdb_insert(id_db,bl->id,bl);
 }
 
@@ -1564,9 +1578,9 @@ void map_addiddb(struct block_list *bl) {
  * id_dbからblを削除
  *------------------------------------------
  */
-void map_deliddb(struct block_list *bl) {
+void map_deliddb(struct block_list *bl) 
+{
 	nullpo_retv(bl);
-
 	numdb_erase(id_db,bl->id);
 }
 
@@ -1574,9 +1588,9 @@ void map_deliddb(struct block_list *bl) {
  * nick_dbへsdを追加
  *------------------------------------------
  */
-void map_addnickdb(struct map_session_data *sd) {
+void map_addnickdb(struct map_session_data *sd) 
+{
 	nullpo_retv(sd);
-
 	strdb_insert(nick_db,sd->status.name,sd);
 }
 
@@ -1586,17 +1600,26 @@ void map_addnickdb(struct map_session_data *sd) {
  * quit?理の主?が違うような?もしてきた
  *------------------------------------------
  */
-int map_quit(struct map_session_data *sd) {
-
+int map_quit(struct map_session_data *sd) 
+{
+	
 	nullpo_retr(0, sd);
-
-		if (sd->state.event_disconnect) {
-			struct npc_data *npc;
-			if ((npc = npc_name2id(script_config.logout_event_name))) {
-			if(npc && npc->u.scr.ref)
-			run_script(npc->u.scr.ref->script,0,sd->bl.id,npc->bl.id); // PCLogoutNPC
-			ShowStatus("Event '"CL_WHITE"%s"CL_RESET"' executed.\n", script_config.logout_event_name);
+	
+	if (sd->state.event_disconnect) 
+	{
+		if (script_config.event_script_type == 0) 
+		{
+			struct npc_data *npc = npc_name2id(script_config.logout_event_name);
+			if(npc && npc->u.scr.ref) 
+			{
+				run_script(npc->u.scr.ref->script,0,sd->bl.id,npc->bl.id); // PCLogoutNPC
+				ShowStatus ("Event '"CL_WHITE"%s"CL_RESET"' executed.\n", script_config.logout_event_name);
 			}
+		}
+		else 
+		{
+			ShowStatus("%d '"CL_WHITE"%s"CL_RESET"' events executed.\n",
+				npc_event_doall_id(script_config.logout_event_name, sd->bl.id), script_config.logout_event_name);
 		}
 
 		if(sd->chatID)	// チャットから出る
@@ -1633,26 +1656,25 @@ int map_quit(struct map_session_data *sd) {
 		if(sd->sc_data && sd->sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中の終了はHPを100に
 			sd->status.hp = 100;
 
-		// check if we've been authenticated [celest]
-		if (sd->state.auth) {
+		status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
+		skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
+		skill_cleartimerskill(&sd->bl);
+
+//		// check if we've been authenticated [celest]
+//		if (sd->state.auth) {
 			pc_stop_walking(sd,0);
 			pc_stopattack(sd);
 			pc_delinvincibletimer(sd);
-		}
-	
+//		}
+		pc_delspiritball(sd,sd->spiritball,1);
+		skill_gangsterparadise(sd,0);
 		skill_unit_move(&sd->bl,gettick(),0);
-
-	status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
-	skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
-	skill_cleartimerskill(&sd->bl);
 
 		if (sd->state.auth)
 			status_calc_pc(sd,4);
 
-	pc_delspiritball(sd,sd->spiritball,1);
-	skill_gangsterparadise(sd,0);
-
 		clif_clearchar_area(&sd->bl,2);
+
 		if(sd->status.pet_id && sd->pd) {
 			pet_lootitem_drop(sd->pd,sd);
 			pet_remove_map(sd);
@@ -1668,9 +1690,13 @@ int map_quit(struct map_session_data *sd) {
 		if(pc_isdead(sd))
 			pc_setrestartvalue(sd,2);
 
+		pc_makesavestatus(sd);
 		chrif_save(sd);
-
+		storage_storage_dirty(sd);
+		storage_storage_save(sd);
 		map_delblock(&sd->bl);
+	}
+
 
 	if( sd->npc_stackbuf != NULL) {
 		aFree( sd->npc_stackbuf );
@@ -1750,6 +1776,18 @@ char * map_charid2nick(int id) {
 	return p->nick;
 }
 
+struct map_session_data * map_charid2sd(int id) {
+	int i;
+	struct map_session_data *sd;
+
+	if (id <= 0) return 0;
+
+	for(i = 0; i < fd_max; i++)
+		if (session[i] && (sd = (struct map_session_data*)session[i]->session_data) && sd->status.char_id == id)
+			return sd;
+
+	return NULL;
+}
 
 /*==========================================
  * Search session data from a nick name
@@ -1846,27 +1884,26 @@ int map_addnpc(int m,struct npc_data *nd) {
 }
 
 void map_removenpc(void) {
-    int i,m,n=0;
+	int i,m,n=0;
 
-    for(m=0;m<map_num;m++) {
-        for(i=0;i<map[m].npc_num && i<MAX_NPC_PER_MAP;i++) {
-            if(map[m].npc[i]!=NULL) {
-                clif_clearchar_area(&map[m].npc[i]->bl,2);
-                map_delblock(&map[m].npc[i]->bl);
-                numdb_erase(id_db,map[m].npc[i]->bl.id);
-//                if(map[m].npc[i]->bl.subtype==SCRIPT) {
-//                    aFree(map[m].npc[i]->u.scr.script);
-//                    aFree(map[m].npc[i]->u.scr.label_list);
-//                }
+	for(m=0;m<map_num;m++) {
+		for(i=0;i<map[m].npc_num && i<MAX_NPC_PER_MAP;i++) {
+			if(map[m].npc[i]!=NULL) {
+				clif_clearchar_area(&map[m].npc[i]->bl,2);
+				map_delblock(&map[m].npc[i]->bl);
+				numdb_erase(id_db,map[m].npc[i]->bl.id);
+//				if(map[m].npc[i]->bl.subtype==SCRIPT) {
+//					aFree(map[m].npc[i]->u.scr.script);
+//					aFree(map[m].npc[i]->u.scr.label_list);
+//				}
 //    just unlink npc from map
 //    npc will be deleted with do_final_npc
-//                aFree(map[m].npc[i]);
-                map[m].npc[i] = NULL;
-                n++;
-            }
-        }
-    }
-
+//				aFree(map[m].npc[i]);
+				map[m].npc[i] = NULL;
+				n++;
+			}
+		}
+	}
 	ShowStatus("Successfully removed and freed from memory '"CL_WHITE"%d"CL_RESET"' NPCs.\n",n);
 }
 
@@ -2581,7 +2618,7 @@ int map_readafm(int m,char *fn) {
 	size_t size;
 
 	char afm_line[65535];
-	int afm_size[1];
+	int afm_size[2];
 	FILE *afm_file;
 	char *str;
 
@@ -3254,31 +3291,26 @@ int flush_timer(int tid, unsigned long tick, int id, int data){
 	return 0;
 }
 
-int id_db_final(void *k,void *d,va_list ap)
+int id_db_final(void *k,void *d,va_list ap) 
 {
-	struct mob_data *id=(struct mob_data *)d;
-	nullpo_retr(0, id);
-	if(id->lootitem)
-		aFree(id->lootitem);
-	if(id)
-		aFree(id);
+	return 0; 
+}
+int map_db_final(void *k,void *d,va_list ap) 
+{
+	return 0; 
+}
+int nick_db_final(void *k,void *d,va_list ap)
+{
+	char *p = (char *)d;
+	if (p) aFree(p);
 	return 0;
 }
-
-int map_db_final(void *k,void *d,va_list ap)
+int charid_db_final(void *k,void *d,va_list ap)
 {
-	struct map_data *id=(struct map_data *)d;
-	nullpo_retr(0, id);
-	if(id)
-	{
-	if(id->gat)
-		aFree(id->gat);
-		aFree(id);
-	}
+	struct charid2nick *p = (struct charid2nick *)d;
+	if (p) aFree(p);
 	return 0;
 }
-int nick_db_final(void *k,void *d,va_list ap){ return 0; }
-int charid_db_final(void *k,void *d,va_list ap){ return 0; }
 int cleanup_sub(struct block_list *bl, va_list ap) {
 	nullpo_retr(0, bl);
 
@@ -3311,13 +3343,13 @@ int cleanup_sub(struct block_list *bl, va_list ap) {
  *------------------------------------------
  */
 void do_final(void) {
-    int map_id, i;
+    int i;
 	ShowStatus("Terminating...\n");
 	///////////////////////////////////////////////////////////////////////////
 
-    for (map_id = 0; map_id < map_num;map_id++)
-		if(map[map_id].m)
-			map_foreachinarea(cleanup_sub, map_id, 0, 0, map[map_id].xs, map[map_id].ys, 0, 0);
+    for (i = 0; i < map_num; i++)
+		if(map[i].m)
+			map_foreachinarea(cleanup_sub, i, 0, 0, map[i].xs, map[i].ys, 0, 0);
 
 #ifndef TXT_ONLY
     chrif_char_reset_offline();
@@ -3326,18 +3358,17 @@ void do_final(void) {
     chrif_flush_fifo();
 
     map_removenpc();
-
-//    numdb_final(id_db, id_db_final);
-    strdb_final(map_db, map_db_final);
-    strdb_final(nick_db, nick_db_final);
-    numdb_final(charid_db, charid_db_final);
-
 	do_final_chrif(); // この内部でキャラを全て切断する
+	do_final_npc();
+//	map_removenpc();
 	do_final_script();
 	do_final_itemdb();
 	do_final_storage();
 	do_final_guild();
+	do_final_party();
+	do_final_pc();
 	do_final_pet();
+	do_final_msg();
 
 	for(i=0;i<map_num;i++){
 		if(map[i].gat) {
@@ -3349,6 +3380,16 @@ void do_final(void) {
 		if(map[i].block_count) aFree(map[i].block_count);
 		if(map[i].block_mob_count) aFree(map[i].block_mob_count);
 	}
+//    do_final_timer(); (we used timer_final() instead)
+    timer_final();
+    numdb_final(id_db, id_db_final);
+	strdb_final(map_db, map_db_final);
+    strdb_final(nick_db, nick_db_final);
+    numdb_final(charid_db, charid_db_final);
+	exit_dbn();
+
+//#endif
+
 #ifndef TXT_ONLY
     map_sql_close();
 #endif /* not TXT_ONLY */
@@ -3418,15 +3459,15 @@ int do_init(int argc, char *argv[]) {
 	GC_enable_incremental();
 #endif
 
-	char *INTER_CONF_NAME="conf/inter_athena.conf";
-	char *LOG_CONF_NAME="conf/log_athena.conf";
-	char *MAP_CONF_NAME = "conf/map_athena.conf";
-	char *BATTLE_CONF_FILENAME = "conf/battle_athena.conf";
-	char *ATCOMMAND_CONF_FILENAME = "conf/atcommand_athena.conf";
-	char *CHARCOMMAND_CONF_FILENAME = "conf/charcommand_athena.conf";
-	char *SCRIPT_CONF_NAME = "conf/script_athena.conf";
-	char *MSG_CONF_NAME = "conf/msg_athena.conf";
-	char *GRF_PATH_FILENAME = "conf/grf-files.txt";
+	INTER_CONF_NAME="conf/inter_athena.conf";
+	LOG_CONF_NAME="conf/log_athena.conf";
+	MAP_CONF_NAME = "conf/map_athena.conf";
+	BATTLE_CONF_FILENAME = "conf/battle_athena.conf";
+	ATCOMMAND_CONF_FILENAME = "conf/atcommand_athena.conf";
+	CHARCOMMAND_CONF_FILENAME = "conf/charcommand_athena.conf";
+	SCRIPT_CONF_NAME = "conf/script_athena.conf";
+	MSG_CONF_NAME = "conf/msg_athena.conf";
+	GRF_PATH_FILENAME = "conf/grf-files.txt";
 
 	// just clear all maps
 	memset(map, 0, MAX_MAP_PER_SERVER*sizeof(struct map_data));

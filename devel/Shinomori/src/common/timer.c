@@ -77,7 +77,6 @@ static int gettick_count;
 unsigned long gettick_nocache(void)
 {
 	gettick_count = 256;
-	gettick_count = 256;	// [Shinomori]
 	return gettick_cache = GetTickCount();
 }
 

@@ -166,7 +166,12 @@ int pc_calc_pvprank_timer(int tid,unsigned long tick,int id,int data);
 int pc_ismarried(struct map_session_data *sd);
 int pc_marriage(struct map_session_data *sd,struct map_session_data *dstsd);
 int pc_divorce(struct map_session_data *sd);
+int pc_adoption(struct map_session_data *sd,struct map_session_data *dstsd,struct map_session_data *jasd);
 struct map_session_data *pc_get_partner(struct map_session_data *sd);
+struct map_session_data *pc_get_father(struct map_session_data *sd);
+struct map_session_data *pc_get_mother(struct map_session_data *sd);
+struct map_session_data *pc_get_child(struct map_session_data *sd);
+
 int pc_set_gm_level(int account_id, int level);
 void pc_setstand(struct map_session_data *sd);
 int pc_break_equip(struct map_session_data *sd, unsigned short where);
@@ -202,8 +207,9 @@ int pc_delspiritball(struct map_session_data *sd,int,int);
 
 int pc_eventtimer(int tid,unsigned long tick,int id,int data);
 
-
+int pc_readdb(void);
 int do_init_pc(void);
+void do_final_pc(void);
 
 enum {ADDITEM_EXIST,ADDITEM_NEW,ADDITEM_OVERAMOUNT};
 

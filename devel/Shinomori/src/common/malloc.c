@@ -63,15 +63,15 @@ void* aRealloc_( void *p, size_t size, const char *file, int line, const char *f
 	return ret;
 }
 
-void* aStrdup_( const char *p, const char *file, int line, const char *func )
+char* aStrdup_( const void *p, const char *file, int line, const char *func )
 {
-	void *ret;
+	char *ret;
 	
 	// ShowMessage("%s:%d: in func %s: strdup %p\n",file,line,func,p);
 #ifdef MEMWATCH
 	ret=mwStrdup(p,file,line);
 #else
-	ret=strdup(p);
+	ret= aStrdup((char *) p);
 #endif
 	if(ret==NULL){
 		ShowMessage("%s:%d: in func %s: strdup error out of memory!\n",file,line,func);
@@ -89,10 +89,6 @@ void aFree_( void *p, const char *file, int line, const char *func )
 #else
 	free(p);
 #endif
-}
-
-int do_init_memmgr(const char* file) {
-	return 0;
 }
 
 #elif defined(GCOLLECT)
@@ -539,6 +535,7 @@ static void memmer_exit(void) {
 		ShowMessage("memmgr: no memory leaks found.\n");
 	} else {
 		ShowMessage("memmgr: memory leaks found.\n");
+		fclose(fp);
 	}
 }
 

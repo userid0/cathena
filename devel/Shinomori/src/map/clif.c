@@ -3757,7 +3757,8 @@ int clif_damage(struct block_list *src,struct block_list *dst,unsigned int tick,
 	if(type != 4 && dst->type == BL_PC && ((struct map_session_data *)dst)->state.infinite_endure)
 		type = 9;
 	if(sc_data) {
-		if(type != 4 && sc_data[SC_ENDURE].timer != -1)
+		if(type != 4 && sc_data[SC_ENDURE].timer != -1 &&
+			(dst->type == BL_PC && !map[dst->m].flag.gvg))
 			type = 9;
 		if(sc_data[SC_HALLUCINATION].timer != -1) {
 			if(damage > 0)
@@ -4402,7 +4403,7 @@ int clif_skill_fail(struct map_session_data *sd,unsigned short skill_id,int type
 	sd->skillid = sd->skilllv = -1;
 	sd->skillitem = sd->skillitemlv = -1;
 
-	if(type==0x4 && battle_config.display_delay_skill_fail==0){
+	if(type==0x4 && (battle_config.display_delay_skill_fail==0 || sd->nodelay)){
 		return 0;
 	}
 
@@ -4781,6 +4782,9 @@ int clif_status_change(struct block_list *bl,int type,int flag)
  */
 int clif_displaymessage(const int fd, char* mes)
 {
+	// invalid pointer?
+	nullpo_retr(-1, mes);
+	
 	//Console [Wizputer]
 	if (fd == 0)
 		ShowConsole(CL_BOLD"%s\n"CL_NORM, mes);
@@ -6836,7 +6840,7 @@ int clif_guild_emblem(struct map_session_data *sd,struct guild *g)
 	WFIFOL(fd,4)=g->guild_id;
 	WFIFOL(fd,8)=g->emblem_id;
 	memcpy(WFIFOP(fd,12),g->emblem_data,g->emblem_len);
-	WFIFOSET(fd,WFIFOW(fd,2));
+	WFIFOSET(fd,g->emblem_len+12);
 	return 0;
 }
 /*==========================================
@@ -6876,14 +6880,18 @@ int clif_guild_skillinfo(struct map_session_data *sd)
 					case GD_KAFRACONTACT:
 					case GD_GUARDIANRESEARCH:
 					case GD_GUARDUP:
+					case GD_DEVELOPMENT:
 						up = guild_checkskill(g,GD_APPROVAL) > 0;
 						break;
 					case GD_LEADERSHIP:
 						//Glory skill requirements -- Pretty sure correct [Sara]
-						up = guild_checkskill(g,GD_GLORYGUILD) > 0;
+						up = (battle_config.require_glory_guild) ?
+							guild_checkskill(g,GD_GLORYGUILD) > 0 : 1;
+						// what skill does it need now that glory guild was removed? [celest]
 						break;
 					case GD_GLORYWOUNDS:
-						up = guild_checkskill(g,GD_GLORYGUILD) > 0;
+						up = (battle_config.require_glory_guild) ?
+							guild_checkskill(g,GD_GLORYGUILD) > 0 : 1;
 						break;
 					case GD_SOULCOLD:
 						up = guild_checkskill(g,GD_GLORYWOUNDS) > 0;
@@ -6906,8 +6914,8 @@ int clif_guild_skillinfo(struct map_session_data *sd)
 						up = guild_checkskill(g,GD_GUARDIANRESEARCH) > 0 &&
 							guild_checkskill(g,GD_REGENERATION) > 0;
 						break;
-					case GD_DEVELOPMENT:
-						up = 0;
+					case GD_GLORYGUILD:
+						up = (battle_config.require_glory_guild) ? 1 : 0;
 						break;
 					default:
 						up = 1;
@@ -7531,6 +7539,14 @@ int clif_specialeffect(struct block_list *bl, int type, int flag) {
 	return 0;
 
 }
+
+// refresh the client's screen, getting rid of any effects
+int clif_refresh(struct map_session_data *sd) {
+	nullpo_retr(-1, sd);
+	clif_changemap(sd,sd->mapname,sd->bl.x,sd->bl.y);
+	return 0;
+}
+
 // ------------
 // clif_parse_*
 // ------------
@@ -7782,7 +7798,8 @@ int clif_parse_LoadEndAck(int fd,struct map_session_data *sd)
 	if(battle_config.save_clothcolor==1 && sd->status.clothes_color > 0)
 		clif_changelook(&sd->bl,LOOK_CLOTHES_COLOR,sd->status.clothes_color);
 
-	if(sd->status.hp<sd->status.max_hp>>2 && pc_checkskill(sd,SM_AUTOBERSERK)>0 &&
+	//if(sd->status.hp<sd->status.max_hp>>2 && pc_checkskill(sd,SM_AUTOBERSERK)>0 &&
+	if(sd->status.hp<sd->status.max_hp>>2 && sd->sc_data[SC_AUTOBERSERK].timer != -1 &&
 		(sd->sc_data[SC_PROVOKE].timer==-1 || sd->sc_data[SC_PROVOKE].val2==0 ))
 		// オートバーサーク発動
 		status_change_start(&sd->bl,SC_PROVOKE,10,1,0,0,0,0);
@@ -10936,11 +10953,11 @@ int clif_parse_sn_explosionspirits(int fd, struct map_session_data *sd)
 		struct pc_base_job s_class = pc_calc_base_job(sd->status.class_);
 		if (battle_config.etc_log){
 			if(nextbaseexp != 0)
-				ShowMessage("SuperNovice explosionspirits!! %d %d %d %d\n",sd->bl.id,s_class.job,sd->status.base_exp,(int)((double)1000*sd->status.base_exp/nextbaseexp));
+				ShowMessage("SuperNovice explosionspirits!! %d %d %d %d\n",sd->bl.id,s_class.job,sd->status.base_exp,1000*sd->status.base_exp/nextbaseexp);
 			else
 				ShowMessage("SuperNovice explosionspirits!! %d %d %d 000\n",sd->bl.id,s_class.job,sd->status.base_exp);
 		}
-		if(s_class.job == 23 && sd->status.base_exp > 0 && nextbaseexp > 0 && (int)((double)1000*sd->status.base_exp/nextbaseexp)%100==0){
+		if(s_class.job == 23 && sd->status.base_exp > 0 && nextbaseexp > 0 && (1000*sd->status.base_exp/nextbaseexp)%100==0){
 			clif_skill_nodamage(&sd->bl,&sd->bl,MO_EXPLOSIONSPIRITS,5,1);
 			status_change_start(&sd->bl,SkillStatusChangeTable[MO_EXPLOSIONSPIRITS],5,0,0,0,skill_get_time(MO_EXPLOSIONSPIRITS,5),0 );
 		}
@@ -11466,7 +11483,7 @@ static int packetdb_readdb(void)
 	int ln=0;
 	int cmd;
 	size_t j,k,packet_ver;
-	char *str[32],*p,*str2[32],*p2,w1[24],w2[24];
+	char *str[64],*p,*str2[64],*p2,w1[64],w2[64];
 
 	struct {
 		int (*func)(int, struct map_session_data *);
@@ -11585,7 +11602,8 @@ static int packetdb_readdb(void)
 		{clif_parse_friends_list_add,"friendslistadd"},
 		{clif_parse_friends_list_remove,"friendslistremove"},
 		{clif_parse_GMkillall,"killall"},
-		{clif_parse_GM_Monster_Item,"summon"},
+		{clif_parse_Recall,"summon"},
+		{clif_parse_GM_Monster_Item,"itemmonster"},
 		{clif_parse_Shift,"shift"},
 		{clif_parse_debug,"debug"},
 

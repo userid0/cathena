@@ -6,8 +6,8 @@
 // code by Jioh L. Jung (ziozzang@4wish.net)
 // This code is under license "BSD"
 char* jstrescape (char* pt);
-char* jstrescapecpy (char* pt, char* spt);
-size_t jmemescapecpy (char* pt, char* spt, int size);
+char* jstrescapecpy (char* pt, const char* spt);
+size_t jmemescapecpy (char* pt, const char* spt, int size);
 
 
 #endif

@@ -82,10 +82,12 @@
 
 int	VPRINTF(const char *fmt, va_list argptr)
 {
-	static HANDLE	handle;
-	unsigned long	written;
-	size_t sz  = 4096; // initial buffer size
 	static char		tempbuf[4096]; // initially using a static fixed buffer size 
+	static Mutex	mtx;
+	ScopeLock		sl(mtx);
+	size_t sz  = 4096; // initial buffer size
+	unsigned long	written;
+	static HANDLE	handle;
 	char *p, *q, *ibuf = tempbuf;
 
 	if (!handle)
@@ -308,7 +310,7 @@ int _vShowMessage(enum msg_type flag, const char *string, va_list ap){
 
 		if(flag!=MSG_NONE)
 		PRINTF("%s ", prefix);
-		VPRINTF(string,ap);
+		VPRINTF(string, ap);
 //		printf("%s ", prefix);
 //		vprintf(string,ap);
 		fflush(stdout);

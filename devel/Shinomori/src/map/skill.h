@@ -139,7 +139,7 @@ int skill_unit_ondamaged(struct skill_unit *src,struct block_list *bl,int damage
 int skill_castfix( struct block_list *bl, int time );
 int skill_delayfix( struct block_list *bl, int time );
 int skill_check_unit_range(int m,int x,int y,unsigned short skillid, unsigned short skilllv);
-int skill_check_unit_range2(int m,int x,int y,unsigned short skillid, unsigned short skilllv);
+int skill_check_unit_range2(int m,int x,int y,unsigned short skillid, unsigned short skilllv, int type);
 
 // -- moonsoul	(added skill_check_unit_cell)
 int skill_check_unit_cell(int skillid,int m,int x,int y,int unit_id);
@@ -172,7 +172,7 @@ void skill_devotion_end(struct map_session_data *md,struct map_session_data *sd,
 int skill_check_cloaking(struct block_list *bl);
 
 // ステ?タス異常
-int skill_encchant_eremental_end(struct block_list *bl, int type);
+int skill_enchant_elemental_end(struct block_list *bl, int type);
 int skillnotok(int skillid, struct map_session_data *sd);
 
 // アイテム作成
@@ -569,8 +569,12 @@ enum {
 	NPC_BREAKHELM,
 	NPC_BREAKSHIELD,
 	NPC_UNDEADATTACK,
-	NPC_EXPLOSIONSPIRITS = 349,
+	
+	NPC_RUNAWAY = 348,
+	NPC_EXPLOSIONSPIRITS,
 	NPC_INCAGI,
+
+	NPC_RECALL = 354,
 
 	LK_AURABLADE = 355,
 	LK_PARRYING,
