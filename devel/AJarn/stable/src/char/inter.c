@@ -4,8 +4,8 @@
 #include "socket.h"
 #include "timer.h"
 #include "db.h"
-#include <string.h>
-#include <stdlib.h>
+#include "showmsg.h"
+#include "utils.h"
 
 #include "inter.h"
 #include "int_party.h"
@@ -13,6 +13,9 @@
 #include "int_storage.h"
 #include "int_pet.h"
 #include "lock.h"
+#include "showmsg.h"
+#include "utils.h"
+#include "malloc.h"
 
 #define WISDATA_TTL (60*1000)	// Existence time of Wisp/page data (60 seconds)
                              	// that is the waiting time of answers of all map-servers
@@ -101,7 +104,7 @@ int inter_accreg_fromstr(const char *str, struct accreg *reg) {
 }
 
 // アカウント変数の読み込み
-int inter_accreg_init() {
+int inter_accreg_init(void) {
 	char line[8192];
 	FILE *fp;
 	int c = 0;
@@ -109,26 +112,22 @@ int inter_accreg_init() {
 
 	accreg_db = numdb_init();
 
-	if( (fp = fopen(accreg_txt, "r")) == NULL)
+	if( (fp = savefopen(accreg_txt, "r")) == NULL)
 		return 1;
 	while(fgets(line, sizeof(line)-1, fp)){
 		line[sizeof(line)-1] = '\0';
 
-		reg = (struct accreg*)aCalloc(sizeof(struct accreg), 1);
-		if (reg == NULL) {
-			printf("inter: accreg: out of memory!\n");
-			exit(0);
-		}
+		reg = (struct accreg*)aCalloc(1,sizeof(struct accreg));
 		if (inter_accreg_fromstr(line, reg) == 0 && reg->account_id > 0) {
 			numdb_insert(accreg_db, reg->account_id, reg);
 		} else {
-			printf("inter: accreg: broken data [%s] line %d\n", accreg_txt, c);
+			ShowMessage("inter: accreg: broken data [%s] line %d\n", accreg_txt, c);
 			aFree(reg);
 		}
 		c++;
 	}
 	fclose(fp);
-//	printf("inter: %s read done (%d)\n", accreg_txt, c);
+//	ShowMessage("inter: %s read done (%d)\n", accreg_txt, c);
 
 	return 0;
 }
@@ -149,17 +148,17 @@ int inter_accreg_save_sub(void *key, void *data, va_list ap) {
 }
 
 // アカウント変数のセーブ
-int inter_accreg_save() {
+int inter_accreg_save(void) {
 	FILE *fp;
 	int lock;
 
 	if ((fp = lock_fopen(accreg_txt,&lock)) == NULL) {
-		printf("int_accreg: cant write [%s] !!! data is lost !!!\n", accreg_txt);
+		ShowMessage("int_accreg: cant write [%s] !!! data is lost !!!\n", accreg_txt);
 		return 1;
 	}
 	numdb_foreach(accreg_db, inter_accreg_save_sub,fp);
 	lock_fclose(fp, accreg_txt, &lock);
-//	printf("inter: %s saved.\n", accreg_txt);
+//	ShowMessage("inter: %s saved.\n", accreg_txt);
 
 	return 0;
 }
@@ -174,9 +173,9 @@ int inter_config_read(const char *cfgName) {
 	char line[1024], w1[1024], w2[1024];
 	FILE *fp;
 
-	fp = fopen(cfgName, "r");
+	fp = savefopen(cfgName, "r");
 	if (fp == NULL) {
-		printf("file not found: %s\n", cfgName);
+		ShowMessage("file not found: %s\n", line);
 		return 1;
 	}
 	while(fgets(line, sizeof(line) - 1, fp)) {
@@ -187,29 +186,29 @@ int inter_config_read(const char *cfgName) {
 		if (sscanf(line,"%[^:]: %[^\r\n]", w1, w2) != 2)
 			continue;
 
-		if (strcmpi(w1, "storage_txt") == 0) {
+		if (strcasecmp(w1, "storage_txt") == 0) {
 			strncpy(storage_txt, w2, sizeof(storage_txt));
-		} else if (strcmpi(w1, "party_txt") == 0) {
+		} else if (strcasecmp(w1, "party_txt") == 0) {
 			strncpy(party_txt, w2, sizeof(party_txt));
-		} else if (strcmpi(w1, "guild_txt") == 0) {
+		} else if (strcasecmp(w1, "guild_txt") == 0) {
 			strncpy(guild_txt, w2, sizeof(guild_txt));
-		} else if (strcmpi(w1, "pet_txt") == 0) {
+		} else if (strcasecmp(w1, "pet_txt") == 0) {
 			strncpy(pet_txt, w2, sizeof(pet_txt));
-		} else if (strcmpi(w1, "castle_txt") == 0) {
+		} else if (strcasecmp(w1, "castle_txt") == 0) {
 			strncpy(castle_txt, w2, sizeof(castle_txt));
-		} else if (strcmpi(w1, "accreg_txt") == 0) {
+		} else if (strcasecmp(w1, "accreg_txt") == 0) {
 			strncpy(accreg_txt, w2, sizeof(accreg_txt));
-		} else if (strcmpi(w1, "guild_storage_txt") == 0) {
+		} else if (strcasecmp(w1, "guild_storage_txt") == 0) {
 			strncpy(guild_storage_txt, w2, sizeof(guild_storage_txt));
-		} else if (strcmpi(w1, "party_share_level") == 0) {
+		} else if (strcasecmp(w1, "party_share_level") == 0) {
 			party_share_level = atoi(w2);
 			if (party_share_level < 0)
 				party_share_level = 0;
-		} else if (strcmpi(w1, "inter_log_filename") == 0) {
+		} else if (strcasecmp(w1, "inter_log_filename") == 0) {
 			strncpy(inter_log_filename, w2, sizeof(inter_log_filename));
-		} else if (strcmpi(w1, "import") == 0) {
+		} else if (strcasecmp(w1, "import") == 0) {
 			inter_config_read(w2);
-		} else if(strcmpi(w1,"log_inter")==0) {
+		} else if(strcasecmp(w1,"log_inter")==0) {
 			log_inter = atoi(w2);
 		}
 	}
@@ -224,8 +223,8 @@ int inter_log(char *fmt,...) {
 	va_list ap;
 
 	va_start(ap,fmt);
-	logfp = fopen(inter_log_filename, "a");
-	if (logfp) {
+	logfp = savefopen(inter_log_filename, "a");
+	if (logfp && fmt) {
 		vfprintf(logfp, fmt, ap);
 		fclose(logfp);
 	}
@@ -235,7 +234,7 @@ int inter_log(char *fmt,...) {
 }
 
 // セーブ
-int inter_save() {
+int inter_save(void) {
 	inter_party_save();
 	inter_guild_save();
 	inter_storage_save();
@@ -273,20 +272,21 @@ int inter_mapif_init(int fd) {
 
 // GMメッセージ送信
 int mapif_GMmessage(unsigned char *mes, int len, int sfd) {
-	unsigned char buf[len];
+	CREATE_BUFFER(buf,unsigned char,len);
 
 	WBUFW(buf,0) = 0x3800;
 	WBUFW(buf,2) = len;
 	memcpy(WBUFP(buf,4), mes, len - 4);
 	mapif_sendallwos(sfd, buf, len);
-//	printf("inter server: GM:%d %s\n", len, mes);
+//	ShowMessage("inter server: GM:%d %s\n", len, mes);
 
+	DELETE_BUFFER(buf);
 	return 0;
 }
 
 // Wisp/page transmission to all map-server
 int mapif_wis_message(struct WisData *wd) {
-	unsigned char buf[56 + wd->len];
+	CREATE_BUFFER(buf,unsigned char,56 + wd->len);
 
 	WBUFW(buf, 0) = 0x3801;
 	WBUFW(buf, 2) = 56 + wd->len;
@@ -294,8 +294,9 @@ int mapif_wis_message(struct WisData *wd) {
 	memcpy(WBUFP(buf, 8), wd->src, 24);
 	memcpy(WBUFP(buf,32), wd->dst, 24);
 	memcpy(WBUFP(buf,56), wd->msg, wd->len);
-	wd->count = mapif_sendall(buf, WBUFW(buf,2));
+	wd->count = mapif_sendall(buf, 56 + wd->len);
 
+	DELETE_BUFFER(buf);
 	return 0;
 }
 
@@ -307,25 +308,26 @@ int mapif_wis_end(struct WisData *wd, int flag) {
 	memcpy(WBUFP(buf, 2), wd->src, 24);
 	WBUFB(buf,26) = flag; // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
 	mapif_send(wd->fd, buf, 27);
-//	printf("inter server wis_end: flag: %d\n", flag);
+//	ShowMessage("inter server wis_end: flag: %d\n", flag);
 
 	return 0;
 }
 
 // アカウント変数送信
 int mapif_account_reg(int fd, unsigned char *src) {
-	unsigned char buf[WBUFW(src,2)];
+	CREATE_BUFFER(buf,unsigned char, (unsigned short)WBUFW(src,2));
 
 	memcpy(WBUFP(buf,0),src,WBUFW(src,2));
 	WBUFW(buf, 0) = 0x3804;
 	mapif_sendallwos(fd, buf, WBUFW(buf,2));
 
+	DELETE_BUFFER(buf);
 	return 0;
 }
 
 // アカウント変数要求返信
 int mapif_account_reg_reply(int fd,int account_id) {
-	struct accreg *reg = (struct accreg*)numdb_search(accreg_db,account_id);
+	struct accreg *reg = (struct accreg *)numdb_search(accreg_db,account_id);
 
 	WFIFOW(fd,0) = 0x3804;
 	WFIFOL(fd,4) = account_id;
@@ -358,7 +360,7 @@ int check_ttl_wisdata_sub(void *key, void *data, va_list ap) {
 	return 0;
 }
 
-int check_ttl_wisdata() {
+int check_ttl_wisdata(void) {
 	unsigned long tick = gettick();
 	int i;
 
@@ -366,8 +368,8 @@ int check_ttl_wisdata() {
 		wis_delnum = 0;
 		numdb_foreach(wis_db, check_ttl_wisdata_sub, tick);
 		for(i = 0; i < wis_delnum; i++) {
-			struct WisData *wd = (struct WisData*)numdb_search(wis_db, wis_dellist[i]);
-			printf("inter: wis data id=%d time out : from %s to %s\n", wd->id, wd->src, wd->dst);
+			struct WisData *wd = (struct WisData *)numdb_search(wis_db, wis_dellist[i]);
+			ShowMessage("inter: wis data id=%d time out : from %s to %s\n", wd->id, wd->src, wd->dst);
 			// removed. not send information after a timeout. Just no answer for the player
 			//mapif_wis_end(wd, 1); // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
 			numdb_erase(wis_db, wd->id);
@@ -394,16 +396,16 @@ int mapif_parse_WisRequest(int fd) {
 	static int wisid = 0;
 	int index;
 
-	if (RFIFOW(fd,2)-52 >= sizeof(wd->msg)) {
-		printf("inter: Wis message size too long.\n");
+	if ((size_t)RFIFOW(fd,2) >= sizeof(wd->msg)+52) {
+		ShowMessage("inter: Wis message size too long.\n");
 		return 0;
-	} else if (RFIFOW(fd,2)-52 <= 0) { // normaly, impossible, but who knows...
-		printf("inter: Wis message doesn't exist.\n");
+	} else if (RFIFOW(fd,2) <= 52) { // normaly, impossible, but who knows...
+		ShowMessage("inter: Wis message doesn't exist.\n");
 		return 0;
 	}
 
 	// search if character exists before to ask all map-servers
-	if ((index = search_character_index((char*)RFIFOP(fd,28))) == -1) {
+	if ((index = search_character_index((char *)RFIFOP(fd,28))) == -1) {
 		unsigned char buf[27];
 		WBUFW(buf, 0) = 0x3802;
 		memcpy(WBUFP(buf, 2), RFIFOP(fd, 4), 24);
@@ -413,9 +415,9 @@ int mapif_parse_WisRequest(int fd) {
 	} else {
 		// to be sure of the correct name, rewrite it
 		memset(RFIFOP(fd,28), 0, 24);
-		strncpy((char*)RFIFOP(fd,28), search_character_name(index), 24);
+		strncpy((char *)RFIFOP(fd,28), search_character_name(index), 24);
 		// if source is destination, don't ask other servers.
-		if (strcmp((char*)RFIFOP(fd,4),(char*)RFIFOP(fd,28)) == 0) {
+		if (strcmp((char *)RFIFOP(fd,4),(char *)RFIFOP(fd,28)) == 0) {
 			unsigned char buf[27];
 			WBUFW(buf, 0) = 0x3802;
 			memcpy(WBUFP(buf, 2), RFIFOP(fd, 4), 24);
@@ -423,11 +425,7 @@ int mapif_parse_WisRequest(int fd) {
 			mapif_send(fd, buf, 27);
 		} else {
 
-			wd = (struct WisData *)aCalloc(sizeof(struct WisData), 1);
-			if (wd == NULL){
-				printf("inter: WisRequest: out of memory !\n");
-				return 0;
-			}
+			wd = (struct WisData *)aCalloc(1,sizeof(struct WisData));
 
 			// Whether the failure of previous wisp/page transmission (timeout)
 			check_ttl_wisdata();
@@ -449,8 +447,9 @@ int mapif_parse_WisRequest(int fd) {
 
 // Wisp/page transmission result
 int mapif_parse_WisReply(int fd) {
-	int id = RFIFOL(fd,2), flag = RFIFOB(fd,6);
-	struct WisData *wd = (struct WisData*)numdb_search(wis_db, id);
+	int id = RFIFOL(fd,2);
+	int flag = RFIFOB(fd,6);
+	struct WisData *wd = (struct WisData *)numdb_search(wis_db, id);
 
 	if (wd == NULL)
 		return 0;	// This wisp was probably suppress before, because it was timeout of because of target was found on another map-server
@@ -466,27 +465,26 @@ int mapif_parse_WisReply(int fd) {
 
 // Received wisp message from map-server for ALL gm (just copy the message and resends it to ALL map-servers)
 int mapif_parse_WisToGM(int fd) {
-	unsigned char buf[RFIFOW(fd,2)]; // 0x3003/0x3803 <packet_len>.w <wispname>.24B <min_gm_level>.w <message>.?B
+	CREATE_BUFFER(buf,unsigned char,(unsigned short)RFIFOW(fd,2));
 
 	memcpy(WBUFP(buf,0), RFIFOP(fd,0), RFIFOW(fd,2));
 	WBUFW(buf, 0) = 0x3803;
 	mapif_sendall(buf, RFIFOW(fd,2));
 
+	DELETE_BUFFER(buf);
 	return 0;
 }
 
 // アカウント変数保存要求
 int mapif_parse_AccReg(int fd) {
+
 	int j, p;
-	struct accreg *reg = (struct accreg*)numdb_search(accreg_db, RFIFOL(fd,4));
+	struct accreg *reg = (struct accreg *)numdb_search(accreg_db, (unsigned long)RFIFOL(fd,4));
 
 	if (reg == NULL) {
-		if ((reg = (struct accreg*)aCalloc(sizeof(struct accreg), 1)) == NULL) {
-			printf("inter: accreg: out of memory !\n");
-			exit(0);
-		}
+		reg = (struct accreg*)aCalloc(1, sizeof(struct accreg));
 		reg->account_id = RFIFOL(fd,4);
-		numdb_insert(accreg_db, RFIFOL(fd,4), reg);
+		numdb_insert(accreg_db, reg->account_id, reg);
 	}
 
 	for(j = 0, p = 8; j < ACCOUNT_REG_NUM && p < RFIFOW(fd,2); j++, p += 36) {
@@ -502,7 +500,7 @@ int mapif_parse_AccReg(int fd) {
 
 // アカウント変数送信要求
 int mapif_parse_AccRegRequest(int fd) {
-//	printf("mapif: accreg request\n");
+//	ShowMessage("mapif: accreg request\n");
 	return mapif_account_reg_reply(fd, RFIFOL(fd,2));
 }
 
@@ -512,7 +510,7 @@ int mapif_parse_AccRegRequest(int fd) {
 // エラーなら0(false)、処理できたなら1、
 // パケット長が足りなければ2をかえさなければならない
 int inter_parse_frommap(int fd) {
-	int cmd = RFIFOW(fd,0);
+	unsigned short cmd = RFIFOW(fd,0);
 	int len = 0;
 
 	// inter鯖管轄かを調べる

@@ -13,7 +13,6 @@
 #define START_ACCOUNT_NUM 2000000
 #define END_ACCOUNT_NUM 100000000
 
-extern int login_port;
 struct mmo_account {
 	int version;	//Added for version check [Sirius]
 	char* userid;
@@ -30,13 +29,15 @@ struct mmo_account {
 
 struct mmo_char_server {
 	char name[21];
-	long ip;
-	short port;
+	unsigned long ip;
+	unsigned short port;
 	int users;
 	int maintenance;
 	int new_;
 };
 
+
+extern unsigned short login_port;
 extern struct mmo_char_server server[MAX_SERVERS];
 extern int server_fd[MAX_SERVERS];
 #endif

@@ -112,9 +112,9 @@ enum AtCommandType {
 	AtCommand_CharSkReset,
 	AtCommand_CharStReset,
 	//by chbrules
-	AtCommand_CharModel,
+	AtCommand_CharModel, 
 	AtCommand_CharSKPoint,
-	AtCommand_CharSTPoint,
+	AtCommand_CharSTPoint, 
 //	AtCommand_CharZeny, //now #zeny
 	AtCommand_RecallAll,
 	AtCommand_ReloadItemDB,
@@ -198,7 +198,7 @@ enum AtCommandType {
 	AtCommand_CleanMap,
 
 	// SQL-only commands start
-#ifndef TXT_ONLY
+#ifndef TXT_ONLY 
 	AtCommand_CheckMail, // [Valaris]
 	AtCommand_ListMail, // [Valaris]
 	AtCommand_ListNewMail, // [Valaris]
@@ -206,7 +206,7 @@ enum AtCommandType {
 	AtCommand_SendMail, // [Valaris]
 	AtCommand_DeleteMail, // [Valaris]
 	AtCommand_SendPriorityMail, // [Valaris]
-//	AtCommand_Sound, // [Valaris]
+//	AtCommand_Sound, // [Valaris]	
 	AtCommand_RefreshOnline, // [Valaris]
 	// SQL-only commands end
 #endif
@@ -246,13 +246,14 @@ enum AtCommandType {
 
 typedef enum AtCommandType AtCommandType;
 
-typedef struct AtCommandInfo {
+struct AtCommandInfo {
 	AtCommandType type;
 	const char* command;
 	int level;
 	int (*proc)(const int, struct map_session_data*,
 		const char* command, const char* message);
-} AtCommandInfo;
+};
+typedef struct AtCommandInfo AtCommandInfo;
 
 AtCommandType
 is_atcommand(const int fd, struct map_session_data* sd, const char* message, int gmlvl);
@@ -276,7 +277,6 @@ int msg_config_read(const char *cfgName);
 char *estr_lower(char *str);
 
 char * job_name(int class_);
-int e_mail_check(unsigned char *email);
 
 #endif
 

@@ -1,8 +1,5 @@
-#include <string.h>
 #include "utils.h"
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
+#include "showmsg.h"
 #include "malloc.h"
 #include "mmo.h"
 
@@ -10,39 +7,40 @@ void dump(unsigned char *buffer, int num)
 {
    int     icnt,jcnt;
 
-   printf("         Hex                                                  ASCII\n");
-   printf("         -----------------------------------------------      ----------------");
+	ShowMessage("         Hex                                                  ASCII\n");
+	ShowMessage("         -----------------------------------------------      ----------------");
 
    for (icnt=0;icnt<num;icnt+=16) {
-	printf("\n%p ",&buffer[icnt]);
+		ShowMessage("\n%p ",&buffer[icnt]);
     for (jcnt=icnt;jcnt<icnt+16;++jcnt) {
 	    if (jcnt < num) {
-              printf("%02hX ",buffer[jcnt]);
+				ShowMessage("%02hX ",buffer[jcnt]);
 		}  else
-              printf("   ");
+				ShowMessage("   ");
     }
 
-    printf("  |  ");
+		ShowMessage("  |  ");
 
 	for (jcnt=icnt;jcnt<icnt+16;++jcnt) {
         if (jcnt < num) {
             if (buffer[jcnt] > 31 && buffer[jcnt] < 127)
-                   printf("%c",buffer[jcnt]);
+					ShowMessage("%c",buffer[jcnt]);
                else
-                   printf(".");
+					ShowMessage(".");
            }  else
-               printf(" ");
+				ShowMessage(" ");
        }
    }
-   printf("\n");
+	ShowMessage("\n");
 }
 
 
 #ifdef _WIN32
+
+// replace with strrchr
 char *rindex(char *str, char c)
 {
         char *sptr;
-
         sptr = str;
         while(*sptr)
                 ++sptr;
@@ -57,38 +55,31 @@ char *rindex(char *str, char c)
 int strcasecmp(const char *arg1, const char *arg2)
 {
   int chk, i;
-
   if (arg1 == NULL || arg2 == NULL) {
-    printf("SYSERR: str_cmp() passed a NULL pointer, %p or %p.\n", arg1, arg2);
+		ShowError("SYSERR: strcasecmp() passed a NULL pointer, %p or %p.\n", arg1, arg2);
     return (0);
   }
-
   for (i = 0; arg1[i] || arg2[i]; i++)
     if ((chk = LOWER(arg1[i]) - LOWER(arg2[i])) != 0)
       return (chk);	/* not equal */
-
   return (0);
 }
 
 int strncasecmp(const char *arg1, const char *arg2, int n)
 {
   int chk, i;
-
   if (arg1 == NULL || arg2 == NULL) {
-    printf("SYSERR: strn_cmp() passed a NULL pointer, %p or %p.\n", arg1, arg2);
+		ShowError("SYSERR: strn_cmp() passed a NULL pointer, %p or %p.\n", arg1, arg2);
     return (0);
   }
-
   for (i = 0; (arg1[i] || arg2[i]) && (n > 0); i++, n--)
     if ((chk = LOWER(arg1[i]) - LOWER(arg2[i])) != 0)
       return (chk);	/* not equal */
-
   return (0);
 }
 
 void str_upper(char *name)
 {
-
   int len = strlen(name);
   while (len--) {
 	if (*name >= 'a' && *name <= 'z')
@@ -100,7 +91,6 @@ void str_upper(char *name)
 void str_lower(char *name)
 {
   int len = strlen(name);
-
   while (len--) {
 	if (*name >= 'A' && *name <= 'Z')
     	*name += ('a' - 'A');
@@ -110,10 +100,11 @@ void str_lower(char *name)
 
 #endif
 
+
 // Allocate a StringBuf  [MouseJstr]
 struct StringBuf * StringBuf_Malloc() 
 {
-	struct StringBuf * ret = (struct StringBuf *) aMallocA(sizeof(struct StringBuf));
+	struct StringBuf * ret = (struct StringBuf *)aMalloc(sizeof(struct StringBuf));
 	StringBuf_Init(ret);
 	return ret;
 }
@@ -121,32 +112,35 @@ struct StringBuf * StringBuf_Malloc()
 // Initialize a previously allocated StringBuf [MouseJstr]
 void StringBuf_Init(struct StringBuf * sbuf)  {
 	sbuf->max_ = 1024;
-	sbuf->ptr_ = sbuf->buf_ = (char *) aMallocA(sbuf->max_ + 1);
+	sbuf->ptr_ = sbuf->buf_ = (char *)aMalloc((sbuf->max_ + 1)*sizeof(char));
 }
 
 // printf into a StringBuf, moving the pointer [MouseJstr]
 int StringBuf_Printf(struct StringBuf *sbuf,const char *fmt,...) 
 {
 	va_list ap;
-        int n, size, off;
-
+	int n, size, off;
+	
+	va_start(ap, fmt);
 	while (1) {
 		/* Try to print in the allocated space. */
-		va_start(ap, fmt);
+		
 		size = sbuf->max_ - (sbuf->ptr_ - sbuf->buf_);
 		n = vsnprintf (sbuf->ptr_, size, fmt, ap);
-		va_end(ap);
+
 		/* If that worked, return the length. */
 		if (n > -1 && n < size) {
 			sbuf->ptr_ += n;
-			return sbuf->ptr_ - sbuf->buf_;
+			break;
 		}
 		/* Else try again with more space. */
 		sbuf->max_ *= 2; // twice the old size
 		off = sbuf->ptr_ - sbuf->buf_;
-		sbuf->buf_ = (char *) aRealloc(sbuf->buf_, sbuf->max_ + 1);
+		sbuf->buf_ = (char *) aRealloc(sbuf->buf_, (sbuf->max_ + 1)*sizeof(char));
 		sbuf->ptr_ = sbuf->buf_ + off;
 	}
+	va_end(ap);
+	return sbuf->ptr_ - sbuf->buf_;
 }
 
 // Append buf2 onto the end of buf1 [MouseJstr]
@@ -158,7 +152,7 @@ int StringBuf_Append(struct StringBuf *buf1,const struct StringBuf *buf2)
 	if (size2 >= buf1_avail)  {
 		int off = buf1->ptr_ - buf1->buf_;
 		buf1->max_ += size2;
-		buf1->buf_ = (char *) aRealloc(buf1->buf_, buf1->max_ + 1);
+		buf1->buf_ = (char *) aRealloc(buf1->buf_, (buf1->max_ + 1)*sizeof(char));
 		buf1->ptr_ = buf1->buf_ + off;
 	}
 
@@ -187,3 +181,203 @@ char * StringBuf_Value(struct StringBuf *sbuf)
 	*sbuf->ptr_ = '\0';
 	return sbuf->buf_;
 }
+
+
+
+
+//-----------------------------------------------------
+// Function to suppress control characters in a string.
+//-----------------------------------------------------
+int remove_control_chars(char *str) {
+	int change = 0;
+	if(str)
+	while( *str ) {
+		if ( *str < 32) {
+			*str = '_';
+			change = 1;
+		}
+		str++;
+	}
+	return change;
+}
+
+//------------------------------------------------------------
+// E-mail check: return 0 (not correct) or 1 (valid). by [Yor]
+//------------------------------------------------------------
+int e_mail_check(char *email) {
+	char ch;
+	char* last_arobas;
+
+	// athena limits
+	if (!email || strlen(email) < 3 || strlen(email) > 39)
+		return 0;
+
+	// part of RFC limits (official reference of e-mail description)
+	if (strchr(email, '@') == NULL || email[strlen(email)-1] == '@')
+		return 0;
+
+	if (email[strlen(email)-1] == '.')
+		return 0;
+
+	last_arobas = strrchr(email, '@');
+
+	if (strstr(last_arobas, "@.") != NULL ||
+	    strstr(last_arobas, "..") != NULL)
+		return 0;
+
+	for(ch = 1; ch < 32; ch++) {
+		if (strchr(last_arobas, ch) != NULL) {
+			return 0;
+		}
+	}
+
+	if (strchr(last_arobas, ' ') != NULL ||
+	    strchr(last_arobas, ';') != NULL)
+		return 0;
+
+	// all correct
+	return 1;
+}
+
+
+
+
+
+
+#ifdef _WIN32
+#include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char* checkpath(char *path, const char *srcpath)
+{	// just make sure the char*path is not const
+	char *p=path;
+	if(NULL!=path && NULL!=srcpath)
+	while(*srcpath) {
+		if (*srcpath=='/') {
+			*p++ = '\\';
+			srcpath++;
+		}
+		else
+			*p++ = *srcpath++;
+	}
+	*p = *srcpath; //EOS
+	return path;
+}
+
+void findfile(const char *p, const char *pat, void (func)(char*) )
+{	
+	WIN32_FIND_DATA FindFileData;
+	HANDLE hFind;
+	char tmppath[MAX_PATH+1];
+	
+	const char *path    = (p  ==NULL)? "." : p;
+	const char *pattern = (pat==NULL)? "" : pat;
+	
+	checkpath(tmppath,path);
+	if( PATHSEP != tmppath[strlen(tmppath)-1])
+		strcat(tmppath, "\\*");
+	else
+		strcat(tmppath, "*");
+	
+	hFind = FindFirstFile(tmppath, &FindFileData);
+	if (hFind != INVALID_HANDLE_VALUE)
+	{
+		do
+		{
+			if (strcmp(FindFileData.cFileName, ".") == 0)
+				continue;
+			if (strcmp(FindFileData.cFileName, "..") == 0)
+				continue;
+
+			sprintf(tmppath,"%s%c%s",path,PATHSEP,FindFileData.cFileName);
+
+			if (FindFileData.cFileName && strstr(FindFileData.cFileName, pattern)) {
+				func( tmppath );
+			}
+
+
+			if( FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
+			{
+				findfile(tmppath, pat, func);
+			}
+		}while (FindNextFile(hFind, &FindFileData) != 0);
+		FindClose(hFind);
+   }
+   return;
+}
+#else
+
+#include <stdio.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+#define MAX_DIR_PATH 2048
+
+char* checkpath(char *path, const char*srcpath)
+{	// just make sure the char*path is not const
+	char *p=path;
+	if(NULL!=path && NULL!=srcpath)
+	while(*srcpath) {
+		if (*srcpath=='\\') {
+			*p++ = '/';
+			srcpath++;
+		}
+		else
+			*p++ = *srcpath++;
+	}
+	*p = *srcpath; //EOS
+	return path;
+}
+
+
+void findfile(const char *p, const char *pat, void (func)(char*) )
+{	
+	DIR* dir;					// pointer to the scanned directory.
+	struct dirent* entry;		// pointer to one directory entry.
+	struct stat dir_stat;       // used by stat().
+	char tmppath[MAX_DIR_PATH+1];
+	char path[MAX_DIR_PATH+1]= ".";
+	const char *pattern = (pat==NULL)? "" : pat;
+	if(p!=NULL) strcpy(path,p);
+
+	// open the directory for reading
+	dir = opendir( checkpath(path, path) );
+	if (!dir) {
+		fprintf(stderr, "Cannot read directory '%s'\n", path);
+		return;
+	}
+
+	// scan the directory, traversing each sub-directory
+	// matching the pattern for each file name.
+	while ((entry = readdir(dir))) {
+		// skip the "." and ".." entries.
+		if (strcmp(entry->d_name, ".") == 0)
+			continue;
+		if (strcmp(entry->d_name, "..") == 0)
+			continue;
+
+		sprintf(tmppath,"%s%c%s",path, PATHSEP, entry->d_name);
+
+		// check if the pattern matchs.
+		if (entry->d_name && strstr(entry->d_name, pattern)) {
+			func( tmppath );
+		}
+		// check if it is a directory.
+		if (stat(tmppath, &dir_stat) == -1) {
+			fprintf(stderr, "stat error %s\n': ", tmppath);
+			continue;
+		}
+		// is this a directory?
+		if (S_ISDIR(dir_stat.st_mode)) {
+			// decent recursivly
+			findfile(tmppath, pat, func);
+		}
+	}//end while
+}
+#endif

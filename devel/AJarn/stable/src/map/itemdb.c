@@ -13,6 +13,7 @@
 #include "script.h"
 #include "pc.h"
 #include "showmsg.h"
+#include "utils.h"
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -32,19 +33,20 @@ static int blue_box_default=0,violet_box_default=0,card_album_default=0,gift_box
 
 // Function declarations
 
-static void itemdb_read(void);
-static int itemdb_readdb(void);
 #ifndef TXT_ONLY
 static int itemdb_read_sqldb(void);
 #endif /* not TXT_ONLY */
+
+static void itemdb_read(void);
+static int itemdb_readdb(void);
 static int itemdb_read_randomitem();
 static int itemdb_read_itemavail(void);
 static int itemdb_read_itemnametable(void);
-static int itemdb_read_itemslottable(void);
 static int itemdb_read_itemslotcounttable(void);
 static int itemdb_read_cardillustnametable(void);
 static int itemdb_read_noequip(void);
 static int itemdb_read_norefine(void);
+static int itemdb_read_itemslottable(void);
 void itemdb_reload(void);
 
 /*==========================================
@@ -58,9 +60,9 @@ int itemdb_searchname_sub(void *key,void *data,va_list ap)
 	char *str;
 	str=va_arg(ap,char *);
 	dst=va_arg(ap,struct item_data **);
-//	if( strcmpi(item->name,str)==0 || strcmp(item->jname,str)==0 ||
+//	if( strcasecmp(item->name,str)==0 || strcmp(item->jname,str)==0 ||
 //		memcmp(item->name,str,24)==0 || memcmp(item->jname,str,24)==0 )
-	if( strcmpi(item->name,str)==0 ) //by lupus
+	if( strcasecmp(item->name,str)==0 ) //by lupus
 		*dst=item;
 	return 0;
 }
@@ -75,7 +77,7 @@ int itemdb_searchjname_sub(void *key,void *data,va_list ap)
 	char *str;
 	str=va_arg(ap,char *);
 	dst=va_arg(ap,struct item_data **);
-	if( strcmpi(item->jname,str)==0 )
+	if( strcasecmp(item->jname,str)==0 )
 		*dst=item;
 	return 0;
 }
@@ -136,7 +138,7 @@ int itemdb_searchrandomid(int flags)
  */
 struct item_data* itemdb_exists(int nameid)
 {
-	return (struct item_data *) numdb_search(item_db,nameid);
+	return (struct item_data*)numdb_search(item_db,nameid);
 }
 /*==========================================
  * DBÇÃåüçı
@@ -146,7 +148,7 @@ struct item_data* itemdb_search(int nameid)
 {
 	struct item_data *id;
 
-	id=(struct item_data *) numdb_search(item_db,nameid);
+	id = (struct item_data *)numdb_search(item_db,nameid);
 	if(id) return id;
 
 	id=(struct item_data *)aCalloc(1,sizeof(struct item_data));
@@ -243,6 +245,8 @@ int itemdb_isdropable(int nameid)
 	return 1;
 }
 
+
+//#ifndef TXT_ONLY
 /*====================================
  * Removed item_value_db, don't re-add
  *------------------------------------
@@ -250,14 +254,14 @@ int itemdb_isdropable(int nameid)
 static void itemdb_read(void)
 {
 	#ifndef TXT_ONLY
-		if (db_use_sqldbs)
-		{
-			itemdb_read_sqldb();
-		}
-		else
-		{
-			itemdb_readdb();
-		}
+	if (db_use_sqldbs)
+	{
+		itemdb_read_sqldb();
+    }
+    else
+    {
+		itemdb_readdb();
+    }
 	/* not TXT_ONLY */
 	#else
 		itemdb_readdb();
@@ -294,11 +298,11 @@ static int itemdb_readdb(void)
 
 	for(i=0;i<2;i++){
 
-		fp=fopen(filename[i],"r");
+		fp=savefopen(filename[i],"r");
 		if(fp==NULL){
 			if(i>0)
 				continue;
-			printf("can't read %s\n",filename[i]);
+			ShowMessage("can't read %s\n",filename[i]);
 			exit(1);
 		}
 
@@ -345,9 +349,8 @@ static int itemdb_readdb(void)
 				}
 				// check for bad prices that can possibly cause exploits
 				if (id->value_buy*75/100 < id->value_sell*124/100) {
-					sprintf (tmp_output, "Item %s [%d] buying:%d < selling:%d\n",
+					ShowWarning ("Item %s [%d] buying:%d < selling:%d\n",
 						id->name, id->nameid, id->value_buy*75/100, id->value_sell*124/100);
-					ShowWarning (tmp_output);
 				}
 			}
 			id->weight=atoi(str[6]);
@@ -373,14 +376,14 @@ static int itemdb_readdb(void)
 
 			if((p=strchr(np,'{'))==NULL)
 				continue;
-			id->use_script = parse_script((unsigned char *) p,lines);
+			id->use_script = (char*)parse_script((unsigned char*)p,lines);
 			if((p=strchr(p+1,'{'))==NULL)
 				continue;
-			id->equip_script = parse_script((unsigned char *) p,lines);
+			id->equip_script = (char*)parse_script((unsigned char*)p,lines);
 		}
 		fclose(fp);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,filename[i]);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,filename[i]);
+
 	}
 	return 0;
 }
@@ -396,7 +399,8 @@ static int itemdb_read_randomitem()
 	FILE *fp;
 	char line[1024];
 	int ln=0;
-	int nameid,i,j;
+	int nameid;
+	size_t i,j;
 	char *str[10],*p;
 
 	const struct {
@@ -415,11 +419,11 @@ static int itemdb_read_randomitem()
 		struct random_item_data *pd=data[i].pdata;
 		int *pc=data[i].pcount;
 		int *pdefault=data[i].pdefault;
-		char *fn=(char *) data[i].filename;
+		char *fn=(char*)data[i].filename;
 
 		*pdefault = 0;
-		if( (fp=fopen(fn,"r"))==NULL ){
-			printf("can't read %s\n",fn);
+		if( (fp=savefopen(fn,"r"))==NULL ){
+			ShowMessage("can't read %s\n",fn);
 			continue;
 		}
 
@@ -455,8 +459,8 @@ static int itemdb_read_randomitem()
 			ln++;
 		}
 		fclose(fp);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",*pc,fn);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",*pc,fn);
+
 	}
 
 	return 0;
@@ -473,8 +477,8 @@ static int itemdb_read_itemavail(void)
 	int nameid,j,k;
 	char *str[10],*p;
 
-	if( (fp=fopen("db/item_avail.txt","r"))==NULL ){
-		printf("can't read db/item_avail.txt\n");
+	if( (fp=savefopen("db/item_avail.txt","r"))==NULL ){
+		ShowMessage("can't read %s\n","db/item_avail.txt");
 		return -1;
 	}
 
@@ -505,8 +509,8 @@ static int itemdb_read_itemavail(void)
 		ln++;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"db/item_avail.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"db/item_avail.txt");
+
 	return 0;
 }
 
@@ -519,7 +523,7 @@ static int itemdb_read_itemnametable(void)
 	char *buf,*p;
 	int s;
 
-	buf=(char *) grfio_reads("data\\idnum2itemdisplaynametable.txt",&s);
+	buf=(char*)grfio_reads("data\\idnum2itemdisplaynametable.txt",&s);
 
 	if(buf==NULL)
 		return -1;
@@ -534,7 +538,7 @@ static int itemdb_read_itemnametable(void)
 #ifdef ITEMDB_OVERRIDE_NAME_VERBOSE
 			if( itemdb_exists(nameid) &&
 				strncmp(itemdb_search(nameid)->jname,buf2,24)!=0 ){
-				printf("[override] %d %s => %s\n",nameid
+				ShowMessage("[override] %d %s => %s\n",nameid
 					,itemdb_search(nameid)->jname,buf2);
 			}
 #endif
@@ -547,8 +551,7 @@ static int itemdb_read_itemnametable(void)
 		p++;
 	}
 	aFree(buf);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\idnum2itemdisplaynametable.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\idnum2itemdisplaynametable.txt");
 
 	return 0;
 }
@@ -562,7 +565,7 @@ static int itemdb_read_cardillustnametable(void)
 	char *buf,*p;
 	int s;
 
-	buf=(char *) grfio_reads("data\\num2cardillustnametable.txt",&s);
+	buf=(char*)grfio_reads("data\\num2cardillustnametable.txt",&s);
 
 	if(buf==NULL)
 		return -1;
@@ -575,7 +578,7 @@ static int itemdb_read_cardillustnametable(void)
 		if(	sscanf(p,"%d#%[^#]#",&nameid,buf2)==2 ){
 			strcat(buf2,".bmp");
 			memcpy(itemdb_search(nameid)->cardillustname,buf2,64);
-//			printf("%d %s\n",nameid,itemdb_search(nameid)->cardillustname);
+//			ShowMessage("%d %s\n",nameid,itemdb_search(nameid)->cardillustname);
 		}
 		
 		p=strchr(p,10);
@@ -583,8 +586,7 @@ static int itemdb_read_cardillustnametable(void)
 		p++;
 	}
 	aFree(buf);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\num2cardillustnametable.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\num2cardillustnametable.txt");
 
 	return 0;
 }
@@ -601,7 +603,7 @@ static int itemdb_read_itemslottable(void)
 	char *buf,*p;
 	int s;
 
-	buf=(char *) grfio_read("data\\itemslottable.txt");
+	buf = (char *)grfio_read("data\\itemslottable.txt");
 	if(buf==NULL)
 		return -1;
 	s=grfio_size("data\\itemslottable.txt");
@@ -611,7 +613,7 @@ static int itemdb_read_itemslottable(void)
 		struct item_data* item;
 		sscanf(p,"%d#%d#",&nameid,&equip);
 		item = itemdb_search(nameid);
-		if (item && itemdb_isequip2(item))			
+		if (item && itemdb_isequip2(item))
 			item->equip=equip;
 		p=strchr(p,10);
 		if(!p) break;
@@ -621,22 +623,16 @@ static int itemdb_read_itemslottable(void)
 		p++;
 	}
 	aFree(buf);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\itemslottable.txt");
-	ShowStatus(tmp_output);
-
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\itemslottable.txt");
 	return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
 static int itemdb_read_itemslotcounttable(void)
 {
 	char *buf,*p;
 	int s;
 
-	buf=(char *) grfio_read("data\\itemslotcounttable.txt");
+	buf = (char *)grfio_read("data\\itemslotcounttable.txt");
 	if(buf==NULL)
 		return -1;
 	s=grfio_size("data\\itemslotcounttable.txt");
@@ -653,9 +649,7 @@ static int itemdb_read_itemslotcounttable(void)
 		p++;
 	}
 	aFree(buf);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\itemslotcounttable.txt");
-	ShowStatus(tmp_output);
-
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\itemslotcounttable.txt");
 	return 0;
 }
 
@@ -672,8 +666,8 @@ static int itemdb_read_noequip(void)
 	char *str[32],*p;
 	struct item_data *id;
 
-	if( (fp=fopen("db/item_noequip.txt","r"))==NULL ){
-		printf("can't read db/item_noequip.txt\n");
+	if( (fp=savefopen("db/item_noequip.txt","r"))==NULL ){
+		ShowMessage("can't read %s\n", "db/item_noequip.txt");
 		return -1;
 	}
 	while(fgets(line,1020,fp)){
@@ -698,8 +692,8 @@ static int itemdb_read_noequip(void)
 
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"db/item_noequip.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"db/item_noequip.txt");
+
 	return 0;
 }
 
@@ -780,15 +774,7 @@ static int itemdb_read_sqldb(void)
 
 				// Insert a new row into the item database
 
-				/*id = aCalloc(sizeof(struct item_data), 1);
-
-				if (id == NULL)
-				{
-					printf("out of memory : itemdb_read_sqldb\n");
-					exit(1);
-				}
-
-				memset(id, 0, sizeof(struct item_data));
+				/*id = aCalloc(1, sizeof(struct item_data));
 				numdb_insert(item_db, (int) nameid, id);*/
 
 				// ----------
@@ -879,14 +865,13 @@ static int itemdb_read_sqldb(void)
 			// If the retrieval failed, output an error
 			if (mysql_errno(&mmysql_handle))
 			{
-				printf("Database server error (retrieving rows from %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
+				ShowMessage("Database server error (retrieving rows from %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
 			}
-			sprintf(tmp_output,"Done reading '"CL_WHITE"%lu"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",(unsigned long) mysql_num_rows(sql_res),item_db_db);
-			ShowStatus(tmp_output);
+			ShowStatus("Done reading '"CL_WHITE"%lu"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",(unsigned long) mysql_num_rows(sql_res),item_db_db);
 		}
 		else
 		{
-			printf("MySQL error (storing query result for %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
+			ShowMessage("MySQL error (storing query result for %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
 		}
 
 		// Free the query result
@@ -894,7 +879,7 @@ static int itemdb_read_sqldb(void)
 	}
 	else
 	{
-		printf("Database server error (executing query for %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
+		ShowMessage("Database server error (executing query for %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
 	}
 
 	return 0;
@@ -907,9 +892,9 @@ static int itemdb_read_sqldb(void)
  */
 static int itemdb_final(void *key,void *data,va_list ap)
 {
-	struct item_data *id;
+	struct item_data *id = (struct item_data *)data;
 
-	nullpo_retr(0, id= (struct item_data *) data);
+	nullpo_retr(0, id);
 
 	if(id->use_script)
 		aFree(id->use_script);
@@ -953,7 +938,7 @@ static int itemdebug(void *key,void *data,va_list ap){
 }
 void itemdebugtxt()
 {
-	dfp=fopen("itemdebug.txt","wt");
+	dfp=savefopen("itemdebug.txt","wt");
 	numdb_foreach(item_db,itemdebug);
 	fclose(dfp);
 }

@@ -6,6 +6,8 @@
 #include "map.h"
 #include "battle.h"
 #include "nullpo.h"
+#include "showmsg.h"
+#include "utils.h"
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -26,7 +28,7 @@ static void push_heap_path(int *heap,struct tmp_path *tp,int index)
 	int i,h;
 
 	if( heap == NULL || tp == NULL ){
-		printf("push_heap_path nullpo\n");
+		ShowMessage("push_heap_path nullpo\n");
 		return;
 	}
 
@@ -214,12 +216,12 @@ int path_blownpos(int m,int x0,int y0,int dx,int dy,int count)
 
 	if(count>15){	// Å‘å10ƒ}ƒX‚É§ŒÀ
 		if(battle_config.error_log)
-			printf("path_blownpos: count too many %d !\n",count);
+			ShowMessage("path_blownpos: count too many %d !\n",count);
 		count=15;
 	}
 	if(dx>1 || dx<-1 || dy>1 || dy<-1){
 		if(battle_config.error_log)
-			printf("path_blownpos: illeagal dx=%d or dy=%d !\n",dx,dy);
+			ShowMessage("path_blownpos: illeagal dx=%d or dy=%d !\n",dx,dy);
 		dx=(dx>=0)?1:((dx<0)?-1:0);
 		dy=(dy>=0)?1:((dy<0)?-1:0);
 	}
@@ -273,7 +275,7 @@ int path_search_long(int m,int x0,int y0,int x1,int y1)
 	else
 		weight = abs(y1 - y0);
 
-	while (x0 != x1 && y0 != y1) {
+	while (x0 != x1 || y0 != y1) {
 		if (map_getcellp(md,x0,y0,CELL_CHKWALL))
 			return 0;
 		wx += dx;
@@ -302,7 +304,8 @@ int path_search(struct walkpath_data *wpd,int m,int x0,int y0,int x1,int y1,int 
 {
 	int heap[MAX_HEAP+1];
 	struct tmp_path tp[MAX_WALKPATH*MAX_WALKPATH];
-	int i,rp,x,y;
+	size_t i;
+	int rp,x,y;
 	struct map_data *md;
 	int dx,dy;
 
@@ -370,8 +373,8 @@ int path_search(struct walkpath_data *wpd,int m,int x0,int y0,int x1,int y1,int 
 		if(x==x1 && y==y1){
 			int len,j;
 
-			for(len=0,i=rp;len<100 && i!=calc_index(x0,y0);i=tp[i].before,len++);
-			if(len==100 || len>=sizeof(wpd->path))
+			for(len=0,i=rp;len<100 && i!=(size_t)calc_index(x0,y0);i=tp[i].before,len++);
+			if(len==100 || (size_t)len>=sizeof(wpd->path))
 				return -1;
 			wpd->path_len=len;
 			wpd->path_pos=0;

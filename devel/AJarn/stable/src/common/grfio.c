@@ -19,41 +19,14 @@
  *	2003/11/11 ... version check fix & bug fix
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <sys/stat.h>
-
 #include "utils.h"
-#include "grfio.h"
 #include "mmo.h"
+#include "grfio.h"
 #include "showmsg.h"
 #include "malloc.h"
 
-#ifdef _WIN32
-	#include <windows.h>
-	#include "zlib_win32.h"
-	HINSTANCE zlib_dll;
-	#define zlib_inflateInit(strm) zlib_inflateInit_((strm),ZLIB_VERSION, sizeof(z_stream))
-	#define zlib_deflateInit(strm, level) zlib_deflateInit_((strm),(level),ZLIB_VERSION,sizeof(z_stream))
+#include <zlib.h>
 
-	int (WINAPI* zlib_inflateInit_) (z_streamp strm, const char *version, int stream_size);
-	int (WINAPI* zlib_inflate) (z_streamp strm, int flush);
-	int (WINAPI* zlib_inflateEnd) (z_streamp strm);
-
-	int (WINAPI* zlib_deflateInit_) (z_streamp strm, int level, const char *version, int stream_size);
-	int (WINAPI* zlib_deflate) (z_streamp strm, int flush);
-	int (WINAPI* zlib_deflateEnd) (z_streamp strm);
-#else
-	#include <zlib.h>
-	#define zlib_inflateInit inflateInit
-	#define zlib_inflate     inflate
-	#define zlib_inflateEnd  inflateEnd
-	#define zlib_deflateInit deflateInit
-	#define zlib_deflate     deflate
-	#define zlib_deflateEnd  deflateEnd
-#endif
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -118,19 +91,19 @@ static unsigned char BitMaskTable[8] = {
 	0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01
 };
 
-static char	BitSwapTable1[64] = {
+static unsigned char	BitSwapTable1[64] = {
 	58, 50, 42, 34, 26, 18, 10,  2, 60, 52, 44, 36, 28, 20, 12,  4,
 	62, 54, 46, 38, 30, 22, 14,  6, 64, 56, 48, 40, 32, 24, 16,  8,
 	57, 49, 41, 33, 25, 17,  9,  1, 59, 51, 43, 35, 27, 19, 11,  3,
 	61, 53, 45, 37, 29, 21, 13,  5, 63, 55, 47, 39, 31, 23, 15,  7
 };
-static char	BitSwapTable2[64] = {
+static unsigned char	BitSwapTable2[64] = {
 	40,  8, 48, 16, 56, 24, 64, 32, 39,  7, 47, 15, 55, 23, 63, 31,
 	38,  6, 46, 14, 54, 22, 62, 30, 37,  5, 45, 13, 53, 21, 61, 29,
 	36,  4, 44, 12, 52, 20, 60, 28, 35,  3, 43, 11, 51, 19, 59, 27,
 	34,  2, 42, 10, 50, 18, 58, 26, 33,  1, 41,  9, 49, 17, 57, 25
 };
-static char	BitSwapTable3[32] = {
+static unsigned char	BitSwapTable3[32] = {
 	16,  7, 20, 21, 29, 12, 28, 17,  1, 15, 23, 26,  5, 18, 31, 10,
      2,  8, 24, 14, 32, 27,  3,  9, 19, 13, 30,  6, 22, 11,  4, 25
 };
@@ -164,10 +137,10 @@ static unsigned char NibbleData[4][64]={
 static unsigned int getlong(unsigned char *p)
 {
 //	return *p+p[1]*256+(p[2]+p[3]*256)*65536;
-	return   p[0]
-		| p[1] << 0x08
-		| p[2] << 0x10
-		| p[3] << 0x18; // Shinomori
+	return    p[0]
+			| p[1] << 0x08
+			| p[2] << 0x10
+			| p[3] << 0x18;
 }
 
 /*==========================================
@@ -181,9 +154,9 @@ static void NibbleSwap(BYTE *Src, int len)
 	}
 }
 
-static void BitConvert(BYTE *Src,char *BitSwapTable)
+static void BitConvert(BYTE *Src,unsigned char *BitSwapTable)
 {
-	int lop,prm;
+	size_t lop,prm;
 	BYTE tmp[8];
 //	*(DWORD*)tmp=*(DWORD*)(tmp+4)=0;
 	memset(tmp,0,8);
@@ -200,7 +173,7 @@ static void BitConvert(BYTE *Src,char *BitSwapTable)
 
 static void BitConvert4(BYTE *Src)
 {
-	int lop,prm;
+	size_t lop,prm;
 	BYTE tmp[8];
 	tmp[0] = ((Src[7]<<5) | (Src[4]>>3)) & 0x3f;	// ..0 vutsr
 	tmp[1] = ((Src[4]<<1) | (Src[5]>>7)) & 0x3f;	// ..srqpo n
@@ -216,7 +189,8 @@ static void BitConvert4(BYTE *Src)
 		         | (NibbleData[lop][tmp[lop*2+1]] & 0x0f);
 	}
 
-	*(DWORD*)(tmp+4)=0;
+//	*(DWORD*)(tmp+4)=0;
+	memset(tmp+4,0,4);
 	for(lop=0;lop!=32;lop++) {
 		prm = BitSwapTable3[lop]-1;
 		if (tmp[prm >> 3] & BitMaskTable[prm & 7]) {
@@ -230,9 +204,9 @@ static void BitConvert4(BYTE *Src)
 	Src[3] ^= tmp[7];
 }
 
-static void decode_des_etc(BYTE *buf,int len,int type,int cycle)
+static void decode_des_etc(BYTE *buf,size_t len,int type,int cycle)
 {
-	int lop,cnt=0;
+	size_t lop,cnt=0;
 	if(cycle<3) cycle=3;
 	else if(cycle<5) cycle++;
 	else if(cycle<7) cycle+=9;
@@ -245,10 +219,12 @@ static void decode_des_etc(BYTE *buf,int len,int type,int cycle)
 			BitConvert(buf,BitSwapTable2);
 		} else {
 			if(cnt==7 && type==0){
-				int a;
+				size_t a;
 				BYTE tmp[8];
-				*(DWORD*)tmp     = *(DWORD*)buf;
-				*(DWORD*)(tmp+4) = *(DWORD*)(buf+4);
+				
+//				*(DWORD*)tmp     = *(DWORD*)buf;
+//				*(DWORD*)(tmp+4) = *(DWORD*)(buf+4);
+				memcpy(tmp,buf,8);
 				cnt=0;
 				buf[0]=tmp[3];
 				buf[1]=tmp[4];
@@ -299,17 +275,17 @@ int decode_zip(unsigned char *dest, unsigned long* destLen, const unsigned char*
 	stream.zalloc = (alloc_func)0;
 	stream.zfree = (free_func)0;
 
-	err = zlib_inflateInit(&stream);
+	err = inflateInit(&stream);
 	if (err != Z_OK) return err;
 
-	err = zlib_inflate(&stream, Z_FINISH);
+	err = inflate(&stream, Z_FINISH);
 	if (err != Z_STREAM_END) {
-		zlib_inflateEnd(&stream);
+		inflateEnd(&stream);
 		return err == Z_OK ? Z_BUF_ERROR : err;
 	}
 	*destLen = stream.total_out;
 
-	err = zlib_inflateEnd(&stream);
+	err = inflateEnd(&stream);
 	return err;
 }
 
@@ -329,17 +305,17 @@ int encode_zip(unsigned char *dest, unsigned long* destLen, const unsigned char*
 	stream.zalloc = (alloc_func)0;
 	stream.zfree = (free_func)0;
 
-	err = zlib_deflateInit(&stream,Z_DEFAULT_COMPRESSION);
+	err = deflateInit(&stream,Z_DEFAULT_COMPRESSION);
 	if (err != Z_OK) return err;
 
-	err = zlib_deflate(&stream, Z_FINISH);
+	err = deflate(&stream, Z_FINISH);
 	if (err != Z_STREAM_END) {
-		zlib_inflateEnd(&stream);
+		inflateEnd(&stream);
 		return err == Z_OK ? Z_BUF_ERROR : err;
 	}
 	*destLen = stream.total_out;
 
-	err = zlib_deflateEnd(&stream);
+	err = deflateEnd(&stream);
 	return err;
 }
 
@@ -376,15 +352,35 @@ static void hashinit(void)
  *	File List : File find
  *------------------------------------------
  */
-FILELIST *filelist_find(char *fname)
+FILELIST *filelist_find(const char *fname)
 {
 	int hash;
+	char *p;
+	char *namebuffer;
+	
+	if(!fname) return NULL;
 
-	for(hash=filelist_hash[filehash((unsigned char *) fname)];hash>=0;hash=filelist[hash].next) {
-		if(strcmpi(filelist[hash].fn,fname)==0)
+	// grf files uses backslash seperator
+	// so we better check if there are backslashes used
+	// combine it with the copy, we cannot write to a const char 
+	// without crashing on "real" machines
+	p = namebuffer = (char*)aMalloc((strlen(fname)+1)*sizeof(char));
+	while(*fname) {
+		if (*fname=='/') {
+			*p++ = '\\';
+			fname++;
+		}
+		else
+			*p++ = *fname++;
+	}
+	*p = 0; //EOS
+
+	for(hash=filelist_hash[filehash((unsigned char *)namebuffer)];hash>=0;hash=filelist[hash].next) {
+		if(strcasecmp(filelist[hash].fn,namebuffer)==0)
 			break;
 	}
 
+	aFree(namebuffer);
 	return (hash>=0)? &filelist[hash] : NULL;
 }
 
@@ -399,27 +395,19 @@ static FILELIST* filelist_add(FILELIST *entry)
 	int hash;
 
 	if (filelist_entrys>=FILELIST_LIMIT) {
-		printf("filelist limit : filelist_add\n");
+		ShowMessage("filelist limit : filelist_add\n");
 		exit(1);
 	}
 
 	if (filelist_entrys>=filelist_maxentry) {
-		FILELIST *new_filelist = (FILELIST*)aRealloc(
-			(void*)filelist, (filelist_maxentry+FILELIST_ADDS)*sizeof(FILELIST) );
-		if (new_filelist != NULL) {
-			filelist = new_filelist;
-			memset(filelist + filelist_maxentry, '\0',
-				FILELIST_ADDS * sizeof(FILELIST));
+		filelist = (FILELIST*)aRealloc(filelist, (filelist_maxentry+FILELIST_ADDS)*sizeof(FILELIST) );
+		memset(filelist + filelist_maxentry, 0, FILELIST_ADDS * sizeof(FILELIST));
 			filelist_maxentry += FILELIST_ADDS;
-		} else {
-			printf("out of memory : filelist_add\n");
-			exit(1);
 		}
-	}
 
 	memcpy( &filelist[filelist_entrys], entry, sizeof(FILELIST) );
 
-	hash = filehash((unsigned char *) entry->fn);
+	hash = filehash((unsigned char*)(entry->fn));
 	filelist[filelist_entrys].next = filelist_hash[hash];
 	filelist_hash[hash] = filelist_entrys;
 
@@ -449,18 +437,11 @@ static void filelist_adjust(void)
 {
 	if (filelist!=NULL) {
 		if (filelist_maxentry>filelist_entrys) {
-			FILELIST *new_filelist = (FILELIST*)aRealloc(
-				(void*)filelist,filelist_entrys*sizeof(FILELIST) );
-			if (new_filelist != NULL) {
-				filelist = new_filelist;
+			filelist = (FILELIST*)aRealloc(filelist,filelist_entrys*sizeof(FILELIST) );
 				filelist_maxentry = filelist_entrys;
-			} else {
-				printf("out of memory : filelist\n");
-				exit(1);
 			}
 		}
 	}
-}
 
 /***********************************************************
  ***                  Grfio Sobroutines                  ***
@@ -469,24 +450,25 @@ static void filelist_adjust(void)
  * Grfio : Resnametable replace
  *------------------------------------------
  */
-char* grfio_resnametable(char* fname, char *lfname)
+const char* grfio_resnametable(const char* fname, char *lfname)
 {
    	FILE *fp;
-	char *p;
 	char w1[256],w2[256],restable[256],line[512];
 
 	sprintf(restable,"%sdata\\resnametable.txt",data_dir);
-
-	for(p=&restable[0];*p!=0;p++) if (*p=='\\') *p = '/';
-
-	fp = fopen(restable,"rb");
+	fp = savefopen(restable,"rb");
 	if(fp==NULL) {
-		printf("%s not found (grfio_resnametable)\n",restable);
-		return NULL;	// 1:not found error
+		ShowMessage("%s not found (grfio_resnametable)\n",restable);
+		lfname[0]=0;
+		return lfname;
+		// returning NULL will crash the following sprintf
+		//return NULL;	// 1:not found error, 
 	}
 
 	while(fgets(line,508,fp)){
-	    if((sscanf(line,"%[^#]#%[^#]#",w1,w2)==2) && (sscanf(fname,"%*5s%s",lfname)==1) &&  (!strcmpi(w1,lfname))){
+		if( (sscanf(line,"%[^#]#%[^#]#",w1,w2)==2) && 
+			(sscanf(fname,"%*5s%s",lfname)==1) &&  
+			(!strcasecmp(w1,lfname))){
 	         sprintf(lfname,"data\\%s",w2);
 		 fclose(fp);
 	         return lfname;
@@ -501,26 +483,22 @@ char* grfio_resnametable(char* fname, char *lfname)
  *	Grfio : Resource file size get
  *------------------------------------------
  */
-int grfio_size(char *fname)
+int grfio_size(const char *fname)
 {
 	FILELIST *entry;
 
 	entry = filelist_find(fname);
 
 	if (entry==NULL || entry->gentry<0) {	// LocalFileCheck
-		char lfname[256],*rname,*p;
+		char lfname[256]="";
 		FILELIST lentry;
 		struct stat st;
-
-	    if(strcmp(data_dir, "") != 0 && (rname=grfio_resnametable(fname,lfname))!=NULL) {
-            //printf("%s\t",fname);
-            //sprintf(rname,"%s",grfio_resnametable(fname,lfname));
-            //printf("%s\n",rname);
-            sprintf(lfname,"%s%s",data_dir,rname);
-            //printf("%s\n",lfname);
-        }
-
-		for(p=&lfname[0];*p!=0;p++) if (*p=='\\') *p = '/';	// * At the time of Unix
+		
+		if(strcmp(data_dir, "") != 0) {
+			//ShowMessage("%s\t",fname);
+			sprintf(lfname,"%s%s",data_dir, grfio_resnametable(fname,lfname));
+			//ShowMessage("%s\n",lfname);
+        }    
 
 		if (stat(lfname,&st)==0) {
 			strncpy(lentry.fn, fname, sizeof(lentry.fn)-1 );
@@ -528,8 +506,7 @@ int grfio_size(char *fname)
 			lentry.gentry = 0;	// 0:LocalFile
 			entry = filelist_modify(&lentry);
 		} else if (entry==NULL) {
-			printf("%s not found (grfio_size)\n", fname);
-			//exit(1);
+			ShowMessage("%s not found (grfio_size)\n", fname);
          	return -1;
 		}
 	}
@@ -540,7 +517,7 @@ int grfio_size(char *fname)
  *	Grfio : Resource file read & size get
  *------------------------------------------
  */
-void* grfio_reads(char *fname, int *size)
+void* grfio_reads(const char *fname, int *size)
 {
 	FILE *in = NULL;
 	unsigned char *buf=NULL,*buf2=NULL;
@@ -550,22 +527,12 @@ void* grfio_reads(char *fname, int *size)
 	entry = filelist_find(fname);
 
 	if (entry==NULL || entry->gentry<=0) {	// LocalFileCheck
-		char lfname[256],*rname,*p;
+		char lfname[256];
 		FILELIST lentry;
-
 		strncpy(lfname,fname,255);
-		// i hope this is the correct way =p [celest]
-		if ((rname=grfio_resnametable(fname,lfname))!=NULL) {
-			char tbuf[255];
-			//sprintf(rname,"%s",grfio_resnametable(fname,lfname));
-			sprintf(tbuf,"%s%s",data_dir,rname);
-			strcpy(lfname, tbuf);
-			//printf("%s\n",lfname);
-		}
+		sprintf(lfname,"%s%s",data_dir, grfio_resnametable(fname,lfname));
 
-		for(p=&lfname[0];*p!=0;p++) if (*p=='\\') *p = '/';	// * At the time of Unix
-
-		in = fopen(lfname,"rb");
+		in = savefopen(lfname,"rb");
 		if(in!=NULL) {
 			if (entry!=NULL && entry->gentry==0) {
 				lentry.declen=entry->declen;
@@ -574,9 +541,9 @@ void* grfio_reads(char *fname, int *size)
 				lentry.declen = ftell(in);
 			}
 			fseek(in,0,0);	// SEEK_SET
-			buf2 = (unsigned char *)aCallocA(lentry.declen+1024, 1);
+			buf2 = (unsigned char*)aMalloc((lentry.declen+1024)*sizeof(unsigned char));
 			if (buf2==NULL) {
-				printf("file read memory allocate error : declen\n");
+				ShowMessage("file read memory allocate error : declen\n");
 				goto errret;
 			}
 			fread(buf2,1,lentry.declen,in);
@@ -588,7 +555,7 @@ void* grfio_reads(char *fname, int *size)
 			if (entry!=NULL && entry->gentry<0) {
 				entry->gentry = -entry->gentry;	// local file checked
 			} else {
-				printf("%s not found (grfio_reads)\n", fname);
+				ShowMessage("%s not found (grfio_reads)\n", fname);
 				//goto errret;
 				aFree(buf2);
 				return NULL;
@@ -596,15 +563,15 @@ void* grfio_reads(char *fname, int *size)
 		}
 	}
 	if (entry!=NULL && entry->gentry>0) {	// Archive[GRF] File Read
-		buf = (unsigned char *) aCallocA(entry->srclen_aligned+1024, 1);
+		buf = (unsigned char*)aMalloc((entry->srclen_aligned+1024)*sizeof(unsigned char));
 		if (buf==NULL) {
-			printf("file read memory allocate error : srclen_aligned\n");
+			ShowMessage("file read memory allocate error : srclen_aligned\n");
 			goto errret;
 		}
 		gfname = gentry_table[entry->gentry-1];
-		in = fopen(gfname,"rb");
+		in = savefopen(gfname,"rb");
 		if(in==NULL) {
-			printf("%s not found (grfio_reads)\n",gfname);
+			ShowMessage("%s not found (grfio_reads)\n",gfname);
 			//goto errret;
 			aFree(buf);
 			return NULL;
@@ -612,27 +579,34 @@ void* grfio_reads(char *fname, int *size)
 		fseek(in,entry->srcpos,0);
 		fread(buf,1,entry->srclen_aligned,in);
 		fclose(in);
-		buf2 = (unsigned char *)aCallocA(entry->declen+1024, 1);
+		buf2=(unsigned char*)aMalloc((entry->declen+1024)*sizeof(unsigned char));
 		if (buf2==NULL) {
-			printf("file decode memory allocate error\n");
+			ShowMessage("file decode memory allocate error\n");
 			goto errret;
 		}
 		if(entry->type==1 || entry->type==3 || entry->type==5) {
-			uLongf len;
+			int len, err;
 			if (entry->cycle>=0) {
 				decode_des_etc(buf,entry->srclen_aligned,entry->cycle==0,entry->cycle);
 			}
 			len=entry->declen;
-			decode_zip(buf2,&len,buf,entry->srclen);
+			err=decode_zip(buf2,(uLongf*)&len,buf,entry->srclen);
+
 			if(len!=entry->declen) {
-				printf("decode_zip size miss match err: %d != %d\n",(int)len,entry->declen);
+				ShowMessage("decode_zip size miss match err: %d != %d\n",len,entry->declen);
 				goto errret;
 			}
+			if(err<0) {
+				ShowMessage("decode_zip error %i!\n",err);
+				goto errret;
+			}
+			
 		} else {
 			memcpy(buf2,buf,entry->declen);
 		}
 		aFree(buf);
 	}
+	
 	if (size!=NULL && entry!=NULL)
 		*size = entry->declen;
 	return buf2;
@@ -647,7 +621,7 @@ errret:
  *	Grfio : Resource file read
  *------------------------------------------
  */
-void* grfio_read(char *fname)
+void* grfio_read(const char *fname)
 {
 	return grfio_reads(fname,NULL);
 }
@@ -672,19 +646,18 @@ static char * decode_filename(unsigned char *buf,int len)
  * Grfio : Entry table read
  *------------------------------------------
  */
-static int grfio_entryread(char *gfname,int gentry)
+static int grfio_entryread(const char *gfname,int gentry)
 {
 	FILE *fp;
-	int grf_size,list_size;
+	long grf_size,list_size;
 	unsigned char grf_header[0x2e];
 	int lop,entry,entrys,ofs,grf_version;
 	char *fname;
 	unsigned char *grf_filelist;
 
-	fp = fopen(gfname,"rb");
+	fp = savefopen(gfname,"rb");
 	if(fp==NULL) {
-		sprintf(tmp_output,"GRF Data File not found: '"CL_WHITE"%s"CL_RESET"'.\n",gfname);
-		ShowWarning(tmp_output);
+		ShowWarning("GRF Data File not found: '"CL_WHITE"%s"CL_RESET"'.\n",gfname);
 		return 1;	// 1:not found error
 	}
 
@@ -692,9 +665,9 @@ static int grfio_entryread(char *gfname,int gentry)
 	grf_size = ftell(fp);
 	fseek(fp,0,0);	// SEEK_SET
 	fread(grf_header,1,0x2e,fp);
-	if(strcmp((const char *) grf_header,"Master of Magic") || fseek(fp,getlong(grf_header+0x1e),1)){	// SEEK_CUR
+	if(strcmp((char*)grf_header,"Master of Magic") || fseek(fp,getlong(grf_header+0x1e),1)){	// SEEK_CUR
 		fclose(fp);
-		printf("%s read error\n",gfname);
+		ShowMessage("%s read error\n",gfname);
 		return 2;	// 2:file format error
 	}
 
@@ -702,10 +675,10 @@ static int grfio_entryread(char *gfname,int gentry)
 
 	if (grf_version==0x01) {	//****** Grf version 01xx ******
 		list_size = grf_size-ftell(fp);
-		grf_filelist = (unsigned char *) aCallocA(list_size, 1);
+		grf_filelist = (unsigned char*)aMalloc(list_size * sizeof(unsigned char));
 		if(grf_filelist==NULL){
 			fclose(fp);
-			printf("out of memory : grf_filelist\n");
+			ShowMessage("out of memory : grf_filelist\n");
 			return 3;	// 3:memory alloc error
 		}
 		fread(grf_filelist,1,list_size,fp);
@@ -723,15 +696,15 @@ static int grfio_entryread(char *gfname,int gentry)
 			type = grf_filelist[ofs2+12];
 			if( type!=0 ){	// Directory Index ... skip
 				fname = decode_filename(grf_filelist+ofs+6,grf_filelist[ofs]-6);
-				if(strlen(fname)>sizeof(aentry.fn)-1){
-					printf("file name too long : %s\n",fname);
+				if(strlen((char*)fname)>sizeof(aentry.fn)-1){
+					ShowMessage("file name too long : %s\n",fname);
 					aFree(grf_filelist);
 					exit(1);
 				}
 				srclen=0;
 				if((period_ptr=strrchr(fname,'.'))!=NULL){
 					for(lop=0;lop<4;lop++) {
-						if(strcmpi(period_ptr,".gnd\0.gat\0.act\0.str"+lop*5)==0)
+						if(strcasecmp(period_ptr,".gnd\0.gat\0.act\0.str"+lop*5)==0)
 							break;
 					}
 					srclen=getlong(grf_filelist+ofs2)-getlong(grf_filelist+ofs2+8)-715;
@@ -750,7 +723,7 @@ static int grfio_entryread(char *gfname,int gentry)
 				aentry.srcpos         = getlong(grf_filelist+ofs2+13)+0x2e;
 				aentry.cycle          = srccount;
 				aentry.type           = type;
-				strncpy(aentry.fn, fname,sizeof(aentry.fn)-1);
+				strncpy(aentry.fn,(char*)fname,sizeof(aentry.fn)-1);
 #ifdef	GRFIO_LOCAL
 				aentry.gentry         = -(gentry+1);	// As Flag for making it a negative number carrying out the first time LocalFileCheck
 #else
@@ -765,7 +738,7 @@ static int grfio_entryread(char *gfname,int gentry)
 	} else if (grf_version==0x02) {	//****** Grf version 02xx ******
 		unsigned char eheader[8];
 		unsigned char *rBuf;
-		uLongf rSize,eSize;
+		long rSize,eSize;
 
 		fread(eheader,1,8,fp);
 		rSize = getlong(eheader);	// Read Size
@@ -773,26 +746,26 @@ static int grfio_entryread(char *gfname,int gentry)
 
 		if (rSize > grf_size-ftell(fp)) {
 			fclose(fp);
-			printf("Illegal data format : grf compress entry size\n");
+			ShowMessage("Illegal data format : grf compress entry size\n");
 			return 4;
 		}
 
-		rBuf = (unsigned char *)aCallocA( rSize , 1);	// Get a Read Size
+		rBuf = (unsigned char*)aMalloc(rSize * sizeof(unsigned char));	// Get a Read Size
 		if (rBuf==NULL) {
 			fclose(fp);
-			printf("out of memory : grf compress entry table buffer\n");
+			ShowMessage("out of memory : grf compress entry table buffer\n");
 			return 3;
 		}
-		grf_filelist = (unsigned char *)aCallocA( eSize , 1);	// Get a Extend Size
+		grf_filelist = (unsigned char*)aMalloc(eSize * sizeof(unsigned char));	// Get a Extend Size
 		if (grf_filelist==NULL) {
 			aFree(rBuf);
 			fclose(fp);
-			printf("out of memory : grf extract entry table buffer\n");
+			ShowMessage("out of memory : grf extract entry table buffer\n");
 			return 3;
 		}
 		fread(rBuf,1,rSize,fp);
 		fclose(fp);
-		decode_zip(grf_filelist,&eSize,rBuf,rSize);	// Decode function
+		decode_zip(grf_filelist,(uLongf*)&eSize,rBuf,rSize);	// Decode function
 		list_size = eSize;
 		aFree(rBuf);
 
@@ -804,8 +777,8 @@ static int grfio_entryread(char *gfname,int gentry)
 			FILELIST aentry;
 
 			fname = (char*)(grf_filelist+ofs);
-			if (strlen(fname)>sizeof(aentry.fn)-1) {
-				printf("grf : file name too long : %s\n",fname);
+			if (strlen((char*)fname)>sizeof(aentry.fn)-1) {
+				ShowMessage("grf : file name too long : %s\n",fname);
 				aFree(grf_filelist);
 				exit(1);
 			}
@@ -828,7 +801,7 @@ static int grfio_entryread(char *gfname,int gentry)
 				aentry.srcpos         = getlong(grf_filelist+ofs2+13)+0x2e;
 				aentry.cycle          = srccount;
 				aentry.type           = type;
-				strncpy(aentry.fn,fname,sizeof(aentry.fn)-1);
+				strncpy(aentry.fn,(char*)fname,sizeof(aentry.fn)-1);
 #ifdef	GRFIO_LOCAL
 				aentry.gentry         = -(gentry+1);	// As Flag for making it a negative number carrying out the first time LocalFileCheck
 #else
@@ -842,7 +815,7 @@ static int grfio_entryread(char *gfname,int gentry)
 
 	} else {	//****** Grf Other version ******
 		fclose(fp);
-		printf("not support grf versions : %04x\n",getlong(grf_header+0x2a));
+		ShowMessage("not support grf versions : %04x\n",getlong(grf_header+0x2a));
 		return 4;
 	}
 
@@ -862,17 +835,18 @@ static void grfio_resourcecheck()
 	char w1[256],w2[256],src[256],dst[256];
 	FILELIST *entry;
 
-	buf = (char*)grfio_reads("data\\resnametable.txt",&size);
+	sprintf(src,"%sdata\\resnametable.txt",data_dir);
+	buf=(char*)grfio_reads(src,&size);
 	buf[size] = 0;
 
 	for(ptr=buf;ptr-buf<size;) {
-		if(sscanf(ptr,"%[^#]#%[^#]#",w1,w2)==2){
+		if(sscanf((char*)ptr,"%[^#]#%[^#]#",w1,w2)==2){
 			if(strstr(w2,"bmp")){
-				sprintf(src,"data\\texture\\%s",w1);
-				sprintf(dst,"data\\texture\\%s",w2);
+				sprintf(src,"%sdata\\texture\\%s",data_dir,w1);
+				sprintf(dst,"%sdata\\texture\\%s",data_dir,w2);
 			} else {
-				sprintf(src,"data\\%s",w1);
-				sprintf(dst,"data\\%s",w2);
+				sprintf(src,"%sdata\\%s",data_dir,w1);
+				sprintf(dst,"%sdata\\%s",data_dir,w2);
 			}
 			entry = filelist_find(dst);
 			if (entry!=NULL) {
@@ -881,7 +855,7 @@ static void grfio_resourcecheck()
 				strncpy( fentry.fn ,src, sizeof(fentry.fn)-1 );
 				filelist_modify(&fentry);
 			} else {
-				//printf("file not found in data.grf : %s < %s\n",dst,src);
+				//ShowMessage("file not found in data.grf : %s < %s\n",dst,src);
 			}
 		}
 		ptr = strchr(ptr,'\n');	// Next line
@@ -898,40 +872,27 @@ static void grfio_resourcecheck()
  */
 #define	GENTRY_ADDS	16	// The number increment of gentry_table entries
 
-int grfio_add(char *fname)
+int grfio_add(const char *fname)
 {
 	int len,result;
 	char *buf;
 
 	if (gentry_entrys>=GENTRY_LIMIT) {
-		printf("gentrys limit : grfio_add\n");
+		ShowError("gentrys limit : grfio_add\n");
 		exit(1);
 	}
 
-//	sprintf(tmp_output,"Reading GRF File: '%s'.\n",fname);
-//	ShowStatus(tmp_output);
+	ShowStatus("Reading GRF File: '%s'.\n",fname);
+
 
 	if (gentry_entrys>=gentry_maxentry) {
-		char **new_gentry = (char**)aRealloc(
-			(void*)gentry_table,(gentry_maxentry+GENTRY_ADDS)*sizeof(char*) );
-		if (new_gentry!=NULL) {
-			int lop;
-			gentry_table = new_gentry;
+		gentry_table = (char**)aRealloc(gentry_table,(gentry_maxentry+GENTRY_ADDS)*sizeof(char*) );
+		memset(gentry_table+gentry_maxentry, 0, GENTRY_ADDS*sizeof(char*));
 			gentry_maxentry += GENTRY_ADDS;
-			for(lop=gentry_entrys;lop<gentry_maxentry;lop++)
-				gentry_table[lop] = NULL;
-		} else {
-			printf("out of memory : grfio_add\n");
-			exit(1);
 		}
-	}
 	len = strlen( fname );
-	buf = (char*)aCallocA(len+1, 1);
-	if (buf==NULL) {
-		printf("out of memory : gentry\n");
-		exit(1);
-	}
-	strcpy( buf, fname );
+	buf = (char*)aMalloc((len+1)*sizeof(char));
+	memcpy( buf, fname, len+1);
 	gentry_table[gentry_entrys++] = buf;
 
 	result = grfio_entryread(fname,gentry_entrys-1);
@@ -972,29 +933,13 @@ void grfio_final(void)
  * Grfio : Initialize
  *------------------------------------------
  */
-void grfio_init(char *fname)
+void grfio_init(const char *fname)
 {
 	FILE *data_conf;
 	char line[1024], w1[1024], w2[1024];
 	int result = 0, result2 = 0, result3 = 0, result4 = 0;
 
-#ifdef _WIN32
-	if(!zlib_dll) {
-		zlib_dll = LoadLibrary("zlib.dll");
-		(FARPROC)zlib_inflateInit_ = GetProcAddress(zlib_dll,"inflateInit_");
-		(FARPROC)zlib_inflate      = GetProcAddress(zlib_dll,"inflate");
-		(FARPROC)zlib_inflateEnd   = GetProcAddress(zlib_dll,"inflateEnd");
-		(FARPROC)zlib_deflateInit_ = GetProcAddress(zlib_dll,"deflateInit_");
-		(FARPROC)zlib_deflate      = GetProcAddress(zlib_dll,"deflate");
-		(FARPROC)zlib_deflateEnd   = GetProcAddress(zlib_dll,"deflateEnd");
-		if(zlib_dll == NULL) {
-			MessageBox(NULL,"Can't load zlib.dll","grfio.c",MB_OK);
-			exit(1);
-		}
-	}
-#endif
-
-	data_conf = fopen(fname, "r");
+	data_conf = savefopen(fname, "r");
 
 	// It will read, if there is grf-files.txt.
 	if (data_conf) {
@@ -1012,8 +957,8 @@ void grfio_init(char *fname)
 		}
 
 		fclose(data_conf);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n",fname);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n",fname);
+
 	} // end of reading grf-files.txt
 
 	hashinit();	// hash table initialization
@@ -1035,9 +980,9 @@ void grfio_init(char *fname)
 
 	if (strcmp(data_dir, "") == 0)		    // Id data_dir doesn't exist
 		result4 = 1;	                    // Data directory
-/*
+
 	if (result != 0 && result2 != 0 && result3 != 0 && result4 != 0) {
-		printf("not grf file readed exit!!\n");
+		ShowMessage("not grf file readed exit!!\n");
 		exit(1);	// It ends, if a resource cannot read one.
-	}*/
+	}
 }

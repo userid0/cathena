@@ -18,8 +18,8 @@ int npc_click(struct map_session_data *,int);
 int npc_scriptcont(struct map_session_data *,int);
 int npc_checknear(struct map_session_data *,int);
 int npc_buysellsel(struct map_session_data *,int,int);
-int npc_buylist(struct map_session_data *,int,unsigned short *);
-int npc_selllist(struct map_session_data *,int,unsigned short *);
+int npc_buylist(struct map_session_data *,int,unsigned char *);
+int npc_selllist(struct map_session_data *,int,unsigned char *);
 int npc_parse_mob(char *w1,char *w2,char *w3,char *w4);
 int npc_parse_warp(char *w1,char *w2,char *w3,char *w4);
 
@@ -34,6 +34,8 @@ int npc_get_new_npc_id(void);
 
 void npc_addsrcfile(char *);
 void npc_delsrcfile(char *);
+void npc_printsrcfile();
+	
 int do_final_npc(void);
 int do_init_npc(void);
 int npc_event_do_oninit(void);
@@ -48,7 +50,16 @@ int npc_gettimerevent_tick(struct npc_data *nd);
 int npc_settimerevent_tick(struct npc_data *nd,int newtimer);
 int npc_delete(struct npc_data *nd);
 
-char current_file[1024];
+// ============================================
+// ADDITION Qamera death/disconnect/connect event mod
+int npc_event_doall_attached_sub(void *key,void *data,va_list ap);
+int npc_event_doall_attached(const char *name, struct map_session_data *sd);
+struct npc_att_data {
+	struct map_session_data * sd;
+	char buf[64];
+} ;
+// END ADDITION
+// ============================================ 
 
 #endif
 

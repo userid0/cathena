@@ -11,6 +11,8 @@
 #include "pc.h"
 #include "chat.h"
 #include "npc.h"
+#include "showmsg.h"
+#include "utils.h"
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -29,13 +31,13 @@ int chat_createchat(struct map_session_data *sd,int limit,int pub,char* pass,cha
 
 	nullpo_retr(0, sd);
 
-	cd = (struct chat_data *) aCalloc(1,sizeof(struct chat_data));
+	cd = (struct chat_data*)aCalloc(1,sizeof(struct chat_data));
 
 	cd->limit = limit;
 	cd->pub = pub;
 	cd->users = 1;
 	memcpy(cd->pass,pass,8);
-	if(titlelen>=sizeof(cd->title)-1) titlelen=sizeof(cd->title)-1;
+	if((size_t)titlelen+1>=sizeof(cd->title)) titlelen=sizeof(cd->title)-1;
 	memcpy(cd->title,title,titlelen);
 	cd->title[titlelen]=0;
 
@@ -78,11 +80,11 @@ int chat_joinchat(struct map_session_data *sd,int chatid,char* pass)
 		clif_joinchatfail(sd,0);
 		return 0;
 	}
-	if(cd->pub==0 && strncmp(pass,(char *) cd->pass,8)){
+	if(cd->pub==0 && strncmp(pass,(char*)(cd->pass),8)){
 		clif_joinchatfail(sd,1);
 		return 0;
 	}
-	if(chatid == (int)sd->chatID) //Double Chat fix by Alex14, thx CHaNGeTe 
+	if((unsigned int )chatid == sd->chatID) //Double Chat fix by Alex14, thx CHaNGeTe 
 	{
 		clif_joinchatfail(sd,1);
 		return 0;
@@ -219,7 +221,7 @@ int chat_changechatstatus(struct map_session_data *sd,int limit,int pub,char* pa
 	cd->limit = limit;
 	cd->pub = pub;
 	memcpy(cd->pass,pass,8);
-	if(titlelen>=sizeof(cd->title)-1) titlelen=sizeof(cd->title)-1;
+	if((size_t)titlelen+1>=sizeof(cd->title)) titlelen=sizeof(cd->title)-1;
 	memcpy(cd->title,title,titlelen);
 	cd->title[titlelen]=0;
 
@@ -268,7 +270,7 @@ int chat_createnpcchat(struct npc_data *nd,int limit,int pub,int trigger,char* t
 
 	nullpo_retr(1, nd);
 
-	cd = (struct chat_data *) aCalloc(1,sizeof(struct chat_data));
+	cd = (struct chat_data *)aCalloc(1,sizeof(struct chat_data));
 
 	cd->limit = cd->trigger = limit;
 	if(trigger>0)
@@ -276,7 +278,7 @@ int chat_createnpcchat(struct npc_data *nd,int limit,int pub,int trigger,char* t
 	cd->pub = pub;
 	cd->users = 0;
 	memcpy(cd->pass,"",1);
-	if(titlelen>=sizeof(cd->title)-1) titlelen=sizeof(cd->title)-1;
+	if((size_t)titlelen+1>=sizeof(cd->title)) titlelen=sizeof(cd->title)-1;
 	memcpy(cd->title,title,titlelen);
 	cd->title[titlelen]=0;
 

@@ -44,13 +44,17 @@ enum { WARP, SHOP, SCRIPT, MONS };
 struct block_list {
 	struct block_list *next,*prev;
 	int id;
-	short m,x,y;
+	short m;
+	short x;
+	short y;
 	unsigned char type;
 	unsigned char subtype;
 };
 
 struct walkpath_data {
-	unsigned char path_len,path_pos,path_half;
+	unsigned char path_len;
+	unsigned char path_pos;
+	unsigned char path_half;
 	unsigned char path[MAX_WALKPATH];
 };
 struct script_reg {
@@ -63,7 +67,10 @@ struct script_regstr {
 };
 struct status_change {
 	int timer;
-	int val1,val2,val3,val4;
+	int val1;
+	int val2;
+	int val3;
+	int val4;
 };
 struct vending {
 	short index;
@@ -78,8 +85,10 @@ struct skill_unit {
 	struct skill_unit_group *group;
 
 	int limit;
-	int val1,val2;
-	short alive,range;
+	int val1;
+	int val2;
+	short alive;
+	short range;
 };
 struct skill_unit_group {
 	int src_id;
@@ -88,10 +97,13 @@ struct skill_unit_group {
 	int map,range;
 	int target_flag;
 	unsigned int tick;
-	int limit,interval;
+	int limit;
+	int interval;
 
-	int skill_id,skill_lv;
-	int val1,val2;
+	int skill_id;
+	int skill_lv;
+	int val1;
+	int val2;
 	char *valstr;
 	int unit_id;
 	int group_id;
@@ -107,8 +119,10 @@ struct skill_timerskill {
 	int src_id;
 	int target_id;
 	int map;
-	short x,y;
-	short skill_id,skill_lv;
+	short x;
+	short y;
+	short skill_id;
+	short skill_lv;
 	int type;
 	int flag;
 };
@@ -163,30 +177,48 @@ struct map_session_data {
 		unsigned unbreakable_armor : 1;
 		unsigned infinite_autospell : 1;
 	} special_state;
-	int char_id, login_id1, login_id2, sex;
+	int char_id;
+	int login_id1;
+	int login_id2;
+	int sex;
 	int packet_ver;  // 5: old, 6: 7july04, 7: 13july04, 8: 26july04, 9: 9aug04/16aug04/17aug04, 10: 6sept04, 11: 21sept04, 12: 18oct04, 13: 25oct04 (by [Yor])
 	struct mmo_charstatus status;
 	struct item_data *inventory_data[MAX_INVENTORY];
 	short equip_index[11];
 	unsigned short unbreakable_equip;
-	int weight,max_weight;
-	int cart_weight,cart_max_weight,cart_num,cart_max_num;
+	int weight;
+	int max_weight;
+	int cart_weight;
+	int cart_max_weight;
+	int cart_num;
+	int cart_max_num;
 	char mapname[24];
-	int fd,new_fd;
-	short to_x,to_y;
-	short speed,prev_speed;
-	short opt1,opt2,opt3;
-	char dir,head_dir;
-	unsigned int client_tick,server_tick;
+	int fd;
+	int new_fd;
+	short to_x;
+	short to_y;
+	short speed;
+	short prev_speed;
+	short opt1;
+	short opt2;
+	short opt3;
+	char dir;
+	char head_dir;
+	unsigned int client_tick;
+	unsigned int server_tick;
 	struct walkpath_data walkpath;
 	int walktimer;
 	int next_walktime;
-	int npc_id,areanpc_id,npc_shopid;
+	int npc_id;
+	int areanpc_id;
+	int npc_shopid;
 	int npc_pos;
 	int npc_menu;
 	int npc_amount;
-	int npc_stack,npc_stackmax;
-	char *npc_script,*npc_scriptroot;
+	int npc_stack;
+	int npc_stackmax;
+	char *npc_script;
+	char *npc_scriptroot;
 	char *npc_stackbuf;
 	char npc_str[256];
 	unsigned int chatID;
@@ -205,28 +237,42 @@ struct map_session_data {
         int followtimer; // [MouseJstr]
         int followtarget;
 
-	short attackrange,attackrange_;
+	short attackrange;
+	short attackrange_;
 	int skilltimer;
 	int skilltarget;
-	short skillx,skilly;
-	short skillid,skilllv;
-	short skillitem,skillitemlv;
-	short skillid_old,skilllv_old;
-	short skillid_dance,skilllv_dance;
+	short skillx;
+	short skilly;
+	short skillid;
+	short skilllv;
+	short skillitem;
+	short skillitemlv;
+	short skillid_old;
+	short skilllv_old;
+	short skillid_dance;
+	short skilllv_dance;
 	struct skill_unit_group skillunit[MAX_SKILLUNITGROUP];
 	struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
 	struct skill_timerskill skilltimerskill[MAX_SKILLTIMERSKILL];
 	unsigned short timerskill_count; // [celest]
 	int cloneskill_id;
-	int potion_hp,potion_sp,potion_per_hp,potion_per_sp;
+	int cloneskill_lv;
+	int potion_hp;
+	int potion_sp;
+	int potion_per_hp;
+	int potion_per_sp;
 
 	int invincible_timer;
 	unsigned int canact_tick;
 	unsigned int canmove_tick;
 	unsigned int canlog_tick;
 	unsigned int canregen_tick;
-	int hp_sub,sp_sub;
-	int inchealhptick,inchealsptick,inchealspirithptick,inchealspiritsptick;
+	int hp_sub;
+	int sp_sub;
+	int inchealhptick;
+	int inchealsptick;
+	int inchealspirithptick;
+	int inchealspiritsptick;
 // -- moonsoul (new tick for berserk self-damage)
 //	int berserkdamagetick;
 	int fame;
@@ -265,22 +311,44 @@ struct map_session_data {
 	int add_def_classrate[10],add_mdef_classrate[10];
 	short monster_drop_item_count;
 	short monster_drop_itemid[10];
-	int monster_drop_race[10],monster_drop_itemrate[10];
-	int double_add_rate,speed_add_rate,aspd_add_rate,perfect_hit_add, get_zeny_add_num;
-	short splash_range,splash_add_range;
-	short autospell_id,autospell_lv,autospell_rate;
-	short hp_drain_rate,hp_drain_per,sp_drain_rate,sp_drain_per;
-	short hp_drain_rate_,hp_drain_per_,sp_drain_rate_,sp_drain_per_;
-	short hp_drain_value,sp_drain_value,hp_drain_value_,sp_drain_value_;
-	int short_weapon_damage_return,long_weapon_damage_return;
-	int weapon_coma_ele[10],weapon_coma_race[12];
-	short break_weapon_rate,break_armor_rate;
+	int monster_drop_race[10];
+	int monster_drop_itemrate[10];
+	int double_add_rate;
+	int speed_add_rate;
+	int aspd_add_rate;
+	int perfect_hit_add;
+	int get_zeny_add_num;
+	short splash_range;
+	short splash_add_range;
+	short autospell_id;
+	short autospell_lv;
+	short autospell_rate;
+	short hp_drain_rate;
+	short hp_drain_per;
+	short sp_drain_rate;
+	short sp_drain_per;
+	short hp_drain_rate_;
+	short hp_drain_per_;
+	short sp_drain_rate_;
+	short sp_drain_per_;
+	short hp_drain_value;
+	short sp_drain_value;
+	short hp_drain_value_;
+	short sp_drain_value_;
+	int short_weapon_damage_return;
+	int long_weapon_damage_return;
+	int weapon_coma_ele[10];
+	int weapon_coma_race[12];
+	short break_weapon_rate;
+	short break_armor_rate;
 	short add_steal_rate;
 
-	short spiritball, spiritball_old;
+	short spiritball;
+	short spiritball_old;
 	int spirit_timer[MAX_SKILL_LEVEL];
 	int magic_damage_return; // AppleGirl Was Here
-	int random_attack_increase_add,random_attack_increase_per; // [Valaris]
+	int random_attack_increase_add;
+	int random_attack_increase_per; // [Valaris]
 	int perfect_hiding; // [Valaris]
 	int unbreakable;
 	int classchange; // [Valaris]
@@ -303,11 +371,19 @@ struct map_session_data {
 	int deal_zeny;
 	short deal_locked;
 
-	int party_sended,party_invite,party_invite_account;
-	int party_hp,party_x,party_y;
+	int party_sended;
+	int party_invite;
+	int party_invite_account;
+	int party_hp;
+	int party_x;
+	int party_y;
 
-	int guild_sended,guild_invite,guild_invite_account;
-	int guild_emblem_id,guild_alliance,guild_alliance_account;
+	int guild_sended;
+	int guild_invite;
+	int guild_invite_account;
+	int guild_emblem_id;
+	int guild_alliance;
+	int guild_alliance_account;
 	int guildspy; // [Syrus22]
 	int partyspy; // [Syrus22]
 
@@ -322,16 +398,28 @@ struct map_session_data {
 	struct pet_data *pd;
 	int pet_hungry_timer;
 
-	int pvp_point,pvp_rank,pvp_timer,pvp_lastusers;
+	int pvp_point;
+	int pvp_rank;
+	int pvp_timer;
+	int pvp_lastusers;
 
 	char eventqueue[MAX_EVENTQUEUE][50];
 	int eventtimer[MAX_EVENTTIMER];
 	unsigned short eventcount; // [celest]
 
-	int last_skillid,last_skilllv;		// Added by RoVeRT
+//	int last_skillid;
+//	int last_skilllv;		// Added by RoVeRT
+	
+	unsigned short change_level;	// [celest]
 
-	unsigned char change_level; // [celest]
-	int autoloot; //by Upa-Kun
+	// ============================================
+	// ADDITION Qamera death/disconnect/connect event mod
+	unsigned event_death : 1;
+	unsigned event_disconnect : 1;
+	unsigned event_onconnect : 1;
+	// END ADDITION
+	// ============================================ 
+	int autoloot : 1; //by Upa-Kun
 
 #ifndef TXT_ONLY
 	int mail_counter;	// mail counter for mail system [Valaris]
@@ -340,27 +428,40 @@ struct map_session_data {
 };
 
 struct npc_timerevent_list {
-	int timer,pos;
+	int timer;
+	int pos;
 };
 struct npc_label_list {
 	char name[24];
 	int pos;
 };
 struct npc_item_list {
-	int nameid,value;
+	int nameid;
+	int value;
+};
+struct npc_reference{
+	char *script;
+	struct npc_label_list *label_list;
+	int label_list_num;	
+	size_t refcnt;			//reference counter
 };
 struct npc_data {
 	struct block_list bl;
 	short n;
-	short class_,dir;
+	short class_;
+	short dir;
 	short speed;
 	char name[24];
 	char exname[24];
 	int chat_id;
-	short opt1,opt2,opt3,option;
+	short opt1;
+	short opt2;
+	short opt3;
+	short option;
 	short flag;
 	int walktimer; // [Valaris]
-	short to_x,to_y; // [Valaris]
+	short to_x;
+	short to_y; // [Valaris]
 	struct walkpath_data walkpath;
 	unsigned int next_walktime;
 	unsigned int canmove_tick;
@@ -373,20 +474,20 @@ struct npc_data {
 
 	union {
 		struct {
-			char *script;
-			short xs,ys;
+			struct npc_reference *ref; // char pointer with reference counter
+			short xs;
+			short ys;
 			int guild_id;
 			int timer,timerid,timeramount,nexttimer,rid;
 			unsigned int timertick;
 			struct npc_timerevent_list *timer_event;
-			int label_list_num;
-			struct npc_label_list *label_list;
-			int src_id;
 		} scr;
 		struct npc_item_list shop_item[1];
 		struct {
-			short xs,ys;
-			short x,y;
+			short xs;
+			short ys;
+			short x;
+			short y;
 			char name[16];
 		} warp;
 	} u;
@@ -399,10 +500,19 @@ struct npc_data {
 struct mob_data {
 	struct block_list bl;
 	short n;
-	short base_class,class_,dir,mode,level;
-	short m,x0,y0,xs,ys;
+	short base_class;
+	short class_;
+	short dir;
+	short mode;
+	short level;
+	short m;
+	short x0;
+	short y0;
+	short xs;
+	short ys;
 	char name[24];
-	int spawndelay1,spawndelay2;
+	int spawndelay1;
+	int spawndelay2;
 	struct {
 		unsigned state : 8;
 		unsigned skillstate : 8;
@@ -418,16 +528,20 @@ struct mob_data {
 		int provoke_flag; // Celest
 	} state;
 	int timer;
-	short to_x,to_y;
+	short to_x;
+	short to_y;
 	short target_dir;
 	short speed;
 	int hp;
-	int target_id,attacked_id;
+	int target_id;
+	int attacked_id;
 	short target_lv;
 	struct walkpath_data walkpath;
 	unsigned int next_walktime;
 	unsigned int attackabletime;
-	unsigned int last_deadtime,last_spawntime,last_thinktime;
+	unsigned int last_deadtime;
+	unsigned int last_spawntime;
+	unsigned int last_thinktime;
 	unsigned int canmove_tick;
 	short move_fail_count;
 	struct {
@@ -439,19 +553,28 @@ struct mob_data {
 
 	struct status_change sc_data[MAX_STATUSCHANGE];
 	short sc_count;
-	short opt1,opt2,opt3,option;
+	short opt1;
+	short opt2;
+	short opt3;
+	short option;
 	short min_chase;
 	int guild_id;
 	int deletetimer;
 
 	int skilltimer;
 	int skilltarget;
-	short skillx,skilly;
-	short skillid,skilllv,skillidx;
+	short skillx;
+	short skilly;
+	short skillid;
+	short skilllv;
+	short skillidx;
 	unsigned int skilldelay[MAX_MOBSKILL];
 	int def_ele;
-	int master_id,master_dist;
-	int exclusion_src,exclusion_party,exclusion_guild;
+	int master_id;
+	int master_dist;
+	int exclusion_src;
+	int exclusion_party;
+	int exclusion_guild;
 	struct skill_timerskill skilltimerskill[MAX_MOBSKILLTIMERSKILL];
 	struct skill_unit_group skillunit[MAX_MOBSKILLUNITGROUP];
 	struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
@@ -459,10 +582,12 @@ struct mob_data {
 	unsigned char size;
 	int owner;
 };
+
 struct pet_data {
 	struct block_list bl;
 	short n;
-	short class_,dir;
+	short class_;
+	short dir;
 	short speed;
 	char name[24];
 	struct {
@@ -471,15 +596,24 @@ struct pet_data {
 		unsigned change_walk_target : 1 ;
 	} state;
 	int timer;
-	short to_x,to_y;
+	short to_x;
+	short to_y;
 	short equip;
 	struct walkpath_data walkpath;
 	int target_id;
 	short target_lv;
 	int move_fail_count;
-	unsigned int attackabletime,next_walktime,last_thinktime;
-	int skilltype,skillval,skilltimer,skillduration; // [Valaris]
-	int skillbonustype,skillbonusval,skillbonustimer,skillbonusduration; // [Valaris]
+	unsigned int attackabletime;
+	unsigned int next_walktime;
+	unsigned int last_thinktime;
+	int skilltype;
+	int skillval;
+	int skilltimer;
+	int skillduration; // [Valaris]
+	int skillbonustype;
+	int skillbonusval;
+	int skillbonustimer;
+	int skillbonusduration; // [Valaris]
 	struct item *lootitem;
 	short loot; // [Valaris]
 	short lootmax; // [Valaris]
@@ -512,10 +646,13 @@ struct map_data {
 	char *alias; // [MouseJstr]
 	struct block_list **block;
 	struct block_list **block_mob;
-	int *block_count,*block_mob_count;
+	int *block_count;
+	int *block_mob_count;
 	int m;
-	short xs,ys;
-	short bxs,bys;
+	short xs;
+	short ys;
+	short bxs;
+	short bys;
 	int npc_num;
 	int users;
 	struct {
@@ -561,15 +698,20 @@ struct map_data_other_server {
 	char name[24];
 	unsigned char *gat;	// NULLŒÅ’è‚É‚µ‚Ä”»’f
 	unsigned long ip;
-	unsigned int port;
+	unsigned short port;
 };
 
 struct flooritem_data {
 	struct block_list bl;
-	short subx,suby;
+	short subx;
+	short suby;
 	int cleartimer;
-	int first_get_id,second_get_id,third_get_id;
-	unsigned int first_get_tick,second_get_tick,third_get_tick;
+	int first_get_id;
+	int second_get_id;
+	int third_get_id;
+	unsigned int first_get_tick;
+	unsigned int second_get_tick;
+	unsigned int third_get_tick;
 	struct item item_data;
 };
 
@@ -623,7 +765,7 @@ enum {
 
 /*
  * map_getcell()ªÇÞÅéÄªµªìªë«Õ«é«°
- */
+*/
 typedef enum { 
 	CELL_CHKWALL=1,		// Ûú(«»«ë«¿«¤«×1)
 	CELL_CHKWATER=3,	// â©íÞ(«»«ë«¿«¤«×3)
@@ -661,8 +803,10 @@ extern int night_flag; // 0=day, 1=night [Yor]
 int map_getcell(int,int,int,cell_t);
 int map_getcellp(struct map_data*,int,int,cell_t);
 void map_setcell(int,int,int,int);
+void map_resetcell(int,int,int,int);
+
 extern int map_read_flag; // 0: grf«Õ«¡«¤«ë 1: «­«ã«Ã«·«å 2: «­«ã«Ã«·«å(?õê)
-enum {
+enum { 
 	READ_FROM_GAT, READ_FROM_AFM,
 	READ_FROM_BITMAP, CREATE_BITMAP,
 	READ_FROM_BITMAP_COMPRESSED, CREATE_BITMAP_COMPRESSED
@@ -719,9 +863,9 @@ char * map_charid2nick(int);
 struct map_session_data * map_id2sd(int);
 struct block_list * map_id2bl(int);
 int map_mapname2mapid(char*);
-int map_mapname2ipport(char*,int*,int*);
-int map_setipport(char *name,unsigned long ip,int port);
-int map_eraseipport(char *name,unsigned long ip,int port);
+int map_mapname2ipport(char *name, unsigned long *ip,unsigned short *port);
+int map_setipport(char *name, unsigned long ip, unsigned short port);
+int map_eraseipport(char *name, unsigned long ip,unsigned short port);
 void map_addiddb(struct block_list *);
 void map_deliddb(struct block_list *bl);
 int map_foreachiddb(int (*)(void*,void*,va_list),...);

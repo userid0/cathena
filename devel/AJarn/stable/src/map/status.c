@@ -22,6 +22,7 @@
 #include "nullpo.h"
 #include "script.h"
 #include "showmsg.h"
+#include "utils.h"
 
 static int max_weight_base[MAX_PC_CLASS];
 static int hp_coefficient[MAX_PC_CLASS];
@@ -436,7 +437,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		sd->base_atk += 4;
 	}
 	if((skill=pc_checkskill(sd,SA_DRAGONOLOGY))>0 ){ // Dragonology increases +1 int every 2 levels
-		sd->paramb[3] += (skill+1)*0.5;
+		sd->paramb[3] += (skill+1)/2;
 	}
 
 	// New guild skills - Celest
@@ -656,11 +657,11 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	if( (skill=pc_checkskill(sd,BS_WEAPONRESEARCH))>0)	// 武器?究の命中率?加
 		sd->hit += skill*2;
 	if(sd->status.option&2 && (skill = pc_checkskill(sd,RG_TUNNELDRIVE))>0 )	// トンネルドライブ	// トンネルドライブ
-		sd->speed += (1.2*DEFAULT_WALK_SPEED - skill*9);
+		sd->speed += (short)(1.2*DEFAULT_WALK_SPEED - skill*9);
 	if (pc_iscarton(sd) && (skill=pc_checkskill(sd,MC_PUSHCART))>0)	// カ?トによる速度低下
-		sd->speed += (10-skill) * (DEFAULT_WALK_SPEED * 0.1);
+		sd->speed += (short)((10-skill) * (DEFAULT_WALK_SPEED * 0.1));
 	else if (pc_isriding(sd)) {	// ペコペコ?りによる速度?加
-		sd->speed -= (0.25 * DEFAULT_WALK_SPEED);
+		sd->speed -= (short)(0.25 * DEFAULT_WALK_SPEED);
 		sd->max_weight += 10000;
 	}
 	if((skill=pc_checkskill(sd,CR_TRUST))>0) { // フェイス
@@ -672,7 +673,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		sd->subele[3] += skill*5;
 	}
 	if((skill=pc_checkskill(sd,SA_ADVANCEDBOOK))>0 )
-		aspd_rate -= skill*0.5;
+		aspd_rate -= skill/2;
 
 	bl=sd->status.base_level;
 
@@ -770,7 +771,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		if(sd->status.class_==12||sd->status.class_==17||sd->status.class_==4013||sd->status.class_==4018)
 			sd->flee += skill*4;
 		if(sd->status.class_==12||sd->status.class_==4013)
-			sd->speed -= sd->speed *(skill*1.5)/100;
+			sd->speed -= sd->speed *(skill*3/2)/100;
 	}
 	if( (skill=pc_checkskill(sd,MO_DODGE))>0 )	// 見切り
 		sd->flee += (skill*3)>>1;
@@ -985,7 +986,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 			sd->addeff[4] += sd->sc_data[SC_ENCPOISON].val2;
 
 		if( sd->sc_data[SC_DANCING].timer!=-1 ){		// 演奏/ダンス使用中
-			sd->speed = (double)sd->speed * (6.- 0.4 * pc_checkskill(sd, ((s_class.job == 19) ? BA_MUSICALLESSON : DC_DANCINGLESSON)));
+			sd->speed = (short)((double)sd->speed * (6.- 0.4 * pc_checkskill(sd, ((s_class.job == 19) ? BA_MUSICALLESSON : DC_DANCINGLESSON))));
 			//sd->speed*=4;
 			sd->nhealsp = 0;
 			sd->nshealsp = 0;
@@ -1255,7 +1256,7 @@ int status_calc_speed (struct map_session_data *sd)
 			//sd->speed = (sd->speed * (155 - sd->sc_data[SC_DEFENDER].val1*5)) / 100;
 		}
 		if( sd->sc_data[SC_DANCING].timer!=-1 ){
-			sd->speed = (double)sd->speed * (6.- 0.4 * pc_checkskill(sd, ((s_class.job == 19) ? BA_MUSICALLESSON : DC_DANCINGLESSON)));
+			sd->speed = (short)((double)sd->speed * (6.- 0.4 * pc_checkskill(sd, ((s_class.job == 19) ? BA_MUSICALLESSON : DC_DANCINGLESSON))));
 		}
 		if(sd->sc_data[SC_CURSE].timer!=-1)
 			sd->speed += 450;
@@ -1266,15 +1267,15 @@ int status_calc_speed (struct map_session_data *sd)
 	}
 
 	if(sd->status.option&2 && (skill = pc_checkskill(sd,RG_TUNNELDRIVE))>0 )
-		sd->speed += (1.2*DEFAULT_WALK_SPEED - skill*9);
+		sd->speed += (short)(1.2*DEFAULT_WALK_SPEED - skill*9);
 	if (pc_iscarton(sd) && (skill=pc_checkskill(sd,MC_PUSHCART))>0)
-		sd->speed += (10-skill) * (DEFAULT_WALK_SPEED * 0.1);
+		sd->speed += (short)((10-skill) * (DEFAULT_WALK_SPEED * 0.1));
 	else if (pc_isriding(sd)) {
-		sd->speed -= (0.25 * DEFAULT_WALK_SPEED);
+		sd->speed -= (short)(0.25 * DEFAULT_WALK_SPEED);
 	}
 	if((skill=pc_checkskill(sd,TF_MISS))>0)
 		if(s_class.job==12)
-			sd->speed -= sd->speed *(skill*1.5)/100;
+			sd->speed -= sd->speed *(skill*3/2)/100;
 
 	if(sd->speed_rate != 100)
 		sd->speed = sd->speed*sd->speed_rate/100;
@@ -2742,7 +2743,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		if(SC_STONE<=type && type<=SC_BLIND){	/* カ?ドによる耐性 */
 			if( sd && sd->reseff[type-SC_STONE] > 0 && rand()%10000<sd->reseff[type-SC_STONE]){
 				if(battle_config.battle_log)
-					printf("PC %d skill_sc_start: cardによる異常耐性?動\n",sd->bl.id);
+					ShowMessage("PC %d skill_sc_start: cardによる異常耐性?動\n",sd->bl.id);
 				return 0;
 			}
 		}
@@ -2751,7 +2752,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 	}
 	else {
 		if(battle_config.error_log)
-			printf("status_change_start: neither MOB nor PC !\n");
+			ShowMessage("status_change_start: neither MOB nor PC !\n");
 		return 0;
 	}
 
@@ -3508,7 +3509,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 
 		default:
 			if(battle_config.error_log)
-				printf("UnknownStatusChange [%d]\n", type);
+				ShowMessage("UnknownStatusChange [%d]\n", type);
 			return 0;
 	}
 
@@ -3657,7 +3658,7 @@ int status_change_end( struct block_list* bl , int type,int tid )
 	nullpo_retr(0, bl);
 	if(bl->type!=BL_PC && bl->type!=BL_MOB) {
 		if(battle_config.error_log)
-			printf("status_change_end: neither MOB nor PC !\n");
+			ShowMessage("status_change_end: neither MOB nor PC !\n");
 		return 0;
 	}
 	nullpo_retr(0, sc_data = status_get_sc_data(bl));
@@ -3991,7 +3992,7 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 
 	if(sc_data[type].timer != tid) {
 		if(battle_config.error_log)
-			printf("status_change_timer %d != %d\n",tid,sc_data[type].timer);
+			ShowMessage("status_change_timer %d != %d\n",tid,sc_data[type].timer);
 		return 0;
 	}
 
@@ -4651,9 +4652,9 @@ int status_readdb(void) {
 	char line[1024],*p;
 
 	// JOB補正?値１
-	fp=fopen("db/job_db1.txt","r");
+	fp=savefopen("db/job_db1.txt","r");
 	if(fp==NULL){
-		printf("can't read db/job_db1.txt\n");
+		ShowWarning("can't read db/job_db1.txt\n");
 		return 1;
 	}
 	i=0;
@@ -4682,14 +4683,13 @@ int status_readdb(void) {
 			break;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/job_db1.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/job_db1.txt");
 
 	// JOBボ?ナス
 	memset(job_bonus,0,sizeof(job_bonus));
-	fp=fopen("db/job_db2.txt","r");
+	fp=savefopen("db/job_db2.txt","r");
 	if(fp==NULL){
-		printf("can't read db/job_db2.txt\n");
+		ShowWarning("can't read db/job_db2.txt\n");
 		return 1;
 	}
 	i=0;
@@ -4712,13 +4712,12 @@ int status_readdb(void) {
 			break;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/job_db2.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/job_db2.txt");
 
 	// JOBボ?ナス2 ?生職用
-	fp=fopen("db/job_db2-2.txt","r");
+	fp=savefopen("db/job_db2-2.txt","r");
 	if(fp==NULL){
-		printf("can't read db/job_db2-2.txt\n");
+		ShowWarning("can't read db/job_db2-2.txt\n");
 		return 1;
 	}
 	i=0;
@@ -4737,16 +4736,15 @@ int status_readdb(void) {
 			break;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/job_db2-2.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/job_db2-2.txt");
 
 	// サイズ補正テ?ブル
 	for(i=0;i<3;i++)
 		for(j=0;j<20;j++)
 			atkmods[i][j]=100;
-	fp=fopen("db/size_fix.txt","r");
+	fp=savefopen("db/size_fix.txt","r");
 	if(fp==NULL){
-		printf("can't read db/size_fix.txt\n");
+		ShowWarning("can't read db/size_fix.txt\n");
 		return 1;
 	}
 	i=0;
@@ -4767,8 +4765,7 @@ int status_readdb(void) {
 		i++;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/size_fix.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/size_fix.txt");
 
 	// 精?デ?タテ?ブル
 	for(i=0;i<5;i++){
@@ -4778,9 +4775,9 @@ int status_readdb(void) {
 		refinebonus[i][1]=0;
 		refinebonus[i][2]=10;
 	}
-	fp=fopen("db/refine_db.txt","r");
+	fp=savefopen("db/refine_db.txt","r");
 	if(fp==NULL){
-		printf("can't read db/refine_db.txt\n");
+		ShowWarning("can't read db/refine_db.txt\n");
 		return 1;
 	}
 	i=0;
@@ -4804,8 +4801,7 @@ int status_readdb(void) {
 		i++;
 	}
 	fclose(fp); //Lupus. close this file!!!
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/refine_db.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/refine_db.txt");
 
 	return 0;
 }

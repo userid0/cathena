@@ -1,8 +1,7 @@
 
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
+
 #include "lock.h"
+#include "utils.h"
 #include "showmsg.h"
 
 // 書き込みファイルの保護処理
@@ -17,9 +16,9 @@ FILE* lock_fopen(const char* filename,int *info) {
 	// 安全なファイル名を得る（手抜き）
 	do {
 		sprintf(newfile,"%s_%04d.tmp",filename,++no);
-	} while((fp = fopen(newfile,"r")) && (fclose(fp), no<9999) );
+	} while((fp = savefopen(newfile,"r")) && (fclose(fp), no<9999) );
 	*info = no;
-	return fopen(newfile,"w");
+	return savefopen(newfile,"w");
 }
 
 // 旧ファイルを削除＆新ファイルをリネーム
@@ -32,8 +31,7 @@ int lock_fclose(FILE *fp,const char* filename,int *info) {
 		remove(filename);
 		// このタイミングで落ちると最悪。
 		if (rename(newfile,filename) != 0) {
-			sprintf(tmp_output,"%s - '"CL_WHITE"%s"CL_RESET"'\n", strerror(errno), newfile);
-			ShowError(tmp_output);
+			ShowError("%s - '"CL_WHITE"%s"CL_RESET"'\n", strerror(errno), newfile);
 		}
 		return ret;
 	} else {

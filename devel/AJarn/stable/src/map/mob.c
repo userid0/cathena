@@ -23,6 +23,7 @@
 #include "npc.h"
 #include "log.h"
 #include "showmsg.h"
+#include "utils.h"
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -59,10 +60,10 @@ static int mob_unlocktarget(struct mob_data *md,int tick);
  */
 int mobdb_searchname(const char *str)
 {
-	int i;
+	size_t i;
 
 	for(i=0;i<sizeof(mob_db)/sizeof(mob_db[0]);i++){
-		if( strcmpi(mob_db[i].name,str)==0 || strcmp(mob_db[i].jname,str)==0 ||
+		if( strcasecmp(mob_db[i].name,str)==0 || strcmp(mob_db[i].jname,str)==0 ||
 			memcmp(mob_db[i].name,str,24)==0 || memcmp(mob_db[i].jname,str,24)==0)
 			return i;
 	}
@@ -76,7 +77,7 @@ int mobdb_searchname(const char *str)
  */
 int mobdb_checkid(const int id)
 {
-	if (id <= 0 || id >= (sizeof(mob_db) / sizeof(mob_db[0])) || mob_db[id].name[0] == '\0')
+	if (id <= 0 || (size_t)id >= (sizeof(mob_db) / sizeof(mob_db[0])) || mob_db[id].name[0] == '\0')
 		return 0;
 
 	return id;
@@ -151,18 +152,17 @@ int mob_once_spawn(struct map_session_data *sd,char *mapname,
 			return 0;
 		}
 //		if(battle_config.etc_log)
-//			printf("mobclass=%d try=%d\n",class_,i);
+//			ShowMessage("mobclass=%d try=%d\n",class_,i);
 	}
 	if(sd){
 		if(x<=0) x=sd->bl.x;
 		if(y<=0) y=sd->bl.y;
 	}else if(x<=0 || y<=0){
-		printf("mob_once_spawn: ??\n");
+		ShowMessage("mob_once_spawn: ?? %i %i %p\n", x,y,sd);
 	}
 
 	for(count=0;count<amount;count++){
 		md=(struct mob_data *)aCalloc(1,sizeof(struct mob_data));
-		memset(md, '\0', sizeof *md);
 
 		if(class_>4000) { // large/tiny mobs [Valaris]
 			md->size=2;
@@ -245,7 +245,8 @@ int mob_once_spawn_area(struct map_session_data *sd,char *mapname,
 			}else
 				return 0;	// Since reference of the place which boils first went wrong, it stops.
 		}
-		if(x==0||y==0) printf("xory=0, x=%d,y=%d,x0=%d,y0=%d\n",x,y,x0,y0);
+		if(x==0||y==0) 
+			ShowMessage("xory=0, x=%d,y=%d,x0=%d,y0=%d\n",x,y,x0,y0);
 		id=mob_once_spawn(sd,mapname,x,y,mobname,class_,1,event);
 		lx=x;
 		ly=y;
@@ -283,19 +284,12 @@ int mob_spawn_guardian(struct map_session_data *sd,char *mapname,
 	}
 
 	else if(x<=0 || y<=0)
-		printf("mob_spawn_guardian: ??\n");
+		ShowMessage("mob_spawn_guardian: ??\n");
 
 
 	for(count=0;count<amount;count++){
 		struct guild_castle *gc;
-		md=(struct mob_data *) aCalloc(sizeof(struct mob_data), 1);
-		if(md==NULL){
-			printf("mob_spawn_guardian: out of memory !\n");
-			exit(1);
-		}
-		memset(md, '\0', sizeof *md);
-
-
+		md = (struct mob_data*)aCalloc(1,sizeof(struct mob_data));
 
 		mob_spawn_dataset(md,mobname,class_);
 		md->bl.m=m;
@@ -572,7 +566,8 @@ static int mob_attack(struct mob_data *md,unsigned int tick,int data)
 	if(md->sc_data[SC_BLADESTOP].timer != -1)
 		return 0;
 
-	if((tbl=map_id2bl(md->target_id))==NULL){
+	tbl = map_id2bl(md->target_id);
+	if(tbl == NULL){
 		md->target_id=0;
 		md->state.targettype = NONE_ATTACKABLE;
 		return 0;
@@ -627,7 +622,7 @@ static int mob_attack(struct mob_data *md,unsigned int tick,int data)
 	if(battle_config.monster_attack_direction_change)
 		md->dir=map_calc_dir(&md->bl, tbl->x,tbl->y );	// 向き設定
 
-	//clif_fixmobpos(md);
+	clif_fixmobpos(md);
 
 	md->state.skillstate=MSS_ATTACK;
 	if( mobskill_use(md,tick,-2) )	// スキル使用
@@ -752,7 +747,7 @@ static int mob_timer(int tid,unsigned int tick,int id,int data)
 
 	if(md->timer != tid){
 		if(battle_config.error_log)
-			printf("mob_timer %d != %d\n",md->timer,tid);
+			ShowMessage("mob_timer %d != %d\n",md->timer,tid);
 		return 0;
 	}
 	md->timer=-1;
@@ -772,7 +767,7 @@ static int mob_timer(int tid,unsigned int tick,int id,int data)
 		break;
 	default:
 		if(battle_config.error_log)
-			printf("mob_timer : %d ?\n",md->state.state);
+			ShowMessage("mob_timer : %d ?\n",md->state.state);
 		break;
 	}
 
@@ -930,7 +925,7 @@ int mob_spawn(int id)
 
 	if(i>=50){
 //		if(battle_config.error_log==1)
-//			printf("MOB spawn error %d @ %s\n",id,map[md->bl.m].name);
+//			ShowMessage("MOB spawn error %d @ %s\n",id,map[md->bl.m].name);
 		add_timer(tick+5000,mob_delayspawn,id,0);
 		return 1;
 	}
@@ -1531,7 +1526,7 @@ static int mob_randomwalk(struct mob_data *md,int tick)
 				md->target_dir = 0;
 				if(md->move_fail_count>1000){
 					if(battle_config.error_log)
-						printf("MOB cant move. random spawn %d, class = %d\n",md->bl.id,md->class_);
+						ShowMessage("MOB cant move. random spawn %d, class_ = %d\n",md->bl.id,md->class_);
 					md->move_fail_count=0;
 					mob_spawn(md->bl.id);
 				}
@@ -1790,7 +1785,7 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 				}
 				else {
 					if(md->lootitem[0].card[0] == (short)0xff00)
-						intif_delete_petdata(*((long *)(&md->lootitem[0].card[1])));
+						intif_delete_petdata( MakeDWord(md->lootitem[0].card[1], md->lootitem[0].card[2]) );
 					for(i=0;i<LOOTITEM_SIZE-1;i++)
 						memcpy(&md->lootitem[i],&md->lootitem[i+1],sizeof(md->lootitem[0]));
 					memcpy(&md->lootitem[LOOTITEM_SIZE-1],&fitem->item_data,sizeof(md->lootitem[0]));
@@ -1868,14 +1863,20 @@ static int mob_ai_hard(int tid,unsigned int tick,int id,int data)
  */
 static int mob_ai_sub_lazy(void * key,void * data,va_list app)
 {
-	struct mob_data *md=(struct mob_data *)data;
+	struct mob_data *md = (struct mob_data *)data;
 	unsigned int tick;
 	va_list ap;
+
+	if(NULL==md)
+	{	int a=(int)key;
+		ShowMessage("md NULL pointer, key=%i\n", a);
+	}
 
 	nullpo_retr(0, md);
 	nullpo_retr(0, app);
 
 	ap=va_arg(app,va_list);
+	nullpo_retr(0, ap);
 
 	if(md->bl.type!=BL_MOB)
 		return 0;
@@ -1912,7 +1913,6 @@ static int mob_ai_sub_lazy(void * key,void * data,va_list app)
 
 		}else{
 			// Since PC is not even in the same map, suitable processing is carried out even if it takes.
-
 			// MOB which is not BOSS which is not Summons MOB, either -- a case -- sometimes -- leaping
 			if( rand()%1000<MOB_LAZYWARPPERC && md->x0<=0 && md->master_id!=0 &&
 				mob_db[md->class_].mexp <= 0 && !(mob_db[md->class_].mode & 0x20))
@@ -2002,6 +2002,8 @@ static int mob_delay_item_drop(int tid,unsigned int tick,int id,int data)
 				clif_additem(ditem->first_sd,0,0,flag);
 				drop_flag = 1;
 			}
+		aFree(ditem);
+		return 0;
 		}
 	}
 
@@ -2049,12 +2051,14 @@ static int mob_delay_item_drop2(int tid,unsigned int tick,int id,int data)
 			}
 		} else
 		#endif
-		if(battle_config.item_auto_get){
+		if(battle_config.item_auto_get || ditem->first_sd->autoloot){//Autoloot added by Upa-Kun
 			drop_flag = 0;
 			if((flag = pc_additem(ditem->first_sd,&ditem->item_data,ditem->item_data.amount))){
 				clif_additem(ditem->first_sd,0,0,flag);
 				drop_flag = 1;
 			}
+		aFree(ditem);
+		return 0;
 		}
 	}
 
@@ -2176,10 +2180,10 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 	}
 
 //	if(battle_config.battle_log)
-//		printf("mob_damage %d %d %d\n",md->hp,max_hp,damage);
+//		ShowMessage("mob_damage %d %d %d\n",md->hp,max_hp,damage);
 	if(md->bl.prev==NULL){
 		if(battle_config.error_log==1)
-			printf("mob_damage : BlockError!!\n");
+			ShowMessage("mob_damage : BlockError!!\n");
 		return 0;
 	}
 
@@ -2450,9 +2454,9 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			per=(double)md->dmglog[i].dmg*256*(9+(double)((count > 6)? 6:count))/10/(double)max_hp;
 			if(per>512) per=512;
 			if(per<1) per=1;
-			base_exp=mob_db[md->class_].base_exp*per/256;
+			base_exp = (int)(mob_db[md->class_].base_exp*per/256);
 			if(base_exp < 1) base_exp = 1;
-			job_exp=mob_db[md->class_].job_exp*per/256;
+			job_exp = (int)(mob_db[md->class_].job_exp*per/256);
 			if(job_exp < 1) job_exp = 1;
 		}
 		else {
@@ -2460,17 +2464,17 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			per=(double)md->dmglog[i].dmg*256*(9+(double)((count > 6)? 6:count))/10/tdmg;
 			if(per>512) per=512;
 			if(per<1) per=1;
-			base_exp=mob_db[md->class_].base_exp*per/256;
+			base_exp = (int)(mob_db[md->class_].base_exp*per/256);
 			if(base_exp < 1) base_exp = 1;
-			job_exp=mob_db[md->class_].job_exp*per/256;
+			job_exp = (int)(mob_db[md->class_].job_exp*per/256);
 			if(job_exp < 1) job_exp = 1;
 		}
 
 		if(sd && battle_config.pk_mode && (mob_db[md->class_].lv - sd->status.base_level >= 20)) {
-			base_exp*=1.15; // pk_mode additional exp if monster >20 levels [Valaris]
+			base_exp = (int)(1.15*base_exp); // pk_mode additional exp if monster >20 levels [Valaris]
 		}
 		if(sd && battle_config.pk_mode && (mob_db[md->class_].lv - sd->status.base_level >= 20)) {
-			job_exp*=1.15; // pk_mode additional exp if monster >20 levels [Valaris]
+			job_exp = (int)(1.15*job_exp); // pk_mode additional exp if monster >20 levels [Valaris]
 		}
 		if(md->master_id) {
 			master = map_id2bl(md->master_id);
@@ -2482,13 +2486,13 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 		}
 		else {
 			if(battle_config.zeny_from_mobs) {
-				if(md->level > 0) zeny=(md->level+rand()%md->level)*per/256; // zeny calculation moblv + random moblv [Valaris]
+				if(md->level > 0) zeny = (int)((md->level+rand()%md->level)*per/256); // zeny calculation moblv + random moblv [Valaris]
 				if(mob_db[md->class_].mexp > 0)
 					zeny*=rand()%250;
 			}
 			if(battle_config.mobs_level_up && md->level > mob_db[md->class_].lv) { // [Valaris]
-				job_exp+=((md->level-mob_db[md->class_].lv)*mob_db[md->class_].job_exp*.03)*per/256;
-				base_exp+=((md->level-mob_db[md->class_].lv)*mob_db[md->class_].base_exp*.03)*per/256;
+				job_exp+=(int)(((md->level-mob_db[md->class_].lv)*mob_db[md->class_].job_exp*.03)*per/256);
+				base_exp+=(int)(((md->level-mob_db[md->class_].lv)*mob_db[md->class_].base_exp*.03)*per/256);
 			}
 		}
 
@@ -2532,7 +2536,6 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 	// item drop
 	if(!(type&1)) {
 		int log_item[8] = {0};
-		int drop_ore = -1,drop_items=0; //slot N for DROP LOG, number of dropped items
 		for(i=0;i<8;i++){
 			struct delay_item_drop *ditem;
 			int drop_rate;
@@ -2547,12 +2550,9 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			if(drop_rate <= 0 && battle_config.drop_rate0item)
 				drop_rate = 1;
 			if(battle_config.drops_by_luk>0 && sd && md) drop_rate+=(sd->status.luk*battle_config.drops_by_luk)/100;	// drops affected by luk [Valaris]
-			if(sd && md && battle_config.pk_mode==1 && (mob_db[md->class_].lv - sd->status.base_level >= 20)) drop_rate*=1.25; // pk_mode increase drops if 20 level difference [Valaris]
-			if(drop_rate <= rand()%10000) {
-				drop_ore = i; //we rmember an empty slot to put there ORE DISCOVERY drop later.
+			if(sd && md && battle_config.pk_mode==1 && (mob_db[md->class_].lv - sd->status.base_level >= 20)) drop_rate=(int)(1.25*drop_rate); // pk_mode increase drops if 20 level difference [Valaris]
+			if(drop_rate <= rand()%10000)
 				continue;
-			}
-			drop_items++;
 
 			ditem=(struct delay_item_drop *)aCalloc(1,sizeof(struct delay_item_drop));
 			ditem->nameid = mob_db[md->class_].dropitem[i].nameid;
@@ -2567,14 +2567,18 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			add_timer(tick+500+i,mob_delay_item_drop,(int)ditem,0);
 		}
 
+		#ifndef TXT_ONLY
+		if(log_config.drop > 0)
+			log_drop(mvp_sd, md->class_, log_item);
+		#endif
+
 		// Ore Discovery [Celest]
 		if (pc_checkskill(sd,BS_FINDINGORE)>0 && battle_config.finding_ore_rate/100 >= rand()%1000) {
 			struct delay_item_drop *ditem;
 			int itemid[17] = { 714, 756, 757, 969, 984, 985, 990, 991, 992, 993, 994, 995, 996, 997, 998, 999, 1002 };
 			ditem=(struct delay_item_drop *)aCalloc(1,sizeof(struct delay_item_drop));
-			ditem->nameid = itemid[rand()%17]; //should return from 0 to 16
-			if (drop_ore<0) i=7; //we have only 8 slots in LOG, there's a check to not overflow
-			log_item[i] = ditem->nameid; //it's for logging only
+			ditem->nameid = itemid[rand()%17];
+			// log_item[i] = ditem->nameid;
 			ditem->amount = 1;
 			ditem->m = md->bl.m;
 			ditem->x = md->bl.x;
@@ -2585,9 +2589,10 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			add_timer(tick+500+i,mob_delay_item_drop,(int)ditem,0);
 		}
 
-		//this drop log contains ALL dropped items + ORE (if there was ORE Recovery) [Lupus]
-		if(log_config.drop > 0 && drop_items) //we check were there any drops.. and if not - don't write the log
-			log_drop(sd, md->class_, log_item); //mvp_sd
+		#ifndef TXT_ONLY
+		if(log_config.drop > 0)
+			log_drop(mvp_sd, md->class_, log_item);
+		#endif
 
 		if(sd && sd->state.attack_type == BF_WEAPON) {
 			for(i=0;i<sd->monster_drop_item_count;i++) {
@@ -2621,7 +2626,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 				struct delay_item_drop2 *ditem;
 
 				ditem=(struct delay_item_drop2 *)aCalloc(1,sizeof(struct delay_item_drop2));
-				memcpy(&ditem->item_data,&md->lootitem[i],sizeof(md->lootitem[0]));
+				memcpy(&ditem->item_data,&md->lootitem[i],sizeof(struct item));
 				ditem->m = md->bl.m;
 				ditem->x = md->bl.x;
 				ditem->y = md->bl.y;
@@ -2671,16 +2676,17 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			}
 			break;
 		}
-
-		if(log_config.mvpdrop > 0)
-			log_mvpdrop(mvp_sd, md->class_, log_mvp);
+		#ifndef TXT_ONLY
+			if(log_config.mvpdrop > 0)
+				log_mvpdrop(mvp_sd, md->class_, log_mvp);
+		#endif
 	}
 
         } // [MouseJstr]
 
 	// <Agit> NPC Event [OnAgitBreak]
 	if(md->npc_event[0] && strcmp(((md->npc_event)+strlen(md->npc_event)-13),"::OnAgitBreak") == 0) {
-		printf("MOB.C: Run NPC_Event[OnAgitBreak].\n");
+		ShowMessage("MOB.C: Run NPC_Event[OnAgitBreak].\n");
 		if (agit_flag == 1) //Call to Run NPC_Event[OnAgitBreak]
 			guild_agit_break(md);
 	}
@@ -2688,7 +2694,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 		// SCRIPT実行
 	if(md->npc_event[0]){
 //		if(battle_config.battle_log)
-//			printf("mob_damage : run event : %s\n",md->npc_event);
+//			ShowMessage("mob_damage : run event : %s\n",md->npc_event);
 		if(src && src->type == BL_PET)
 			sd = ((struct pet_data *)src)->msd;
 		if(sd == NULL) {
@@ -2698,7 +2704,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 				struct map_session_data *tmpsd;
 				int i;
 				for(i=0;i<fd_max;i++){
-					if(session[i] && (tmpsd= (struct map_session_data *) session[i]->session_data) && tmpsd->state.auth) {
+					if(session[i] && (tmpsd=(struct map_session_data *)session[i]->session_data) && tmpsd->state.auth) {
 						if(md->bl.m == tmpsd->bl.m) {
 							sd = tmpsd;
 							break;
@@ -2848,7 +2854,7 @@ int mob_warpslave_sub(struct block_list *bl,va_list ap)
  */
 int mob_warpslave(struct mob_data *md,int x, int y)
 {
-//printf("warp slave\n");
+//ShowMessage("warp slave\n");
 	map_foreachinarea(mob_warpslave_sub, md->bl.m,
 		x-AREA_SIZE,y-AREA_SIZE,
 		x+AREA_SIZE,y+AREA_SIZE,BL_MOB,
@@ -2900,7 +2906,7 @@ int mob_warp(struct mob_data *md,int m,int x,int y,int type)
 	}else {
 		m=md->bl.m;
 		if(battle_config.error_log==1)
-			printf("MOB %d warp failed, class = %d\n",md->bl.id,md->class_);
+			ShowMessage("MOB %d warp failed, class_ = %d\n",md->bl.id,md->class_);
 	}
 
 	md->target_id=0;	// タゲを解除する
@@ -2911,7 +2917,7 @@ int mob_warp(struct mob_data *md,int m,int x,int y,int type)
 
 	if(type>0 && i==1000) {
 		if(battle_config.battle_log)
-			printf("MOB %d warp to (%d,%d), class = %d\n",md->bl.id,x,y,md->class_);
+			ShowMessage("MOB %d warp to (%d,%d), class_ = %d\n",md->bl.id,x,y,md->class_);
 	}
 
 	map_addblock(&md->bl);
@@ -3117,7 +3123,7 @@ int mobskill_castend_id( int tid, unsigned int tick, int id,int data )
 	if((mbl = map_id2bl(id)) == NULL ) //詠唱したMobがもういないというのは良くある正常処理
 		return 0;
 	if((md=(struct mob_data *)mbl) == NULL ){
-		printf("mobskill_castend_id nullpo mbl->id:%d\n",mbl->id);
+		ShowMessage("mobskill_castend_id nullpo mbl->id:%d\n",mbl->id);
 		return 0;
 	}
 
@@ -3143,7 +3149,7 @@ int mobskill_castend_id( int tid, unsigned int tick, int id,int data )
 		md->last_thinktime=tick + status_get_adelay(&md->bl);
 
 	if((bl = map_id2bl(md->skilltarget)) == NULL || bl->prev==NULL){ //スキルターゲットが存在しない
-		//printf("mobskill_castend_id nullpo\n");//ターゲットがいないときはnullpoじゃなくて普通に終了
+		//ShowMessage("mobskill_castend_id nullpo\n");//ターゲットがいないときはnullpoじゃなくて普通に終了
 		return 0;
 	}
 	if(md->bl.m != bl->m)
@@ -3172,7 +3178,7 @@ int mobskill_castend_id( int tid, unsigned int tick, int id,int data )
 	md->skilldelay[md->skillidx]=tick;
 
 	if(battle_config.mob_skill_log)
-		printf("MOB skill castend skill=%d, class = %d\n",md->skillid,md->class_);
+		ShowMessage("MOB skill castend skill=%d, class_ = %d\n",md->skillid,md->class_);
 //	mob_stop_walking(md,0);
 
 	switch( skill_get_nk(md->skillid) )
@@ -3303,7 +3309,7 @@ int mobskill_castend_pos( int tid, unsigned int tick, int id,int data )
 	md->skilldelay[md->skillidx]=tick;
 
 	if(battle_config.mob_skill_log)
-		printf("MOB skill castend skill=%d, class = %d\n",md->skillid,md->class_);
+		ShowMessage("MOB skill castend skill=%d, class_ = %d\n",md->skillid,md->class_);
 //	mob_stop_walking(md,0);
 
 	skill_castend_pos2(&md->bl,md->skillx,md->skilly,md->skillid,md->skilllv,tick,0);
@@ -3391,7 +3397,7 @@ int mobskill_use_id(struct mob_data *md,struct block_list *target,int skill_idx)
 	}
 
 	if(battle_config.mob_skill_log)
-		printf("MOB skill use target_id=%d skill=%d lv=%d cast=%d, class = %d\n",target->id,skill_id,skill_lv,casttime,md->class_);
+		ShowMessage("MOB skill use target_id=%d skill=%d lv=%d cast=%d, class_ = %d\n",target->id,skill_id,skill_lv,casttime,md->class_);
 
 	if(casttime>0 || forcecast){ 	// 詠唱が必要
 //		struct mob_data *md2;
@@ -3488,7 +3494,7 @@ int mobskill_use_pos( struct mob_data *md,
 	md->state.skillcastcancel=ms->cancel;
 
 	if(battle_config.mob_skill_log)
-		printf("MOB skill use target_pos=(%d,%d) skill=%d lv=%d cast=%d, class = %d\n",
+		ShowMessage("MOB skill use target_pos=(%d,%d) skill=%d lv=%d cast=%d, class_ = %d\n",
 			skill_x,skill_y,skill_id,skill_lv,casttime,md->class_);
 
 	if( casttime>0 ) {	// A cast time is required.
@@ -3634,7 +3640,7 @@ int mobskill_use(struct mob_data *md,unsigned int tick,int event)
 			continue;
 
 		// 状態判定
-		if( ms[i].state>=0 && ms[i].state!=md->state.skillstate )
+		if( ms[i].state>=0 && ms[i].state!=(short)(md->state.skillstate) )
 			continue;
 
 		// 条件判定
@@ -3869,7 +3875,7 @@ static int mob_readdb(void)
 
 	for(i=0;i<2;i++){
 
-		fp=fopen(filename[i],"r");
+		fp=savefopen(filename[i],"r");
 		if(fp==NULL){
 			if(i>0)
 				continue;
@@ -4036,8 +4042,7 @@ static int mob_readdb(void)
 			mob_db[class_].clothes_color=0; //Add for player monster dye - Valaris
 		}
 		fclose(fp);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n",filename[i]);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n",filename[i]);
 	}
 	return 0;
 }
@@ -4050,12 +4055,12 @@ static int mob_readdb_mobavail(void)
 {
 	FILE *fp;
 	char line[1024];
-	int ln=0;
+	unsigned long ln=0;
 	int class_,j,k;
 	char *str[20],*p,*np;
 
-	if( (fp=fopen("db/mob_avail.txt","r"))==NULL ){
-		printf("can't read db/mob_avail.txt\n");
+	if( (fp=savefopen("db/mob_avail.txt","r"))==NULL ){
+		ShowMessage("can't read %s\n", "db/mob_avail.txt");
 		return -1;
 	}
 
@@ -4102,8 +4107,7 @@ static int mob_readdb_mobavail(void)
 		ln++;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"db/mob_avail.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"db/mob_avail.txt");
 	return 0;
 }
 
@@ -4118,16 +4122,16 @@ static int mob_read_randommonster(void)
 	char *str[10],*p;
 	int i,j;
 
-	const char* mobfile[] = {
+	char* mobfile[] = {
 		"db/mob_branch.txt",
 		"db/mob_poring.txt",
 		"db/mob_boss.txt" };
 
 	for(i=0;i<MAX_RANDOMMONSTER;i++){
 		mob_db[0].summonper[i] = 1002;	// 設定し忘れた場合はポリンが出るようにしておく
-		fp=fopen(mobfile[i],"r");
+		fp=savefopen(mobfile[i],"r");
 		if(fp==NULL){
-			printf("can't read %s\n",mobfile[i]);
+			ShowMessage("can't read %s\n",mobfile[i]);
 			return -1;
 		}
 		while(fgets(line,1020,fp)){
@@ -4150,8 +4154,7 @@ static int mob_read_randommonster(void)
 				mob_db[class_].summonper[i]=per;
 		}
 		fclose(fp);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n",mobfile[i]);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n",mobfile[i]);
 	}
 	return 0;
 }
@@ -4225,17 +4228,17 @@ static int mob_readskilldb(void)
 
 	for(x=0;x<2;x++){
 
-		fp=fopen(filename[x],"r");
+		fp=savefopen(filename[x],"r");
 		if(fp==NULL){
 			if(x==0)
-				printf("can't read %s\n",filename[x]);
+				ShowMessage("can't read %s\n",filename[x]);
 			continue;
 		}
 		while(fgets(line,1020,fp)){
 			char *sp[20],*p;
 			int mob_id;
-			struct mob_skill *ms;
-			int j=0;
+			struct mob_skill *ms=NULL;
+			size_t j=0;
 
 			if(line[0] == '/' && line[1] == '/')
 				continue;
@@ -4246,7 +4249,8 @@ static int mob_readskilldb(void)
 				if((p=strchr(p,','))!=NULL)
 					*p++=0;
 			}
-			if( (mob_id=atoi(sp[0]))<=0 )
+			mob_id=atoi(sp[0]);
+			if( mob_id<=0  || mob_id>=MAX_MOB_DB)
 				continue;
 
 			if( strcmp(sp[1],"clear")==0 ){
@@ -4259,7 +4263,7 @@ static int mob_readskilldb(void)
 				if( (ms=&mob_db[mob_id].skill[i])->skill_id == 0)
 					break;
 			if(i==MAX_MOBSKILL){
-				printf("mob_skill: readdb: too many skill ! [%s] in %d[%s]\n",
+				ShowMessage("mob_skill: readdb: too many skill ! [%s] in %d[%s]\n",
 					sp[1],mob_id,mob_db[mob_id].jname);
 				continue;
 			}
@@ -4306,8 +4310,7 @@ static int mob_readskilldb(void)
 			mob_db[mob_id].maxskill=i+1;
 		}
 		fclose(fp);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n",filename[x]);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n",filename[x]);
 	}
 	return 0;
 }
@@ -4333,14 +4336,14 @@ static int mob_read_sqldb(void)
 {
 	char line[1024];
 	int i,class_;
-	long unsigned int ln=0;
+	unsigned long ln=0;
 	char *str[55],*p,*np;
 
 	memset(mob_db,0,sizeof(mob_db));
 
     sprintf (tmp_sql, "SELECT * FROM `%s`",mob_db_db);
 	if(mysql_query(&mmysql_handle, tmp_sql) ) {
-		printf("DB server Error (select %s to Memory)- %s\n",mob_db_db,mysql_error(&mmysql_handle) );
+		ShowMessage("DB server Error (select %s to Memory)- %s\n",mob_db_db,mysql_error(&mmysql_handle) );
 	}
 	sql_res = mysql_store_result(&mmysql_handle);
 	if (sql_res) {
@@ -4463,8 +4466,7 @@ static int mob_read_sqldb(void)
 			mob_db[class_].head_buttom=0;
 		}
 		mysql_free_result(sql_res);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%lu"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,mob_db_db);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%lu"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,mob_db_db);
 	}
 	return 0;
 }

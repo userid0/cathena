@@ -3,39 +3,41 @@
 #ifndef	_TIMER_H_
 #define	_TIMER_H_
 
+#include "base.h"
+
 #define BASE_TICK 5
 
 #define TIMER_ONCE_AUTODEL 1
 #define TIMER_INTERVAL 2
-#define TIMER_REMOVE_HEAP 16
+//#define TIMER_REMOVE_HEAP 16
 
-#define DIFF_TICK(a,b) ((int)((a)-(b)))
+#define DIFF_TICK(a,b) (((int)(a)-(int)(b)))
 
 // Struct declaration
 
 struct TimerData {
-	unsigned int tick;
+	unsigned long	tick;
 	int (*func)(int,unsigned int,int,int);
-	int id;
-	int data;
-	int type;
-	int interval;
-	int heap_pos;
+	int				id;
+	int				data;
+	int				type;
+	unsigned long	interval;
+//	size_t			heap_pos; // not used and maybe useless, heap positiona are changing
 };
 
 // Function prototype declaration
 
-unsigned int gettick_nocache(void);
-unsigned int gettick(void);
+unsigned long gettick_nocache(void);
+unsigned long gettick(void);
 
-int add_timer(unsigned int,int (*)(int,unsigned int,int,int),int,int);
-int add_timer_interval(unsigned int,int (*)(int,unsigned int,int,int),int,int,int);
-int delete_timer(int,int (*)(int,unsigned int,int,int));
+int add_timer(unsigned long,int (*)(int,unsigned int,int,int),int,int);
+int add_timer_interval(unsigned long,int (*)(int,unsigned int,int,int),int,int,int);
+int delete_timer(size_t,int (*)(int,unsigned int,int,int));
 
-int addtick_timer(int tid,unsigned int tick);
-struct TimerData *get_timer(int tid);
+int addtick_timer(size_t tid,unsigned long tick);
+struct TimerData *get_timer(size_t tid);
 
-int do_timer(unsigned int tick);
+int do_timer(unsigned long tick);
 
 int add_timer_func_list(int (*)(int,unsigned int,int,int),char*);
 void do_final_timer(void);

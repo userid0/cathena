@@ -11,8 +11,9 @@
 #include "storage.h"
 #include "guild.h"
 #include "nullpo.h"
+#include "showmsg.h"
+#include "utils.h"
 #include "malloc.h"
-
 #ifdef MEMWATCH
 #include "memwatch.h"
 #endif
@@ -40,7 +41,7 @@ struct item *i2=(struct item *)_i2;
 }
 
  
-void sortage_sortitem(struct storage* stor){
+void sortage_sortitem(struct pc_storage* stor){
 	nullpo_retv(stor);
 
 	qsort(stor->storage, MAX_STORAGE, sizeof(struct item), storage_comp_item);
@@ -64,14 +65,14 @@ int do_init_storage(void) // map.c::do_init()から呼ばれる
 }
 static int guild_storage_db_final(void *key,void *data,va_list ap)
 {
-	struct guild_storage *gstor=data;
-	aFree(gstor);
+	struct guild_storage *gstor = (struct guild_storage *)data;
+	if(gstor) aFree(gstor);
 	return 0;
 }
 static int storage_db_final(void *key,void *data,va_list ap)
 {
-	struct storage *stor=data;
-	aFree(stor);
+	struct storage *stor = (struct storage *)data;
+	if(stor) aFree(stor);
 	return 0;
 }
 void do_final_storage(void) // by [MC Cameri]
@@ -82,17 +83,12 @@ void do_final_storage(void) // by [MC Cameri]
 		numdb_final(guild_storage_db,guild_storage_db_final);
 }
 
-struct storage *account2storage(int account_id)
+struct pc_storage *account2storage(int account_id)
 {
-	struct storage *stor;
-	stor=numdb_search(storage_db,account_id);
+	struct pc_storage *stor;
+	stor = (struct pc_storage *)numdb_search(storage_db,account_id);
 	if(stor == NULL) {
-		stor = aCallocA(sizeof(struct storage), 1);
-		if(stor == NULL){
-			printf("storage: out of memory!\n");
-			exit(0);
-		}
-		memset(stor,0,sizeof(struct storage));
+		stor = (struct pc_storage *)aCalloc(sizeof(struct pc_storage), 1);
 		stor->account_id=account_id;
 		numdb_insert(storage_db,stor->account_id,stor);
 	}
@@ -100,13 +96,13 @@ struct storage *account2storage(int account_id)
 }
 
 // Just to ask storage, without creation
-struct storage *account2storage2(int account_id) {
-	return numdb_search(storage_db, account_id);
+struct pc_storage *account2storage2(int account_id) {
+	return (struct pc_storage *)numdb_search(storage_db, account_id);
 }
 
 int storage_delete(int account_id)
 {
-	struct storage *stor = numdb_search(storage_db,account_id);
+	struct pc_storage *stor = (struct pc_storage *)numdb_search(storage_db,account_id);
 	if(stor) {
 		numdb_erase(storage_db,account_id);
 		aFree(stor);
@@ -120,11 +116,10 @@ int storage_delete(int account_id)
  */
 int storage_storageopen(struct map_session_data *sd)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 
 	nullpo_retr(0, sd);
-
-	if((stor = numdb_search(storage_db,sd->status.account_id)) != NULL) {
+	if((stor = (struct pc_storage *)numdb_search(storage_db,sd->status.account_id)) != NULL) {
 		if (stor->storage_status == 0) {
 			stor->storage_status = 1;
 			sd->state.storage_flag = 0;
@@ -133,17 +128,37 @@ int storage_storageopen(struct map_session_data *sd)
 			clif_updatestorageamount(sd,stor);
 			return 0;
 		}	
-	} else
+	} else {
 		intif_request_storage(sd->status.account_id);
+	}
 
 	return 1;
+}
+
+int storage_storageopen2(struct map_session_data *sd, struct map_session_data *pl_sd)
+{
+	struct pc_storage *stor;
+	if(sd == NULL || pl_sd == NULL)
+	{
+		ShowMessage("storage_storageopen nullpo\n");
+		return 0;
+	}
+
+	if((stor = (struct pc_storage *)numdb_search(storage_db,pl_sd->status.account_id)) != NULL)
+	{
+		clif_storageitemlist(sd,stor);
+		clif_storageequiplist(sd,stor);
+		clif_updatestorageamount(sd,stor);
+		return 1;
+	}
+	return 0;
 }
 
 /*==========================================
  * カプラ倉庫へアイテム追加
  *------------------------------------------
  */
-int storage_additem(struct map_session_data *sd,struct storage *stor,struct item *item_data,int amount)
+int storage_additem(struct map_session_data *sd,struct pc_storage *stor,struct item *item_data,int amount)
 {
 	struct item_data *data;
 	int i;
@@ -193,7 +208,7 @@ int storage_additem(struct map_session_data *sd,struct storage *stor,struct item
  * カプラ倉庫アイテムを減らす
  *------------------------------------------
  */
-int storage_delitem(struct map_session_data *sd,struct storage *stor,int n,int amount)
+int storage_delitem(struct map_session_data *sd,struct pc_storage *stor,int n,int amount)
 {
 	nullpo_retr(1, sd);
 	nullpo_retr(1, stor);
@@ -219,7 +234,7 @@ int storage_delitem(struct map_session_data *sd,struct storage *stor,int n,int a
  */
 int storage_storageadd(struct map_session_data *sd,int index,int amount)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 
 	nullpo_retr(0, sd);
 	nullpo_retr(0, stor=account2storage2(sd->status.account_id));
@@ -243,7 +258,7 @@ int storage_storageadd(struct map_session_data *sd,int index,int amount)
  */
 int storage_storageget(struct map_session_data *sd,int index,int amount)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 	int flag;
 
 	nullpo_retr(0, sd);
@@ -268,7 +283,7 @@ int storage_storageget(struct map_session_data *sd,int index,int amount)
  */
 int storage_storageaddfromcart(struct map_session_data *sd,int index,int amount)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 
 	nullpo_retr(0, sd);
 	nullpo_retr(0, stor=account2storage2(sd->status.account_id));
@@ -291,7 +306,7 @@ int storage_storageaddfromcart(struct map_session_data *sd,int index,int amount)
  */
 int storage_storagegettocart(struct map_session_data *sd,int index,int amount)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 
 	nullpo_retr(0, sd);
 	nullpo_retr(0, stor=account2storage2(sd->status.account_id));
@@ -316,7 +331,7 @@ int storage_storagegettocart(struct map_session_data *sd,int index,int amount)
  */
 int storage_storageclose(struct map_session_data *sd)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 
 	nullpo_retr(0, sd);
 	nullpo_retr(0, stor=account2storage2(sd->status.account_id));
@@ -337,11 +352,11 @@ int storage_storageclose(struct map_session_data *sd)
  */
 int storage_storage_quit(struct map_session_data *sd)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 
 	nullpo_retr(0, sd);
 
-	stor = numdb_search(storage_db,sd->status.account_id);
+	stor = (struct pc_storage *)numdb_search(storage_db,sd->status.account_id);
 	if(stor)  {
 		stor->storage_status = 0;
 		storage_storage_save(sd);
@@ -352,9 +367,9 @@ int storage_storage_quit(struct map_session_data *sd)
 
 void storage_storage_dirty(struct map_session_data *sd)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 
-	stor=numdb_search(storage_db,sd->status.account_id);
+	stor = (struct pc_storage *)numdb_search(storage_db,sd->status.account_id);
 
 	if(stor)
 		stor->dirty = 1;
@@ -362,11 +377,11 @@ void storage_storage_dirty(struct map_session_data *sd)
 
 int storage_storage_save(struct map_session_data *sd)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 
 	nullpo_retr(0, sd);
 
-	stor=numdb_search(storage_db,sd->status.account_id);
+	stor = (struct pc_storage *)numdb_search(storage_db,sd->status.account_id);
 	if(stor && stor->dirty)  {
 		intif_send_storage(stor);
 		stor->dirty = 0;
@@ -379,13 +394,9 @@ struct guild_storage *guild2storage(int guild_id)
 {
 	struct guild_storage *gs = NULL;
 	if(guild_search(guild_id) != NULL) {
-		gs=numdb_search(guild_storage_db,guild_id);
+		gs = (struct guild_storage *)numdb_search(guild_storage_db,guild_id);
 		if(gs == NULL) {
-			gs = aCallocA(sizeof(struct guild_storage), 1);
-			if(gs==NULL){
-				printf("storage: out of memory!\n");
-				exit(0);
-			}
+			gs = (struct guild_storage *)aCalloc(sizeof(struct guild_storage), 1);
 			gs->guild_id=guild_id;
 			numdb_insert(guild_storage_db,gs->guild_id,gs);
 		}
@@ -395,7 +406,7 @@ struct guild_storage *guild2storage(int guild_id)
 
 int guild_storage_delete(int guild_id)
 {
-	struct guild_storage *gstor = numdb_search(guild_storage_db,guild_id);
+	struct guild_storage *gstor = (struct guild_storage *)numdb_search(guild_storage_db,guild_id);
 	if(gstor) {
 		numdb_erase(guild_storage_db,guild_id);
 		aFree(gstor);
@@ -411,7 +422,7 @@ int storage_guild_storageopen(struct map_session_data *sd)
 
 	if(sd->status.guild_id <= 0)
 		return 2;
-	if((gstor = numdb_search(guild_storage_db,sd->status.guild_id)) != NULL) {
+	if((gstor = (struct guild_storage *)numdb_search(guild_storage_db,sd->status.guild_id)) != NULL) {
 		if(gstor->storage_status)
 			return 1;
 		gstor->storage_status = 1;
@@ -601,7 +612,7 @@ int storage_guild_storage_quit(struct map_session_data *sd,int flag)
 
 	nullpo_retr(0, sd);
 
-	stor = numdb_search(guild_storage_db,sd->status.guild_id);
+	stor = (struct guild_storage *)numdb_search(guild_storage_db,sd->status.guild_id);
 	if(stor) {
 		if(!flag)
 			intif_send_guild_storage(sd->status.account_id,stor);

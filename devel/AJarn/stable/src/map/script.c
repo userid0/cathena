@@ -8,11 +8,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#ifndef _WIN32
-#include <sys/time.h>
-#endif
-
-#include <time.h>
 
 #include "socket.h"
 #include "timer.h"
@@ -39,7 +34,11 @@
 #include "guild.h"
 #include "lock.h"
 #include "atcommand.h"
+#include "socket.h"
+#include "showmsg.h"
+#include "utils.h"
 #include "log.h"
+
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -47,17 +46,19 @@
 
 #define SCRIPT_BLOCK_SIZE 256
 enum { LABEL_NEXTLINE=1,LABEL_START };
-static unsigned char * script_buf;
+static char * script_buf;
 static int script_pos,script_size;
 
 char *str_buf;
-int str_pos,str_size;
-static struct str_data_struct {
+size_t str_pos;
+size_t str_size;
+
+static struct s_str_data {
 	int type;
 	int str;
 	int backpatch;
 	int label;
-	int (*func)();
+	int (*func)(struct script_state *);
 	int val;
 	int next;
 } *str_data;
@@ -88,7 +89,7 @@ static int parse_cmd;
  * ÉçÅ[ÉJÉãÉvÉçÉgÉ^ÉCÉvêÈåæ (ïKóvÇ»ï®ÇÃÇ›)
  *------------------------------------------
  */
-unsigned char* parse_subexpr(unsigned char *,int);
+char* parse_subexpr(char *,int);
 int buildin_mes(struct script_state *st);
 int buildin_goto(struct script_state *st);
 int buildin_callsub(struct script_state *st);
@@ -301,6 +302,12 @@ int buildin_summon(struct script_state *st); // [celest]
 int buildin_isnight(struct script_state *st); // [celest]
 int buildin_isday(struct script_state *st); // [celest]
 
+// ADDITION Qamera death/disconnect/connect event mod
+int buildin_pcstrcharinfo(struct script_state *st);
+int buildin_pcgetcharid(struct script_state *st);
+int buildin_disconnectevent(struct script_state *st);
+int buildin_deathevent(struct script_state *st);
+// END ADDITION 
 void push_val(struct script_stack *stack,int type,int val);
 int run_func(struct script_state *st);
 
@@ -543,8 +550,9 @@ enum {
  * ï∂éöóÒÇÃÉnÉbÉVÉÖÇåvéZ
  *------------------------------------------
  */
-static int calc_hash(const unsigned char *p)
-{
+static int calc_hash(const char *str)
+{	// we need it unsigned here
+	const unsigned char *p = (const unsigned char *)str;
 	int h=0;
 	while(*p){
 		h=(h<<1)+(h>>3)+(h>>5)+(h>>8);
@@ -558,12 +566,12 @@ static int calc_hash(const unsigned char *p)
  *------------------------------------------
  */
 // ä˘ë∂ÇÃÇ≈Ç†ÇÍÇŒî‘çÜÅAñ≥ÇØÇÍÇŒ-1
-static int search_str(const unsigned char *p)
+static int search_str(const char *p)
 {
 	int i;
 	i=str_hash[calc_hash(p)];
 	while(i){
-		if(strcmp(str_buf+str_data[i].str,(char *) p)==0){
+		if(strcmp(str_buf+str_data[i].str,p)==0){
 			return i;
 		}
 		i=str_data[i].next;
@@ -576,19 +584,31 @@ static int search_str(const unsigned char *p)
  *------------------------------------------
  */
 // ä˘ë∂ÇÃÇ≈Ç†ÇÍÇŒî‘çÜÅAñ≥ÇØÇÍÇŒìoò^ÇµÇƒêVãKî‘çÜ
-static int add_str(const unsigned char *p)
+static int add_str(const char *p)
 {
 	int i;
+
+//	char *lowcase = aStrdup((char*)p);
+//	for(i=0;lowcase[i];i++)
+//		lowcase[i]=tolower(lowcase[i]);
+//	if((i=search_str((unsigned char*)lowcase))>=0){
+//		aFree(lowcase);
+//		return i;
+//	}
+//	aFree(lowcase);
+
+	// maybe a fixed size buffer would be sufficient
 	char *lowcase;
 
-	lowcase=aStrdup((char *) p);
-	for(i=0;lowcase[i];i++)
-		lowcase[i]=tolower(lowcase[i]);
-	if((i=search_str((unsigned char *) lowcase))>=0){
+	if(NULL==p) return -1; // should not happen
+
+	lowcase=(char *)aMalloc((strlen(p)+1)*sizeof(char));
+	for(i=0; p[i]; i++)
+		lowcase[i]=tolower(p[i]);
+	lowcase[i] = 0;//EOS
+	i=search_str(lowcase);
 		aFree(lowcase);
-		return i;
-	}
-	aFree(lowcase);
+	if(i >= 0) return i;
 
 	i=calc_hash(p);
 	if(str_hash[i]==0){
@@ -596,7 +616,7 @@ static int add_str(const unsigned char *p)
 	} else {
 		i=str_hash[i];
 		for(;;){
-			if(strcmp(str_buf+str_data[i].str,(char *) p)==0){
+			if(strcmp(str_buf+str_data[i].str,p)==0){
 				return i;
 			}
 			if(str_data[i].next==0)
@@ -607,15 +627,16 @@ static int add_str(const unsigned char *p)
 	}
 	if(str_num>=str_data_size){
 		str_data_size+=128;
-		str_data=(struct str_data_struct *) aRealloc(str_data,sizeof(str_data[0])*str_data_size);
-		memset(str_data + (str_data_size - 128), '\0', 128);
+		str_data=(struct s_str_data*)aRealloc(str_data,str_data_size*sizeof(struct s_str_data));
+		memset(str_data + (str_data_size - 128), 0, 128*sizeof(struct s_str_data));
 	}
-	while(str_pos+(int)strlen((char *) p)+1>=str_size){
+	while(str_pos+(int)strlen(p)+1>=str_size){
 		str_size+=256;
-		str_buf=(char *)aRealloc(str_buf,str_size);
-		memset(str_buf + (str_size - 256), '\0', 256);
+		str_buf=(char *)aRealloc(str_buf,str_size*sizeof(char));
+		memset(str_buf + (str_size - 256), 0, 256*sizeof(char));
 	}
-	strcpy(str_buf+str_pos, (char *) p);
+
+	memcpy(str_buf+str_pos,(char*)p,strlen((char*)p)+1);
 	str_data[str_num].type=C_NOP;
 	str_data[str_num].str=str_pos;
 	str_data[str_num].next=0;
@@ -635,9 +656,8 @@ static void check_script_buf(int size)
 {
 	if(script_pos+size>=script_size){
 		script_size+=SCRIPT_BLOCK_SIZE;
-		script_buf=(unsigned char *)aRealloc(script_buf,script_size);
-		memset(script_buf + script_size - SCRIPT_BLOCK_SIZE, '\0',
-			SCRIPT_BLOCK_SIZE);
+		script_buf=(char *)aRealloc(script_buf,script_size*sizeof(char));
+		memset(script_buf + (script_size - SCRIPT_BLOCK_SIZE), 0, SCRIPT_BLOCK_SIZE*sizeof(char));
 	}
 }
 
@@ -725,7 +745,9 @@ void set_label(int l,int pos)
 	str_data[l].type=C_POS;
 	str_data[l].label=pos;
 	for(i=str_data[l].backpatch;i>=0 && i!=0x00ffffff;){
-		next=(*(int*)(script_buf+i)) & 0x00ffffff;
+		next = (0xFF&script_buf[i])
+			 | (0xFF&script_buf[i+1])<<8
+			 | (0xFF&script_buf[i+2])<<16;
 		script_buf[i-1]=C_POS;
 		script_buf[i]=pos;
 		script_buf[i+1]=pos>>8;
@@ -738,7 +760,7 @@ void set_label(int l,int pos)
  * ÉXÉyÅ[ÉX/ÉRÉÅÉìÉgì«Ç›îÚÇŒÇµ
  *------------------------------------------
  */
-static unsigned char *skip_space(unsigned char *p)
+static char *skip_space(char *p)
 {
 	while(1){
 		while(isspace(*p))
@@ -761,8 +783,9 @@ static unsigned char *skip_space(unsigned char *p)
  * ÇPíPåÍÉXÉLÉbÉv
  *------------------------------------------
  */
-static unsigned char *skip_word(unsigned char *p)
+static char *skip_word(char *str)
 {
+	unsigned char*p =(unsigned char*)str;
 	// prefix
 	if(*p=='$') p++;	// MAPéIì‡ã§óLïœêîóp
 	if(*p=='@') p++;	// àÍéûìIïœêîóp(like weiss)
@@ -770,6 +793,8 @@ static unsigned char *skip_word(unsigned char *p)
 	if(*p=='#') p++;	// ÉèÅ[ÉãÉhaccountïœêîóp
 	if(*p=='l') p++;	// àÍéûìIïœêîóp(like weiss)
 
+	// this is for skipping multibyte characters
+	// I do not modify here but just set the string pointer back to unsigned
 	while(isalnum(*p)||*p=='_'|| *p>=0x81)
 		if(*p>=0x81 && p[1]){
 			p+=2;
@@ -779,37 +804,37 @@ static unsigned char *skip_word(unsigned char *p)
 	// postfix
 	if(*p=='$') p++;	// ï∂éöóÒïœêî
 
-	return p;
+	return (char*)p;
 }
 
-static unsigned char *startptr;
+static char *startptr;
 static int startline;
 
 /*==========================================
  * ÉGÉâÅ[ÉÅÉbÉZÅ[ÉWèoóÕ
  *------------------------------------------
  */
-static void disp_error_message(const char *mes,const unsigned char *pos)
+static void disp_error_message(const char *mes,const char *pos)
 {
 	int line,c=0,i;
-	unsigned char *p,*linestart,*lineend;
+	char *p,*linestart,*lineend;
 
 	for(line=startline,p=startptr;p && *p;line++){
 		linestart=p;
-		lineend=(unsigned char *) strchr((char *) p,'\n');
+		lineend=strchr(p,'\n');
 		if(lineend){
 			c=*lineend;
 			*lineend=0;
 		}
 		if(lineend==NULL || pos<lineend){
-			printf("%s line %d : ",mes,line);
+			ShowMessage("%s line %d : ",mes,line);
 			for(i=0;(linestart[i]!='\r') && (linestart[i]!='\n') && linestart[i];i++){
 				if(linestart+i!=pos)
-					printf("%c",linestart[i]);
+					ShowMessage("%c",linestart[i]);
 				else
-					printf("\'%c\'",linestart[i]);
+					ShowMessage("\'%c\'",linestart[i]);
 			}
-			printf("\a\n");
+			ShowMessage("\a\n");
 			if(lineend)
 				*lineend=c;
 			return;
@@ -823,14 +848,13 @@ static void disp_error_message(const char *mes,const unsigned char *pos)
  * çÄÇÃâêÕ
  *------------------------------------------
  */
-unsigned char* parse_simpleexpr(unsigned char *p)
+char* parse_simpleexpr(char *p)
 {
-	int i;
 	p=skip_space(p);
 
 #ifdef DEBUG_FUNCIN
 	if(battle_config.etc_log)
-		printf("parse_simpleexpr %s\n",p);
+		ShowMessage("parse_simpleexpr %s\n",p);
 #endif
 	if(*p==';' || *p==','){
 		disp_error_message("unexpected expr end",p);
@@ -846,9 +870,9 @@ unsigned char* parse_simpleexpr(unsigned char *p)
 		}
 	} else if(isdigit(*p) || ((*p=='-' || *p=='+') && isdigit(p[1]))){
 		char *np;
-		i=strtoul((char *) p,&np,0);
+		int i=strtoul(p,&np,0);
 		add_scripti(i);
-		p=(unsigned char *) np;
+		p= np;
 	} else if(*p=='"'){
 		add_scriptc(C_STR);
 		p++;
@@ -875,12 +899,12 @@ unsigned char* parse_simpleexpr(unsigned char *p)
 			disp_error_message("unexpected character",p);
 			exit(1);
 		}
-		p2=(char *) skip_word(p);
+		p2 = skip_word(p);
 		c=*p2;	*p2=0;	// ñºëOÇadd_strÇ∑ÇÈ
 		l=add_str(p);
 
 		parse_cmd=l;	// warn_*_mismatch_paramnumÇÃÇΩÇﬂÇ…ïKóv
-		if(l== search_str((unsigned char *) "if"))	// warn_cmd_no_commaÇÃÇΩÇﬂÇ…ïKóv
+		if(l==search_str("if"))	// warn_cmd_no_commaÇÃÇΩÇﬂÇ…ïKóv
 			parse_cmd_if++;
 /*
 		// îpé~ó\íËÇÃl14/l15,Ç®ÇÊÇ—ÉvÉåÉtÉBÉbÉNÉXÇåÇÃåxçê
@@ -892,11 +916,11 @@ unsigned char* parse_simpleexpr(unsigned char *p)
 		}
 */
 		*p2=c;	
-                p=(unsigned char *) p2;
+		p=p2;
 
 		if(str_data[l].type!=C_FUNC && c=='['){
 			// array(name[i] => getelementofarray(name,i) )
-			add_scriptl(search_str((unsigned char *) "getelementofarray"));
+			add_scriptl(search_str("getelementofarray"));
 			add_scriptc(C_ARG);
 			add_scriptl(l);
 			p=parse_subexpr(p+1,-1);
@@ -913,7 +937,7 @@ unsigned char* parse_simpleexpr(unsigned char *p)
 
 #ifdef DEBUG_FUNCIN
 	if(battle_config.etc_log)
-		printf("parse_simpleexpr end %s\n",p);
+		ShowMessage("parse_simpleexpr end %s\n",p);
 #endif
 	return p;
 }
@@ -922,26 +946,26 @@ unsigned char* parse_simpleexpr(unsigned char *p)
  * éÆÇÃâêÕ
  *------------------------------------------
  */
-unsigned char* parse_subexpr(unsigned char *p,int limit)
+char* parse_subexpr(char *p,int limit)
 {
 	int op,opl,len;
 	char *tmpp;
 
 #ifdef DEBUG_FUNCIN
 	if(battle_config.etc_log)
-		printf("parse_subexpr %s\n",p);
+		ShowMessage("parse_subexpr %s\n",p);
 #endif
 	p=skip_space(p);
 
 	if(*p=='-'){
-		tmpp=(char *) skip_space((unsigned char *) (p+1));
+		tmpp = skip_space(p+1);
 		if(*tmpp==';' || *tmpp==','){
 			add_scriptl(LABEL_NEXTLINE);
 			p++;
 			return p;
 		}
 	}
-	tmpp=(char *) p;
+	tmpp = p;
 	if((op=C_NEG,*p=='-') || (op=C_LNOT,*p=='!') || (op=C_NOT,*p=='~')){
 		p=parse_subexpr(p+1,100);
 		add_scriptc(op);
@@ -973,13 +997,13 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
 			const char *plist[128];
 
 			if( str_data[func].type!=C_FUNC ){
-				disp_error_message("expect function",(unsigned char *) tmpp);
+				disp_error_message("expect function",tmpp);
 				exit(0);
 			}
 
 			add_scriptc(C_ARG);
 			do {
-				plist[i]=(char *) p;
+				plist[i]=p;
 				p=parse_subexpr(p,-1);
 				p=skip_space(p);
 				if(*p==',') p++;
@@ -989,7 +1013,7 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
 				p=skip_space(p);
 				i++;
 			} while(*p && *p!=')' && i<128);
-			plist[i]=(char *) p;
+			plist[i]=p;
 			if(*(p++)!=')'){
 				disp_error_message("func request '(' ')'",p);
 				exit(1);
@@ -1000,7 +1024,7 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
 				int j=0;
 				for(j=0;arg[j];j++) if(arg[j]=='*')break;
 				if( (arg[j]==0 && i!=j) || (arg[j]=='*' && i<j) ){
-					disp_error_message("illegal number of parameters",(unsigned char *) (plist[(i<j)?i:j]));
+					disp_error_message("illegal number of parameters",plist[(i<j)?i:j]);
 				}
 			}
 		} else {
@@ -1011,7 +1035,7 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
 	}
 #ifdef DEBUG_FUNCIN
 	if(battle_config.etc_log)
-		printf("parse_subexpr end %s\n",p);
+		ShowMessage("parse_subexpr end %s\n",p);
 #endif
 	return p;  /* return first untreated operator */
 }
@@ -1020,11 +1044,11 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
  * éÆÇÃï]âø
  *------------------------------------------
  */
-unsigned char* parse_expr(unsigned char *p)
+char* parse_expr(char *p)
 {
 #ifdef DEBUG_FUNCIN
 	if(battle_config.etc_log)
-		printf("parse_expr %s\n",p);
+		ShowMessage("parse_expr %s\n",p);
 #endif
 	switch(*p){
 	case ')': case ';': case ':': case '[': case ']':
@@ -1035,7 +1059,7 @@ unsigned char* parse_expr(unsigned char *p)
 	p=parse_subexpr(p,-1);
 #ifdef DEBUG_FUNCIN
 	if(battle_config.etc_log)
-		printf("parse_expr end %s\n",p);
+		ShowMessage("parse_expr end %s\n",p);
 #endif
 	return p;
 }
@@ -1044,7 +1068,7 @@ unsigned char* parse_expr(unsigned char *p)
  * çsÇÃâêÕ
  *------------------------------------------
  */
-unsigned char* parse_line(unsigned char *p)
+char* parse_line(char *p)
 {
 	int i=0,cmd;
 	const char *plist[128];
@@ -1057,19 +1081,19 @@ unsigned char* parse_line(unsigned char *p)
 	parse_cmd_if=0;	// warn_cmd_no_commaÇÃÇΩÇﬂÇ…ïKóv
 
 	// ç≈èâÇÕä÷êîñº
-	p2=(char *) p;
+	p2 = p;
 	p=parse_simpleexpr(p);
 	p=skip_space(p);
 
 	cmd=parse_cmd;
 	if( str_data[cmd].type!=C_FUNC ){
-		disp_error_message("expect command",(unsigned char *) p2);
+		disp_error_message("expect command", p2);
 //		exit(0);
 	}
 
 	add_scriptc(C_ARG);
 	while(p && *p && *p!=';' && i<128){
-		plist[i]=(char *) p;
+		plist[i]=p;
 
 		p=parse_expr(p);
 		p=skip_space(p);
@@ -1093,7 +1117,7 @@ unsigned char* parse_line(unsigned char *p)
 		int j=0;
 		for(j=0;arg[j];j++) if(arg[j]=='*')break;
 		if( (arg[j]==0 && i!=j) || (arg[j]=='*' && i<j) ){
-			disp_error_message("illegal number of parameters",(unsigned char *) (plist[(i<j)?i:j]));
+			disp_error_message("illegal number of parameters",plist[(i<j)?i:j]);
 		}
 	}
 
@@ -1109,7 +1133,7 @@ static void add_buildin_func(void)
 {
 	int i,n;
 	for(i=0;buildin_func[i].func;i++){
-		n=add_str((unsigned char *) buildin_func[i].name);
+		n=add_str(buildin_func[i].name);
 		str_data[n].type=C_FUNC;
 		str_data[n].val=i;
 		str_data[n].func=buildin_func[i].func;
@@ -1123,12 +1147,13 @@ static void add_buildin_func(void)
 static void read_constdb(void)
 {
 	FILE *fp;
-	char line[1024],name[1024];
+	char line[1024];
+	char name[1024];
 	int val,n,i,type;
 
-	fp=fopen("db/const.txt","r");
+	fp=savefopen("db/const.txt","r");
 	if(fp==NULL){
-		printf("can't read db/const.txt\n");
+		ShowMessage("can't read %s\n","db/const.txt");
 		return ;
 	}
 	while(fgets(line,1020,fp)){
@@ -1156,7 +1181,7 @@ static void read_constdb(void)
  */
 char* parse_script(unsigned char *src,int line)
 {
-	unsigned char *p,*tmpp;
+	char *p,*tmpp;
 	int i;
 	static int first=1;
 
@@ -1165,7 +1190,7 @@ char* parse_script(unsigned char *src,int line)
 		read_constdb();
 	}
 	first=0;
-	script_buf=(unsigned char *)aCallocA(SCRIPT_BLOCK_SIZE,sizeof(unsigned char));
+	script_buf=(char *)aCallocA(SCRIPT_BLOCK_SIZE,sizeof(char));
 	script_pos=0;
 	script_size=SCRIPT_BLOCK_SIZE;
 	str_data[LABEL_NEXTLINE].type=C_NOP;
@@ -1185,10 +1210,10 @@ char* parse_script(unsigned char *src,int line)
 	scriptlabel_db=strdb_init(50);
 
 	// for error message
-	startptr = src;
+	startptr = (char*)src;
 	startline = line;
 
-	p=src;
+	p=(char*)src;
 	p=skip_space(p);
 	if(*p!='{'){
 		disp_error_message("not found '{'",p);
@@ -1210,7 +1235,7 @@ char* parse_script(unsigned char *src,int line)
 				exit(1);
 			}
 			set_label(l,script_pos);
-			strdb_insert(scriptlabel_db,p,script_pos);	// äOïîóplabel dbìoò^
+			strdb_insert(scriptlabel_db,p,script_pos);	// ËOÚˆ˘plabel dbÙoˇ^
 			*skip_word(p)=c;
 			p=tmpp+1;
 			continue;
@@ -1230,7 +1255,7 @@ char* parse_script(unsigned char *src,int line)
 	add_scriptc(C_NOP);
 
 	script_size = script_pos;
-	script_buf=(char *)aRealloc(script_buf,script_pos + 1);
+	script_buf=(char*)aRealloc(script_buf,(script_pos + 1)*sizeof(char));
 
 	// ñ¢âåàÇÃÉâÉxÉãÇâåà
 	for(i=LABEL_START;i<str_num;i++){
@@ -1239,7 +1264,9 @@ char* parse_script(unsigned char *src,int line)
 			str_data[i].type=C_NAME;
 			str_data[i].label=i;
 			for(j=str_data[i].backpatch;j>=0 && j!=0x00ffffff;){
-				next=(*(int*)(script_buf+j)) & 0x00ffffff;
+				next = (0xFF&script_buf[j])
+					 | (0xFF&script_buf[j+1])<<8
+					 | (0xFF&script_buf[j+2])<<16;
 				script_buf[j]=i;
 				script_buf[j+1]=i>>8;
 				script_buf[j+2]=i>>16;
@@ -1250,14 +1277,14 @@ char* parse_script(unsigned char *src,int line)
 
 #ifdef DEBUG_DISP
 	for(i=0;i<script_pos;i++){
-		if((i&15)==0) printf("%04x : ",i);
-		printf("%02x ",script_buf[i]);
-		if((i&15)==15) printf("\n");
+		if((i&15)==0) ShowMessage("%04x : ",i);
+		ShowMessage("%02x ",script_buf[i]);
+		if((i&15)==15) ShowMessage("\n");
 	}
-	printf("\n");
+	ShowMessage("\n");
 #endif
 
-	return script_buf;
+	return (char*)script_buf;
 }
 
 //
@@ -1273,7 +1300,7 @@ struct map_session_data *script_rid2sd(struct script_state *st)
 {
 	struct map_session_data *sd=map_id2sd(st->rid);
 	if(!sd){
-		printf("script_rid2sd: fatal error ! player not attached!\n");
+		ShowError("script_rid2sd: fatal error ! player not attached!\n");
 	}
 	return sd;
 }
@@ -1293,7 +1320,7 @@ int get_val(struct script_state*st,struct script_data* data)
 
 		if(prefix!='$'){
 			if((sd=script_rid2sd(st))==NULL)
-				printf("get_val error name?:%s\n",name);
+				ShowError("get_val error name?:%s\n",name);
 		}
 		if(postfix=='$'){
 
@@ -1304,7 +1331,7 @@ int get_val(struct script_state*st,struct script_data* data)
 			}else if(prefix=='$'){
 				data->u.str = (char *)numdb_search(mapregstr_db,data->u.num);
 			}else{
-				printf("script: get_val: illegal scope string variable.\n");
+				ShowError("script: get_val: illegal scope string variable.\n");
 				data->u.str = "!!ERROR!!";
 			}
 			if( data->u.str == NULL )
@@ -1369,7 +1396,7 @@ static int set_reg(struct map_session_data *sd,int num,char *name,void *v)
 		}else if(prefix=='$') {
 			mapreg_setregstr(num,str);
 		}else{
-			printf("script: set_reg: illegal scope string variable !");
+			ShowError("script: set_reg: illegal scope string variable !");
 		}
 	}else{
 		// êîíl
@@ -1401,7 +1428,7 @@ char* conv_str(struct script_state *st,struct script_data *data)
 	get_val(st,data);
 	if(data->type==C_INT){
 		char *buf;
-		buf=(char *)aCallocA(16,sizeof(char));
+		buf=(char *)aMalloc(16*sizeof(char));
 		sprintf(buf,"%d",data->u.num);
 		data->type=C_STR;
 		data->u.str=buf;
@@ -1439,15 +1466,13 @@ int conv_num(struct script_state *st,struct script_data *data)
  */
 void push_val(struct script_stack *stack,int type,int val)
 {
-	if(stack->sp >= stack->sp_max){
+	if((size_t)stack->sp >= stack->sp_max){
 		stack->sp_max += 64;
-		stack->stack_data = (struct script_data *)aRealloc(stack->stack_data,
-			sizeof(stack->stack_data[0]) * stack->sp_max);
-		memset(stack->stack_data + (stack->sp_max - 64), 0,
-			64 * sizeof(*(stack->stack_data)));
+		stack->stack_data = (struct script_data *)aRealloc(stack->stack_data, stack->sp_max*sizeof(struct script_data) );
+		memset(stack->stack_data + (stack->sp_max - 64), 0, 64 * sizeof(struct script_data));
 	}
 //	if(battle_config.etc_log)
-//		printf("push (%d,%d)-> %d\n",type,val,stack->sp);
+//		ShowMessage("push (%d,%d)-> %d\n",type,val,stack->sp);
 	stack->stack_data[stack->sp].type=type;
 	stack->stack_data[stack->sp].u.num=val;
 	stack->sp++;
@@ -1459,17 +1484,15 @@ void push_val(struct script_stack *stack,int type,int val)
  */
 void push_str(struct script_stack *stack,int type,unsigned char *str)
 {
-	if(stack->sp>=stack->sp_max){
+	if((size_t)stack->sp >= stack->sp_max){
 		stack->sp_max += 64;
-		stack->stack_data = (struct script_data *)aRealloc(stack->stack_data,
-			sizeof(stack->stack_data[0]) * stack->sp_max);
-		memset(stack->stack_data + (stack->sp_max - 64), '\0',
-			64 * sizeof(*(stack->stack_data)));
+		stack->stack_data = (struct script_data *)aRealloc(stack->stack_data, stack->sp_max * sizeof(struct script_data));
+		memset(stack->stack_data + (stack->sp_max - 64), 0, 64 * sizeof(struct script_data));
 	}
 //	if(battle_config.etc_log)
-//		printf("push (%d,%x)-> %d\n",type,str,stack->sp);
+//		ShowMessage("push (%d,%x)-> %d\n",type,str,stack->sp);
 	stack->stack_data[stack->sp].type=type;
-	stack->stack_data[stack->sp].u.str=str;
+	stack->stack_data[stack->sp].u.str=(char*)str;
 	stack->sp++;
 }
 
@@ -1481,10 +1504,10 @@ void push_copy(struct script_stack *stack,int pos)
 {
 	switch(stack->stack_data[pos].type){
 	case C_CONSTSTR:
-		push_str(stack,C_CONSTSTR,stack->stack_data[pos].u.str);
+		push_str(stack,C_CONSTSTR,(unsigned char*)stack->stack_data[pos].u.str);
 		break;
 	case C_STR:
-		push_str(stack,C_STR,aStrdup(stack->stack_data[pos].u.str));
+		push_str(stack,C_STR,(unsigned char*)strdup(stack->stack_data[pos].u.str));
 		break;
 	default:
 		push_val(stack,stack->stack_data[pos].type,stack->stack_data[pos].u.num);
@@ -1505,7 +1528,7 @@ void pop_stack(struct script_stack* stack,int start,int end)
 		}
 	}
 	if(stack->sp>end){
-		memmove(&stack->stack_data[start],&stack->stack_data[end],sizeof(stack->stack_data[0])*(stack->sp-end));
+		memmove(&stack->stack_data[start],&stack->stack_data[end],sizeof(struct script_data)*(stack->sp-end));
 	}
 	stack->sp-=end-start;
 }
@@ -1533,7 +1556,7 @@ int buildin_goto(struct script_state *st)
 	int pos;
 
 	if( st->stack->stack_data[st->start+2].type!=C_POS ){
-		printf("script: goto: not label!\n");
+		ShowMessage("script: goto: not label!\n");
 		st->state=END;
 		return 0;
 	}
@@ -1553,7 +1576,7 @@ int buildin_callfunc(struct script_state *st)
 	char *scr;
 	char *str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 
-	if( (scr=strdb_search(script_get_userfunc_db(),str)) ){
+	if( (scr=(char*)strdb_search(script_get_userfunc_db(),str)) ){
 		int i,j;
 		for(i=st->start+3,j=0;i<st->end;i++,j++)
 			push_copy(st->stack,i);
@@ -1568,7 +1591,7 @@ int buildin_callfunc(struct script_state *st)
 		st->defsp=st->start+4+j;
 		st->state=GOTO;
 	}else{
-		printf("script:callfunc: function not found! [%s]\n",str);
+		ShowMessage("script:callfunc: function not found! [%s]\n",str);
 		st->state=END;
 	}
 	return 0;
@@ -1604,14 +1627,14 @@ int buildin_getarg(struct script_state *st)
 	int num=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	int max,stsp;
 	if( st->defsp<4 || st->stack->stack_data[st->defsp-1].type!=C_RETINFO ){
-		printf("script:getarg without callfunc or callsub!\n");
+		ShowMessage("script:getarg without callfunc or callsub!\n");
 		st->state=END;
 		return 0;
 	}
 	max=conv_num(st,& (st->stack->stack_data[st->defsp-4]));
 	stsp=st->defsp - max -4;
 	if( num >= max ){
-		printf("script:getarg arg1(%d) out of range(%d) !\n",num,max);
+		ShowMessage("script:getarg arg1(%d) out of range(%d) !\n",num,max);
 		st->state=END;
 		return 0;
 	}
@@ -1679,7 +1702,7 @@ int buildin_menu(struct script_state *st)
 			conv_str(st,& (st->stack->stack_data[i]));
 			len+=strlen(st->stack->stack_data[i].u.str)+1;
 		}
-		buf=(char *)aCallocA(len,sizeof(char));
+		buf=(char *)aMalloc(len*sizeof(char));
 		buf[0]=0;
 		for(i=st->start+2,len=0;i<st->end;i+=2){
 			strcat(buf,st->stack->stack_data[i].u.str);
@@ -1698,7 +1721,7 @@ int buildin_menu(struct script_state *st)
 		if(sd->npc_menu>0 && sd->npc_menu<(st->end-st->start)/2){
 			int pos;
 			if( st->stack->stack_data[st->start+sd->npc_menu*2+1].type!=C_POS ){
-				printf("script: menu: not label !\n");
+				ShowMessage("script: menu: not label !\n");
 				st->state=END;
 				return 0;
 			}
@@ -1802,6 +1825,7 @@ int buildin_areawarp(struct script_state *st)
 
 	if( (m=map_mapname2mapid(mapname))< 0)
 		return 0;
+//!! broadcast command if not on this mapserver
 
 	map_foreachinarea(buildin_areawarp_sub,
 		m,x0,y0,x1,y1,BL_PC,	str,x,y );
@@ -1874,7 +1898,7 @@ int buildin_input(struct script_state *st)
 {
 	struct map_session_data *sd=NULL;
 	int num=(st->end>st->start+2)?st->stack->stack_data[st->start+2].u.num:0;
-	char *name=(st->end>st->start+2)?str_buf+str_data[num&0x00ffffff].str:"";
+	char *name=(st->end>st->start+2)?str_buf+str_data[num&0x00ffffff].str:(char*)"";
 //	char prefix=*name;
 	char postfix=name[strlen(name)-1];
 
@@ -1886,20 +1910,9 @@ int buildin_input(struct script_state *st)
 			if(st->end>st->start+2){ // à¯êî1å¬
 				set_reg(sd,num,name,(void*)sd->npc_str);
 			}else{
-				printf("buildin_input: string discarded !!\n");
+				ShowError("buildin_input: string discarded !!\n");
 			}
 		}else{
-
-			// commented by Lupus (check Value Number Input fix in clif.c)
-			// readded by Yor: set ammount to 0 instead of cancel trade.
-			// ** Fix by fritz :X keeps people from abusing old input bugs
-			if (sd->npc_amount < 0) { //** If input amount is less then 0
-//				clif_tradecancelled(sd); // added "Deal has been cancelled" message by Valaris
-//				buildin_close(st); // ** close
-				sd->npc_amount = 0;
-			} else if (sd->npc_amount > battle_config.vending_max_value) // new fix by Yor
-				sd->npc_amount = battle_config.vending_max_value;
-
 			// êîíl
 			if(st->end>st->start+2){ // à¯êî1å¬
 				set_reg(sd,num,name,(void*)sd->npc_amount);
@@ -1956,13 +1969,12 @@ int buildin_set(struct script_state *st)
 	char postfix=name[strlen(name)-1];
 
 	if( st->stack->stack_data[st->start+2].type!=C_NAME ){
-		printf("script: buildin_set: not name\n");
+		ShowMessage("script: buildin_set: not name\n");
 		return 0;
 	}
 
 	if( prefix!='$' )
 		sd=script_rid2sd(st);
-
 
 	if( postfix=='$' ){
 		// ï∂éöóÒ
@@ -1990,7 +2002,7 @@ int buildin_setarray(struct script_state *st)
 	int i,j;
 
 	if( prefix!='$' && prefix!='@' ){
-		printf("buildin_setarray: illegal scope !\n");
+		ShowMessage("buildin_setarray: illegal scope !\n");
 		return 0;
 	}
 	if( prefix!='$' )
@@ -2022,7 +2034,7 @@ int buildin_cleararray(struct script_state *st)
 	void *v;
 
 	if( prefix!='$' && prefix!='@' ){
-		printf("buildin_cleararray: illegal scope !\n");
+		ShowMessage("buildin_cleararray: illegal scope !\n");
 		return 0;
 	}
 	if( prefix!='$' )
@@ -2056,11 +2068,11 @@ int buildin_copyarray(struct script_state *st)
 	int i;
 
 	if( prefix!='$' && prefix!='@' && prefix2!='$' && prefix2!='@' ){
-		printf("buildin_copyarray: illegal scope !\n");
+		ShowMessage("buildin_copyarray: illegal scope !\n");
 		return 0;
 	}
 	if( (postfix=='$' || postfix2=='$') && postfix!=postfix2 ){
-		printf("buildin_copyarray: type mismatch !\n");
+		ShowMessage("buildin_copyarray: type mismatch !\n");
 		return 0;
 	}
 	if( prefix!='$' || prefix2!='$' )
@@ -2093,7 +2105,7 @@ int buildin_getarraysize(struct script_state *st)
 	char postfix=name[strlen(name)-1];
 
 	if( prefix!='$' && prefix!='@' ){
-		printf("buildin_copyarray: illegal scope !\n");
+		ShowMessage("buildin_copyarray: illegal scope !\n");
 		return 0;
 	}
 
@@ -2119,7 +2131,7 @@ int buildin_deletearray(struct script_state *st)
 		count=conv_num(st,& (st->stack->stack_data[st->start+3]));
 
 	if( prefix!='$' && prefix!='@' ){
-		printf("buildin_deletearray: illegal scope !\n");
+		ShowMessage("buildin_deletearray: illegal scope !\n");
 		return 0;
 	}
 	if( prefix!='$' )
@@ -2130,7 +2142,7 @@ int buildin_deletearray(struct script_state *st)
 	}
 	for(;i<(128-(num>>24));i++){
 		if( postfix!='$' ) set_reg(sd,num+(i<<24),name, 0);
-		if( postfix=='$' ) set_reg(sd,num+(i<<24),name, "");
+		if( postfix=='$' ) set_reg(sd,num+(i<<24),name, (void*)"");
 	}
 	return 0;
 }
@@ -2144,14 +2156,14 @@ int buildin_getelementofarray(struct script_state *st)
 	if( st->stack->stack_data[st->start+2].type==C_NAME ){
 		int i=conv_num(st,& (st->stack->stack_data[st->start+3]));
 		if(i>127 || i<0){
-			printf("script: getelementofarray (operator[]): param2 illegal number %d\n",i);
+			ShowMessage("script: getelementofarray (operator[]): param2 illegal number %d\n",i);
 			push_val(st->stack,C_INT,0);
 		}else{
 			push_val(st->stack,C_NAME,
 				(i<<24) | st->stack->stack_data[st->start+2].u.num );
 		}
 	}else{
-		printf("script: getelementofarray (operator[]): param1 not name !\n");
+		ShowMessage("script: getelementofarray (operator[]): param1 not name !\n");
 		push_val(st->stack,C_INT,0);
 	}
 	return 0;
@@ -2252,7 +2264,7 @@ int buildin_countitem(struct script_state *st)
 		}
 	else{
 		if(battle_config.error_log)
-			printf("wrong item ID : countitem(%i)\n",nameid);
+			ShowMessage("wrong item ID : countitem(%i)\n",nameid);
 	}
 	push_val(st->stack,C_INT,count);
 
@@ -2513,7 +2525,7 @@ int buildin_delitem(struct script_state *st)
 	amount=conv_num(st,& (st->stack->stack_data[st->start+3]));
 
 	if (nameid<500 || amount<=0 ) {//by Lupus. Don't run FOR if u got wrong item ID or amount<=0
-		//printf("wrong item ID or amount<=0 : delitem %i,\n",nameid,amount);
+		//ShowMessage("wrong item ID or amount<=0 : delitem %i,\n",nameid,amount);
 		return 0;
 	}
 	sd=script_rid2sd(st);
@@ -2526,7 +2538,7 @@ int buildin_delitem(struct script_state *st)
 			continue;
 		//1 egg uses 1 cell in the inventory. so it's ok to delete 1 pet / per cycle
 		if(sd->inventory_data[i]->type==7 && sd->status.inventory[i].card[0] == (short)0xff00 && search_petDB_index(nameid, PET_EGG) >= 0 ){
-			intif_delete_petdata(*((long *)(&sd->status.inventory[i].card[1])));
+			intif_delete_petdata( MakeDWord(sd->status.inventory[i].card[1], sd->status.inventory[i].card[2]) );
 			//clear egg flag. so it won't be put in IMPORTANT items (eggs look like item with 2 cards ^_^)
 			sd->status.inventory[i].card[1] = sd->status.inventory[i].card[0] = 0;
 			//now this egg'll be deleted as a common unimportant item
@@ -2633,7 +2645,7 @@ char *buildin_getpartyname_sub(int party_id)
 
 	if(p!=NULL){
 		char *buf;
-		buf=(char *)aCallocA(24,sizeof(char));
+		buf=(char *)aMalloc(24*sizeof(char));
 		strcpy(buf,p->name);
 		return buf;
 	}
@@ -2648,9 +2660,9 @@ int buildin_getpartyname(struct script_state *st)
 	party_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	name=buildin_getpartyname_sub(party_id);
 	if(name!=0)
-		push_str(st->stack,C_STR,name);
+		push_str(st->stack,C_STR,(unsigned char*)name);
 	else
-		push_str(st->stack,C_CONSTSTR,"null");
+		push_str(st->stack,C_CONSTSTR,(unsigned char*)"null");
 
 	return 0;
 }
@@ -2669,7 +2681,7 @@ int buildin_getpartymember(struct script_state *st)
 	if(p!=NULL){
 		for(i=0;i<MAX_PARTY;i++){
 			if(p->member[i].account_id){
-//				printf("name:%s %d\n",p->member[i].name,i);
+//				ShowMessage("name:%s %d\n",p->member[i].name,i);
 				mapreg_setregstr(add_str("$@partymembername$")+(i<<24),p->member[i].name);
 				j++;
 			}
@@ -2690,7 +2702,7 @@ char *buildin_getguildname_sub(int guild_id)
 
 	if(g!=NULL){
 		char *buf;
-		buf=(char *)aCallocA(24,sizeof(char));
+		buf=(char *)aMalloc(24*sizeof(char));
 		strcpy(buf,g->name);
 		return buf;
 	}
@@ -2702,9 +2714,9 @@ int buildin_getguildname(struct script_state *st)
 	int guild_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	name=buildin_getguildname_sub(guild_id);
 	if(name!=0)
-		push_str(st->stack,C_STR,name);
+		push_str(st->stack,C_STR,(unsigned char*)name);
 	else
-		push_str(st->stack,C_CONSTSTR,"null");
+		push_str(st->stack,C_CONSTSTR,(unsigned char*)"null");
 	return 0;
 }
 
@@ -2719,8 +2731,8 @@ char *buildin_getguildmaster_sub(int guild_id)
 
 	if(g!=NULL){
 		char *buf;
-		buf=(char *)aCallocA(24,sizeof(char));
-		strncpy(buf,g->master, 23);
+		buf=(char *)aMalloc(24*sizeof(char));
+		memcpy(buf,g->master, 24);//EOS included
 		return buf;
 	}
 
@@ -2732,9 +2744,9 @@ int buildin_getguildmaster(struct script_state *st)
 	int guild_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	master=buildin_getguildmaster_sub(guild_id);
 	if(master!=0)
-		push_str(st->stack,C_STR,master);
+		push_str(st->stack,C_STR,(unsigned char*)master);
 	else
-		push_str(st->stack,C_CONSTSTR,"null");
+		push_str(st->stack,C_CONSTSTR,(unsigned char*)"null");
 	return 0;
 }
 
@@ -2769,25 +2781,25 @@ int buildin_strcharinfo(struct script_state *st)
 	num=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	if(num==0){
 		char *buf;
-		buf=(char *)aCallocA(24,sizeof(char));
-		strncpy(buf,sd->status.name, 23);
-		push_str(st->stack,C_STR,buf);
+		buf=(char *)aMalloc(24*sizeof(char));
+		memcpy(buf,sd->status.name, 24);//EOS included
+		push_str(st->stack,C_STR,(unsigned char*)buf);
 	}
 	if(num==1){
 		char *buf;
 		buf=buildin_getpartyname_sub(sd->status.party_id);
 		if(buf!=0)
-			push_str(st->stack,C_STR,buf);
+			push_str(st->stack,C_STR,(unsigned char*)buf);
 		else
-			push_str(st->stack,C_CONSTSTR,"");
+			push_str(st->stack,C_CONSTSTR,(unsigned char*)"");
 	}
 	if(num==2){
 		char *buf;
 		buf=buildin_getguildname_sub(sd->status.guild_id);
 		if(buf!=0)
-			push_str(st->stack,C_STR,buf);
+			push_str(st->stack,C_STR,(unsigned char*)buf);
 		else
-			push_str(st->stack,C_CONSTSTR,"");
+			push_str(st->stack,C_CONSTSTR,(unsigned char*)"");
 	}
 
 	return 0;
@@ -2808,7 +2820,7 @@ int buildin_getequipid(struct script_state *st)
 	sd=script_rid2sd(st);
 	if(sd == NULL)
 	{
-		printf("getequipid: sd == NULL\n");
+		ShowMessage("getequipid: sd == NULL\n");
 		return 0;
 	}
 	num=conv_num(st,& (st->stack->stack_data[st->start+2]));
@@ -2836,7 +2848,7 @@ int buildin_getequipname(struct script_state *st)
 	struct item_data* item;
 	char *buf;
 
-	buf=(char *)aCallocA(64,sizeof(char));
+	buf=(char *)aMalloc(64*sizeof(char));
 	sd=script_rid2sd(st);
 	num=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	i=pc_checkequip(sd,equip[num-1]);
@@ -2849,7 +2861,7 @@ int buildin_getequipname(struct script_state *st)
 	}else{
 		sprintf(buf,"%s-[%s]",pos[num-1],pos[10]);
 	}
-	push_str(st->stack,C_STR,buf);
+	push_str(st->stack,C_STR,(unsigned char*)buf);
 
 	return 0;
 }
@@ -3596,11 +3608,11 @@ int buildin_gettimestr(struct script_state *st)
 	fmtstr=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	maxlen=conv_num(st,& (st->stack->stack_data[st->start+3]));
 
-	tmpstr=(char *)aCallocA(maxlen+1,sizeof(char));
+	tmpstr=(char *)aMalloc((maxlen+1)*sizeof(char));
 	strftime(tmpstr,maxlen,fmtstr,localtime(&now));
 	tmpstr[maxlen]='\0';
 
-	push_str(st->stack,C_STR,tmpstr);
+	push_str(st->stack,C_STR,(unsigned char*)tmpstr);
 	return 0;
 }
 
@@ -3682,10 +3694,11 @@ int buildin_makepet(struct script_state *st)
 	if (pet_id >= 0 && sd) {
 		sd->catch_target_class = pet_db[pet_id].class_;
 		intif_create_pet(
-			sd->status.account_id, sd->status.char_id,
-			(short)pet_db[pet_id].class_, (short)mob_db[pet_db[pet_id].class_].lv,
-			(short)pet_db[pet_id].EggID, 0, (short)pet_db[pet_id].intimate,
-			100, 0, 1, pet_db[pet_id].jname);
+			sd->status.account_id, sd->status.char_id,				//long
+			pet_db[pet_id].class_, mob_db[pet_db[pet_id].class_].lv,//short
+			pet_db[pet_id].EggID, 0, pet_db[pet_id].intimate, 100,	//short
+			0, 1,													//char
+			pet_db[pet_id].jname);									//char*
 	}
 
 	return 0;
@@ -3744,7 +3757,7 @@ int buildin_monster(struct script_state *st)
 	amount=conv_num(st,& (st->stack->stack_data[st->start+7]));
 	if( st->end>st->start+8 )
 		event=conv_str(st,& (st->stack->stack_data[st->start+8]));
-
+//!! broadcast command if not on this mapserver
 	mob_once_spawn(map_id2sd(st->rid),map,x,y,str,class_,amount,event);
 	return 0;
 }
@@ -3767,7 +3780,7 @@ int buildin_areamonster(struct script_state *st)
 	amount=conv_num(st,& (st->stack->stack_data[st->start+9]));
 	if( st->end>st->start+10 )
 		event=conv_str(st,& (st->stack->stack_data[st->start+10]));
-
+//!! broadcast command if not on this mapserver
 	mob_once_spawn_area(map_id2sd(st->rid),map,x0,y0,x1,y1,str,class_,amount,event);
 	return 0;
 }
@@ -3802,6 +3815,7 @@ int buildin_killmonster(struct script_state *st)
 
 	if( (m=map_mapname2mapid(mapname))<0 )
 		return 0;
+//!! broadcast command if not on this mapserver
 	map_foreachinarea(buildin_killmonster_sub,
 		m,0,0,map[m].xs,map[m].ys,BL_MOB, event ,allflag);
 	return 0;
@@ -3820,6 +3834,7 @@ int buildin_killmonsterall(struct script_state *st)
 
 	if( (m=map_mapname2mapid(mapname))<0 )
 		return 0;
+//!! broadcast command if not on this mapserver
 	map_foreachinarea(buildin_killmonsterall_sub,
 		m,0,0,map[m].xs,map[m].ys,BL_MOB);
 	return 0;
@@ -3833,6 +3848,7 @@ int buildin_doevent(struct script_state *st)
 {
 	char *event;
 	event=conv_str(st,& (st->stack->stack_data[st->start+2]));
+//!! broadcast command if not on this mapserver
 	npc_event(map_id2sd(st->rid),event,0);
 	return 0;
 }
@@ -4025,9 +4041,9 @@ int buildin_announce(struct script_state *st)
 	if(flag&0x0f){
 		struct block_list *bl=(flag&0x08)? map_id2bl(st->oid) :
 			(struct block_list *)script_rid2sd(st);
-		clif_GMmessage(bl,str,strlen(str)+1,flag);
+		clif_GMmessage(bl,str,flag);
 	}else
-		intif_GMmessage(str,strlen(str)+1,flag);
+		intif_GMmessage(str,flag);
 	return 0;
 }
 /*==========================================
@@ -4041,7 +4057,7 @@ int buildin_mapannounce_sub(struct block_list *bl,va_list ap)
 	str=va_arg(ap,char *);
 	len=va_arg(ap,int);
 	flag=va_arg(ap,int);
-	clif_GMmessage(bl,str,len,flag|3);
+	clif_GMmessage(bl,str,flag|3);
 	return 0;
 }
 int buildin_mapannounce(struct script_state *st)
@@ -4055,6 +4071,7 @@ int buildin_mapannounce(struct script_state *st)
 
 	if( (m=map_mapname2mapid(mapname))<0 )
 		return 0;
+//!! broadcast command if not on this mapserver
 	map_foreachinarea(buildin_mapannounce_sub,
 		m,0,0,map[m].xs,map[m].ys,BL_PC, str,strlen(str)+1,flag&0x10);
 	return 0;
@@ -4079,7 +4096,7 @@ int buildin_areaannounce(struct script_state *st)
 
 	if( (m=map_mapname2mapid(map))<0 )
 		return 0;
-
+//!! broadcast command if not on this mapserver
 	map_foreachinarea(buildin_mapannounce_sub,
 		m,x0,y0,x1,y1,BL_PC, str,strlen(str)+1,flag&0x10 );
 	return 0;
@@ -4113,6 +4130,7 @@ int buildin_getmapusers(struct script_state *st)
 		push_val(st->stack,C_INT,-1);
 		return 0;
 	}
+//!! broadcast command if not on this mapserver
 	push_val(st->stack,C_INT,map[m].users);
 	return 0;
 }
@@ -4139,6 +4157,7 @@ int buildin_getareausers(struct script_state *st)
 		push_val(st->stack,C_INT,-1);
 		return 0;
 	}
+//!! broadcast command if not on this mapserver
 	map_foreachinarea(buildin_getareausers_sub,
 		m,x0,y0,x1,y1,BL_PC,&users);
 	push_val(st->stack,C_INT,users);
@@ -4187,6 +4206,7 @@ int buildin_getareadropitem(struct script_state *st)
 		push_val(st->stack,C_INT,-1);
 		return 0;
 	}
+//!! broadcast command if not on this mapserver
 	map_foreachinarea(buildin_getareadropitem_sub,
 		m,x0,y0,x1,y1,BL_ITEM,item,&amount);
 	push_val(st->stack,C_INT,amount);
@@ -4322,7 +4342,7 @@ int buildin_sc_end(struct script_state *st)
 		bl = map_id2bl(((struct map_session_data *)bl)->skilltarget);
 	status_change_end(bl,type,-1);
 //	if(battle_config.etc_log)
-//		printf("sc_end : %d %d\n",st->rid,type);
+//		ShowMessage("sc_end : %d %d\n",st->rid,type);
 	return 0;
 }
 /*==========================================
@@ -4357,7 +4377,7 @@ int buildin_getscrate(struct script_state *st)
 int buildin_debugmes(struct script_state *st)
 {
 	conv_str(st,& (st->stack->stack_data[st->start+2]));
-	printf("script debug : %d %d : %s\n",st->rid,st->oid,st->stack->stack_data[st->start+2].u.str);
+	ShowMessage("script debug : %d %d : %s\n",st->rid,st->oid,st->stack->stack_data[st->start+2].u.str);
 	return 0;
 }
 
@@ -4621,7 +4641,7 @@ int buildin_getwaitingroomstate(struct script_state *st)
 		push_str(st->stack,C_CONSTSTR,cd->pass);
 		return 0;
 	case 16:
-		push_str(st->stack,C_CONSTSTR,cd->npc_event);
+		push_str(st->stack,C_CONSTSTR,(unsigned char*)(cd->npc_event));
 		return 0;
 	}
 	push_val(st->stack,C_INT,val);
@@ -4718,6 +4738,7 @@ int buildin_setmapflagnosave(struct script_state *st)
 	x=conv_num(st,& (st->stack->stack_data[st->start+4]));
 	y=conv_num(st,& (st->stack->stack_data[st->start+5]));
 	m = map_mapname2mapid(str);
+//!! broadcast command if not on this mapserver
 	if(m >= 0) {
 		map[m].flag.nosave=1;
 		memcpy(map[m].save.map,str2,16);
@@ -4736,6 +4757,7 @@ int buildin_setmapflag(struct script_state *st)
 	str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	i=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	m = map_mapname2mapid(str);
+//!! broadcast command if not on this mapserver
 	if(m >= 0) {
 		switch(i) {
 			case MF_NOMEMO:
@@ -4804,10 +4826,8 @@ int buildin_setmapflag(struct script_state *st)
 			case MF_NOGO: // celest
 				map[m].flag.nogo=1;
 				break;
-
 		}
 	}
-
 	return 0;
 }
 
@@ -4819,6 +4839,7 @@ int buildin_removemapflag(struct script_state *st)
 	str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	i=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	m = map_mapname2mapid(str);
+//!! broadcast command if not on this mapserver
 	if(m >= 0) {
 		switch(i) {
 			case MF_NOMEMO:
@@ -4901,6 +4922,7 @@ int buildin_pvpon(struct script_state *st)
 
 	str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	m = map_mapname2mapid(str);
+//!! broadcast command if not on this mapserver
 	if(m >= 0 && !map[m].flag.pvp && !map[m].flag.nopvp) {
 		map[m].flag.pvp = 1;
 		clif_send0199(m,1);
@@ -4909,7 +4931,7 @@ int buildin_pvpon(struct script_state *st)
 			return 0;
 
 		for(i=0;i<fd_max;i++){	//êlêîï™ÉãÅ[Év
-			if(session[i] && (pl_sd=session[i]->session_data) && pl_sd->state.auth){
+			if(session[i] && (pl_sd=(struct map_session_data *)session[i]->session_data) && pl_sd->state.auth){
 				if(m == pl_sd->bl.m && pl_sd->pvp_timer == -1) {
 					pl_sd->pvp_timer=add_timer(gettick()+200,pc_calc_pvprank_timer,pl_sd->bl.id,0);
 					pl_sd->pvp_rank=0;
@@ -4931,6 +4953,7 @@ int buildin_pvpoff(struct script_state *st)
 
 	str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	m = map_mapname2mapid(str);
+//!! broadcast command if not on this mapserver
 	if(m >= 0 && map[m].flag.pvp && map[m].flag.nopvp) {
 		map[m].flag.pvp = 0;
 		clif_send0199(m,0);
@@ -4939,7 +4962,7 @@ int buildin_pvpoff(struct script_state *st)
 			return 0;
 
 		for(i=0;i<fd_max;i++){	//êlêîï™ÉãÅ[Év
-			if(session[i] && (pl_sd=session[i]->session_data) && pl_sd->state.auth){
+			if(session[i] && (pl_sd=(struct map_session_data *)session[i]->session_data) && pl_sd->state.auth){
 				if(m == pl_sd->bl.m) {
 					clif_pvpset(pl_sd,0,0,2);
 					if(pl_sd->pvp_timer != -1) {
@@ -4961,6 +4984,7 @@ int buildin_gvgon(struct script_state *st)
 
 	str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	m = map_mapname2mapid(str);
+//!! broadcast command if not on this mapserver
 	if(m >= 0 && !map[m].flag.gvg) {
 		map[m].flag.gvg = 1;
 		clif_send0199(m,3);
@@ -4975,6 +4999,7 @@ int buildin_gvgoff(struct script_state *st)
 
 	str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	m = map_mapname2mapid(str);
+//!! broadcast command if not on this mapserver
 	if(m >= 0 && map[m].flag.gvg) {
 		map[m].flag.gvg = 0;
 		clif_send0199(m,0);
@@ -5079,7 +5104,7 @@ int buildin_flagemblem(struct script_state *st)
 
 	if(g_id < 0) return 0;
 
-//	printf("Script.c: [FlagEmblem] GuildID=%d, Emblem=%d.\n", g->guild_id, g->emblem_id);
+//	ShowMessage("Script.c: [FlagEmblem] GuildID=%d, Emblem=%d.\n", g->guild_id, g->emblem_id);
 	((struct npc_data *)map_id2bl(st->oid))->u.scr.guild_id = g_id;
 	return 1;
 }
@@ -5093,16 +5118,16 @@ int buildin_getcastlename(struct script_state *st)
 	for(i=0;i<MAX_GUILDCASTLE;i++){
 		if( (gc=guild_castle_search(i)) != NULL ){
 			if(strcmp(mapname,gc->map_name)==0){
-				buf=(char *)aCallocA(24,sizeof(char));
-				strncpy(buf,gc->castle_name,24);
+				buf=(char *)aMalloc(24*sizeof(char));
+				memcpy(buf,gc->castle_name,24);//EOS included
 				break;
 			}
 		}
 	}
 	if(buf)
-	push_str(st->stack,C_STR,buf);
+	push_str(st->stack,C_STR,(unsigned char*)buf);
 	else
-		push_str(st->stack,C_CONSTSTR,"");
+		push_str(st->stack,C_CONSTSTR,(unsigned char*)"");
 	return 0;
 }
 
@@ -5394,7 +5419,7 @@ int buildin_mapwarp(struct script_state *st)	// Added by RoVeRT
 
 	if( (m=map_mapname2mapid(mapname))< 0)
 		return 0;
-
+//!! broadcast command if not on this mapserver
 	map_foreachinarea(buildin_areawarp_sub,
 		m,x0,y0,x1,y1,BL_PC,	str,x,y );
 	return 0;
@@ -5562,21 +5587,17 @@ int buildin_strmobinfo(struct script_state *st)
 	case 1:
 		{
 			char *buf;
-			buf=aCallocA(24, 1);
-//			buf=mob_db[class_].name;
-// for string assignments you would need to go for c++ [Shinomori]
+		buf = (char*)aMalloc(24*sizeof(char));
 			strcpy(buf,mob_db[class_].name);
-			push_str(st->stack,C_STR,buf);
+		push_str(st->stack,C_STR,(unsigned char*)buf);
 			break;
 		}
 	case 2:
 		{
 			char *buf;
-			buf=aCallocA(24, 1);
-//			buf=mob_db[class_].jname;
-// for string assignments you would need to go for c++ [Shinomori]
+		buf=(char*)aMalloc(24*sizeof(char));
 			strcpy(buf,mob_db[class_].jname);
-			push_str(st->stack,C_STR,buf);
+		push_str(st->stack,C_STR,(unsigned char*)buf);
 			break;
 		}
 	case 3:
@@ -5658,10 +5679,9 @@ int buildin_getitemname(struct script_state *st)
 
 	i_data = NULL;
 	i_data = itemdb_search(item_id);
-	item_name=(char *)aCallocA(24,sizeof(char));
-
-	strncpy(item_name,i_data->jname,23);
-	push_str(st->stack,C_STR,item_name);
+	item_name=(char *)aMalloc(24*sizeof(char));
+	memcpy(item_name,i_data->jname,24);//EOS included
+	push_str(st->stack,C_STR,(unsigned char*)item_name);
 	return 0;
 }
 
@@ -5791,14 +5811,14 @@ int buildin_clearitem(struct script_state *st)
  */
 int buildin_classchange(struct script_state *st)
 {
-	int _class,type;
+	int class_,type;
 	struct block_list *bl=map_id2bl(st->oid);
 
 	if(bl==NULL) return 0;
 
-	_class=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	class_=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	type=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	clif_class_change(bl,_class,type);
+	clif_class_change(bl,class_,type);
 	return 0;
 }
 
@@ -5817,6 +5837,7 @@ int buildin_misceffect(struct script_state *st)
 		struct map_session_data *sd=script_rid2sd(st);
 		if(sd)
 			clif_misceffect2(&sd->bl,type);
+//!! broadcast command if not on this mapserver
 	}
 	return 0;
 }
@@ -5829,8 +5850,6 @@ int buildin_soundeffect(struct script_state *st)
 	struct map_session_data *sd=script_rid2sd(st);
 	char *name;
 	int type=0;
-
-
 	name=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	type=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	if(sd){
@@ -6197,11 +6216,9 @@ int buildin_npcstop(struct script_state *st)
 {
 	struct npc_data *nd=(struct npc_data *)map_id2bl(st->oid);
 
-	if(nd) {
-		if(nd->state.state==MS_WALK)
+	if( (nd) && (nd->state.state==MS_WALK) ){
 			npc_stop_walking(nd,1);
 	}
-
 	return 0;
 }
 
@@ -6263,14 +6280,14 @@ int buildin_getsavepoint(struct script_state *st)
         sd=script_rid2sd(st);
 
         type=conv_num(st,& (st->stack->stack_data[st->start+2]));
-        mapname=aCallocA(24, 1);
+		mapname=(char*)aMalloc(24*sizeof(char));
+		memcpy(mapname,sd->status.save_point.map,24);//EOS included
 
         x=sd->status.save_point.x;
         y=sd->status.save_point.y;
-        strncpy(mapname,sd->status.save_point.map,24);
         switch(type){
             case 0:
-                push_str(st->stack,C_STR,mapname);
+		push_str(st->stack,C_STR,(unsigned char*)mapname);
                 break;
             case 1:
                 push_val(st->stack,C_INT,x);
@@ -6315,24 +6332,24 @@ int buildin_getmapxy(struct script_state *st){
 	char *mapname;
 
         if( st->stack->stack_data[st->start+2].type!=C_NAME ){
-                printf("script: buildin_getmapxy: not mapname variable\n");
+		ShowMessage("script: buildin_getmapxy: not mapname variable\n");
                 push_val(st->stack,C_INT,-1);
                 return 0;
         }
         if( st->stack->stack_data[st->start+3].type!=C_NAME ){
-                printf("script: buildin_getmapxy: not mapx variable\n");
+		ShowMessage("script: buildin_getmapxy: not mapx variable\n");
                 push_val(st->stack,C_INT,-1);
                 return 0;
         }
         if( st->stack->stack_data[st->start+4].type!=C_NAME ){
-                printf("script: buildin_getmapxy: not mapy variable\n");
+		ShowMessage("script: buildin_getmapxy: not mapy variable\n");
                 push_val(st->stack,C_INT,-1);
                 return 0;
         }
 
 //??????????? >>>  Possible needly check function parameters on C_STR,C_INT,C_INT <<< ???????????//
 	type=conv_num(st,& (st->stack->stack_data[st->start+5]));
-	mapname=aCallocA(24, 1);
+	mapname=(char*)aMalloc(24*sizeof(char));
 
         switch (type){
             case 0:                                             //Get Character Position
@@ -6340,33 +6357,28 @@ int buildin_getmapxy(struct script_state *st){
                         sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
                     else
                         sd=script_rid2sd(st);
-
                     if ( sd==NULL ) {                   //wrong char name or char offline
                         push_val(st->stack,C_INT,-1);
                         return 0;
                     }
-
-
                     x=sd->bl.x;
                     y=sd->bl.y;
-                    strncpy(mapname,sd->mapname,24);
-                    printf(">>>>%s %d %d\n",mapname,x,y);
+		memcpy(mapname,sd->mapname,24);//EOS included
+		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
                     break;
             case 1:                                             //Get NPC Position
                     if( st->end > st->start+6 )
                         nd=npc_name2id(conv_str(st,& (st->stack->stack_data[st->start+6])));
                     else
                         nd=(struct npc_data *)map_id2bl(st->oid);
-
                     if ( nd==NULL ) {                   //wrong npc name or char offline
                         push_val(st->stack,C_INT,-1);
                         return 0;
                     }
-
                     x=nd->bl.x;
                     y=nd->bl.y;
-                    strncpy(mapname,map[nd->bl.m].name,24);
-                    printf(">>>>%s %d %d\n",mapname,x,y);
+		memcpy(mapname,map[nd->bl.m].name,24);//EOS incuded
+		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
                     break;
             case 2:                                             //Get Pet Position
                     if( st->end>st->start+6 )
@@ -6378,27 +6390,23 @@ int buildin_getmapxy(struct script_state *st){
                         push_val(st->stack,C_INT,-1);
                         return 0;
                     }
-
                     pd=sd->pd;
-
                     if(pd==NULL){                       //ped data not found
                         push_val(st->stack,C_INT,-1);
                         return 0;
                     }
                     x=pd->bl.x;
                     y=pd->bl.y;
-                    strncpy(mapname,map[pd->bl.m].name,24);
-
-                    printf(">>>>%s %d %d\n",mapname,x,y);
+		memcpy(mapname,map[pd->bl.m].name,24);//EOS included
+		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
                     break;
-
             case 3:                                             //Get Mob Position
                         push_val(st->stack,C_INT,-1);
                         return 0;
             default:                                            //Wrong type parameter
                         push_val(st->stack,C_INT,-1);
                         return 0;
-        }
+	}//end switch
 
      //Set MapName$
         num=st->stack->stack_data[st->start+2].u.num;
@@ -6409,7 +6417,6 @@ int buildin_getmapxy(struct script_state *st){
             sd=script_rid2sd(st);
         else
             sd=NULL;
-
         set_reg(sd,num,name,(void*)mapname);
 
      //Set MapX
@@ -6423,7 +6430,6 @@ int buildin_getmapxy(struct script_state *st){
             sd=NULL;
         set_reg(sd,num,name,(void*)x);
 
-
      //Set MapY
         num=st->stack->stack_data[st->start+4].u.num;
         name=(char *)(str_buf+str_data[num&0x00ffffff].str);
@@ -6433,7 +6439,6 @@ int buildin_getmapxy(struct script_state *st){
             sd=script_rid2sd(st);
         else
             sd=NULL;
-
         set_reg(sd,num,name,(void*)y);
 
      //Return Success value
@@ -6449,12 +6454,10 @@ int buildin_skilluseid (struct script_state *st)
 {
    int skid,sklv;
    struct map_session_data *sd;
-
    skid=conv_num(st,& (st->stack->stack_data[st->start+2]));
    sklv=conv_num(st,& (st->stack->stack_data[st->start+3]));
    sd=script_rid2sd(st);
    skill_use_id(sd,sd->status.account_id,skid,sklv);
-
    return 0;
 }
 
@@ -6466,15 +6469,12 @@ int buildin_skillusepos(struct script_state *st)
 {
    int skid,sklv,x,y;
    struct map_session_data *sd;
-
    skid=conv_num(st,& (st->stack->stack_data[st->start+2]));
    sklv=conv_num(st,& (st->stack->stack_data[st->start+3]));
    x=conv_num(st,& (st->stack->stack_data[st->start+4]));
    y=conv_num(st,& (st->stack->stack_data[st->start+5]));
-
    sd=script_rid2sd(st);
    skill_use_pos(sd,x,y,skid,sklv);
-
    return 0;
 }
 
@@ -6492,7 +6492,7 @@ int buildin_logmes(struct script_state *st)
 
 int buildin_summon(struct script_state *st)
 {
-	int _class, id;
+	int class_, id;
 	char *str,*event="";
 	struct map_session_data *sd;
 	struct mob_data *md;
@@ -6501,11 +6501,11 @@ int buildin_summon(struct script_state *st)
 	if (sd) {
 		int tick = gettick();
 		str	=conv_str(st,& (st->stack->stack_data[st->start+2]));
-		_class=conv_num(st,& (st->stack->stack_data[st->start+3]));
+		class_=conv_num(st,& (st->stack->stack_data[st->start+3]));
 		if( st->end>st->start+4 )
 			event=conv_str(st,& (st->stack->stack_data[st->start+4]));
 
-		id=mob_once_spawn(sd, "this", 0, 0, str,_class,1,event);
+		id=mob_once_spawn(sd, "this", 0, 0, str,class_,1,event);
 		if((md=(struct mob_data *)map_id2bl(id))){
 			md->master_id=sd->bl.id;
 			md->state.special_mob_ai=1;
@@ -6566,7 +6566,7 @@ void unget_com(int c)
 {
 	if(unget_com_data!=-1){
 		if(battle_config.error_log)
-			printf("unget_com can back only 1 data\n");
+			ShowMessage("unget_com can back only 1 data\n");
 	}
 	unget_com_data=c;
 }
@@ -6664,7 +6664,7 @@ void op_2str(struct script_state *st,int op,int sp1,int sp2)
 		a= (strcmp(s1,s2)<=0);
 		break;
 	default:
-		printf("illegal string operater\n");
+		ShowMessage("illegal string operater\n");
 		break;
 	}
 
@@ -6685,15 +6685,13 @@ void op_2num(struct script_state *st,int op,int i1,int i2)
 		break;
 	case C_MUL:
 		{
-	#ifndef _MSC_VER
-		long long res = i1 * i2;
-	#else
-		__int64 res = i1 * i2;
-	#endif
-		if (res >  2147483647 )
-			i1 = 2147483647;
+			int64 res = (int64)i1 * (int64)i2;
+			if (res >  LLCONST(2147483647) )
+				i1 = 0x7FFFFFFF;
+			else if (res <  LLCONST(-2147483648) )
+				i1 = 0x80000000;
 		else
-			i1*=i2;
+				i1 = (int)res;
 		}
 		break;
 	case C_DIV:
@@ -6769,7 +6767,7 @@ void op_2(struct script_state *st,int op)
 		op_2num(st,op,i1,i2);
 	}else{
 		// si,is => error
-		printf("script: op_2: int&str, str&int not allow.");
+		ShowMessage("script: op_2: int&str, str&int not allow.");
 		push_val(st->stack,C_INT,0);
 	}
 }
@@ -6809,7 +6807,7 @@ int run_func(struct script_state *st)
 	for(i=end_sp-1;i>=0 && st->stack->stack_data[i].type!=C_ARG;i--);
 	if(i==0){
 		if(battle_config.error_log)
-			printf("function not found\n");
+			ShowMessage("function not found\n");
 //		st->stack->sp=0;
 		st->state=END;
 		return 0;
@@ -6820,41 +6818,41 @@ int run_func(struct script_state *st)
 
 	func=st->stack->stack_data[st->start].u.num;
 	if( st->stack->stack_data[st->start].type!=C_NAME || str_data[func].type!=C_FUNC ){
-		printf("run_func: not function and command! \n");
+		ShowMessage("run_func: not function and command! \n");
 //		st->stack->sp=0;
 		st->state=END;
 		return 0;
 	}
 #ifdef DEBUG_RUN
 	if(battle_config.etc_log) {
-		printf("run_func : %s? (%d(%d))\n",str_buf+str_data[func].str,func,str_data[func].type);
-		printf("stack dump :");
+		ShowMessage("run_func : %s? (%d(%d))\n",str_buf+str_data[func].str,func,str_data[func].type);
+		ShowMessage("stack dump :");
 		for(i=0;i<end_sp;i++){
 			switch(st->stack->stack_data[i].type){
 			case C_INT:
-				printf(" int(%d)",st->stack->stack_data[i].u.num);
+				ShowMessage(" int(%d)",st->stack->stack_data[i].u.num);
 				break;
 			case C_NAME:
-				printf(" name(%s)",str_buf+str_data[st->stack->stack_data[i].u.num].str);
+				ShowMessage(" name(%s)",str_buf+str_data[st->stack->stack_data[i].u.num].str);
 				break;
 			case C_ARG:
-				printf(" arg");
+				ShowMessage(" arg");
 				break;
 			case C_POS:
-				printf(" pos(%d)",st->stack->stack_data[i].u.num);
+				ShowMessage(" pos(%d)",st->stack->stack_data[i].u.num);
 				break;
 			default:
-				printf(" %d,%d",st->stack->stack_data[i].type,st->stack->stack_data[i].u.num);
+				ShowMessage(" %d,%d",st->stack->stack_data[i].type,st->stack->stack_data[i].u.num);
 			}
 		}
-		printf("\n");
+		ShowMessage("\n");
 	}
 #endif
 	if(str_data[func].func){
 		str_data[func].func(st);
 	} else {
 		if(battle_config.error_log)
-			printf("run_func : %s? (%d(%d))\n",str_buf+str_data[func].str,func,str_data[func].type);
+			ShowMessage("run_func : %s? (%d(%d))\n",str_buf+str_data[func].str,func,str_data[func].type);
 		push_val(st->stack,C_INT,0);
 	}
 
@@ -6867,7 +6865,7 @@ int run_func(struct script_state *st)
 
 		pop_stack(st->stack,st->defsp,start_sp);	// ïúãAÇ…é◊ñÇÇ»ÉXÉ^ÉbÉNçÌèú
 		if(st->defsp<4 || st->stack->stack_data[st->defsp-1].type!=C_RETINFO){
-			printf("script:run_func(return) return without callfunc or callsub!\n");
+			ShowMessage("script:run_func(return) return without callfunc or callsub!\n");
 			st->state=END;
 			return 0;
 		}
@@ -6900,28 +6898,35 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 
 	rerun_pos=st->pos;
 	for(st->state=0;st->state==0;){
-		switch(c=get_com(script,&st->pos)){
+		switch(c=get_com((unsigned char*)script,&st->pos)){
 		case C_EOL:
 			if(stack->sp!=st->defsp){
 				if(battle_config.error_log)
-					printf("stack.sp(%d) != default(%d)\n",stack->sp,st->defsp);
+					ShowMessage("stack.sp(%d) != default(%d)\n",stack->sp,st->defsp);
 				stack->sp=st->defsp;
 			}
 			rerun_pos=st->pos;
 			break;
 		case C_INT:
-			push_val(stack,C_INT,get_num(script,&st->pos));
+			push_val(stack,C_INT,get_num((unsigned char*)script,&st->pos));
 			break;
 		case C_POS:
 		case C_NAME:
-			push_val(stack,c,(*(int*)(script+st->pos))&0xffffff);
+		{
+//			push_val(stack,c,(!*!(int!*!)(script+st->pos))&0xffffff);
+			unsigned long tmp;
+			tmp = (0xFF&script[st->pos])
+				| (0xFF&script[st->pos+1])<<8
+				| (0xFF&script[st->pos+2])<<16;
+			push_val(stack,c,tmp);
 			st->pos+=3;
 			break;
+		}
 		case C_ARG:
 			push_val(stack,c,0);
 			break;
 		case C_STR:
-			push_str(stack,C_CONSTSTR,script+st->pos);
+			push_str(stack,C_CONSTSTR,(unsigned char*)script+st->pos);
 			while(script[st->pos++]);
 			break;
 		case C_FUNC:
@@ -6931,7 +6936,7 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 				script=st->script;
 				st->state=0;
 				if( gotocount>0 && (--gotocount)<=0 ){
-					printf("run_script: infinity loop !\n");
+					ShowMessage("run_script: infinity loop !\n");
 					st->state=END;
 				}
 			}
@@ -6973,12 +6978,12 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 
 		default:
 			if(battle_config.error_log)
-				printf("unknown command : %d @ %d\n",c,pos);
+				ShowMessage("unknown command : %d @ %d\n",c,pos);
 			st->state=END;
 			break;
 		}
 		if( cmdcount>0 && (--cmdcount)<=0 ){
-			printf("run_script: infinity loop !\n");
+			ShowMessage("run_script: infinity loop !\n");
 			st->state=END;
 		}
 	}
@@ -7010,8 +7015,8 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 			memcpy(sd->npc_stackbuf, stack->stack_data, sizeof(stack->stack_data[0]) * stack->sp_max);
 			sd->npc_stack = stack->sp;
 			sd->npc_stackmax = stack->sp_max;
-			sd->npc_script=script;
-			sd->npc_scriptroot=rootscript;
+			sd->npc_script=(char*)script;
+			sd->npc_scriptroot=(char*)rootscript;
 		}
 	}
 
@@ -7081,7 +7086,7 @@ int mapreg_setregstr(int num,const char *str)
 {
 	char *p;
 
-	if( (p=numdb_search(mapregstr_db,num))!=NULL )
+	if( (p=(char*)numdb_search(mapregstr_db,num))!=NULL )
 		aFree(p);
 
 	if( str==NULL || *str==0 ){
@@ -7089,7 +7094,7 @@ int mapreg_setregstr(int num,const char *str)
 		mapreg_dirty=1;
 		return 0;
 	}
-	p=(char *)aCallocA(strlen(str)+1, sizeof(char));
+	p=(char *)aMalloc( (strlen(str)+1)*sizeof(char));
 	strcpy(p,str);
 	numdb_insert(mapregstr_db,num,p);
 	mapreg_dirty=1;
@@ -7105,7 +7110,7 @@ static int script_load_mapreg()
 	FILE *fp;
 	char line[1024];
 
-	if( (fp=fopen(mapreg_txt,"rt"))==NULL )
+	if( (fp=savefopen(mapreg_txt,"rt"))==NULL )
 		return -1;
 
 	while(fgets(line,sizeof(line),fp)){
@@ -7116,16 +7121,16 @@ static int script_load_mapreg()
 			continue;
 		if( buf1[strlen(buf1)-1]=='$' ){
 			if( sscanf(line+n,"%[^\n\r]",buf2)!=1 ){
-				printf("%s: %s broken data !\n",mapreg_txt,buf1);
+				ShowMessage("%s: %s broken data !\n",mapreg_txt,buf1);
 				continue;
 			}
-			p=(char *)aCallocA(strlen(buf2) + 1,sizeof(char));
+			p=(char *)aMalloc( (strlen(buf2) + 1)*sizeof(char));
 			strcpy(p,buf2);
 			s=add_str(buf1);
 			numdb_insert(mapregstr_db,(i<<24)|s,p);
 		}else{
 			if( sscanf(line+n,"%d",&v)!=1 ){
-				printf("%s: %s broken data !\n",mapreg_txt,buf1);
+				ShowMessage("%s: %s broken data !\n",mapreg_txt,buf1);
 				continue;
 			}
 			s=add_str(buf1);
@@ -7209,7 +7214,7 @@ static int set_posword(char *p)
 	return 0;
 }
 
-int script_config_read(char *cfgName)
+int script_config_read(const char *cfgName)
 {
 	int i;
 	char line[1024],w1[1024],w2[1024];
@@ -7219,12 +7224,12 @@ int script_config_read(char *cfgName)
 	script_config.warn_cmd_no_comma=1;
 	script_config.warn_func_mismatch_paramnum=1;
 	script_config.warn_cmd_mismatch_paramnum=1;
-	script_config.check_cmdcount=8192;
-	script_config.check_gotocount=512;
+	script_config.check_cmdcount=16384;
+	script_config.check_gotocount=1024;
 
-	fp=fopen(cfgName,"r");
+	fp=savefopen(cfgName,"r");
 	if(fp==NULL){
-		printf("file not found: %s\n",cfgName);
+		ShowMessage("file not found: %s\n",cfgName);
 		return 1;
 	}
 	while(fgets(line,1020,fp)){
@@ -7233,28 +7238,28 @@ int script_config_read(char *cfgName)
 		i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
 		if(i!=2)
 			continue;
-		if(strcmpi(w1,"refine_posword")==0) {
+		if(strcasecmp(w1,"refine_posword")==0) {
 			set_posword(w2);
 		}
-		else if(strcmpi(w1,"warn_func_no_comma")==0) {
+		else if(strcasecmp(w1,"warn_func_no_comma")==0) {
 			script_config.warn_func_no_comma = battle_config_switch(w2);
 		}
-		else if(strcmpi(w1,"warn_cmd_no_comma")==0) {
+		else if(strcasecmp(w1,"warn_cmd_no_comma")==0) {
 			script_config.warn_cmd_no_comma = battle_config_switch(w2);
 		}
-		else if(strcmpi(w1,"warn_func_mismatch_paramnum")==0) {
+		else if(strcasecmp(w1,"warn_func_mismatch_paramnum")==0) {
 			script_config.warn_func_mismatch_paramnum = battle_config_switch(w2);
 		}
-		else if(strcmpi(w1,"warn_cmd_mismatch_paramnum")==0) {
+		else if(strcasecmp(w1,"warn_cmd_mismatch_paramnum")==0) {
 			script_config.warn_cmd_mismatch_paramnum = battle_config_switch(w2);
 		}
-		else if(strcmpi(w1,"check_cmdcount")==0) {
+		else if(strcasecmp(w1,"check_cmdcount")==0) {
 			script_config.check_cmdcount = battle_config_switch(w2);
 		}
-		else if(strcmpi(w1,"check_gotocount")==0) {
+		else if(strcasecmp(w1,"check_gotocount")==0) {
 			script_config.check_gotocount = battle_config_switch(w2);
 		}
-		else if(strcmpi(w1,"import")==0){
+		else if(strcasecmp(w1,"import")==0){
 			script_config_read(w2);
 		}
 	}
@@ -7302,10 +7307,8 @@ int do_final_script()
 	if(userfunc_db)
 		strdb_final(userfunc_db,userfunc_db_final);
 
-        if (str_data)
-            aFree(str_data);
-        if (str_buf)
-            aFree(str_buf);
+	if (str_data)	aFree(str_data);
+	if (str_buf)	aFree(str_buf);
 
 	return 0;
 }

@@ -26,8 +26,9 @@
 #include "chrif.h"
 #include "guild.h"
 #include "showmsg.h"
+#include "utils.h"
+#include "socket.h"
 #include "grfio.h"
-
 #ifdef MEMWATCH
 #include "memwatch.h"
 #endif
@@ -755,12 +756,8 @@ struct skill_abra_db skill_abra_db[MAX_SKILL_ABRA_DB];
 // i: Skill ID, l: Skill Level, var: Value to return after checking
 // for values that don't require level just put a one (putting 0 will trigger return 0; instead
 // for values that might need to use a different function just skill_chk would suffice.
-#define skill_chk(i, l) \
-	if (i >= 10000 && i < 10015) {i -= 9500;} \
-	if (i < 1 || i > MAX_SKILL_DB) {return 0;} \
-	if (l <= 0 || l > MAX_SKILL_LEVEL) {return 0;}
-#define skill_get(var, i, l) \
-	{ skill_chk(i, l); return var; }
+#define skill_chk(i, l) if (i >= 10000 && i < 10015) {i -= 9500;} if (i < 1 || i > MAX_SKILL_DB) {return 0;} if (l <= 0 || l > MAX_SKILL_LEVEL) {return 0;}
+#define skill_get(var, i, l)	{ skill_chk(i, l); return var; }
 
 // Skill DB
 int	skill_get_hit( int id ){ skill_get (skill_db[id].hit, id, 1); }
@@ -1288,14 +1285,14 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,int s
 			if(!sd->state.arrow_atk) {
 				if(rand()%10000 < (sd->addeff[i-SC_STONE])*sc_def_card/100 ){
 					if(battle_config.battle_log)
-						printf("PC %d skill_addeff: cardによる異常?動 %d %d\n",sd->bl.id,i,sd->addeff[i-SC_STONE]);
+						ShowMessage("PC %d skill_addeff: cardによる異常?動 %d %d\n",sd->bl.id,i,sd->addeff[i-SC_STONE]);
 					status_change_start(bl,i,7,0,0,0,(i==SC_CONFUSION)? 10000+7000:skill_get_time2(sc2[i-SC_STONE],7),0);
 				}
 			}
 			else {
 				if(rand()%10000 < (sd->addeff[i-SC_STONE]+sd->arrow_addeff[i-SC_STONE])*sc_def_card/100 ){
 					if(battle_config.battle_log)
-						printf("PC %d skill_addeff: cardによる異常?動 %d %d\n",sd->bl.id,i,sd->addeff[i-SC_STONE]);
+						ShowMessage("PC %d skill_addeff: cardによる異常?動 %d %d\n",sd->bl.id,i,sd->addeff[i-SC_STONE]);
 					status_change_start(bl,i,7,0,0,0,(i==SC_CONFUSION)? 10000+7000:skill_get_time2(sc2[i-SC_STONE],7),0);
 				}
 			}
@@ -1312,14 +1309,14 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,int s
 			if(!sd->state.arrow_atk) {
 				if(rand()%10000 < (sd->addeff2[i-SC_STONE])*sc_def_card/100 ){
 					if(battle_config.battle_log)
-						printf("PC %d skill_addeff: cardによる異常?動 %d %d\n",src->id,i,sd->addeff2[i-SC_STONE]);
+						ShowMessage("PC %d skill_addeff: cardによる異常?動 %d %d\n",src->id,i,sd->addeff2[i-SC_STONE]);
 					status_change_start(src,i,7,0,0,0,(i==SC_CONFUSION)? 10000+7000:skill_get_time2(sc2[i-SC_STONE],7),0);
 				}
 			}
 			else {
 				if(rand()%10000 < (sd->addeff2[i-SC_STONE]+sd->arrow_addeff2[i-SC_STONE])*sc_def_card/100 ){
 					if(battle_config.battle_log)
-						printf("PC %d skill_addeff: cardによる異常?動 %d %d\n",src->id,i,sd->addeff2[i-SC_STONE]);
+						ShowMessage("PC %d skill_addeff: cardによる異常?動 %d %d\n",src->id,i,sd->addeff2[i-SC_STONE]);
 					status_change_start(src,i,7,0,0,0,(i==SC_CONFUSION)? 10000+7000:skill_get_time2(sc2[i-SC_STONE],7),0);
 				}
 			}
@@ -2212,8 +2209,9 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,int s
 	struct status_change *sc_data = status_get_sc_data(src);
 	int i;
 
-	if(skillid < 0)	return 0;
+	if(skillid < 0) return 0;
 	if(skillid > 0 && skilllv <= 0) return 0;
+
 
 	nullpo_retr(1, src);
 	nullpo_retr(1, bl);
@@ -2569,7 +2567,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,int s
 			dist = ((dx>dy)?dx:dy);
 			map_foreachinarea (skill_attack_area,src->m,src->x-1,src->y-1,src->x+1,src->y+1,0,
 				BF_WEAPON,src,src,skillid,skilllv,tick,0x0500|dist,BCT_ENEMY);
-			status_change_start (src,SC_FLAMELAUNCHER,0,0,0,0,10000,0);
+				status_change_start(src,SC_FLAMELAUNCHER,0,0,0,0,10000,0);
 			clif_skill_nodamage (src,src,skillid,skilllv,1);
 		}
 		break;
@@ -2810,17 +2808,17 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,int s
 					struct map_session_data *tsd = (struct map_session_data *)bl;
 					if (tsd) {
 						tsd->status.sp = 0;
-						clif_updatestatus((struct map_session_data *)bl,SP_SP);
-					}
+					clif_updatestatus((struct map_session_data *)bl,SP_SP);
+				}
 				}
 			} else {
 				clif_skill_nodamage(src,src,skillid,skilllv,1);
 				if (skilllv == 5)
 					skill_attack(BF_MAGIC,src,src,src,skillid,skilllv,tick,0 );
 				if (sd) {
-					sd->status.sp = 0;
-					clif_updatestatus(sd,SP_SP);
-				}				
+				sd->status.sp = 0;
+				clif_updatestatus(sd,SP_SP);
+			}
 			}
 			status_change_start(src,SC_BLOCKSKILL,skilllv,0,skillid,0, (skilllv < 5 ? 10000: 15000),0 );
 		}
@@ -2896,7 +2894,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,int s
 		break;
 
 	default:
-		printf("Unknown skill used:%d\n",skillid);
+		ShowMessage("Unknown skill used:%d\n",skillid);
 		map_freeblock_unlock();
 		return 1;
 	}
@@ -3399,10 +3397,11 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 			struct pc_base_job dst_s_class = pc_calc_base_job(dstsd->status.class_);
 
 			int lv = sd->status.base_level-dstsd->status.base_level;
+			
 			lv = (lv<0)?-lv:lv;
 			if((dstsd->bl.type!=BL_PC)	// 相手はPCじゃないとだめ
 			 ||(sd->bl.id == dstsd->bl.id)	// 相手が自分はだめ
-			 ||(lv > battle_config.devotion_level_difference)			// レベル差±10まで
+			 ||(lv > battle_config.devotion_level_difference)	// レベル差±10まで
 			 ||(!sd->status.party_id && !sd->status.guild_id)	// PTにもギルドにも所?無しはだめ
 			 ||((sd->status.party_id != dstsd->status.party_id)	// 同じパ?ティ?か、
 			 &&(sd->status.guild_id != dstsd->status.guild_id))	// 同じギルドじゃないとだめ
@@ -3655,7 +3654,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 		{
 			struct status_change *tsc_data = status_get_sc_data(bl);
 			int sc=SkillStatusChangeTable[skillid];
-			clif_skill_nodamage(src,bl,skillid,skilllv,1);
+			clif_skill_nodamage(src,bl,skillid,-1,1);
 			if(tsc_data && tsc_data[sc].timer!=-1 )
 				/* 解除する */
 				status_change_end(bl, sc, -1);
@@ -3915,7 +3914,8 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 			if(battle_config.holywater_name_input) {
 				item_tmp.card[0] = 0xfe;
 				item_tmp.card[1] = 0;
-				*((unsigned long *)(&item_tmp.card[2]))=sd->char_id;	/* キャラID */
+				item_tmp.card[2] = GetWord(sd->char_id,0);	/* キャラID */
+				item_tmp.card[3] = GetWord(sd->char_id,1);
 			}
 			eflag = pc_additem(sd,&item_tmp,1);
 			if(eflag) {
@@ -3951,7 +3951,8 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 	case ST_FULLSTRIP:	// Celest
 	{
 		struct status_change *tsc_data = status_get_sc_data(bl);
-		int scid, equip, strip_fix, strip_num = 0;
+		int scid, equip, strip_fix;
+		int strip_num = 1;
 		scid = SkillStatusChangeTable[skillid];
 		switch (skillid) {
 			case RG_STRIPWEAPON:
@@ -3968,7 +3969,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 				break;
 			case ST_FULLSTRIP:
 				equip = EQP_WEAPON | EQP_SHIELD | EQP_ARMOR | EQP_HELM;
-				strip_num = 3;
+				strip_num = 4;
 				break;
 			default:
 				return 1;
@@ -3988,7 +3989,8 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 			for (i=0;i<MAX_INVENTORY;i++) {
 				if (dstsd->status.inventory[i].equip && dstsd->status.inventory[i].equip & equip){
 					pc_unequipitem(dstsd,i,3);
-					if ((--strip_num) <= 0)
+					strip_num--;
+					if( strip_num <= 0 )
 						break;
 				}
 			}
@@ -4732,7 +4734,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 		break;
 
 	default:
-		printf("Unknown skill used:%d\n",skillid);
+		ShowMessage("Unknown skill used:%d\n",skillid);
 		map_freeblock_unlock();
 		return 1;
 	}
@@ -4858,7 +4860,7 @@ int skill_castend_id( int tid, unsigned int tick, int id,int data )
 	}
 
 	if(battle_config.pc_skill_log)
-		printf("PC %d skill castend skill=%d\n",sd->bl.id,sd->skillid);
+		ShowMessage("PC %d skill castend skill=%d\n",sd->bl.id,sd->skillid);
 	pc_stop_walking(sd,0);
 
 	switch( skill_get_nk(sd->skillid) )
@@ -5145,7 +5147,7 @@ int skill_castend_map( struct map_session_data *sd,int skill_num, const char *ma
 	pc_stopattack(sd);
 
 	if(battle_config.pc_skill_log)
-		printf("PC %d skill castend skill =%d map=%s\n",sd->bl.id,skill_num,map);
+		ShowMessage("PC %d skill castend skill =%d map=%s\n",sd->bl.id,skill_num,map);
 	pc_stop_walking(sd,0);
 
 	if(strcmp(map,"cancel")==0)
@@ -5201,8 +5203,9 @@ int skill_castend_map( struct map_session_data *sd,int skill_num, const char *ma
 				return 0;
 			if((group=skill_unitsetting(&sd->bl,sd->skillid,sd->skilllv,sd->skillx,sd->skilly,0))==NULL)
 				return 0;
-			group->valstr=(char *)aCallocA(24,sizeof(char));
+			group->valstr=(char *)aMalloc(24*sizeof(char));
 			memcpy(group->valstr,map,24);
+			group->valstr[24-1]=0;
 			group->val2=(x<<16)|y;
 		}
 		break;
@@ -5574,7 +5577,7 @@ struct skill_unit_group *skill_unitsetting( struct block_list *src, int skillid,
 
 	default:
 		if(battle_config.error_log)
-			printf ("skill_unitsetting: Unknown skill id = %d\n",skillid);
+			ShowMessage ("skill_unitsetting: Unknown skill id = %d\n",skillid);
 		return 0;
 	}
 
@@ -5587,13 +5590,9 @@ struct skill_unit_group *skill_unitsetting( struct block_list *src, int skillid,
 	group->range=range;
 	if(skillid==HT_TALKIEBOX ||
 	   skillid==RG_GRAFFITI){
-		group->valstr=aCallocA(80, 1);
-		if(group->valstr==NULL){
-			printf("skill_castend_map: out of memory !\n");
-			exit(1);
+		group->valstr = (char *)aMalloc(80*sizeof(char));
+		memcpy(group->valstr,talkie_mes,80);//EOS included
 		}
-		memcpy(group->valstr,talkie_mes,80);
-	}
 	for(i=0;i<count;i++){
 		struct skill_unit *unit;
 		int ux=x,uy=y,val1=skilllv,val2=0,limit=group->limit,alive=1;
@@ -5878,19 +5877,28 @@ int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned int
 	if( bl->prev==NULL || !src->alive || (bl->type == BL_PC && pc_isdead((struct map_session_data *)bl) ) )
 		return 0;
 
-	nullpo_retr(0, sg=src->group);
-	nullpo_retr(0, ss=map_id2bl(sg->src_id));
+	sg = src->group;
+	nullpo_retr(0, sg);
+	ss = map_id2bl(sg->src_id);
+	nullpo_retr(0, ss);
 
 	if(ss->type == BL_PC)
-		nullpo_retr(0, srcsd=(struct map_session_data *)ss);
+	{
+		srcsd = (struct map_session_data *)ss;
+		nullpo_retr(0, srcsd);
+	}
 	if(srcsd && srcsd->chatID)
 		return 0;
 
 	if( bl->type != BL_PC && bl->type != BL_MOB )
 		return 0;
-	nullpo_retr(0, ts = skill_unitgrouptickset_search(bl, sg));
+
+	ts = skill_unitgrouptickset_search(bl, sg);
+	nullpo_retr(0, ts);
+
 	diff=DIFF_TICK(tick,ts->tick);
 	goflag=(diff>sg->interval || diff<0);
+
 	if (sg->skill_id == CR_GRANDCROSS && !battle_config.gx_allhit) // 重なっていたら3HITしない
 		goflag = (diff>sg->interval*map_count_oncell(bl->m,bl->x,bl->y) || diff<0);
 
@@ -6137,8 +6145,10 @@ int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned int
 				break;
 			if(sc_data) {
 				if (sc_data[type].timer==-1)
+				{
 					status_change_start(bl,type,sg->skill_lv,sg->val1,sg->val2,
 						(int)src,skill_get_time2(sg->skill_id,sg->skill_lv),0);
+				}
 				else if( (unit2=(struct skill_unit *)sc_data[type].val4) && unit2 != src ){
 					if(unit2 && unit2->group && DIFF_TICK(sg->tick,unit2->group->tick)>0 )
 						status_change_start(bl,type,sg->skill_lv,sg->val1,sg->val2,
@@ -6271,7 +6281,7 @@ int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned int
 			struct map_session_data *sd;
 			if (srcsd && bl->type == BL_PC && (sd=(struct map_session_data *)bl) &&
 				sd->status.guild_id == srcsd->status.guild_id &&
-				sd != srcsd) {
+				sd != srcsd && sd) {
 					sd->state.hawkeyes_flag = (int)src;
 					status_calc_pc (sd, 0);
 				}
@@ -6280,7 +6290,7 @@ int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned int
 
 /*	default:
 		if(battle_config.error_log)
-			printf("skill_unit_onplace: Unknown skill unit id=%d block=%d\n",sg->unit_id,bl->id);
+			ShowMessage("skill_unit_onplace: Unknown skill unit id=%d block=%d\n",sg->unit_id,bl->id);
 		break;*/
 	}
 	if(bl->type==BL_MOB && ss!=bl)	/* スキル使用?件のMOBスキル */
@@ -6445,7 +6455,7 @@ int skill_unit_onout(struct skill_unit *src,struct block_list *bl,unsigned int t
 
 /*	default:
 		if(battle_config.error_log)
-			printf("skill_unit_onout: Unknown skill unit id=%d block=%d\n",sg->unit_id,bl->id);
+			ShowMessage("skill_unit_onout: Unknown skill unit id=%d block=%d\n",sg->unit_id,bl->id);
 		break;*/
 	}
 	skill_unitgrouptickset_delete(bl,sg);
@@ -6503,7 +6513,7 @@ int skill_unit_ondelete(struct skill_unit *src,struct block_list *bl,unsigned in
 
 /*	default:
 		if(battle_config.error_log)
-			printf("skill_unit_ondelete: Unknown skill unit id=%d block=%d\n",sg->unit_id,bl->id);
+			ShowMessage("skill_unit_ondelete: Unknown skill unit id=%d block=%d\n",sg->unit_id,bl->id);
 		break;*/
 	}
 	skill_unitgrouptickset_delete(bl,sg);
@@ -6528,12 +6538,9 @@ int skill_unit_onlimit(struct skill_unit *src,unsigned int tick)
 					src->bl.x,src->bl.y,1);
 			if(group == NULL)
 				return 0;
-			group->valstr=aCallocA(24, 1);
-			if(group->valstr==NULL){
-				printf("skill_unit_onlimit: out of memory !\n");
-				exit(1);
-			}
+			group->valstr=(char*)aMalloc(24*sizeof(char));
 			memcpy(group->valstr,sg->valstr,24);
+			group->valstr[24-1]=0;
 			group->val2=sg->val2;
 		}
 		break;
@@ -6762,7 +6769,7 @@ int skill_castend_pos( int tid, unsigned int tick, int id,int data )
 	}
 
 	if(battle_config.pc_skill_log)
-		printf("PC %d skill castend skill=%d\n",sd->bl.id,sd->skillid);
+		ShowMessage("PC %d skill castend skill=%d\n",sd->bl.id,sd->skillid);
 	pc_stop_walking(sd,0);
 
 	skill_castend_pos2(&sd->bl,sd->skillx,sd->skilly,sd->skillid,sd->skilllv,tick,0);
@@ -6914,12 +6921,17 @@ static int skill_check_condition_mob_master_sub(struct block_list *bl,va_list ap
 	int *c,src_id=0,mob_class=0;
 	struct mob_data *md;
 
+	md       = (struct mob_data*)bl;
+	src_id   = va_arg(ap,int);
+	mob_class= va_arg(ap,int);
+	c        = va_arg(ap,int *);
+	
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
-	nullpo_retr(0, md=(struct mob_data*)bl);
-	nullpo_retr(0, src_id=va_arg(ap,int));
-	nullpo_retr(0, mob_class=va_arg(ap,int));
-	nullpo_retr(0, c=va_arg(ap,int *));
+	nullpo_retr(0, md);
+	nullpo_retr(0, src_id);
+	nullpo_retr(0, mob_class);
+	nullpo_retr(0, c);
 
 	if(md->class_==mob_class && md->master_id==src_id)
 		(*c)++;
@@ -7378,7 +7390,7 @@ int skill_castfix( struct block_list *bl, int time )
 	if(time==0)
 		return 0;
 	if (sd) {
-		if(!skill_get_castnodex(skill, lv) > 0) {
+		if( skill_get_castnodex(skill, lv) == 0) {
 			castrate=((struct map_session_data *)bl)->castrate;
 			time=time*castrate*(battle_config.castrate_dex_scale - status_get_dex(bl))/(battle_config.castrate_dex_scale * 100);
 			time=time*battle_config.cast_rate/100;
@@ -7400,7 +7412,8 @@ int skill_delayfix( struct block_list *bl, int time )
 {
 	struct status_change *sc_data;
 	struct map_session_data *sd = NULL;
-	int skill = 0,lv = 0;
+	int skill=0;
+	int lv = 0;
 	int delayrate = 100;
 
 	nullpo_retr(0, bl);
@@ -7464,7 +7477,7 @@ int skill_use_id( struct map_session_data *sd, int target_id,
 
 	if( (bl=map_id2bl(target_id)) == NULL ){
 /*		if(battle_config.error_log)
-			printf("skill target not found %d\n",target_id); */
+			ShowMessage("skill target not found %d\n",target_id); */
 		return 0;
 	}
 	if(sd->bl.m != bl->m || pc_isdead(sd))
@@ -7528,7 +7541,7 @@ int skill_use_id( struct map_session_data *sd, int target_id,
 		/* 演奏/ダンス中 */
 		if(sc_data[SC_DANCING].timer!=-1 ){
 	//		if(battle_config.pc_skill_log)
-	//			printf("dancing! %d\n",skill_num);
+	//			ShowMessage("dancing! %d\n",skill_num);
 			if( sc_data[SC_DANCING].val4 && skill_num!=BD_ADAPTATION ) //合奏中はアドリブ以外不可
 				return 0;
 			if(skill_num!=BD_ADAPTATION && skill_num!=BA_MUSICALSTRIKE && skill_num!=DC_THROWARROW){
@@ -7768,7 +7781,7 @@ int skill_use_id( struct map_session_data *sd, int target_id,
 	}
 
 	if(battle_config.pc_skill_log)
-		printf("PC %d skill use target_id=%d skill=%d lv=%d cast=%d\n",sd->bl.id,target_id,skill_num,skill_lv,casttime);
+		ShowMessage("PC %d skill use target_id=%d skill=%d lv=%d cast=%d\n",sd->bl.id,target_id,skill_num,skill_lv,casttime);
 
 //	if(sd->skillitem == skill_num)
 //		casttime = delay = 0;
@@ -7926,7 +7939,7 @@ int skill_use_pos( struct map_session_data *sd,
 	sd->state.skillcastcancel = skill_db[skill_num].castcancel;
 
 	if(battle_config.pc_skill_log)
-		printf("PC %d skill use target_pos=(%d,%d) skill=%d lv=%d cast=%d\n",sd->bl.id,skill_x,skill_y,skill_num,skill_lv,casttime);
+		ShowMessage("PC %d skill use target_pos=(%d,%d) skill=%d lv=%d cast=%d\n",sd->bl.id,skill_x,skill_y,skill_num,skill_lv,casttime);
 
 //	if(sd->skillitem == skill_num)
 //		casttime = delay = 0;
@@ -8000,7 +8013,7 @@ int skill_castcancel(struct block_list *bl,int type)
 				else
 					ret=delete_timer( sd->skilltimer, skill_castend_id );
 				if(ret<0)
-					printf("delete timer error : skillid : %d\n",sd->skillid);
+					ShowMessage("delete timer error : skillid : %d\n",sd->skillid);
 			}
 			else {
 				if((inf = skill_get_inf( sd->skillid_old )) == 2 || inf == 32)
@@ -8008,7 +8021,7 @@ int skill_castcancel(struct block_list *bl,int type)
 				else
 					ret=delete_timer( sd->skilltimer, skill_castend_id );
 				if(ret<0)
-					printf("delete timer error : skillid : %d\n",sd->skillid_old);
+					ShowMessage("delete timer error : skillid : %d\n",sd->skillid_old);
 			}
 			sd->skilltimer=-1;
 			clif_skillcastcancel(bl);
@@ -8027,7 +8040,7 @@ int skill_castcancel(struct block_list *bl,int type)
 			clif_skillcastcancel(bl);
 		}
 		if(ret<0)
-			printf("delete timer error : skillid : %d\n",md->skillid);
+			ShowMessage("delete timer error : skillid : %d\n",md->skillid);
 		return 0;
 	}
 	return 1;
@@ -8683,8 +8696,8 @@ int skill_check_cloaking(struct block_list *bl)
 {
 	static int dx[]={ 0, 1, 0, -1, -1,  1, 1, -1}; //optimized by Lupus
 	static int dy[]={-1, 0, 1,  0, -1, -1, 1,  1};
-	int end=1,i;
-
+	int end=1;
+	size_t i;
 	//missing sd [Found by Celest, commited by Aria]
 	struct map_session_data *sd=(struct map_session_data *)bl;
 
@@ -8723,7 +8736,7 @@ int skill_type_cloaking(struct block_list *bl)
 {
 	static int dx[]={ 0, 1, 0, -1, -1,  1, 1, -1}; //optimized by Lupus
 	static int dy[]={-1, 0, 1,  0, -1, -1, 1,  1};
-	int i;
+	size_t i;
 
 	nullpo_retr(0, bl);
 	if(bl->type == BL_PC && battle_config.pc_cloak_check_type&1)
@@ -8951,7 +8964,7 @@ struct skill_unit_group *skill_initunitgroup(struct block_list *src,
 	}
 
 	if(group==NULL){
-		printf("skill_initunitgroup: error unit group !\n");
+		ShowMessage("skill_initunitgroup: error unit group !\n");
 		exit(1);
 	}
 
@@ -9122,8 +9135,7 @@ struct skill_unit_group_tickset *skill_unitgrouptickset_search(
 
 	if (j == -1) {
 		if(battle_config.error_log) {
-			sprintf (tmp_output, "skill_unitgrouptickset_search: tickset is full\n");
-			ShowWarning (tmp_output);
+			ShowWarning("skill_unitgrouptickset_search: tickset is full\n");
 		}
 		for (i = 0; i<MAX_SKILLUNITGROUPTICKSET; i++)
 			set[k].id = 0;
@@ -9165,7 +9177,7 @@ int skill_unitgrouptickset_delete(
 		}
 	}
 //	if (i == MAX_SKILLUNITGROUPTICKSET && battle_config.error_log) {
-//		printf("skill_unitgrouptickset_delete: tickset not found\n");
+//		ShowMessage("skill_unitgrouptickset_delete: tickset not found\n");
 //	}
 
 	return 0;
@@ -9517,12 +9529,9 @@ int skill_unit_move_unit_group( struct skill_unit_group *group, int m,int dx,int
 			int i,j, *r_flag, *s_flag, *m_flag;
 			struct skill_unit *unit1;
 			struct skill_unit *unit2;
-                        r_flag = (int *) aMallocA(sizeof(int) * group->unit_count);
-                        s_flag = (int *) aMallocA(sizeof(int) * group->unit_count);
-                        m_flag = (int *) aMallocA(sizeof(int) * group->unit_count);
-			memset(r_flag,0, sizeof(int) * group->unit_count);// ?承フラグ
-			memset(s_flag,0, sizeof(int) * group->unit_count);// ?承フラグ
-			memset(m_flag,0, sizeof(int) * group->unit_count);// ?承フラグ
+			r_flag = (int *) aCalloc(group->unit_count, sizeof(int));
+			s_flag = (int *) aCalloc(group->unit_count, sizeof(int));
+			m_flag = (int *) aCalloc(group->unit_count, sizeof(int));
 
 			//先にフラグを全部決める
 		for(i=0;i<group->unit_count;i++){
@@ -9710,7 +9719,7 @@ int skill_produce_mix( struct map_session_data *sd,
 				pc_delitem(sd,j,y,0);
 			}else {
 				if(battle_config.error_log)
-					printf("skill_produce_mix: material item error\n");
+					ShowMessage("skill_produce_mix: material item error\n");
 			}
 
 			x-=y;	/* まだ足りない個?を計算 */
@@ -9778,7 +9787,7 @@ int skill_produce_mix( struct map_session_data *sd,
 	}
 
 //	if(battle_config.etc_log)
-//		printf("make rate = %d\n",make_per);
+//		ShowMessage("make rate = %d\n",make_per);
 
 	if(rand()%10000 < make_per){
 		/* 成功 */
@@ -9790,13 +9799,15 @@ int skill_produce_mix( struct map_session_data *sd,
 		if(equip){	/* 武器の場合 */
 			tmp_item.card[0]=0x00ff; /* 製造武器フラグ */
 			tmp_item.card[1]=((sc*5)<<8)+ele;	/* ?性とつよさ */
-			*((unsigned long *)(&tmp_item.card[2]))=sd->char_id;	/* キャラID */
+			tmp_item.card[2]=GetWord(sd->char_id,0);	/* キャラID */
+			tmp_item.card[3]=GetWord(sd->char_id,1);
 		}
 		else if((battle_config.produce_item_name_input && skill_produce_db[idx].req_skill!=AM_PHARMACY) ||
 			(battle_config.produce_potion_name_input && skill_produce_db[idx].req_skill==AM_PHARMACY)) {
 			tmp_item.card[0]=0x00fe;
 			tmp_item.card[1]=0;
-			*((unsigned long *)(&tmp_item.card[2]))=sd->char_id;	/* キャラID */
+			tmp_item.card[2]=GetWord(sd->char_id,0);	/* キャラID */
+			tmp_item.card[3]=GetWord(sd->char_id,1);
 		}
 
 		#ifndef TXT_ONLY
@@ -9879,7 +9890,8 @@ int skill_arrow_create( struct map_session_data *sd,int nameid)
 		if(battle_config.making_arrow_name_input) {
 			tmp_item.card[0]=0x00fe;
 			tmp_item.card[1]=0;
-			*((unsigned long *)(&tmp_item.card[2]))=sd->char_id;	/* キャラID */
+			tmp_item.card[2]=GetWord(sd->char_id,0);	/* キャラID */
+			tmp_item.card[3]=GetWord(sd->char_id,1);
 		}
 		if(tmp_item.nameid <= 0 || tmp_item.amount <= 0)
 			continue;
@@ -9909,14 +9921,14 @@ int skill_readdb(void)
 {
 	int i,j,k,l,m;
 	FILE *fp;
-	char line[1024],*p;
+	char *p, line[1024];
 	char *filename[]={"db/produce_db.txt","db/produce_db2.txt"};
 
 	/* スキルデ?タベ?ス */
 	memset(skill_db,0,sizeof(skill_db));
-	fp=fopen("db/skill_db.txt","r");
+	fp=savefopen("db/skill_db.txt","r");
 	if(fp==NULL){
-		printf("can't read db/skill_db.txt\n");
+		ShowMessage("can't read %s\n","db/skill_db.txt");
 		return 1;
 	}
 	while(fgets(line,1020,fp)){
@@ -9937,7 +9949,7 @@ int skill_readdb(void)
 		else if(i<=0 || i>MAX_SKILL_DB)
 			continue;
 
-/*		printf("skill id=%d\n",i); */
+/*		ShowMessage("skill id=%d\n",i); */
 		memset(split2,0,sizeof(split2));
 		for(j=0,p=split[1];j<MAX_SKILL_LEVEL && p;j++){
 			split2[j]=p;
@@ -9961,18 +9973,18 @@ int skill_readdb(void)
 		for(k=0;k<MAX_SKILL_LEVEL;k++)
 			skill_db[i].num[k]=(split2[k])? atoi(split2[k]):atoi(split2[0]);
 
-		if(strcmpi(split[8],"yes") == 0)
+		if(strcasecmp(split[8],"yes") == 0)
 			skill_db[i].castcancel=1;
 		else
 			skill_db[i].castcancel=0;
 		skill_db[i].cast_def_rate=atoi(split[9]);
 		skill_db[i].inf2=atoi(split[10]);
 		skill_db[i].maxcount=atoi(split[11]);
-		if(strcmpi(split[12],"weapon") == 0)
+		if(strcasecmp(split[12],"weapon") == 0)
 			skill_db[i].skill_type=BF_WEAPON;
-		else if(strcmpi(split[12],"magic") == 0)
+		else if(strcasecmp(split[12],"magic") == 0)
 			skill_db[i].skill_type=BF_MAGIC;
-		else if(strcmpi(split[12],"misc") == 0)
+		else if(strcasecmp(split[12],"misc") == 0)
 			skill_db[i].skill_type=BF_MISC;
 		else
 			skill_db[i].skill_type=0;
@@ -9986,12 +9998,11 @@ int skill_readdb(void)
 			skill_db[i].blewcount[k]=(split2[k])? atoi(split2[k]):atoi(split2[0]);
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_db.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_db.txt");
 
-	fp=fopen("db/skill_require_db.txt","r");
+	fp=savefopen("db/skill_require_db.txt","r");
 	if(fp==NULL){
-		printf("can't read db/skill_require_db.txt\n");
+		ShowMessage("can't read %s\n","db/skill_require_db.txt");
 		return 1;
 	}
 	while(fgets(line,1020,fp)){
@@ -10082,18 +10093,18 @@ int skill_readdb(void)
 				skill_db[i].weapon |= 1<<l;
 		}
 
-		if( strcmpi(split[8],"hiding")==0 ) skill_db[i].state=ST_HIDING;
-		else if( strcmpi(split[8],"cloaking")==0 ) skill_db[i].state=ST_CLOAKING;
-		else if( strcmpi(split[8],"hidden")==0 ) skill_db[i].state=ST_HIDDEN;
-		else if( strcmpi(split[8],"riding")==0 ) skill_db[i].state=ST_RIDING;
-		else if( strcmpi(split[8],"falcon")==0 ) skill_db[i].state=ST_FALCON;
-		else if( strcmpi(split[8],"cart")==0 ) skill_db[i].state=ST_CART;
-		else if( strcmpi(split[8],"shield")==0 ) skill_db[i].state=ST_SHIELD;
-		else if( strcmpi(split[8],"sight")==0 ) skill_db[i].state=ST_SIGHT;
-		else if( strcmpi(split[8],"explosionspirits")==0 ) skill_db[i].state=ST_EXPLOSIONSPIRITS;
-		else if( strcmpi(split[8],"recover_weight_rate")==0 ) skill_db[i].state=ST_RECOV_WEIGHT_RATE;
-		else if( strcmpi(split[8],"move_enable")==0 ) skill_db[i].state=ST_MOVE_ENABLE;
-		else if( strcmpi(split[8],"water")==0 ) skill_db[i].state=ST_WATER;
+		if( strcasecmp(split[8],"hiding")==0 ) skill_db[i].state=ST_HIDING;
+		else if( strcasecmp(split[8],"cloaking")==0 ) skill_db[i].state=ST_CLOAKING;
+		else if( strcasecmp(split[8],"hidden")==0 ) skill_db[i].state=ST_HIDDEN;
+		else if( strcasecmp(split[8],"riding")==0 ) skill_db[i].state=ST_RIDING;
+		else if( strcasecmp(split[8],"falcon")==0 ) skill_db[i].state=ST_FALCON;
+		else if( strcasecmp(split[8],"cart")==0 ) skill_db[i].state=ST_CART;
+		else if( strcasecmp(split[8],"shield")==0 ) skill_db[i].state=ST_SHIELD;
+		else if( strcasecmp(split[8],"sight")==0 ) skill_db[i].state=ST_SIGHT;
+		else if( strcasecmp(split[8],"explosionspirits")==0 ) skill_db[i].state=ST_EXPLOSIONSPIRITS;
+		else if( strcasecmp(split[8],"recover_weight_rate")==0 ) skill_db[i].state=ST_RECOV_WEIGHT_RATE;
+		else if( strcasecmp(split[8],"move_enable")==0 ) skill_db[i].state=ST_MOVE_ENABLE;
+		else if( strcasecmp(split[8],"water")==0 ) skill_db[i].state=ST_WATER;
 		else skill_db[i].state=ST_NONE;
 
 		memset(split2,0,sizeof(split2));
@@ -10126,13 +10137,12 @@ int skill_readdb(void)
 		skill_db[i].amount[9]=atoi(split[29]);
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_require_db.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_require_db.txt");
 
 	/* キャスティングデ?タベ?ス */
-	fp=fopen("db/skill_cast_db.txt","r");
+	fp=savefopen("db/skill_cast_db.txt","r");
 	if(fp==NULL){
-		printf("can't read db/skill_cast_db.txt\n");
+		ShowMessage("can't read %s\n","db/skill_cast_db.txt");
 		return 1;
 	}
 	while(fgets(line,1020,fp)){
@@ -10191,17 +10201,16 @@ int skill_readdb(void)
 			skill_db[i].upkeep_time2[k]=(split2[k])? atoi(split2[k]):atoi(split2[0]);
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_cast_db.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_cast_db.txt");
 
 	/* 製造系スキルデ?タベ?ス */
 	memset(skill_produce_db,0,sizeof(skill_produce_db));
 	for(m=0;m<2;m++){
-		fp=fopen(filename[m],"r");
+		fp=savefopen(filename[m],"r");
 		if(fp==NULL){
 			if(m>0)
 				continue;
-			printf("can't read %s\n",filename[m]);
+			ShowMessage("can't read %s\n",filename[m]);
 			return 1;
 		}
 		k=0;
@@ -10235,14 +10244,14 @@ int skill_readdb(void)
 				break;
 		}
 		fclose(fp);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",k,filename[m]);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",k,filename[m]);
 	}
 
 	memset(skill_arrow_db,0,sizeof(skill_arrow_db));
-	fp=fopen("db/create_arrow_db.txt","r");
+
+	fp=savefopen("db/create_arrow_db.txt","r");
 	if(fp==NULL){
-		printf("can't read db/create_arrow_db.txt\n");
+		ShowMessage("can't read %s\n","db/create_arrow_db.txt");
 		return 1;
 	}
 	k=0;
@@ -10274,13 +10283,12 @@ int skill_readdb(void)
 			break;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",k,"db/create_arrow_db.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",k,"db/create_arrow_db.txt");
 
 	memset(skill_abra_db,0,sizeof(skill_abra_db));
-	fp=fopen("db/abra_db.txt","r");
+	fp=savefopen("db/abra_db.txt","r");
 	if(fp==NULL){
-		printf("can't read db/abra_db.txt\n");
+		ShowMessage("can't read %s\n","db/abra_db.txt");
 		return 1;
 	}
 	k=0;
@@ -10308,12 +10316,11 @@ int skill_readdb(void)
 			break;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",k,"db/abra_db.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",k,"db/abra_db.txt");
 
-	fp=fopen("db/skill_castnodex_db.txt","r");
+	fp=savefopen("db/skill_castnodex_db.txt","r");
 	if(fp==NULL){
-		printf("can't read db/skill_castnodex_db.txt\n");
+		ShowMessage("can't read %s\n","db/skill_castnodex_db.txt");
 		return 1;
 	}
 	while(fgets(line,1020,fp)){
@@ -10355,12 +10362,11 @@ int skill_readdb(void)
 			skill_db[i].delaynodex[k]=(split2[k])? atoi(split2[k]):atoi(split2[0]);
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_castnodex_db.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_castnodex_db.txt");
 
-	fp=fopen("db/skill_nocast_db.txt","r");
+	fp=savefopen("db/skill_nocast_db.txt","r");
 	if(fp==NULL){
-		printf("can't read db/skill_nocast_db.txt\n");
+		ShowMessage("can't read %s\n","db/skill_nocast_db.txt");
 		return 1;
 	}
 	k=0;
@@ -10385,8 +10391,7 @@ int skill_readdb(void)
 		k++;
 	}
 	fclose(fp);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_nocast_db");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/skill_nocast_db");
 
 	return 0;
 }
@@ -10401,7 +10406,7 @@ static int skill_read_skillspamount(void)
 	struct skill_db *skill = NULL;
 	int s, idx, new_flag=1, level=1, sp=0;
 
-	buf=grfio_reads("data\\leveluseskillspamount.txt",&s);
+	buf = (char *)grfio_reads("data\\leveluseskillspamount.txt",&s);
 
 	if(buf==NULL)
 		return -1;
@@ -10431,8 +10436,7 @@ static int skill_read_skillspamount(void)
 		p++;
 	}
 	aFree(buf);
-	sprintf(tmp_output,"Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\leveluseskillspamount.txt");
-	ShowStatus(tmp_output);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\leveluseskillspamount.txt");
 
 	return 0;
 }

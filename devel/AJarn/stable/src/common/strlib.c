@@ -1,80 +1,91 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "strlib.h"
 #include "utils.h"
+#include "showmsg.h"
 #include "malloc.h"
-
 //-----------------------------------------------
 // string lib.
-char* jstrescape (char* pt) {
+
+// assuming call convention ...(string1)
+// string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
+unsigned char* jstrescape (unsigned char* pt) {
 	//copy from here
-	char *ptr;
-	int i =0, j=0;
+	unsigned char *spt,*sp;
+	unsigned char *p=pt;
+	if(NULL==pt) return NULL;
 
 	//copy string to temporary
-	CREATE_A(ptr, char, J_MAX_MALLOC_SIZE);
-	strcpy(ptr,pt);
-
-	while (ptr[i] != '\0') {
-		switch (ptr[i]) {
+	CREATE(spt, unsigned char, strlen((char*)pt)+1);
+	strcpy ((char*)spt,(char*)pt);
+	
+	sp=spt;
+	while (*sp) {
+		switch (*sp) {
 			case '\'':
-				pt[j++] = '\\';
-				pt[j++] = ptr[i++];
+				*p++ = '\\';
+				*p++ = *sp++;
 				break;
 			case '\\':
-				pt[j++] = '\\';
-				pt[j++] = ptr[i++];
+				*p++ = '\\';
+				*p++ = *sp++;
 				break;
 			default:
-				pt[j++] = ptr[i++];
+				*p++ = *sp++;
 		}
 	}
-	pt[j++] = '\0';
-	aFree (ptr);
-	return &pt[0];
+	*p++ = '\0';
+	aFree (spt);
+	return pt;
 }
 
-char* jstrescapecpy (char* pt,char* spt) {
+// assuming call convention ...(string1, string2)
+// string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
+unsigned char* jstrescapecpy (unsigned char* pt,unsigned char* sp) {
 	//copy from here
-	int i =0, j=0;
-
-	while (spt[i] != '\0') {
-		switch (spt[i]) {
+	unsigned char *p =pt;
+	if( (NULL==pt) || (NULL==sp) ) return NULL;
+	while(*sp) {
+		switch (*sp) {
 			case '\'':
-				pt[j++] = '\\';
-				pt[j++] = spt[i++];
+				*p++ = '\\';
+				*p++ = *sp++;
 				break;
 			case '\\':
-				pt[j++] = '\\';
-				pt[j++] = spt[i++];
+				*p++ = '\\';
+				*p++ = *sp++;
 				break;
 			default:
-				pt[j++] = spt[i++];
+				*p++ = *sp++;
 		}
 	}
-	pt[j++] = '\0';
-	return &pt[0];
+	*p++ = '\0';
+	return pt;
 }
-int jmemescapecpy (char* pt,char* spt, int size) {
-	//copy from here
-	int i =0, j=0;
 
-	while (i < size) {
-		switch (spt[i]) {
+// assuming call convention ...(string1, string2, max_chars_to_copy)
+// string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
+size_t jmemescapecpy (unsigned char* pt,unsigned char* spt, int size) {
+	//copy from here
+	unsigned char *p  =pt;
+	unsigned char *sp =spt;
+	if( (NULL==pt) || (NULL==spt) ) return 0;
+	
+	while ( (sp < spt+size) && *sp) {
+		switch (*sp) {
 			case '\'':
-				pt[j++] = '\\';
-				pt[j++] = spt[i++];
+				*p++ = '\\';
+				*p++ = *sp++;
 				break;
 			case '\\':
-				pt[j++] = '\\';
-				pt[j++] = spt[i++];
+				*p++ = '\\';
+				*p++ = *sp++;
 				break;
 			default:
-				pt[j++] = spt[i++];
+				*p++ = *sp++;
 		}
 	}
 	// copy size is 0 ~ (j-1)
-	return j;
+	// and what about the final EOS? You __NEED__ it... 
+	*p = '\0';
+	return (p-pt);
 }

@@ -16,7 +16,7 @@
 //#define pc_setstand(sd) ((sd)->state.dead_sit = 0)
 #define pc_isdead(sd) ((sd)->state.dead_sit == 1)
 #define pc_issit(sd) ((sd)->state.dead_sit == 2)
-#define pc_setdir(sd,b,h) ((sd)->dir = (b) ,(sd)->head_dir = (h) )
+#define pc_setdir(sd,b,h) ((sd)->dir = (char)(b) ,(sd)->head_dir = (char)(h) )
 #define pc_setchatid(sd,n) ((sd)->chatID = n)
 #define pc_ishiding(sd) ((sd)->status.option&0x4006)
 #define pc_iscarton(sd) ((sd)->status.option&CART_MASK)
@@ -34,7 +34,7 @@ int pc_counttargeted(struct map_session_data *sd,struct block_list *src,int targ
 int pc_setrestartvalue(struct map_session_data *sd,int type);
 int pc_makesavestatus(struct map_session_data *);
 int pc_setnewpc(struct map_session_data*,int,int,int,int,int,int);
-int pc_authok(int, int, time_t, struct mmo_charstatus *);
+int pc_authok(int, int, time_t, unsigned char *);
 int pc_authfail(int);
 
 int pc_isequip(struct map_session_data *sd,int n);
@@ -183,7 +183,8 @@ struct skill_tree_entry {
 		short id;
 		unsigned char lv;
 	} need[5];
-}; // Celest
+};// Celest
+	
 extern struct skill_tree_entry skill_tree[3][25][MAX_SKILL_TREE];
 
 int pc_read_gm_account(int fd);

@@ -22,6 +22,7 @@
 #include "script.h"
 #include "skill.h"
 #include "showmsg.h"
+#include "utils.h"
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -395,7 +396,7 @@ static int pet_timer(int tid,unsigned int tick,int id,int data)
 
 	if(pd->timer != tid){
 		if(battle_config.error_log)
-			printf("pet_timer %d != %d\n",pd->timer,tid);
+			ShowMessage("pet_timer %d != %d\n",pd->timer,tid);
 		return 0;
 	}
 	pd->timer=-1;
@@ -415,7 +416,7 @@ static int pet_timer(int tid,unsigned int tick,int id,int data)
 			break;
 		default:
 			if(battle_config.error_log)
-				printf("pet_timer : %d ?\n",pd->state.state);
+				ShowMessage("pet_timer : %d ?\n",pd->state.state);
 			break;
 	}
 
@@ -438,7 +439,7 @@ static int pet_walktoxy_sub(struct pet_data *pd)
 	pet_changestate(pd,MS_WALK,0);
 	clif_movepet(pd);
 //	if(battle_config.etc_log)
-//		printf("walkstart\n");
+//		ShowMessage("walkstart\n");
 
 	return 0;
 }
@@ -501,7 +502,7 @@ static int pet_hungry(int tid,unsigned int tick,int id,int data)
 
 	if(sd->pet_hungry_timer != tid){
 		if(battle_config.error_log)
-			printf("pet_hungry_timer %d != %d\n",sd->pet_hungry_timer,tid);
+			ShowMessage("pet_hungry_timer %d != %d\n",sd->pet_hungry_timer,tid);
 		return 0;
 	}
 	sd->pet_hungry_timer = -1;
@@ -590,8 +591,6 @@ int pet_remove_map(struct map_session_data *sd)
 {
 	nullpo_retr(0, sd);
 
-	Assert((sd->status.pet_id == 0 || sd->pd == 0) || sd->pd->msd == sd); 
-
 	if(sd->status.pet_id && sd->pd) {
 
 		struct pet_data *pd=sd->pd; // [Valaris]
@@ -610,8 +609,11 @@ int pet_remove_map(struct map_session_data *sd)
 			pet_hungry_timer_delete(sd);
 		clif_clearchar_area(&sd->pd->bl,0);
 		map_delblock(&sd->pd->bl);
-		free(sd->pd->lootitem);
+		aFree(sd->pd->lootitem);
 		map_deliddb(&sd->pd->bl);
+		
+		aFree(sd->pd->lootitem);
+		map_freeblock(sd->pd);
 	}
 	return 0;
 }
@@ -651,11 +653,11 @@ int pet_return_egg(struct map_session_data *sd)
 
 	nullpo_retr(0, sd);
 
-	Assert((sd->status.pet_id == 0 || sd->pd == 0) || sd->pd->msd == sd); 
-
 	if(sd->status.pet_id && sd->pd) {
+
 		// ƒ‹[ƒg‚µ‚½Item‚ð—Ž‚Æ‚³‚¹‚é
 		pet_lootitem_drop(sd->pd,sd);
+
 		pet_remove_map(sd);
 		sd->status.pet_id = 0;
 		sd->pd = NULL;
@@ -666,8 +668,9 @@ int pet_return_egg(struct map_session_data *sd)
 		memset(&tmp_item,0,sizeof(tmp_item));
 		tmp_item.nameid = sd->petDB->EggID;
 		tmp_item.identify = 1;
-		tmp_item.card[0] = 0xff00;
-		*((long *)(&tmp_item.card[1])) = sd->pet.pet_id;
+		tmp_item.card[0] = (short)(0xff00);
+		tmp_item.card[1] = GetWord(sd->pet.pet_id,0);
+		tmp_item.card[2] = GetWord(sd->pet.pet_id,1);
 		tmp_item.card[3] = sd->pet.rename_flag;
 		if((flag = pc_additem(sd,&tmp_item,1))) {
 			clif_additem(sd,0,0,flag);
@@ -697,8 +700,6 @@ int pet_data_init(struct map_session_data *sd)
 	int i=0,interval=0;
 
 	nullpo_retr(1, sd);
-
-	Assert((sd->status.pet_id == 0 || sd->pd == 0) || sd->pd->msd == sd); 
 
 	if(sd->status.account_id != sd->pet.account_id || sd->status.char_id != sd->pet.char_id ||
 		sd->status.pet_id != sd->pet.pet_id) {
@@ -835,13 +836,14 @@ int pet_select_egg(struct map_session_data *sd,short egg_index)
 	nullpo_retr(0, sd);
 
 	if(sd->status.inventory[egg_index].card[0] == (short)0xff00)
-		intif_request_petdata(sd->status.account_id,sd->status.char_id,*((long *)&sd->status.inventory[egg_index].card[1]));
+	{
+		intif_request_petdata(sd->status.account_id, sd->status.char_id, MakeDWord(sd->status.inventory[egg_index].card[1], sd->status.inventory[egg_index].card[2]) );
+		pc_delitem(sd,egg_index,1,0);
+	}
 	else {
 		if(battle_config.error_log)
-			printf("wrong egg item inventory %d\n",egg_index);
+			ShowMessage("wrong egg item inventory %d\n",egg_index);
 	}
-	pc_delitem(sd,egg_index,1,0);
-
 	return 0;
 }
 
@@ -876,7 +878,7 @@ int pet_catch_process2(struct map_session_data *sd,int target_id)
 
 	//target_id‚É‚æ‚é“G¨—‘”»’è
 //	if(battle_config.etc_log)
-//		printf("mob_id = %d, mob_class = %d\n",md->bl.id,md->class_);
+//		ShowMessage("mob_id = %d, mob_class = %d\n",md->bl.id,md->class_);
 		//¬Œ÷‚Ìê‡
 	pet_catch_rate = (pet_db[i].capture + (sd->status.base_level - mob_db[md->class_].lv)*30 + sd->paramc[5]*20)*(200 - md->hp*100/mob_db[md->class_].max_hp)/100;
 	if(pet_catch_rate < 1) pet_catch_rate = 1;
@@ -887,9 +889,13 @@ int pet_catch_process2(struct map_session_data *sd,int target_id)
 		mob_catch_delete(md,0);
 		clif_pet_rulet(sd,1);
 //		if(battle_config.etc_log)
-//			printf("rulet success %d\n",target_id);
-		intif_create_pet(sd->status.account_id,sd->status.char_id,pet_db[i].class_,mob_db[pet_db[i].class_].lv,
-			pet_db[i].EggID,0,pet_db[i].intimate,100,0,1,pet_db[i].jname);
+//			ShowMessage("rulet success %d\n",target_id);
+		intif_create_pet(
+			sd->status.account_id,sd->status.char_id,
+			pet_db[i].class_,mob_db[pet_db[i].class_].lv,
+			pet_db[i].EggID,0,pet_db[i].intimate,100,
+			0,1,
+			pet_db[i].jname);
 	}
 	else
 		clif_pet_rulet(sd,0);
@@ -913,8 +919,9 @@ int pet_get_egg(int account_id,int pet_id,int flag)
 			memset(&tmp_item,0,sizeof(tmp_item));
 			tmp_item.nameid = pet_db[i].EggID;
 			tmp_item.identify = 1;
-			tmp_item.card[0] = 0xff00;
-			tmp_item.card[1] = pet_id;
+			tmp_item.card[0] = (short)(0xff00);
+			tmp_item.card[1] = GetWord(pet_id,0);
+			tmp_item.card[2] = GetWord(pet_id,1);
 			tmp_item.card[3] = sd->pet.rename_flag;
 			if((ret = pc_additem(sd,&tmp_item,1))) {
 				clif_additem(sd,0,0,ret);
@@ -1114,7 +1121,7 @@ static int pet_randomwalk(struct pet_data *pd,int tick)
 				pd->move_fail_count++;
 				if(pd->move_fail_count>1000){
 					if(battle_config.error_log)
-						printf("PET cant move. hold position %d, class = %d\n",pd->bl.id,pd->class_);
+						ShowMessage("PET cant move. hold position %d, class_ = %d\n",pd->bl.id,pd->class_);
 					pd->move_fail_count=0;
 					pet_changestate(pd,MS_DELAY,60000);
 					return 0;
@@ -1274,7 +1281,7 @@ static int pet_ai_sub_hard(struct pet_data *pd,unsigned int tick)
 				}
 				else {
 					if(pd->lootitem[0].card[0] == (short)0xff00)
-						intif_delete_petdata(*((long *)(&pd->lootitem[0].card[1])));
+						intif_delete_petdata( MakeDWord(pd->lootitem[0].card[1],pd->lootitem[0].card[2]) );
 					for(i=0;i<PETLOOT_SIZE-1;i++)
 						memcpy(&pd->lootitem[i],&pd->lootitem[i+1],sizeof(pd->lootitem[0]));
 					memcpy(&pd->lootitem[PETLOOT_SIZE-1],&fitem->item_data,sizeof(pd->lootitem[0]));
@@ -1613,11 +1620,11 @@ int read_petdb()
 	
 	memset(pet_db,0,sizeof(pet_db));
 	for(i=0;i<2;i++){
-		fp=fopen(filename[i],"r");
+		fp=savefopen(filename[i],"r");
 		if(fp==NULL){
 			if(i>0)
 				continue;
-			printf("can't read %s\n",filename[i]);
+			ShowMessage("can't read %s\n",filename[i]);
 			return -1;
 		}
 		while(fgets(line,1020,fp)){
@@ -1668,12 +1675,11 @@ int read_petdb()
 			pet_db[j].script = NULL;
 			if((np=strchr(p,'{'))==NULL)
 				continue;
-			pet_db[j].script = parse_script(np,0);
+			pet_db[j].script = (char*)parse_script((unsigned char*)np,0);
 			j++;
 		}
 		fclose(fp);
-		sprintf(tmp_output,"Done reading '"CL_WHITE"%d"CL_RESET"' pets in '"CL_WHITE"%s"CL_RESET"'.\n",j,filename[i]);
-		ShowStatus(tmp_output);
+		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' pets in '"CL_WHITE"%s"CL_RESET"'.\n",j,filename[i]);
 	}
 	return 0;
 }
@@ -1704,7 +1710,7 @@ int do_final_pet(void) {
 	int i;
 	for(i = 0;i < MAX_PET_DB; i++) {
 		if(pet_db[i].script) {
-			free(pet_db[i].script);
+			aFree(pet_db[i].script);
 		}
 	}
 	return 0;

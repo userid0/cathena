@@ -6,26 +6,27 @@
 #define PETLOOT_SIZE	20 // [Valaris]
 
 struct pet_db {
-	int	class_;
-	char name[24],jname[24];
-	int itemID;
-	int EggID;
-	int AcceID;
-	int FoodID;
-	int fullness;
-	int hungry_delay;
-	int r_hungry;
-	int r_full;
-	int intimate;
-	int die;
-	int capture;
-	int speed;
-	char s_perfor;
-	int talk_convert_class;
-	int attack_rate;
-	int defence_attack_rate;
-	int change_target_rate;
-	char *script;
+	short	class_;
+	char	name[24];
+	char	jname[24];
+	int		itemID;
+	short	EggID;
+	int		AcceID;
+	int		FoodID;
+	int		fullness;
+	int		hungry_delay;
+	int		r_hungry;
+	int		r_full;
+	short	intimate;		// counts 0...1000 as per thousand
+	int		die;
+	int		capture;
+	int		speed;
+	char	s_perfor;
+	int		talk_convert_class;
+	int		attack_rate;
+	int		defence_attack_rate;
+	int		change_target_rate;
+	char	*script;
 };
 extern struct pet_db pet_db[MAX_PET_DB];
 

@@ -4,9 +4,9 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "../common/socket.h"
-#include "../common/timer.h"
-#include "../common/nullpo.h"
+#include "socket.h"
+#include "timer.h"
+#include "nullpo.h"
 
 #include "log.h"
 #include "clif.h"
@@ -29,6 +29,7 @@
 #include "trade.h"
 #include "core.h"
 #include "showmsg.h"
+#include "utils.h"
 
 static char command_symbol = '#';
 
@@ -132,7 +133,7 @@ is_charcommand(const int fd, struct map_session_data* sd, const char* message, i
 
 	memset(&info, 0, sizeof(info));
 	str += strlen(sd->status.name);
-	while (*str && (isspace(*str) || (s_flag == 0 && *str == ':'))) {
+	while (*str && (isspace((int)(*str)) || (s_flag == 0 && *str == ':'))) {
 		if (*str == ':')
 			s_flag = 1;
 		str++;
@@ -147,12 +148,12 @@ is_charcommand(const int fd, struct map_session_data* sd, const char* message, i
 		const char* p = str;
 		memset(command, '\0', sizeof(command));
 		memset(output, '\0', sizeof(output));
-		while (*p && !isspace(*p))
+		while (*p && !isspace((int)(*p)))
 			p++;
-		if (p - str >= sizeof(command)) // too long
+		if ((size_t)(p - str) >= sizeof(command)) // too long
 			return CharCommand_Unknown;
-		strncpy(command, str, p - str);
-		while (isspace(*p))
+		memcpy(command, str, p - str);
+		while (isspace((int)(*p)))
 			p++;
 
 		if (type == CharCommand_Unknown || info.proc == NULL) {
@@ -196,7 +197,7 @@ CharCommandType charcommand(const int level, const char* message, struct CharCom
 		command[sizeof(command)-1] = '\0';
 
 		while (charcommand_info[i].type != CharCommand_Unknown) {
-			if (strcmpi(command+1, charcommand_info[i].command+1) == 0 && level >= charcommand_info[i].level) {
+			if (strcasecmp(command+1, charcommand_info[i].command+1) == 0 && level >= charcommand_info[i].level) {
 				p[0] = charcommand_info[i].command[0]; // set correct first symbol for after.
 				break;
 			}
@@ -227,7 +228,7 @@ static CharCommandInfo* get_charcommandinfo_byname(const char* name) {
 	int i;
 
 	for (i = 0; charcommand_info[i].type != CharCommand_Unknown; i++)
-		if (strcmpi(charcommand_info[i].command + 1, name) == 0)
+		if (strcasecmp(charcommand_info[i].command + 1, name) == 0)
 			return &charcommand_info[i];
 
 	return NULL;
@@ -242,8 +243,8 @@ int charcommand_config_read(const char *cfgName) {
 	CharCommandInfo* p;
 	FILE* fp;
 
-	if ((fp = fopen(cfgName, "r")) == NULL) {
-		printf("CharCommands configuration file not found: %s\n", cfgName);
+	if ((fp = savefopen(cfgName, "r")) == NULL) {
+		ShowMessage("CharCommands configuration file not found: %s\n", cfgName);
 		return 1;
 	}
 
@@ -262,9 +263,9 @@ int charcommand_config_read(const char *cfgName) {
 				p->level = 0;
 		}
 
-		if (strcmpi(w1, "import") == 0)
+		if (strcasecmp(w1, "import") == 0)
 			charcommand_config_read(w2);
-		else if (strcmpi(w1, "command_symbol") == 0 && w2[0] > 31 &&
+		else if (strcasecmp(w1, "command_symbol") == 0 && w2[0] > 31 &&
 		         w2[0] != '/' && // symbol of standard ragnarok GM commands
 		         w2[0] != '%'	// symbol of party chat speaking
 			)
@@ -695,7 +696,7 @@ int charcommand_stats_all(const int fd, struct map_session_data* sd, const char*
 
 	count = 0;
 	for(i = 0; i < fd_max; i++) {
-		if (session[i] && (pl_sd = session[i]->session_data) && pl_sd->state.auth) {
+		if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data) && pl_sd->state.auth) {
 
 			if (pc_isGM(pl_sd) > 0)
 				sprintf(gmlevel, "| GM Lvl: %d", pc_isGM(pl_sd));
@@ -917,7 +918,7 @@ charcommand_storagelist(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	struct storage *stor;
+	struct pc_storage *stor;
 	struct map_session_data *pl_sd;
 	struct item_data *item_data, *item_temp;
 	int i, j, count, counter, counter2;
@@ -1063,10 +1064,12 @@ int charcommand_item(
 					// if pet egg
 					if (pet_id >= 0) {
 						sd->catch_target_class = pet_db[pet_id].class_;
-						intif_create_pet(sd->status.account_id, sd->status.char_id,
-						                 (short)pet_db[pet_id].class_, (short)mob_db[pet_db[pet_id].class_].lv,
-						                 (short)pet_db[pet_id].EggID, 0, (short)pet_db[pet_id].intimate,
-						                 100, 0, 1, pet_db[pet_id].jname);
+						intif_create_pet(
+							sd->status.account_id, sd->status.char_id,           
+							pet_db[pet_id].class_, mob_db[pet_db[pet_id].class_].lv,             
+							pet_db[pet_id].EggID, 0, pet_db[pet_id].intimate,100, 
+							0, 1, 
+							pet_db[pet_id].jname);
 					// if not pet egg
 					} else {
 						memset(&item_tmp, 0, sizeof(item_tmp));
@@ -1081,16 +1084,17 @@ int charcommand_item(
 				clif_displaymessage(fd, msg_table[81]); // Your GM level don't authorise you to do this action on this player.
 				return -1;
 			}
-		} else if(/* from jA's @giveitem */strcmpi(character,"all")==0 || strcmpi(character,"everyone")==0){
+		} else if(/* from jA's @giveitem */strcasecmp(character,"all")==0 || strcasecmp(character,"everyone")==0){
+			char buf[256];
 			for (i = 0; i < fd_max; i++) {
-				if (session[i] && (pl_sd = session[i]->session_data)){
+				if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)){
 					charcommand_giveitem_sub(pl_sd,item_data,number);
-					snprintf(tmp_output, sizeof(tmp_output), "You got %s %d.", item_name,number);
-					clif_displaymessage(pl_sd->fd, tmp_output);
+					snprintf(buf, sizeof(buf), "You got %s %d.", item_name,number);
+					clif_displaymessage(pl_sd->fd, buf);
 				}
 			}
-			snprintf(tmp_output, sizeof(tmp_output), "%s received %s %d.","Everyone",item_name,number);
-			clif_displaymessage(fd, tmp_output);
+			snprintf(buf, sizeof(buf), "%s received %s %d.","Everyone",item_name,number);
+			clif_displaymessage(fd, buf);
 		} else {
 			clif_displaymessage(fd, msg_table[3]); // Character not found.
 			return -1;

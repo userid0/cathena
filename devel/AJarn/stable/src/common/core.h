@@ -3,9 +3,11 @@
 #ifndef	_CORE_H_
 #define	_CORE_H_
 
+#include "base.h"
+
 extern int runflag;
 
-int do_init(int,char**);
+extern int do_init(int,char**);
 
 void set_termfunc(void (*termfunc)(void));
 

@@ -14,6 +14,8 @@
 #include "battle.h"
 #include "intif.h"
 #include "clif.h"
+#include "showmsg.h"
+#include "utils.h"
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -49,7 +51,7 @@ void do_init_party(void)
 // 検索
 struct party *party_search(int party_id)
 {
-	return numdb_search(party_db,party_id);
+	return (struct party *)numdb_search(party_db,party_id);
 }
 int party_searchname_sub(void *key,void *data,va_list ap)
 {
@@ -57,7 +59,7 @@ int party_searchname_sub(void *key,void *data,va_list ap)
 	char *str;
 	str=va_arg(ap,char *);
 	dst=va_arg(ap,struct party **);
-	if(strcmpi(p->name,str)==0)
+	if(strcasecmp(p->name,str)==0)
 		*dst=p;
 	return 0;
 }
@@ -69,7 +71,7 @@ struct party* party_searchname(char *str)
 	return p;
 }
 // 作成要求
-int party_create(struct map_session_data *sd,char *name,int item,int item2)
+int party_create(struct map_session_data *sd,char *name, int item, int item2)
 {
 	nullpo_retr(0, sd);
 
@@ -91,8 +93,8 @@ int party_created(int account_id,int fail,int party_id,char *name)
 	if(fail==0){
 		struct party *p;
 		sd->status.party_id=party_id;
-		if((p=numdb_search(party_db,party_id))!=NULL){
-			printf("party: id already exists!\n");
+		if((p=(struct party *)numdb_search(party_db,party_id))!=NULL){
+			ShowMessage("party: id already exists!\n");
 			exit(1);
 		}
 		p=(struct party *)aCalloc(1,sizeof(struct party));
@@ -121,7 +123,7 @@ int party_check_member(struct party *p)
 	nullpo_retr(0, p);
 
 	for(i=0;i<fd_max;i++){
-		if(session[i] && (sd=session[i]->session_data) && sd->state.auth){
+		if(session[i] && (sd=(struct map_session_data *)session[i]->session_data) && sd->state.auth){
 			if(sd->status.party_id==p->party_id){
 				int j,f=1;
 				for(j=0;j<MAX_PARTY;j++){	// パーティにデータがあるか確認
@@ -135,7 +137,7 @@ int party_check_member(struct party *p)
 				if(f){
 					sd->status.party_id=0;
 					if(battle_config.error_log)
-						printf("party: check_member %d[%s] is not member\n",sd->status.account_id,sd->status.name);
+						ShowMessage("party: check_member %d[%s] is not member\n",sd->status.account_id,sd->status.name);
 				}
 			}
 		}
@@ -149,7 +151,7 @@ int party_recv_noinfo(int party_id)
 	int i;
 	struct map_session_data *sd;
 	for(i=0;i<fd_max;i++){
-		if(session[i] && (sd=session[i]->session_data) && sd->state.auth){
+		if(session[i] && (sd=(struct map_session_data *)session[i]->session_data) && sd->state.auth){
 			if(sd->status.party_id==party_id)
 				sd->status.party_id=0;
 		}
@@ -164,7 +166,7 @@ int party_recv_info(struct party *sp)
 	
 	nullpo_retr(0, sp);
 
-	if((p=numdb_search(party_db,sp->party_id))==NULL){
+	if((p=(struct party *)numdb_search(party_db,sp->party_id))==NULL){
 		p=(struct party *)aCalloc(1,sizeof(struct party));
 		numdb_insert(party_db,sp->party_id,p);
 		
@@ -253,7 +255,7 @@ int party_member_added(int party_id,int account_id,int flag)
 	struct map_session_data *sd= map_id2sd(account_id),*sd2;
 	if(sd==NULL && flag==0){
 		if(battle_config.error_log)
-			printf("party: member added error %d is not online\n",account_id);
+			ShowMessage("party: member added error %d is not online\n",account_id);
 		intif_party_leave(party_id,account_id); // キャラ側に登録できなかったため脱退要求を出す
 		return 0;
 	}
@@ -267,7 +269,7 @@ int party_member_added(int party_id,int account_id,int flag)
 		return 0;
 	}
 	
-		// 成功
+	// 成功
 	sd->party_sended=0;
 	sd->status.party_id=party_id;
 	
@@ -390,7 +392,7 @@ int party_optionchanged(int party_id,int account_id,int exp,int item,int flag)
 }
 
 // パーティメンバの移動通知
-int party_recv_movemap(int party_id,int account_id,char *map,int online,int lv)
+int party_recv_movemap(int party_id,int account_id,char *map,int online,unsigned short lv)
 {
 	struct party *p;
 	int i;
@@ -399,7 +401,7 @@ int party_recv_movemap(int party_id,int account_id,char *map,int online,int lv)
 	for(i=0;i<MAX_PARTY;i++){
 		struct party_member *m=&p->member[i];
 		if( m == NULL ){
-			printf("party_recv_movemap nullpo?\n");
+			ShowMessage("party_recv_movemap nullpo?\n");
 			return 0;
 		}
 		if(m->account_id==account_id){
@@ -411,7 +413,7 @@ int party_recv_movemap(int party_id,int account_id,char *map,int online,int lv)
 	}
 	if(i==MAX_PARTY){
 		if(battle_config.error_log)
-			printf("party: not found member %d on %d[%s]",account_id,party_id,p->name);
+			ShowMessage("party: not found member %d on %d[%s]",account_id,party_id,p->name);
 		return 0;
 	}
 	
@@ -452,7 +454,6 @@ int party_send_movemap(struct map_session_data *sd)
 			sd->party_sended=1;
 		}
 	}
-	
 	return 0;
 }
 // パーティメンバのログアウト
@@ -591,7 +592,7 @@ int party_exp_share(struct party *p,int map,int base_exp,int job_exp,int zeny)
 		return 0;
 	for(i=0;i<MAX_PARTY;i++)
 		if((sd=p->member[i].sd)!=NULL && sd->bl.m==map && session[sd->fd] != NULL) {
-			if (/* pc_issit(sd) || */ sd->chatID || (sd->idletime < (tick_ - 120)))
+			if (/* pc_issit(sd) || */ sd->chatID || ((time_t)sd->idletime < (tick_ - 120)))
 				continue;
 #ifdef TWILIGHT
 			pc_gainexp(sd,base_exp,job_exp);

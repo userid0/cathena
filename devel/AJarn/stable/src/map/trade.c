@@ -11,6 +11,8 @@
 #include "nullpo.h"
 #include "log.h"
 #include "chrif.h"
+#include "showmsg.h"
+#include "utils.h"
 
 /*==========================================
  * æˆø—v¿‚ğ‘Šè‚É‘—‚é

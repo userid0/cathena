@@ -1,12 +1,11 @@
 // $Id: db.c,v 1.2 2004/09/23 14:43:06 MouseJstr Exp $
 // #define MALLOC_DBN
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
+
 #include "db.h"
 #include "mmo.h"
 #include "utils.h"
-#include "malloc.h"
+#include "showmsg.h"
 
 #ifdef MEMWATCH
 #include "memwatch.h"
@@ -46,8 +45,8 @@ static void free_dbn(struct dbn* add_dbn)
 static int strdb_cmp(struct dbt* table,void* a,void* b)
 {
 	if(table->maxlen)
-		return strncmp((const char*)a,(const char*)b,table->maxlen);
-	return strcmp((const char*)a,(const char*)b);
+		return strncmp((char*)a,(char*)b,table->maxlen);
+	return strcmp((char*)a,(char*)b);
 }
 
 // maybe change the void* to unsigned char* ???
@@ -55,7 +54,7 @@ static unsigned int strdb_hash(struct dbt* table,void* a)
 {
 	int i;
 	unsigned int h;
-	unsigned char *p = (unsigned char*)a;
+	unsigned char *p=(unsigned char *)a;
 
 	i=table->maxlen;
 	if(i==0) i=0x7fffffff;
@@ -133,14 +132,14 @@ void * db_search2(struct dbt *table, const char *key)
 {
 	int i,sp;
 	struct dbn *p,*pn,*stack[64];
-    int slen = strlen(key);
+        int slen = strlen(key);
 
 	for(i=0;i<HASH_SIZE;i++){
 		if((p=table->ht[i])==NULL)
 			continue;
 		sp=0;
 		while(1){
-                        if (strnicmp(key, (const char*)p->key, slen) == 0)
+			if (strncasecmp(key, (char*)p->key, slen) == 0)
                            return p->data;
 			if((pn=p->left)!=NULL){
 				if(p->right){
@@ -376,7 +375,7 @@ struct dbn* db_insert(struct dbt *table,void* key,void* data)
 	CREATE(p, struct dbn, 1);
 #endif
 	if(p==NULL){
-		printf("out of memory : db_insert\n");
+		ShowMessage("out of memory : db_insert\n");
 		return NULL;
 	}
 	p->parent= NULL;
@@ -446,8 +445,9 @@ void db_foreach(struct dbt *table,int (*func)(void*,void*,va_list),...)
 		while(1){
 			//reverted it back. sorry that brought thios bug from Freya [Lupus]
 			//if (!p->data) {
-			//	printf("Warning: no data for key %d in db_foreach (db.c) !\n",(int)p->key);
+			//	ShowMessage("Warning: no data for key %d in db_foreach (db.c) !\n",(int)p->key);
 			//} else {
+if (p->data)
 			func(p->key, p->data, ap);
 			//}
 			if((pn=p->left)!=NULL){

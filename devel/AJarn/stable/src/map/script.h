@@ -20,7 +20,8 @@ struct script_data {
 };
 
 struct script_stack {
-	int sp,sp_max;
+	int sp;
+	size_t sp_max;
 	struct script_data *stack_data;
 };
 struct script_state {
@@ -38,7 +39,7 @@ int run_script(char *,int,int,int);
 struct dbt* script_get_label_db();
 struct dbt* script_get_userfunc_db();
 
-int script_config_read(char *cfgName);
+int script_config_read(const char *cfgName);
 int do_init_script();
 int do_final_script();
 
