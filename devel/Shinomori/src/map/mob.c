@@ -132,9 +132,9 @@ int mob_once_spawn(struct map_session_data *sd,char *mapname,
 		return 0;
 
 	if(class_<0){	// ランダムに召喚
+		int k;
 		i = 0;
 		j = -class_-1;
-		int k;
 		if(j>=0 && j<MAX_RANDOMMONSTER){
 			do{
 				class_=rand()%1000+1001;
@@ -894,7 +894,7 @@ int mob_setdelayspawn(int id)
 
 	spawntime1=md->last_spawntime+md->spawndelay1;
 	spawntime2=md->last_deadtime+md->spawndelay2;
-	spawntime3=gettick()+5000;
+	spawntime3=gettick()+5000+rand()%5000; //Lupus
 	// spawntime = max(spawntime1,spawntime2,spawntime3);
 	if(DIFF_TICK(spawntime1,spawntime2)>0)
 		spawntime=spawntime1;
@@ -1589,6 +1589,8 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 	int i,dx,dy,ret,dist;
 	int attack_type=0;
 	int mode,race;
+	int search_size = AREA_SIZE*2;
+	int blind_flag = 0;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
@@ -1618,6 +1620,9 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 	if((md->opt1 > 0 && md->opt1 != 6) || md->state.state==MS_DELAY || md->sc_data[SC_BLADESTOP].timer != -1)
 		return 0;
 
+	if (md->sc_data && md->sc_data[SC_BLIND].timer != -1)
+		blind_flag = 1;
+
 	if(!(mode&0x80) && md->target_id > 0)
 		md->target_id = 0;
 
@@ -1642,7 +1647,8 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 			if(abl->type==BL_PC)
 				asd=(struct map_session_data *)abl;
 			if(asd==NULL || md->bl.m != abl->m || abl->prev == NULL || asd->invincible_timer != -1 || pc_isinvisible(asd) ||
-				(dist=distance(md->bl.x,md->bl.y,abl->x,abl->y))>=32 || battle_check_target(bl,abl,BCT_ENEMY)==0)
+				(dist=distance(md->bl.x,md->bl.y,abl->x,abl->y))>=32 || battle_check_target(bl,abl,BCT_ENEMY)==0 ||
+				(blind_flag && dist>3))
 				md->attacked_id=0;
 			else {
 				//距離が遠い場合はタゲを変更しない
@@ -1669,15 +1675,16 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 	if( (!md->target_id || md->state.targettype == NONE_ATTACKABLE) && mode&0x04 && !md->state.master_check &&
 		battle_config.monster_active_enable){
 		i=0;
+		search_size = (blind_flag) ? 3 : AREA_SIZE*2;
 		if(md->state.special_mob_ai){
 			map_foreachinarea(mob_ai_sub_hard_activesearch,md->bl.m,
-							  md->bl.x-AREA_SIZE*2,md->bl.y-AREA_SIZE*2,
-							  md->bl.x+AREA_SIZE*2,md->bl.y+AREA_SIZE*2,
+							  md->bl.x-search_size,md->bl.y-search_size,
+							  md->bl.x+search_size,md->bl.y+search_size,
 							  0,md,&i);
 		}else{
 			map_foreachinarea(mob_ai_sub_hard_activesearch,md->bl.m,
-							  md->bl.x-AREA_SIZE*2,md->bl.y-AREA_SIZE*2,
-							  md->bl.x+AREA_SIZE*2,md->bl.y+AREA_SIZE*2,
+							  md->bl.x-search_size,md->bl.y-search_size,
+							  md->bl.x+search_size,md->bl.y+search_size,
 							  BL_PC,md,&i);
 		}
 	}
@@ -1685,9 +1692,10 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 	// The item search of a route monster
 	if( !md->target_id && mode&0x02 && !md->state.master_check){
 		i=0;
+		search_size = (blind_flag) ? 3 : AREA_SIZE*2;
 		map_foreachinarea(mob_ai_sub_hard_lootsearch,md->bl.m,
-						  md->bl.x-AREA_SIZE*2,md->bl.y-AREA_SIZE*2,
-						  md->bl.x+AREA_SIZE*2,md->bl.y+AREA_SIZE*2,
+						  md->bl.x-search_size,md->bl.y-search_size,
+						  md->bl.x+search_size,md->bl.y+search_size,
 						  BL_ITEM,md,&i);
 	}
 
@@ -1699,7 +1707,7 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 			else if(tbl->type==BL_MOB)
 				tmd=(struct mob_data *)tbl;
 			if(tsd || tmd) {
-				if(tbl->m != md->bl.m || tbl->prev == NULL || (dist=distance(md->bl.x,md->bl.y,tbl->x,tbl->y))>=md->min_chase)
+				if(tbl->m != md->bl.m || tbl->prev == NULL || (dist=distance(md->bl.x,md->bl.y,tbl->x,tbl->y)) >= search_size || (blind_flag && dist>3))
 					mob_unlocktarget(md,tick);	// 別マップか、視界外
 				else if( tsd && !(mode&0x20) && (tsd->sc_data[SC_TRICKDEAD].timer != -1 || tsd->sc_data[SC_BASILICA].timer != -1 ||
 					((pc_ishiding(tsd) || tsd->state.gangsterparadise) &&
@@ -1718,9 +1726,11 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 //					if(md->timer != -1 && (DIFF_TICK(md->next_walktime,tick)<0 || distance(md->to_x,md->to_y,tsd->bl.x,tsd->bl.y)<2) )
 					if(md->timer != -1 && md->state.state!=MS_ATTACK && (DIFF_TICK(md->next_walktime,tick)<0 || distance(md->to_x,md->to_y,tbl->x,tbl->y)<2) )
 						return 0; // 既に移動中
-					if( !mob_can_reach(md,tbl,(md->min_chase>13)?md->min_chase:13) )
+					search_size = (blind_flag) ? 3 :
+						((md->min_chase > 13) ? md->min_chase : 13);
+					if(!mob_can_reach(md,tbl, search_size))
 						mob_unlocktarget(md,tick);	// 移動できないのでタゲ解除（IWとか？）
-					else{
+					else {
 						// 追跡
 						md->next_walktime=tick+500;
 						i=0;
@@ -1754,8 +1764,8 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 							if(dy<0) dy=2;
 							else if(dy>0) dy=-2;
 							mob_walktoxy(md,md->bl.x+dx,md->bl.y+dy,0);
+						}
 					}
-				}
 				} else { // 攻撃射程範囲内
 					md->state.skillstate=MSS_ATTACK;
 					if(md->state.state==MS_WALK)
@@ -1763,23 +1773,17 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 					if(md->state.state==MS_ATTACK)
 						return 0; // 既に攻撃中
 					mob_changestate(md,MS_ATTACK,attack_type);
-
-/*					if(mode&0x08){	// リンクモンスター
-						map_foreachinarea(mob_ai_sub_hard_linksearch,md->bl.m,
-							md->bl.x-13,md->bl.y-13,
-							md->bl.x+13,md->bl.y+13,
-							BL_MOB,md,&tsd->bl);
-					}*/
 				}
 				return 0;
-			}else{	// ルートモンスター処理
+			} else {	// ルートモンスター処理
 				if(tbl == NULL || tbl->type != BL_ITEM ||tbl->m != md->bl.m ||
-					 (dist=distance(md->bl.x,md->bl.y,tbl->x,tbl->y))>=md->min_chase || !md->lootitem){
+					(dist=distance(md->bl.x,md->bl.y,tbl->x,tbl->y))>=md->min_chase || !md->lootitem |
+					(blind_flag && dist>=4)){
 					 // 遠すぎるかアイテムがなくなった
 					mob_unlocktarget(md,tick);
 					if(md->state.state==MS_WALK)
 						mob_stop_walking(md,1);	// 歩行中なら停止
-				}else if(dist){
+				} else if(dist) {
 					if(!(mode&1)){	// 移動しないモード
 						mob_unlocktarget(md,tick);
 						return 0;
@@ -2615,7 +2619,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 		}
 
 		// Ore Discovery [Celest]
-		if (pc_checkskill(sd,BS_FINDINGORE)>0 && battle_config.finding_ore_rate/100 >= rand()%1000) {
+		if (sd && pc_checkskill(sd,BS_FINDINGORE)>0 && battle_config.finding_ore_rate/100 >= rand()%1000) {
 			struct delay_item_drop *ditem;
 			int itemid[17] = { 714, 756, 757, 969, 984, 985, 990, 991, 992, 993, 994, 995, 996, 997, 998, 999, 1002 };
 			ditem=(struct delay_item_drop *)aCalloc(1,sizeof(struct delay_item_drop));
@@ -2634,7 +2638,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 		}
 
 		//this drop log contains ALL dropped items + ORE (if there was ORE Recovery) [Lupus]
-		if(log_config.drop > 0 && drop_items) //we check were there any drops.. and if not - don't write the log
+		if(sd && log_config.drop > 0 && drop_items) //we check were there any drops.. and if not - don't write the log
 			log_drop(sd, md->class_, log_item); //mvp_sd
 
 		if(sd && sd->state.attack_type == BF_WEAPON) {

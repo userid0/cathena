@@ -1590,7 +1590,6 @@ int map_quit(struct map_session_data *sd) {
 
 	nullpo_retr(0, sd);
 
-	if(!sd->state.waitingdisconnect) {
 	if (sd->state.event_disconnect) {
 		struct npc_data *npc;
 		if ((npc = npc_name2id(script_config.logout_event_name))) {
@@ -1640,7 +1639,8 @@ int map_quit(struct map_session_data *sd) {
 		pc_stopattack(sd);
 		pc_delinvincibletimer(sd);
 	}
-		skill_unit_move(&sd->bl,gettick(),0);
+	
+	skill_unit_move(&sd->bl,gettick(),0);
 
 	status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
 	skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
@@ -1672,8 +1672,7 @@ int map_quit(struct map_session_data *sd) {
 	chrif_save(sd);
 	storage_storage_dirty(sd);
 	storage_storage_save(sd);
-		map_delblock(&sd->bl);
-	}
+	map_delblock(&sd->bl);
 
 	if( sd->npc_stackbuf && sd->npc_stackbuf != NULL) {
 		aFree( sd->npc_stackbuf );
@@ -1730,7 +1729,7 @@ struct map_session_data * map_id2sd(int id) {
 	return NULL;
 */
 	int i;
-	struct map_session_data *sd=NULL;
+	struct map_session_data *sd;
 
 	if(id) // skip if zero id's are searched
 	for(i = 0; i < fd_max; i++)
@@ -3086,7 +3085,7 @@ int inter_config_read(char *cfgName)
 		} else if(strcasecmp(w1,"map_server_db")==0){
 			strcpy(map_server_db, w2);
 		} else if(strcasecmp(w1,"use_sql_db")==0){
-			if (strcasecmp(w2,"yes")){db_use_sqldbs=0;} else if (strcasecmp(w2,"no")){db_use_sqldbs=1;}
+			db_use_sqldbs = battle_config_switch(w2);
 			ShowMessage ("Using SQL dbs: %s\n",w2);
 		//Login Server SQL DB
 		} else if(strcasecmp(w1,"login_server_ip")==0){
@@ -3502,7 +3501,7 @@ int do_init(int argc, char *argv[]) {
 	atexit(do_final);
 
 	id_db = numdb_init();
-	map_db = strdb_init(16);
+	map_db = strdb_init(24);
 	nick_db = strdb_init(24);
 	charid_db = numdb_init();
 #ifndef TXT_ONLY
@@ -3560,9 +3559,8 @@ int do_init(int argc, char *argv[]) {
 	if(battle_config.mail_system)
 		do_init_mail();
 
-	if (log_config.branch || log_config.drop || log_config.mvpdrop ||
-		log_config.present || log_config.produce || log_config.refine ||
-		log_config.trade)
+	if (log_config.sql_logs && (log_config.branch || log_config.drop || log_config.mvpdrop ||
+		log_config.present || log_config.produce || log_config.refine || log_config.trade))
 	{
 		log_sql_init();
 	}

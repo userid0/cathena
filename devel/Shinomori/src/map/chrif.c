@@ -297,6 +297,7 @@ int chrif_authreq(struct map_session_data *sd)
 
 	if (!sd || !sd->bl.id || !sd->login_id1)
 		return -1;
+
 	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
 		return -1;
 
@@ -327,6 +328,8 @@ int chrif_charselectreq(struct map_session_data *sd)
 	nullpo_retr(-1, sd);
 
 	if(!sd || !sd->bl.id || !sd->login_id1)
+		return -1;
+	if( char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
 		return -1;
 
 	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
@@ -1031,7 +1034,7 @@ int chrif_parse(int fd)
 	if (fd != char_fd) {
 		session_Remove(fd);
 		return 0;
-		}
+	}
 	// else it is the char_fd
 	if( !session_isActive(fd) ) {
 		// char server is disconnecting
@@ -1073,8 +1076,7 @@ int chrif_parse(int fd)
 		case 0x2afd: 
 		{
 			pc_authok(RFIFOL(fd,4), RFIFOL(fd,8), (time_t)RFIFOL(fd,12), RFIFOP(fd,16)); 
-			// typecast is bad but only memcopied internaly, so it might be ok
-
+			// typecast is bad but only memcopied internally, so it might be ok
 			break;
 		}
 		case 0x2afe: pc_authfail(RFIFOL(fd,2)); break;

@@ -264,6 +264,10 @@ int percentrefinery[5][10];	// 精錬成功率(refine_db.txt)
 static int atkmods[3][20];	// 武器ATKサイズ修正(size_fix.txt)
 static char job_bonus[3][MAX_PC_CLASS][MAX_LEVEL];
 
+int current_equip_item_index; //Contains inventory index of an equipped item. To pass it into the EQUP_SCRIPT [Lupus]
+//we need it for new cards 15 Feb 2005, to check if the combo cards are insrerted into the CURRENT weapon only
+//to avoid cards exploits
+
 /*==========================================
  * 精錬ボーナス
  *------------------------------------------
@@ -533,7 +537,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	}
 
 	for(i=0;i<10;i++) {
-		index = sd->equip_index[i];
+		current_equip_item_index = index = sd->equip_index[i]; //We pass INDEX to current_equip_item_index - for EQUIP_SCRIPT (new cards solution) [Lupus]
 		if(index < 0)
 			continue;
 		if(i == 9 && sd->equip_index[8] == index)
@@ -590,7 +594,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 
 	// ?備品によるステ?タス?化はここで?行
 	for(i=0;i<10;i++) {
-		index = sd->equip_index[i];
+		current_equip_item_index = index = sd->equip_index[i]; //We pass INDEX to current_equip_item_index - for EQUIP_SCRIPT (new cards solution) [Lupus]
 		if(index < 0)
 			continue;
 		if(i == 9 && sd->equip_index[8] == index)
@@ -935,6 +939,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		else if (s_class.upper==2)
 			sd->status.max_hp = sd->status.max_hp * 70/100;
 
+	if (sd->hprate <= 0)
+		sd->hprate = 1;
 	if(sd->hprate!=100)
 		sd->status.max_hp = sd->status.max_hp*sd->hprate/100;
 
@@ -960,6 +966,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 			sd->status.max_sp = sd->status.max_sp * 130/100;
 		else if (s_class.upper==2)
 			sd->status.max_sp = sd->status.max_sp * 70/100;
+	if (sd->sprate <= 0)
+		sd->sprate = 1;
 	if(sd->sprate!=100)
 		sd->status.max_sp = sd->status.max_sp*sd->sprate/100;
 
@@ -1657,29 +1665,29 @@ int status_get_max_hp(struct block_list *bl)
 			if(battle_config.mobs_level_up) // mobs leveling up increase [Valaris]
 				max_hp += (md->level - mob_db[md->class_].lv) * status_get_vit(bl);
 
-			if(mob_db[md->class_].mexp > 0) {
+			if(mob_db[md->class_].mexp > 0) { //MVP Monsters
 				if(battle_config.mvp_hp_rate != 100) {
 					double hp = (double)max_hp * battle_config.mvp_hp_rate / 100.0;
 					max_hp = (hp > 0x7FFFFFFF ? 0x7FFFFFFF : (int)hp);
+				}
 			}
-			}
-			else {
-				if(battle_config.mvp_hp_rate != 100) {
-					double hp = (double)max_hp * battle_config.mvp_hp_rate / 100.0;
+			else {	//Common MONSTERS
+				if(battle_config.monster_hp_rate != 100) {
+					double hp = (double)max_hp * battle_config.monster_hp_rate / 100.0;
 					max_hp = (hp > 0x7FFFFFFF ? 0x7FFFFFFF : (int)hp);
+				}
 			}
-		}
 		}
 		else if(bl->type == BL_PET) {
 			struct pet_data *pd;
 			nullpo_retr(1, pd = (struct pet_data*)bl);
 			max_hp = mob_db[pd->class_].max_hp;
 
-			if(mob_db[pd->class_].mexp > 0) {
+			if(mob_db[pd->class_].mexp > 0) { //MVP Monsters 
 				if(battle_config.mvp_hp_rate != 100)
 					max_hp = (max_hp * battle_config.mvp_hp_rate)/100;
 			}
-			else {
+			else {	//Common MONSTERS
 				if(battle_config.monster_hp_rate != 100)
 					max_hp = (max_hp * battle_config.monster_hp_rate)/100;
 			}
@@ -3080,7 +3088,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 	if(sc_data[type].timer != -1){	/* すでに同じ異常になっている場合タイマ解除 */
 		if(sc_data[type].val1 > val1 && type != SC_COMBO && type != SC_DANCING && type != SC_DEVOTION &&
 			type != SC_SPEEDPOTION0 && type != SC_SPEEDPOTION1 && type != SC_SPEEDPOTION2 && type != SC_SPEEDPOTION3
-						 && type != SC_ATKPOT && type != SC_MATKPOT) // added atk and matk potions [Valaris]
+			&& type != SC_ATKPOT && type != SC_MATKPOT) // added atk and matk potions [Valaris]
 			return 0;
 
 		if ((type >=SC_STAN && type <= SC_BLIND) || type == SC_DPOISON)
@@ -3921,8 +3929,8 @@ int status_change_clear(struct block_list *bl,int type)
 	nullpo_retr(0, opt2 = status_get_opt2(bl));
 	nullpo_retr(0, opt3 = status_get_opt3(bl));
 
-	if (*sc_count == 0)
-		return 0;
+//	if (*sc_count == 0)
+//		return 0;
 	for(i = 0; i < MAX_STATUSCHANGE; i++){
 		if(sc_data[i].timer != -1){	/* 異常があるならタイマ?を削除する */
 			status_change_end(bl, i, -1);
@@ -4051,7 +4059,7 @@ int status_change_end( struct block_list* bl , int type,int tid )
 				{
 					struct map_session_data *md = map_id2sd(sc_data[type].val1);
 					sc_data[type].val1=sc_data[type].val2=0;
-					skill_devotion(md,bl->id);
+					if(md) skill_devotion(md,bl->id);
 					calc_flag = 1;
 				}
 				break;
@@ -4281,7 +4289,7 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 #else
 	nullpo_retr(0, bl);
 #endif
-	
+
 	nullpo_retr(0, sc_data=status_get_sc_data(bl));
 
 	if(bl->type==BL_PC)
@@ -4294,11 +4302,9 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 			ShowMessage("status_change_timer %d != %d\n",tid,sc_data[type].timer);
 		return 0;
 	}
-
 	// security system to prevent forgetting timer removal
 	int temp_timerid = sc_data[type].timer;
 	sc_data[type].timer = -1;
-
 
 
 	switch(type){	/* 特殊な?理になる場合 */
@@ -4423,8 +4429,8 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 			if (unit->group != 0)
 			{
 				sc_data[type].timer=add_timer(skill_get_time(unit->group->skill_id,unit->group->skill_lv)/10+tick,status_change_timer, bl->id, data );
-			return 0;
-		}
+				return 0;
+			}// dont forget the brackets
 		}
 		break;
 
@@ -4457,37 +4463,19 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 		}
 		break;
 	case SC_POISON:
-		if(sc_data[SC_SLOWPOISON].timer == -1) {
-			if( (--sc_data[type].val3) > 0) {
-				int hp = status_get_max_hp(bl);
-				if(status_get_hp(bl) > hp>>2) {
-					if(sd) {
-						hp = 3 + hp*3/200;
-						pc_heal(sd,-hp,0);
-					}
-					else if(md) {
-						hp = 3 + hp/200;
-						md->hp -= hp;
-					}
-				}
-				sc_data[type].timer=add_timer(1000+tick,status_change_timer, bl->id, data );
-				return 0;
-			}
-		}
-		else
-			sc_data[type].timer=add_timer(1000+tick,status_change_timer, bl->id, data );
-		break;
 	case SC_DPOISON:
 		if (sc_data[SC_SLOWPOISON].timer == -1 && (--sc_data[type].val3) > 0) {
 			int hp = status_get_max_hp(bl);
-			if (status_get_hp(bl) > hp>>2) {
-				if(sd) {
-					hp = 3 + hp/50;
-					pc_heal(sd, -hp, 0);
-				} else if(md) {
-					hp = 3 + hp/100;
-					md->hp -= hp;
-				}
+			if (type == SC_POISON && status_get_hp(bl) < hp>>2)
+				break;
+			if(sd) {
+				hp = (type == SC_DPOISON) ? 3 + hp/50 : 3 + hp*3/200;
+				pc_heal(sd, -hp, 0);
+			} else if (bl->type == BL_MOB) {
+				struct mob_data *md;
+				nullpo_retr(0, md=(struct mob_data *)bl);
+				hp = (type == SC_DPOISON) ? 3 + hp/100 : 3 + hp/200;
+				md->hp -= hp;
 			}
 		}
 		if (sc_data[type].val3 > 0)
@@ -4496,7 +4484,6 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 			return 0;
 		}
 		break;
-
 	case SC_TENSIONRELAX:	/* テンションリラックス */
 		if(sd){		/* SPがあって、HPが?タンでなければ?? */
 			if( sd->status.sp > 12 && sd->status.max_hp > sd->status.hp ){
@@ -4638,7 +4625,7 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 			}
 			/* タイマ?再設定 */
 			sc_data[type].timer=add_timer(1000+tick, status_change_timer,bl->id, data);
-				return 0;
+			return 0;
 		}
 		break;
 
@@ -4839,15 +4826,17 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 	case SC_GUILDAURA:
 		{
 			struct block_list *tbl = map_id2bl(sc_data[type].val2);
-			if (tbl && battle_check_range(bl, tbl, 2))
+			
+			if (tbl && battle_check_range(bl, tbl, 2)){
 			{
 				sc_data[type].timer = add_timer(1000 + tick, status_change_timer,bl->id, data);
-					return 0;			
+					return 0;
+			}// ugh, don't  forget the brackets
 		}
 		}
 		break;
 	}
-
+	
 	// default for all non-handled control paths
 	// security system to prevent forgetting timer removal
 	sc_data[type].timer = temp_timerid; // to have status_change_end handle a valid timer

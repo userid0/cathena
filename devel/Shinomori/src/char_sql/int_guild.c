@@ -659,12 +659,12 @@ int inter_guild_readdb()
 int inter_guild_sql_init()
 {
 	int i;
-
-        guild_db_=numdb_init();
-        castle_db_=numdb_init();
-        guild_expcache_db_=numdb_init();
-        guild_infoevent_db_=numdb_init();
-        guild_castleinfoevent_db_=numdb_init();
+	
+	guild_db_=numdb_init();
+	castle_db_=numdb_init();
+	guild_expcache_db_=numdb_init();
+	guild_infoevent_db_=numdb_init();
+	guild_castleinfoevent_db_=numdb_init();
 
 	ShowMessage("interserver guild memory initialize.... (%d byte)\n",sizeof(struct guild));
 	guild_pt = (struct guild*)aCalloc(sizeof(struct guild), 1);

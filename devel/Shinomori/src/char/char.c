@@ -1280,7 +1280,7 @@ void create_online_files(void) {
 				if (online_display_option & 24) { // 8 or 16
 					// prepare map name
 					memset(temp, 0, 17);
-					strncpy(temp, char_dat[j].last_point.map, 16);
+					memcpy(temp, char_dat[j].last_point.map, 16);
 					if (strstr(temp, ".gat") != NULL) {
 						temp[strstr(temp, ".gat") - temp] = 0; // suppress the '.gat'
 					}
@@ -1516,7 +1516,7 @@ static int char_delete(struct mmo_charstatus *cs) {
 		WBUFW(buf,0) = 0x2b12;
 		WBUFL(buf,2) = cs->char_id;
 		WBUFL(buf,6) = cs->partner_id;
-		mapif_sendall((unsigned char*)buf,10);
+		mapif_sendall(buf,10);
 		// —£¥
 		char_divorce(cs);
 	}
@@ -1728,7 +1728,7 @@ int parse_tologin(int fd) {
 				else {
 					int lp;
 					char *p;
-					char buf[128];
+					unsigned char buf[128];
 					CREATE_BUFFER(message,char,RFIFOL(fd,4) + 1);
 
 					memset(message, '\0', sizeof(message));
@@ -1772,7 +1772,7 @@ int parse_tologin(int fd) {
 								WBUFW(buf,2) = lp + strlen(split) + 1;
 								WBUFL(buf,4) = 0x65756c62; // only write if in blue (lp = 8)
 								memcpy(WBUFP(buf,lp), split, strlen(split) + 1);
-								mapif_sendall((unsigned char*)buf, WBUFW(buf,2));
+								mapif_sendall(buf, WBUFW(buf,2));
 							}
 						}
 					}
@@ -2918,7 +2918,7 @@ int mapif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
 int mapif_send(int fd, unsigned char *buf, unsigned int len) {
 	int i;
 
-	if (fd >= 0) {
+	if( session_isActive(fd) ) {
 		for(i = 0; i < MAX_MAP_SERVERS; i++) {
 			if (fd == server_fd[i]) {
 				memcpy(WFIFOP(fd,0), buf, len);
@@ -2934,7 +2934,7 @@ int send_users_tologin(int tid, unsigned long tick, int id, int data) {
 	int users = count_users();
 	unsigned char buf[16];
 
-	if (login_fd > 0 && session[login_fd]) {
+	if ( session_isActive(login_fd) ) {
 		// send number of user to login server
 		WFIFOW(login_fd,0) = 0x2714;
 		WFIFOL(login_fd,2) = users;

@@ -81,6 +81,8 @@ struct Script_Config script_config;
 static int parse_cmd_if=0;
 static int parse_cmd;
 
+extern int current_equip_item_index; //for New CARS Scripts. It contains Inventory Index of the EQUIP_SCRIPT caller item. [Lupus]
+
 /*==========================================
  * ローカルプロトタイプ宣言 (必要な物のみ)
  *------------------------------------------
@@ -300,6 +302,7 @@ int buildin_isnight(struct script_state *st); // [celest]
 int buildin_isday(struct script_state *st); // [celest]
 int buildin_isequipped(struct script_state *st); // [celest]
 int buildin_isequippedcnt(struct script_state *st); // [celest]
+int buildin_cardscnt(struct script_state *st); // [Lupus]
 int buildin_getusersname(struct script_state *st); //jA commands added [Lupus]
 int buildin_dispbottom(struct script_state *st);
 int buildin_recovery(struct script_state *st);
@@ -551,6 +554,7 @@ struct {
 	{buildin_isday,"isday",""}, // check whether it is day time [Celest]
 	{buildin_isequipped,"isequipped","i*"}, // check whether another item/card has been equipped [Celest]
 	{buildin_isequippedcnt,"isequippedcnt","i*"}, // check how many items/cards are being equipped [Celest]
+	{buildin_cardscnt,"cardscnt","i*"}, // check how many items/cards are being equipped in the same arm [Lupus]
 #ifdef PCRE_SUPPORT
         {buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
         {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
@@ -6940,7 +6944,7 @@ int buildin_isequippedcnt(struct script_state *st)
 			continue;
 		
 		for (j=0; j<10; j++) {
-			int index, type, flag = 0;
+			int index, type;
 			index = sd->equip_index[j];
 			if(index < 0) continue;
 			if(j == 9 && sd->equip_index[8] == index) continue;
@@ -6951,22 +6955,17 @@ int buildin_isequippedcnt(struct script_state *st)
 			if(sd->inventory_data[index]) {
 				if (type == 4 || type == 5) {
 					if (sd->inventory_data[index]->nameid == id)
-						flag = 1;
+						ret++; //[Lupus]
 				} else if (type == 6) {
 					for(k=0; k<sd->inventory_data[index]->slot; k++) {
 						if (sd->status.inventory[index].card[0]!=0x00ff &&
 							sd->status.inventory[index].card[0]!=0x00fe &&
 							sd->status.inventory[index].card[0]!=(short)0xff00 &&
 							sd->status.inventory[index].card[k] == id) {
-							flag = 1;
-							break;
+							ret++; //[Lupus]
 						}
 					}
 				}				
-				if (flag) {
-					ret++;
-					break;
-				}
 			}
 		}
 	}
@@ -6974,6 +6973,55 @@ int buildin_isequippedcnt(struct script_state *st)
 	push_val(st->stack,C_INT,ret);
 	return 0;
 }
+
+/*================================================
+ * Check how many given inserted cards in the CURRENT
+ * weapon - used for 2/15's cards patch [Lupus]
+ *------------------------------------------------
+ */
+int buildin_cardscnt(struct script_state *st)
+{
+	struct map_session_data *sd;
+	int i, k, id = 1;
+	int ret = 0;
+
+	sd = script_rid2sd(st);
+	
+	for (i=0; id!=0; i++) {
+		if(st->end>st->start+(i+2))
+			id=conv_num(st,&(st->stack->stack_data[st->start+(i+2)]));
+		else id = 0;
+
+		if (id <= 0)
+			continue;
+		
+		int index, type;
+		index = current_equip_item_index; //we get CURRENT WEAPON inventory index from status.c [Lupus]
+		if(index < 0) continue;
+
+		type = itemdb_type(id);
+			
+		if(sd->inventory_data[index]) {
+			if (type == 4 || type == 5) {
+				if (sd->inventory_data[index]->nameid == id)
+					ret++;
+			} else if (type == 6) {
+				for(k=0; k<sd->inventory_data[index]->slot; k++) {
+					if (sd->status.inventory[index].card[0]!=0x00ff &&
+						sd->status.inventory[index].card[0]!=0x00fe &&
+						sd->status.inventory[index].card[0]!=(short)0xff00 &&
+						sd->status.inventory[index].card[k] == id) {
+						ret++;
+					}
+				}
+			}				
+		}
+	}
+	push_val(st->stack,C_INT,ret);
+//	push_val(st->stack,C_INT,current_equip_item_index);
+	return 0;
+}
+
 //
 // 実行部main
 //

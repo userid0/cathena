@@ -1089,6 +1089,10 @@ extern inline bool session_isRemoved(int fd)
 {
 	return ( session_isValid(fd) && session[fd]->flag.remove );
 }
+extern inline bool session_isMarked(int fd)
+{
+	return ( session_isValid(fd) && session[fd]->flag.marked );
+}
 extern inline bool session_Remove(int fd)
 {
 	if( session_isValid(fd) && !session[fd]->flag.marked )

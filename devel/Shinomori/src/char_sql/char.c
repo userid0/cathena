@@ -632,7 +632,7 @@ int memitemdata_to_sql(struct itemtmp mapitem[], int count, int char_id, int tab
 		sprintf(selectoption,"guild_id");
 		break;
 	default:
-		printf("Invalid table name!\n");
+		ShowMessage("Invalid table name!\n");
 		return 1;
 	}
 	//ShowMessage("Working Table : %s \n",tablename);

@@ -430,13 +430,17 @@ int inter_guild_init() {
 		}
 		c++;
 	}
+	fclose(fp);
 
-	if (!c) {
-		ShowMessage(" %s - making Default Data...\n", castle_txt);
-		//デフォルトデータを作成
-		for(i = 0; i < MAX_GUILDCASTLE; i++) {
+	//デフォルトデータを作成
+	for(i = 0; i < MAX_GUILDCASTLE; i++) {
+		// check if castle i exist
+		gc = (struct guild_castle*)numdb_search(castle_db, c);
+		if( NULL==gc )
+		{	// construct a new one if not
 			gc = (struct guild_castle*)aCalloc(1, sizeof(struct guild_castle));
 			gc->castle_id = i;
+			// the rest should be not necessary since calloc set the structure to zero anyway
 			gc->guild_id = 0;
 			gc->economy = 0;
 			gc->defense = 0;
@@ -464,12 +468,7 @@ int inter_guild_init() {
 			gc->Ghp7 = 0;	// end additions [Valaris]
 			numdb_insert(castle_db, gc->castle_id, gc);
 		}
-		ShowMessage(" %s - making done\n",castle_txt);
-		return 0;
 	}
-
-	fclose(fp);
-
 	return 0;
 }
 

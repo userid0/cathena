@@ -1813,7 +1813,6 @@ int atcommand_speed(
 	speed = atoi(message);
 	if (speed >= MIN_WALK_SPEED && speed <= MAX_WALK_SPEED) {
 		sd->speed = speed;
-		//sd->walktimer = x;
 		//‚±‚Ì•¶‚ð’Ç‰Á by ‚ê‚
 		clif_updatestatus(sd, SP_SPEED);
 		clif_displaymessage(fd, msg_table[8]); // Speed changed.
@@ -3003,7 +3002,7 @@ int atcommand_go(
 					clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
 					return -1;
 				}
-				if (pc_setpos(sd, sd->status.memo_point[-town-1].map, sd->status.memo_point[-town-1].x, sd->status.memo_point[-town-1].y, 3) == 0) {
+				if( pc_setpos(sd, sd->status.memo_point[-town-1].map, sd->status.memo_point[-town-1].x, sd->status.memo_point[-town-1].y, 3) ) {
 					clif_displaymessage(fd, msg_table[0]); // Warped.
 				} else {
 					clif_displaymessage(fd, msg_table[1]); // Map not found.
@@ -3024,7 +3023,7 @@ int atcommand_go(
 				clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
 				return -1;
 			}
-			if (pc_setpos(sd, (char *)data[town].map, data[town].x, data[town].y, 3) == 0) {
+			if( pc_setpos(sd, (char *)data[town].map, data[town].x, data[town].y, 3) ) {
 				clif_displaymessage(fd, msg_table[0]); // Warped.
 			} else {
 				clif_displaymessage(fd, msg_table[1]); // Map not found.
@@ -6338,7 +6337,7 @@ int atcommand_jail(
 				y = 75;
 				break;
 			}
-			if (pc_setpos(pl_sd, "sec_pri.gat", x, y, 3) == 0) {
+			if( pc_setpos(pl_sd, "sec_pri.gat", x, y, 3) ) {
 				pc_setsavepoint(pl_sd, "sec_pri.gat", x, y); // Save Char Respawn Point in the jail room [Lupus]
 				clif_displaymessage(pl_sd->fd, msg_table[117]); // GM has send you in jails.
 				clif_displaymessage(fd, msg_table[118]); // Player warped in jails.
@@ -6382,8 +6381,8 @@ int atcommand_unjail(
 			if (pl_sd->bl.m != map_mapname2mapid("sec_pri.gat")) {
 				clif_displaymessage(fd, msg_table[119]); // This player is not in jails.
 				return -1;
-			} else if (pc_setpos(pl_sd, "prontera.gat", 156, 191, 3) == 0) {
-				pc_setsavepoint(pl_sd, "prontera.gat", 156, 191); // Save char respawn point in Prontera
+			} else if (pc_setpos(pl_sd, "prontera.gat", 0, 0, 3) == 0) { //old coords: 156,191
+				pc_setsavepoint(pl_sd, "prontera.gat", 0, 0); // Save char respawn point in Prontera
 				clif_displaymessage(pl_sd->fd, msg_table[120]); // GM has discharge you.
 				clif_displaymessage(fd, msg_table[121]); // Player warped to Prontera.
 			} else {

@@ -1313,8 +1313,12 @@ static int npc_walk(struct npc_data *nd,unsigned long tick,int data)
 			i = 1;
 
 		nd->state.state=MS_WALK;
+		if(nd->walktimer != -1)
+		{
+			delete_timer(nd->walktimer,npc_walktimer);
+			nd->walktimer=-1;
+		}
 		nd->walktimer=add_timer(tick+i,npc_walktimer,nd->bl.id,nd->walkpath.path_pos);
-
 
 		if(nd->walkpath.path_pos>=nd->walkpath.path_len)
 			clif_fixnpcpos(nd);	// When npc stops, retransmission current of a position.
@@ -1330,8 +1334,10 @@ int npc_changestate(struct npc_data *nd,int state,int type)
 	nullpo_retr(0, nd);
 
 	if(nd->walktimer != -1)
+	{
 		delete_timer(nd->walktimer,npc_walktimer);
-	nd->walktimer=-1;
+		nd->walktimer=-1;
+	}
 
 	nd->state.state=state;
 
@@ -1366,7 +1372,6 @@ static int npc_walktimer(int tid,unsigned long tick,int id,int data)
 	if(nd->walktimer != tid){
 		return 0;
 	}
-
 	nd->walktimer=-1;
 
 	if(nd->bl.prev == NULL)
@@ -1729,6 +1734,7 @@ int npc_convertlabel_db(void *key,void *data,va_list ap)
 	nullpo_retr(0, nd);
 
 	if(NULL==nd->u.scr.ref) return 0;
+
 	lst= nd->u.scr.ref->label_list;
 	num= nd->u.scr.ref->label_list_num;
 	if(!lst){

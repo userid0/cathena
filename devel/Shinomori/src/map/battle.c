@@ -264,8 +264,10 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 				status_change_end(bl,SC_SAFETYWALL,-1);
 			}
 		}
-		if(sc_data[SC_PNEUMA].timer!=-1 && damage>0 && ((flag&BF_WEAPON && flag&BF_LONG && skill_num != NPC_GUIDEDATTACK) ||
-			(flag&BF_MISC && (skill_num ==  HT_BLITZBEAT || skill_num == SN_FALCONASSAULT)))){ // [DracoRPG]
+		if(sc_data[SC_PNEUMA].timer!=-1 && damage>0 &&
+			((flag&BF_WEAPON && flag&BF_LONG && skill_num != NPC_GUIDEDATTACK) ||
+			(flag&BF_MISC && (skill_num ==  HT_BLITZBEAT || skill_num == SN_FALCONASSAULT)) ||
+			(flag&BF_MAGIC && skill_num == ASC_BREAKER))){ // [DracoRPG]
 			// ニューマ
 			damage=0;
 		}
@@ -2288,9 +2290,6 @@ static struct Damage battle_calc_pc_weapon_attack(
 					// calculate physical part of damage
 					damage = damage * skill_lv;
 					damage2 = damage2 * skill_lv;
-					// calculate magic part of damage
-					damage3 = skill_lv * status_get_int(src) * 5;
-
 					flag=(flag&~BF_RANGEMASK)|BF_LONG;
 				}
 				break;
@@ -2557,12 +2556,6 @@ static struct Damage battle_calc_pc_weapon_attack(
 //カード補正による左手ダメージ増加
 //カードによるダメージ増加処理(左手)ここまで
 
-// -- moonsoul (cardfix for magic damage portion of ASC_BREAKER)
-	if(skill_num == ASC_BREAKER) {
-		damage3 = damage3 * cardfix / 100;
-		dmg_lv = ATK_DEF; // ignores flee [celest]
-	}
-
 //カードによるダメージ減衰処理ここから
 	if(tsd){ //対象がPCの場合
 		cardfix=100;
@@ -2759,14 +2752,6 @@ static struct Damage battle_calc_pc_weapon_attack(
 				mob_class_change(((struct mob_data *)target),changeclass);
 			}
 		}
-
-
-// -- moonsoul (final combination of phys, mag damage for ASC_BREAKER)
-	if(skill_num == ASC_BREAKER) {
-		damage3 += rand()%500+500;
-		damage += damage3;
-//		damage2 += damage3;
-	}
 
 	wd.damage=damage;
 	wd.damage2=damage2;
@@ -3036,6 +3021,10 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,struct block_list *
 				damage = ((struct map_session_data *)target)->status.sp * 2;
 				matk_flag = 0; // don't consider matk and matk2
 			}
+			break;
+		case ASC_BREAKER:
+			damage = rand()%500 + 500 + skill_lv * status_get_int(bl) * 5;
+			matk_flag = 0; // don't consider matk and matk2
 			break;
 		}
 	}

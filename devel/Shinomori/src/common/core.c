@@ -2,7 +2,7 @@
 // original : core.c 2003/02/26 18:03:12 Rev 1.7
 
 #ifdef DUMPSTACK
-	#ifndef _WIN32	// HAVE_EXECINFO_H
+	#ifndef CYGWIN	// HAVE_EXECINFO_H
 		#include <execinfo.h>
 	#endif
 #endif
@@ -105,7 +105,7 @@ static void sig_proc(int sn)
  *	Dumps the stack using glibc's backtrace
  *-----------------------------------------
  */
-#ifdef DUMPSTACK
+	#ifdef DUMPSTACK
 void sig_dump(int sn)
 {
 
@@ -119,7 +119,7 @@ void sig_dump(int sn)
 
 		// search for a usable filename
 		do {
-			sprintf(tmp,"save/stackdump_%04d.txt", ++no);
+			sprintf(tmp,"log/stackdump_%04d.txt", ++no);
 	} while((fp = savefopen(tmp,"r")) && (fclose(fp), no < 9999));
 		// dump the trace into the file
 	if ((fp = savefopen (tmp,"w")) != NULL) {
@@ -128,17 +128,15 @@ void sig_dump(int sn)
 			fprintf(fp,"Stack trace:\n");
 			size = backtrace (array, 20);
 			stack = backtrace_symbols (array, size);
-
 			for (no = 0; no < size; no++) {
-
 				fprintf(fp, "%s\n", stack[no]);
-
 			}
 			fprintf(fp,"End of stack trace\n");
 
 			fclose(fp);
 			aFree(stack);
 		}
+	//cygwin_stackdump ();
 	// When pass the signal to the system's default handler
 	compat_signal(sn, SIG_DFL);
 	raise(sn);
@@ -227,8 +225,6 @@ int main(int argc,char **argv)
 {
 	int next;
 	///////////////////////////////////////////////////////////////////////////
-	pid_create(argv[0]);
-
 #ifdef DUMPSTACK
 	///////////////////////////////////////////////////////////////////////////
 	// glibc dump
@@ -241,9 +237,9 @@ int main(int argc,char **argv)
 	compat_signal(SIGFPE, sig_dump);
 	compat_signal(SIGILL, sig_dump);
 #ifndef WIN32
-	compat_signal(SIGBUS, sig_dump);
-	compat_signal(SIGTRAP, SIG_DFL);
-#endif
+		compat_signal(SIGBUS, sig_dump);
+		compat_signal(SIGTRAP, SIG_DFL);
+	#endif
 	///////////////////////////////////////////////////////////////////////////
 #else
 	///////////////////////////////////////////////////////////////////////////
@@ -251,7 +247,7 @@ int main(int argc,char **argv)
 	compat_signal(SIGPIPE,SIG_IGN);
 	compat_signal(SIGTERM,sig_proc);
 	compat_signal(SIGINT,sig_proc);
-	
+
 	// Signal to create coredumps by system when necessary (crash)
 	compat_signal(SIGSEGV, SIG_DFL);
 #ifndef _WIN32
@@ -264,6 +260,8 @@ int main(int argc,char **argv)
 	///////////////////////////////////////////////////////////////////////////
 	//
 	display_title();
+
+	pid_create(argv[0]);
 	do_init_memmgr(argv[0]); // ˆê”ÔÅ‰‚ÉŽÀs‚·‚é•K—v‚ª‚ ‚é
 	tick_ = time(0);
 	///////////////////////////////////////////////////////////////////////////

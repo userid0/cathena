@@ -547,8 +547,8 @@ int mmo_auth_init(void) {
 					ShowMessage(CL_BT_RED"mmo_auth_init: ******Error: account name already exists.\n");
 					ShowMessage("               account name '%s' -> new account not read.\n", userid); // 2 lines, account name can be long.
 					ShowMessage("               Account saved in log file.\n"CL_RESET);
-					login_log("mmmo_auth_init: ******Error: an account has an identical id to another." RETCODE);
-					login_log("               account id #%d -> new account not read (saved in next line):" RETCODE, account_id);
+					login_log("mmmo_auth_init: ******Error: an account has an identical name to another." RETCODE);
+					login_log("               account name '%s' -> new account not read (saved in next line):" RETCODE, userid);
 					login_log("%s", line);
 					break;
 				}

@@ -369,23 +369,23 @@ int pc_makesavestatus(struct map_session_data *sd)
 
 	// 死亡?態だったのでhpを1、位置をセ?ブ場所に?更
 	if(!sd->state.waitingdisconnect) {
-	if(pc_isdead(sd)){
-		pc_setrestartvalue(sd,0);
-		memcpy(&sd->status.last_point,&sd->status.save_point,sizeof(sd->status.last_point));
-	} else {
-		memcpy(sd->status.last_point.map,sd->mapname,24);
-		sd->status.last_point.x = sd->bl.x;
-		sd->status.last_point.y = sd->bl.y;
-	}
-
-	// セ?ブ禁止マップだったので指定位置に移動
-	if(map[sd->bl.m].flag.nosave){
-		struct map_data *m=&map[sd->bl.m];
-		if(strcmp(m->save.map,"SavePoint")==0)
+		if(pc_isdead(sd)){
+			pc_setrestartvalue(sd,0);
 			memcpy(&sd->status.last_point,&sd->status.save_point,sizeof(sd->status.last_point));
-		else
-			memcpy(&sd->status.last_point,&m->save,sizeof(sd->status.last_point));
-	}
+		} else {
+			memcpy(sd->status.last_point.map,sd->mapname,24);
+			sd->status.last_point.x = sd->bl.x;
+			sd->status.last_point.y = sd->bl.y;
+		}
+
+		// セ?ブ禁止マップだったので指定位置に移動
+		if(map[sd->bl.m].flag.nosave){
+			struct map_data *m=&map[sd->bl.m];
+			if(strcmp(m->save.map,"SavePoint")==0)
+				memcpy(&sd->status.last_point,&sd->status.save_point,sizeof(sd->status.last_point));
+			else
+				memcpy(&sd->status.last_point,&m->save,sizeof(sd->status.last_point));
+		}
 	}
 
 	//マナ?ポイントがプラスだった場合0に
@@ -643,7 +643,6 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 
 	sd = map_id2sd(id);
 	nullpo_retr(1, sd);
-
 	// check if double login occured
 	if(sd->new_fd){
 		// 2重login状態だったので、両方落す
@@ -658,7 +657,6 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 		clif_authfail_fd(sd->fd, 0);
 		return 1;
 	}
-
 	memset(&sd->state, 0, sizeof(sd->state));
 	// 基本的な初期化
 	sd->state.connect_new = 1;
@@ -763,22 +761,27 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 	for(i = 0; i < MAX_EVENTTIMER; i++)
 		sd->eventtimer[i] = -1;
 	sd->eventcount=0;
-
 	// 位置の設定
-	if (pc_setpos(sd,sd->status.last_point.map, sd->status.last_point.x, sd->status.last_point.y, 0) != 0) {
-		if(battle_config.error_log) {
+	if( !pc_setpos(sd,sd->status.last_point.map, sd->status.last_point.x, sd->status.last_point.y, 0) ) {
+		int i;
+		if(battle_config.error_log) 
+		{
 			char buf[32];
 			sprintf(buf, "Last_point_map %s not found\n", sd->status.last_point.map);
 			ShowError (buf);
 		}
 		// try warping to a default map instead
-		if (pc_setpos(sd, "prontera.gat", 273, 354, 0) != 0) {
+		for(i=0; i<map_num; i++)
+		{
+			if(map[i].gat) 
+				break;
+		}
+		if( i>=map_num || !pc_setpos(sd, map[i].name, 100, 100, 0) ) {
 			// if we fail again
 			clif_authfail_fd(sd->fd, 0);
 			return 1;
 		}
 	}
-
 	// pet
 	if (sd->status.pet_id > 0)
 		intif_request_petdata(sd->status.account_id, sd->status.char_id, sd->status.pet_id);
@@ -2851,7 +2854,7 @@ int pc_steal_coin(struct map_session_data *sd,struct block_list *bl)
  * PCの位置設定
  *------------------------------------------
  */
-int pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clrtype)
+bool pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clrtype)
 {
 	char mapname[24];
 	int m=0,disguise=0;
@@ -2955,7 +2958,9 @@ int pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clrt
 				memcpy(sd->mapname,mapname,24);
 				sd->bl.x=x;
 				sd->bl.y=y;
+				
 				sd->state.waitingdisconnect=1;
+
 				pc_makesavestatus(sd);
 				if(sd->status.pet_id > 0 && sd->pd)
 					intif_save_petdata(sd->status.account_id,&sd->pet);
@@ -2963,10 +2968,10 @@ int pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clrt
 				storage_storage_save(sd);
 				storage_delete(sd->status.account_id);
 				chrif_changemapserver(sd, mapname, x, y, ip, port);
-				return 0;
+				return true;
 			}
 		}
-		return 1;
+		return false;
 	}
 
 	if(x <0 || x >= map[m].xs || y <0 || y >= map[m].ys)
@@ -3034,7 +3039,7 @@ int pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clrt
 //	map_addblock(&sd->bl);	/// ブロック登?とspawnは
 //	clif_spawnpc(sd);
 
-	return 0;
+	return true;
 }
 
 /*==========================================
@@ -3211,8 +3216,8 @@ static int pc_walk(int tid,unsigned long tick,int id,int data)
 			return 0;
 		}
 		moveblock = ( x/BLOCK_SIZE != (x+dx)/BLOCK_SIZE || y/BLOCK_SIZE != (y+dy)/BLOCK_SIZE);
-
-		sd->walktimer = 1;
+// ? setting it to a valied timer?
+//		sd->walktimer = 1;
 		map_foreachinmovearea(clif_pcoutsight,sd->bl.m,x-AREA_SIZE,y-AREA_SIZE,x+AREA_SIZE,y+AREA_SIZE,dx,dy,0,sd);
 
 		x += dx;
@@ -3226,7 +3231,7 @@ static int pc_walk(int tid,unsigned long tick,int id,int data)
 		skill_unit_move(&sd->bl,tick,1);
 
 		map_foreachinmovearea(clif_pcinsight,sd->bl.m,x-AREA_SIZE,y-AREA_SIZE,x+AREA_SIZE,y+AREA_SIZE,-dx,-dy,0,sd);
-		sd->walktimer = -1;
+//		sd->walktimer = -1;
 
 		if(sd->status.party_id>0){	// パ?ティのＨＰ情報通知?査
 			struct party *p=party_search(sd->status.party_id);
@@ -3292,6 +3297,7 @@ static int pc_walktoxy_sub(struct map_session_data *sd)
 
 	nullpo_retr(1, sd);
 
+
 	if(path_search(&wpd,sd->bl.m,sd->bl.x,sd->bl.y,sd->to_x,sd->to_y,0))
 		return 1;
 	memcpy(&sd->walkpath,&wpd,sizeof(wpd));
@@ -3301,6 +3307,11 @@ static int pc_walktoxy_sub(struct map_session_data *sd)
 
 	if((i=calc_next_walk_step(sd))>0){
 		i = i>>2;
+
+		if(sd->walktimer != -1) {
+			delete_timer(sd->walktimer,pc_walk);
+			sd->walktimer=-1;
+		}
 		sd->walktimer=add_timer(gettick()+i,pc_walk,sd->bl.id,0);
 	}
 	clif_movechar(sd);
@@ -3690,6 +3701,11 @@ int pc_attack_timer(int tid,unsigned long tick,int id,int data)
 			clif_skill_fail(sd,1,4,0);
 			return 0;
 		}
+	}
+
+	if(sd->status.weapon == 11 && sd->equip_index[10] < 0) {
+		clif_arrow_fail(sd,0);
+		return 0;
 	}
 
 	dist = distance(sd->bl.x,sd->bl.y,bl->x,bl->y);
@@ -6626,7 +6642,7 @@ static int pc_spirit_heal_hp(struct map_session_data *sd)
 
 	sd->inchealspirithptick += natural_heal_diff_tick;
 
-	if(sd->weight*100/sd->max_weight >= battle_config.natural_heal_weight_rate)
+	if(sd->weight*100 >= sd->max_weight*battle_config.natural_heal_weight_rate)
 		interval += interval;
 
 	if(sd->inchealspirithptick >= interval) {
@@ -6667,7 +6683,7 @@ static int pc_spirit_heal_sp(struct map_session_data *sd)
 
 	sd->inchealspiritsptick += natural_heal_diff_tick;
 
-	if(sd->weight*100/sd->max_weight >= battle_config.natural_heal_weight_rate)
+	if(sd->weight*100 >= sd->max_weight*battle_config.natural_heal_weight_rate)
 		interval += interval;
 
 	if(sd->inchealspiritsptick >= interval) {
@@ -6733,7 +6749,7 @@ static int pc_natural_heal_sub(struct map_session_data *sd,va_list ap) {
 	tick = (unsigned long)va_arg(ap,int);
 
 // -- moonsoul (if conditions below altered to disallow natural healing if under berserk status)
-	if ((battle_config.natural_heal_weight_rate > 100 || sd->weight*100/sd->max_weight < battle_config.natural_heal_weight_rate) &&
+	if ((battle_config.natural_heal_weight_rate > 100 || sd->weight*100 < sd->max_weight * battle_config.natural_heal_weight_rate) &&
 		!pc_isdead(sd) &&
 		!pc_ishiding(sd) &&
 	//-- cannot regen for 5 minutes after using Berserk --- [Celest]
@@ -6802,6 +6818,8 @@ int pc_setsavepoint(struct map_session_data *sd,char *mapname,int x,int y)
  *------------------------------------------
  */
 static int last_save_fd,save_flag;
+static int Ghp[MAX_GUILDCASTLE][8]; // so save only if HP are changed // experimental code [Yor]
+
 static int pc_autosave_sub(struct map_session_data *sd,va_list ap)
 {
 	nullpo_retr(0, sd);
@@ -6809,8 +6827,11 @@ static int pc_autosave_sub(struct map_session_data *sd,va_list ap)
 	Assert((sd->status.pet_id == 0 || sd->pd == 0) || sd->pd->msd == sd);
 
 	if(save_flag==0 && sd->fd>last_save_fd && !sd->state.waitingdisconnect){
-		struct guild_castle *gc=NULL;
-		int i;
+// --- uncomment to reenable guild castle saving ---//
+//		struct guild_castle *gc=NULL;
+//		int i;
+//
+
 //		if(battle_config.save_log)
 //			ShowMessage("autosave %d\n",sd->fd);
 		// pet
@@ -6820,18 +6841,43 @@ static int pc_autosave_sub(struct map_session_data *sd,va_list ap)
 		chrif_save(sd);
 		storage_storage_save(sd);
 
-		for(i=0;i<MAX_GUILDCASTLE;i++){
-			gc=guild_castle_search(i);
-			if(!gc) continue;
-			if(gc->visibleG0==1) guild_castledatasave(gc->castle_id,18,gc->Ghp0);
-			if(gc->visibleG1==1) guild_castledatasave(gc->castle_id,19,gc->Ghp1);
-			if(gc->visibleG2==1) guild_castledatasave(gc->castle_id,20,gc->Ghp2);
-			if(gc->visibleG3==1) guild_castledatasave(gc->castle_id,21,gc->Ghp3);
-			if(gc->visibleG4==1) guild_castledatasave(gc->castle_id,22,gc->Ghp4);
-			if(gc->visibleG5==1) guild_castledatasave(gc->castle_id,23,gc->Ghp5);
-			if(gc->visibleG6==1) guild_castledatasave(gc->castle_id,24,gc->Ghp6);
-			if(gc->visibleG7==1) guild_castledatasave(gc->castle_id,25,gc->Ghp7);
-		}
+// --- uncomment to reenable guild castle saving ---//
+/*		for(i = 0; i < MAX_GUILDCASTLE; i++) {	// [Yor]
+			gc = guild_castle_search(i);
+			if (!gc) continue;
+			if (gc->visibleG0 == 1 && Ghp[i][0] != gc->Ghp0) {
+				guild_castledatasave(gc->castle_id, 18, gc->Ghp0);
+				Ghp[i][0] = gc->Ghp0;
+			}
+			if (gc->visibleG1 == 1 && Ghp[i][1] != gc->Ghp1) {
+				guild_castledatasave(gc->castle_id, 19, gc->Ghp1);
+				Ghp[i][1] = gc->Ghp1;
+			}
+			if (gc->visibleG2 == 1 && Ghp[i][2] != gc->Ghp2) {
+				guild_castledatasave(gc->castle_id, 20, gc->Ghp2);
+				Ghp[i][2] = gc->Ghp2;
+			}
+			if (gc->visibleG3 == 1 && Ghp[i][3] != gc->Ghp3) {
+				guild_castledatasave(gc->castle_id, 21, gc->Ghp3);
+				Ghp[i][3] = gc->Ghp3;
+			}
+			if (gc->visibleG4 == 1 && Ghp[i][4] != gc->Ghp4) {
+				guild_castledatasave(gc->castle_id, 22, gc->Ghp4);
+				Ghp[i][4] = gc->Ghp4;
+			}
+			if (gc->visibleG5 == 1 && Ghp[i][5] != gc->Ghp5) {
+				guild_castledatasave(gc->castle_id, 23, gc->Ghp5);
+				Ghp[i][5] = gc->Ghp5;
+			}
+			if (gc->visibleG6 == 1 && Ghp[i][6] != gc->Ghp6) {
+				guild_castledatasave(gc->castle_id, 24, gc->Ghp6);
+				Ghp[i][6] = gc->Ghp6;
+			}
+			if (gc->visibleG7 == 1 && Ghp[i][7] != gc->Ghp7) {
+				guild_castledatasave(gc->castle_id, 25, gc->Ghp7);
+				Ghp[i][7] = gc->Ghp7;
+			}
+		}*/
 
 		save_flag=1;
 		last_save_fd = sd->fd;
