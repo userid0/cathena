@@ -1,0 +1,7 @@
+;you should put names of all functions here
+;which you want to export
+EXPORTS
+	do_init
+	do_final
+	Firewall_AddPort
+	UPNP_AddPort
