@@ -1,0 +1,132 @@
+ToDo
+====
+- RSW loading		30% 
+  GND and RSM loading are done so all thats left to do are the RSM 
+  transformations... (which is the part I don't understand just yet...)  
+
+- RSM loading		80%
+  Texture problems
+  Alpha channel - I still have to figure out how to create an alpha channel 
+  using magenta color.
+
+- GND Loading		Done!
+
+History
+=======
+
+4/26/04
+=======
+Yeah! Found out what was wrong with the code... It was leftover code from the 3DSImp plugin
+I based the source on.  I really need to clean out my code.
+
+Now GND importing runs quickly and without a glitch. Average load times on a Pentium III 733
+are 4 to 5 seconds, compared to 60 or more seconds with the old method.
+
+The fixed bug also solved the missing faces issues, and the wrong real-time textures issue.
+
+
+4/25/04
+=======
+Implemented a hash method of storing and finding vertices, and GND loading times have been
+lowered considerably. (Like 50 seconds to 5 :))  However it does not solve the problem of
+missing faces.  Something else in my code is awry...
+
+
+4/24/04
+-------
+Created a VertexList class to handle the GND objects vertices list.
+I implemented this so that faces can share vertices, instead of having
+its own set of vertices. The immediate result is a lower consumption of memory,
+and faster on-screen display.
+
+The first pass stores vertices in the list and throws out duplicates. A hash function
+would help with speed, but right now a linear search through an array (slow!) is used
+to check if the vertex exists in the list.
+
+A new problem is that only a few of the faces generated seem to be visible in the 3DSMax
+object.  A face count produces the expected results, but where are all the faces...?
+
+On a note, removing isolated vertices causes the vertex count to drop (as expected) but the
+face count remains the same...  Implying that the remaining vertices are being used by the
+missing faces, implying that my FindVertex code doesn't work properly?...
+
+
+4/22/04
+-------
+Wow... Three months and no updates...
+
+This is just a minor update. Two flavors of RSMImp are now available.
+New RSMImp for 3DSMax 5.0 and the old RSMImp for 3DSMax 3.1
+
+For some reason the compiler keeps linking to "GetRsrcString@@UAEPADJ".
+So I have to keep opening up RSMImp.obj and renaming UAEPADJ to UAEPADH
+just to get it to compile
+
+I need to fix this...
+
+
+1/17/04
+-------
+Texture maps are now automatically enabled during loading.  Means we
+can see the textures in the viewport right away instead of enabling them 
+one by one.
+
+Also fixed the centering and rotation of the object. Scaling and positioning 
+in RSW files aren't quite ok yet.
+
+GND files still need vertex optimization...
+
+humhumhum
+
+
+11/7/03
+-------
+Not much work done.  I still have to figure out how to re-use vertices in the
+GND file format.  Right now it just creates new vertices for each new face, and
+that really hogs memory.  Also, GND objects aren't complete.  All the vertices 
+are loaded but only half the faces are displayed.
+
+Defeufeu also brought to my attention the correct method for loading RSM objects
+into RSW world space, so I hope to do some work there.
+
+I wish I could get my hands on a Pentium 4 so that work would go more quickly.
+
+
+9/8/03
+------
+Found out that texture mapping wasn't working correctly on all models.
+For some reason some textures don't map properly.  
+
+I've also separated material assignments.  This is buggy at best as I don't
+know exactly how Max stores maps, as far as I know that object materials
+are only instanced in the Materials selector. (i.e. Materials selector is 
+only a swatch)
+
+
+9/4/03
+------
+Material loading complete.  
+Added Ragnarok path loading from an INI file in the MAX folder.
+
+
+9/4/03
+------
+Texture mapping now works and all I need to do now is create a multi-material,
+load the textures into the sub materials, and apply the material to the mesh.
+
+For now, though, you'll have to create the material manually.
+
+To find out which bitmap the mesh uses, I had to use my VB based model viewer
+that logs the textures loaded.
+
+
+9/3/03
+------
+After several days of staring at 3DS Importer code, I decided to just copy it in 
+and tweak it to my needs.  I slowly began to get a glimpse of how the import plugin 
+worked and tested by creating a plane.
+
+That being done, I went on to add defeufeu's RSM loading code.  After a few
+trials, got it to import vertex and face information.
+
+I still don't know how texture mapping and materials are done, so they're todo for now.
