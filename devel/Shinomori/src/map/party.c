@@ -25,7 +25,7 @@
 
 static struct dbt* party_db;
 
-int party_send_xyhp_timer(int tid,unsigned int tick,int id,int data);
+int party_send_xyhp_timer(int tid,unsigned long tick,int id,int data);
 /*==========================================
  * èIóπ
  *------------------------------------------
@@ -45,7 +45,7 @@ void do_init_party(void)
 {
 	party_db=numdb_init();
 	add_timer_func_list(party_send_xyhp_timer,"party_send_xyhp_timer");
-	add_timer_interval(gettick()+PARTY_SEND_XYHP_INVERVAL,party_send_xyhp_timer,0,0,PARTY_SEND_XYHP_INVERVAL);
+	add_timer_interval(gettick()+PARTY_SEND_XYHP_INVERVAL,PARTY_SEND_XYHP_INVERVAL,party_send_xyhp_timer,0,0);
 }
 
 // åüçı
@@ -533,7 +533,7 @@ int party_send_xyhp_timer_sub(void *key,void *data,va_list ap)
 	return 0;
 }
 // à íuÇ‚ÇgÇoí ím
-int party_send_xyhp_timer(int tid,unsigned int tick,int id,int data)
+int party_send_xyhp_timer(int tid,unsigned long tick,int id,int data)
 {
 	numdb_foreach(party_db,party_send_xyhp_timer_sub,tick);
 	return 0;
@@ -584,27 +584,81 @@ int party_exp_share(struct party *p,int map,int base_exp,int job_exp,int zeny)
 	int i,c;
 
 	nullpo_retr(0, p);
-	
+
 	for(i=c=0;i<MAX_PARTY;i++)
 	{
-		if((sd=p->member[i].sd)!=NULL && sd->bl.m==map)
+		if((sd=p->member[i].sd)!=NULL && p->member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
+		{
+			if (/* pc_issit(sd) || */ sd->chatID || (sd->idletime < (tick_ - 120)))
+				continue;
 			c++;
+		}
 	}
 
 	if(c==0)
 		return 0;
+
 	for(i=0;i<MAX_PARTY;i++)
-		if((sd=p->member[i].sd)!=NULL && sd->bl.m==map && session[sd->fd] != NULL) {
+	{
+		if((sd=p->member[i].sd)!=NULL && p->member[i].online && sd->bl.m==map && session[sd->fd] != NULL) 
+		{
 			if (/* pc_issit(sd) || */ sd->chatID || ((time_t)sd->idletime < (tick_ - 120)))
 				continue;
-#ifdef TWILIGHT
-			pc_gainexp(sd,base_exp,job_exp);
-#else
-			pc_gainexp(sd,base_exp/c+1,job_exp/c+1);
-#endif
+
+			pc_gainexp(sd, base_exp/c, job_exp/c);
+
 			if(battle_config.zeny_from_mobs) // zeny from mobs [Valaris]
-				pc_getzeny(sd,zeny/c+1);
+				pc_getzeny(sd,zeny/c);
 		}
+	}
+	return 0;
+}
+///////////////////////////////////////////////////////////////////////////////
+// other calculation method
+// pc's get experience according to their lvl
+// so if a lvl 99 and a lvl 1 pc share exp, 
+// the lvl 99 gets 99 and the lvl 1 get 1 point
+// this way it won't be necessary to block exp sharing of lvl differences
+///////////////////////////////////////////////////////////////////////////////
+int party_exp_share2(struct party *p,int map,int base_exp,int job_exp,int zeny)
+{
+	struct map_session_data *sd;
+	int i;
+	size_t lvlsum = 0;
+	double base_exp_div,job_exp_div,zeny_div;
+
+	nullpo_retr(0, p);
+
+	for(i=0;i<MAX_PARTY;i++)
+	{
+		if((sd=p->member[i].sd)!=NULL && p->member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
+		{
+			if (/* pc_issit(sd) || */ sd->chatID || (sd->idletime < (tick_ - 120)))
+				continue;
+			lvlsum += p->member[i].lv;
+		}
+	}
+
+	if(lvlsum==0)
+		return 0;
+
+	base_exp_div = (double)base_exp /(double)lvlsum;
+	job_exp_div  = (double)job_exp  /(double)lvlsum;
+	zeny_div     = (double)zeny     /(double)lvlsum;
+	
+	for(i=0;i<MAX_PARTY;i++)
+	{
+		if((sd=p->member[i].sd)!=NULL && p->member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
+		{
+			if (/* pc_issit(sd) || */ sd->chatID || (sd->idletime < (tick_ - 120)))
+				continue;
+
+			pc_gainexp(sd, (int)(base_exp_div *p->member[i].lv), (int)(job_exp_div * p->member[i].lv));
+
+			if(battle_config.zeny_from_mobs) // zeny from mobs [Valaris]
+				pc_getzeny(sd,(int)(zeny_div*p->member[i].lv));
+		}
+	}
 	return 0;
 }
 

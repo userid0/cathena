@@ -817,7 +817,7 @@ static int atmobsearch_sub(struct block_list *bl,va_list ap)
 	md = (struct mob_data *)bl;
 	
 	if(md && fd && (mob_id==-1 || (md->class_==mob_id))){
-		snprintf(output, sizeof output, "%2d[%3d:%3d] %s",
+		snprintf(output, sizeof(output), "%2d[%3d:%3d] %s",
 				++number,bl->x, bl->y,md->name);
 		clif_displaymessage(fd, output);
 	}
@@ -836,7 +836,7 @@ static int atcommand_cleanmap_sub(struct block_list *bl,va_list ap)
 	fitem = (struct flooritem_data *)bl;
 	if(fitem==NULL || fitem->bl.type!=BL_ITEM){
 		if(battle_config.error_log)
-			ShowMessage("map_clearflooritem_timer : error\n");
+			ShowError("map_clearflooritem_timer : error\n");
 		return 1;
 	}
 	delete_timer(fitem->cleartimer,map_clearflooritem_timer);
@@ -886,7 +886,7 @@ int msg_config_read(const char *cfgName) {
 	FILE *fp;
 
 	if ((fp = savefopen(cfgName, "r")) == NULL) {
-		ShowMessage("Messages file not found: %s\n", cfgName);
+		ShowError("Messages file not found: %s\n", cfgName);
 		return 1;
 	}
 
@@ -933,7 +933,7 @@ int atcommand_config_read(const char *cfgName) {
 	FILE* fp;
 
 	if ((fp = savefopen(cfgName, "r")) == NULL) {
-		ShowMessage("At commands configuration file not found: %s\n", cfgName);
+		ShowError("At commands configuration file not found: %s\n", cfgName);
 		return 1;
 	}
 
@@ -8965,7 +8965,7 @@ int atcommand_mobinfo(
 	}
 	strcpy(output," Drops:");
 	j=0;
-	for (i=0; i<8; i++) {
+	for (i=0; i<10; i++) { // 8 -> 10 Lupus
 		if ( mob_db[mob_id].dropitem[i].nameid<=0 || mob_db[mob_id].dropitem[i].p<=0)
 			continue;
 		if( (item_data = itemdb_search(mob_db[mob_id].dropitem[i].nameid)) == NULL)

@@ -137,9 +137,9 @@ static unsigned char NibbleData[4][64]={
 static unsigned int getlong(unsigned char *p)
 {
 //	return *p+p[1]*256+(p[2]+p[3]*256)*65536;
-	return    p[0]
-			| p[1] << 0x08
-			| p[2] << 0x10
+	return   p[0]
+		| p[1] << 0x08
+		| p[2] << 0x10
 			| p[3] << 0x18;
 }
 
@@ -357,7 +357,7 @@ FILELIST *filelist_find(const char *fname)
 	int hash;
 	char *p;
 	char *namebuffer;
-	
+
 	if(!fname) return NULL;
 
 	// grf files uses backslash seperator
@@ -493,12 +493,12 @@ int grfio_size(const char *fname)
 		char lfname[256]="";
 		FILELIST lentry;
 		struct stat st;
-		
+
 		if(strcmp(data_dir, "") != 0) {
 			//ShowMessage("%s\t",fname);
 			sprintf(lfname,"%s%s",data_dir, grfio_resnametable(fname,lfname));
 			//ShowMessage("%s\n",lfname);
-        }    
+        }
 
 		if (stat(lfname,&st)==0) {
 			strncpy(lentry.fn, fname, sizeof(lentry.fn)-1 );
@@ -984,5 +984,5 @@ void grfio_init(const char *fname)
 	if (result != 0 && result2 != 0 && result3 != 0 && result4 != 0) {
 		ShowMessage("not grf file readed exit!!\n");
 		exit(1);	// It ends, if a resource cannot read one.
-	}
+}
 }

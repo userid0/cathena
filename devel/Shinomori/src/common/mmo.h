@@ -769,7 +769,8 @@ struct party {
 	int party_id;
 	char name[24];
 	int exp;
-	int item, itemc;
+	int item;
+	int itemc;
 	struct party_member member[MAX_PARTY];
 };
 extern inline void _party_tobuffer(const struct party *p, unsigned char **buf)

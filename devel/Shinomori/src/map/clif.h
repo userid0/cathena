@@ -28,7 +28,6 @@ void clif_setport(int);
 unsigned long clif_getip(void);
 int clif_getport(void);
 int clif_countusers(void);
-void clif_setwaitclose(int);
 
 int clif_authok(struct map_session_data *);
 int clif_authfail_fd(int,int);
@@ -294,6 +293,9 @@ int clif_GM_kick(struct map_session_data *sd,struct map_session_data *tsd,int ty
 int clif_timedout(struct map_session_data *sd);
 
 int clif_foreachclient(int (*)(struct map_session_data*,va_list),...);
+
+
+int clif_terminate(int fd);
 
 int do_final_clif(void);
 int do_init_clif(void);

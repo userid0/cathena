@@ -36,7 +36,6 @@
 #define MAX_MOB_DB 2000		/* Change this to increase the table size in your mob_db to accomodate
 								numbers more than 2000 for mobs if you want to (and know what you're doing).
 								Be sure to note that 4001 to 4047 are for advanced classes. */
-
 struct mob_db mob_db[2001];
 
 #define CLASSCHANGE_BOSS_NUM 21
@@ -47,7 +46,7 @@ struct mob_db mob_db[2001];
  */
 static int distance(int,int,int,int);
 static int mob_makedummymobdb(int);
-static int mob_timer(int,unsigned int,int,int);
+static int mob_timer(int tid,unsigned long tick,int id,int data);
 int mobskill_use(struct mob_data *md,unsigned int tick,int event);
 int mobskill_deltimer(struct mob_data *md );
 int mob_skillid2skillidx(int class_,int skillid);
@@ -728,7 +727,7 @@ int mob_changestate(struct mob_data *md,int state,int type)
  * It branches to a walk and an attack.
  *------------------------------------------
  */
-static int mob_timer(int tid,unsigned int tick,int id,int data)
+static int mob_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct mob_data *md;
 	struct block_list *bl;
@@ -827,7 +826,7 @@ int mob_walktoxy(struct mob_data *md,int x,int y,int easy)
  * mob spawn with delay (timer function)
  *------------------------------------------
  */
-static int mob_delayspawn(int tid,unsigned int tick,int m,int n)
+static int mob_delayspawn(int tid,unsigned long tick,int m,int n)
 {
 	mob_spawn(m);
 	return 0;
@@ -945,6 +944,8 @@ int mob_spawn(int id)
 	if(!md->speed)
 		md->speed = mob_db[md->class_].speed;
 	md->def_ele = mob_db[md->class_].element;
+
+	memcpy(md->name,mob_db[md->class_].jname,24);
 
 	if(!md->level) // [Valaris]
 		md->level=mob_db[md->class_].lv;
@@ -1850,7 +1851,7 @@ static int mob_ai_sub_foreachclient(struct map_session_data *sd,va_list ap)
  * Serious processing for mob in PC field of view   (interval timer function)
  *------------------------------------------
  */
-static int mob_ai_hard(int tid,unsigned int tick,int id,int data)
+static int mob_ai_hard(int tid,unsigned long tick,int id,int data)
 {
 	clif_foreachclient(mob_ai_sub_foreachclient,tick);
 
@@ -1928,7 +1929,7 @@ static int mob_ai_sub_lazy(void * key,void * data,va_list app)
  * Negligent processing for mob outside PC field of view   (interval timer function)
  *------------------------------------------
  */
-static int mob_ai_lazy(int tid,unsigned int tick,int id,int data)
+static int mob_ai_lazy(int tid,unsigned long tick,int id,int data)
 {
 	map_foreachiddb(mob_ai_sub_lazy,tick);
 
@@ -1958,13 +1959,13 @@ struct delay_item_drop2 {
  * item drop with delay (timer function)
  *------------------------------------------
  */
-static int mob_delay_item_drop(int tid,unsigned int tick,int id,int data)
+static int mob_delay_item_drop(int tid,unsigned long tick,int id,int data)
 {
-	struct delay_item_drop *ditem;
+	struct delay_item_drop *ditem=(struct delay_item_drop *)id;
 	struct item temp_item;
 	int flag, drop_flag = 1;
 
-	nullpo_retr(0, ditem=(struct delay_item_drop *)id);
+	nullpo_retr(0, ditem);
 
 	memset(&temp_item,0,sizeof(temp_item));
 	temp_item.nameid = ditem->nameid;
@@ -2019,12 +2020,12 @@ static int mob_delay_item_drop(int tid,unsigned int tick,int id,int data)
  * item drop (timer function)-lootitem with delay
  *------------------------------------------
  */
-static int mob_delay_item_drop2(int tid,unsigned int tick,int id,int data)
+static int mob_delay_item_drop2(int tid,unsigned long tick,int id,int data)
 {
-	struct delay_item_drop2 *ditem;
+	struct delay_item_drop2 *ditem=(struct delay_item_drop2 *)id;
 	int flag, drop_flag = 1;
 
-	nullpo_retr(0, ditem=(struct delay_item_drop2 *)id);
+	nullpo_retr(0, ditem);
 
 	if (ditem->first_sd){
 		#if 0
@@ -2103,7 +2104,7 @@ int mob_catch_delete(struct mob_data *md,int type)
 	return 0;
 }
 
-int mob_timer_delete(int tid, unsigned int tick, int id, int data)
+int mob_timer_delete(int tid, unsigned long tick, int id, int data)
 {
 	struct block_list *bl=map_id2bl(id);
 	struct mob_data *md;
@@ -2112,6 +2113,7 @@ int mob_timer_delete(int tid, unsigned int tick, int id, int data)
 
 	md = (struct mob_data *)bl;
 	mob_catch_delete(md,3);
+	if(md) md->deletetimer = -1;
 	return 0;
 }
 
@@ -2168,8 +2170,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 	struct item item;
 	int ret;
 	int drop_rate;
-	int skill,sp;
-
+	
 	nullpo_retr(0, md); //srcはNULLで呼ばれる場合もあるので、他でチェック
 
 	max_hp = status_get_max_hp(&md->bl);
@@ -2189,8 +2190,8 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 
 	if(md->state.state==MS_DEAD || md->hp<=0) {
 		if(md->bl.prev != NULL) {
-			mob_changestate(md,MS_DEAD,0);
 			mobskill_use(md,tick,-1);	// It is skill at the time of death.
+			mob_changestate(md,MS_DEAD,0);
 			clif_clearchar_area(&md->bl,1);
 			map_delblock(&md->bl);
 			mob_setdelayspawn(md->bl.id);
@@ -2377,8 +2378,8 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 	// ----- ここから死亡処理 -----
 
 	map_freeblock_lock();
-	mob_changestate(md,MS_DEAD,0);
 	mobskill_use(md,tick,-1);	// 死亡時スキル
+	mob_changestate(md,MS_DEAD,0);
 
 	memset(tmpsd,0,sizeof(tmpsd));
 	memset(pt,0,sizeof(pt));
@@ -2388,14 +2389,27 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 	if(src && src->type == BL_MOB)
 		mob_unlocktarget((struct mob_data *)src,tick);
 
-	/* ソウルドレイン */
-	if(sd && sd->state.attack_type == BF_MAGIC && (skill=pc_checkskill(sd,HW_SOULDRAIN))>0){
-		clif_skill_nodamage(src,&md->bl,HW_SOULDRAIN,skill,1);
-		sp = (status_get_lv(&md->bl))*(65+15*skill)/100;
-		if(sd->status.sp + sp > sd->status.max_sp)
-			sp = sd->status.max_sp - sd->status.sp;
-		sd->status.sp += sp;
-		clif_heal(sd->fd,SP_SP,sp);
+	
+	if(sd) {
+		int sp = 0, hp = 0;
+		if (sd->state.attack_type == BF_MAGIC && (i=pc_checkskill(sd,HW_SOULDRAIN))>0){	/* ソウルドレイン */
+			clif_skill_nodamage(src,&md->bl,HW_SOULDRAIN,i,1);
+			sp += (status_get_lv(&md->bl))*(65+15*i)/100;
+		}
+		sp += sd->sp_gain_value;
+		hp += sd->hp_gain_value;
+		if (sp > 0) {
+			if(sd->status.sp + sp > sd->status.max_sp)
+				sp = sd->status.max_sp - sd->status.sp;
+			sd->status.sp += sp;
+			clif_heal(sd->fd,SP_SP,sp);
+		}
+		if (hp > 0) {
+			if(sd->status.hp + hp > sd->status.max_hp)
+				hp = sd->status.max_hp - sd->status.hp;
+			sd->status.hp += hp;
+			clif_heal(sd->fd,SP_HP,hp);
+		}
 	}
 
 	// map外に消えた人は計算から除くので
@@ -2535,9 +2549,9 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 
 	// item drop
 	if(!(type&1)) {
-		int log_item[8] = {0};
+		int log_item[10] = {0}; //8 -> 10 Lupus
 		int drop_ore = -1,drop_items=0; //slot N for DROP LOG, number of dropped items
-		for(i=0;i<8;i++){
+		for(i=0;i<10;i++){ // 8 -> 10 Lupus
 			struct delay_item_drop *ditem;
 			int drop_rate;
 
@@ -2556,7 +2570,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 				drop_ore = i; //we rmember an empty slot to put there ORE DISCOVERY drop later.
 				continue;
 			}
-			drop_items++;
+			drop_items++; //we cound if there were any drops
 
 			ditem=(struct delay_item_drop *)aCalloc(1,sizeof(struct delay_item_drop));
 			ditem->nameid = mob_db[md->class_].dropitem[i].nameid;
@@ -2568,7 +2582,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			ditem->first_sd = mvp_sd;
 			ditem->second_sd = second_sd;
 			ditem->third_sd = third_sd;
-			add_timer(tick+500+i,mob_delay_item_drop,(int)ditem,0);
+			add_timer(tick+500+i,mob_delay_item_drop,(int)ditem,0); //!!todo!!
 		}
 
 		// Ore Discovery [Celest]
@@ -2577,8 +2591,9 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			int itemid[17] = { 714, 756, 757, 969, 984, 985, 990, 991, 992, 993, 994, 995, 996, 997, 998, 999, 1002 };
 			ditem=(struct delay_item_drop *)aCalloc(1,sizeof(struct delay_item_drop));
 			ditem->nameid = itemid[rand()%17]; //should return from 0 to 16
-			if (drop_ore<0) i=7; //we have only 8 slots in LOG, there's a check to not overflow
+			if (drop_ore<0) i=8; //we have only 10 slots in LOG, there's a check to not overflow (9th item usually a card, so we use 8th slot)
 			log_item[i] = ditem->nameid; //it's for logging only
+			drop_items++; //we cound if there were any drops
 			ditem->amount = 1;
 			ditem->m = md->bl.m;
 			ditem->x = md->bl.x;
@@ -2586,7 +2601,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			ditem->first_sd = mvp_sd;
 			ditem->second_sd = second_sd;
 			ditem->third_sd = third_sd;
-			add_timer(tick+500+i,mob_delay_item_drop,(int)ditem,0);
+			add_timer(tick+500+i,mob_delay_item_drop,(int)ditem,0); //!!todo!!
 		}
 
 		//this drop log contains ALL dropped items + ORE (if there was ORE Recovery) [Lupus]
@@ -2614,7 +2629,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 					ditem->first_sd = mvp_sd;
 					ditem->second_sd = second_sd;
 					ditem->third_sd = third_sd;
-					add_timer(tick+520+i,mob_delay_item_drop,(int)ditem,0);
+					add_timer(tick+520+i,mob_delay_item_drop,(int)ditem,0); //!!todo!!
 				}
 			}
 			if(sd->get_zeny_num > 0)
@@ -2632,7 +2647,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 				ditem->first_sd = mvp_sd;
 				ditem->second_sd = second_sd;
 				ditem->third_sd = third_sd;
-				add_timer(tick+540+i,mob_delay_item_drop2,(int)ditem,0);
+				add_timer(tick+540+i,mob_delay_item_drop2,(int)ditem,0);//!!todo!!
 			}
 		}
 	}
@@ -2741,6 +2756,7 @@ int mob_class_change(struct mob_data *md,int *value)
 
 	if(value[0]<=1000 || value[0]>MAX_MOB_DB)
 		return 0;
+
 	if(md->bl.prev == NULL) return 0;
 
 	while(count < 5 && value[count] > 1000 && value[count] <= MAX_MOB_DB) count++;
@@ -2760,10 +2776,14 @@ int mob_class_change(struct mob_data *md,int *value)
 	}
 	else
 		md->hp = max_hp*hp_rate/100;
-	if(md->hp > max_hp) md->hp = max_hp;
-	else if(md->hp < 1) md->hp = 1;
+
+	if(md->hp > max_hp) 
+		md->hp = max_hp;
+	else if(md->hp < 1) 
+		md->hp = 1;
 
 	memcpy(md->name,mob_db[class_].jname,24);
+
 	memset(&md->state,0,sizeof(md->state));
 	md->attacked_id = 0;
 	md->target_id = 0;
@@ -3111,7 +3131,7 @@ int mob_skillid2skillidx(int class_,int skillid)
  * スキル使用（詠唱完了、ID指定）
  *------------------------------------------
  */
-int mobskill_castend_id( int tid, unsigned int tick, int id,int data )
+int mobskill_castend_id( int tid, unsigned long tick, int id,int data )
 {
 	struct mob_data* md=NULL;
 	struct block_list *bl;
@@ -3203,7 +3223,7 @@ int mobskill_castend_id( int tid, unsigned int tick, int id,int data )
  * スキル使用（詠唱完了、場所指定）
  *------------------------------------------
  */
-int mobskill_castend_pos( int tid, unsigned int tick, int id,int data )
+int mobskill_castend_pos( int tid, unsigned long tick, int id,int data )
 {
 	struct mob_data* md=NULL;
 	struct block_list *bl;
@@ -3430,7 +3450,7 @@ int mobskill_use_id(struct mob_data *md,struct block_list *target,int skill_idx)
 
 	if( casttime>0 ){
 		md->skilltimer =
-			add_timer( gettick()+casttime, mobskill_castend_id, md->bl.id, 0 );
+			add_timer( gettick()+casttime, mobskill_castend_id, md->bl.id, 0);
 	}else{
 		md->skilltimer = -1;
 		mobskill_castend_id(md->skilltimer,gettick(),md->bl.id, 0);
@@ -3518,7 +3538,7 @@ int mobskill_use_pos( struct mob_data *md,
 		status_change_end(&md->bl,SC_CLOAKING,-1);
 	if( casttime>0 ){
 		md->skilltimer =
-			add_timer( gettick()+casttime, mobskill_castend_pos, md->bl.id, 0 );
+			add_timer( gettick()+casttime, mobskill_castend_pos, md->bl.id, 0);
 	}else{
 		md->skilltimer = -1;
 		mobskill_castend_pos(md->skilltimer,gettick(),md->bl.id, 0);
@@ -3843,9 +3863,9 @@ static int mob_makedummymobdb(int class_)
 	mob_db[class_].adelay=1000;
 	mob_db[class_].amotion=500;
 	mob_db[class_].dmotion=500;
-	mob_db[class_].dropitem[0].nameid=909;	// Jellopy
-	mob_db[class_].dropitem[0].p=1000;
-	for(i=1;i<8;i++){
+	//mob_db[class_].dropitem[0].nameid=909;	// Jellopy
+	//mob_db[class_].dropitem[0].p=1000;
+	for(i=1;i<10;i++){ // 8-> 10 Lupus
 		mob_db[class_].dropitem[i].nameid=0;
 		mob_db[class_].dropitem[i].p=0;
 	}
@@ -3884,12 +3904,12 @@ static int mob_readdb(void)
 		}
 		while(fgets(line,1020,fp)){
 			int class_,i;
-			char *str[55],*p,*np;
+			char *str[60],*p,*np; // 55->60 Lupus
 
 			if(line[0] == '/' && line[1] == '/')
 				continue;
 
-			for(i=0,p=line;i<55;i++){
+			for(i=0,p=line;i<60;i++){
 				if((np=strchr(p,','))!=NULL){
 					str[i]=p;
 					*np=0;
@@ -3949,7 +3969,7 @@ static int mob_readdb(void)
 			mob_db[class_].amotion=atoi(str[27]);
 			mob_db[class_].dmotion=atoi(str[28]);
 
-			for(i=0;i<8;i++){
+			for(i=0;i<10;i++){ // 8 -> 10 Lupus
 				int rate = 0,type,ratemin,ratemax;
 				mob_db[class_].dropitem[i].nameid=atoi(str[29+i*2]);
 				type = itemdb_type(mob_db[class_].dropitem[i].nameid);
@@ -4021,12 +4041,13 @@ static int mob_readdb(void)
 				rate = (rate < ratemin)? ratemin: (rate > ratemax)? ratemax: rate;
 				mob_db[class_].dropitem[i].p = rate;
 			}
-			// Item1,Item2
-			mob_db[class_].mexp=atoi(str[45])*battle_config.mvp_exp_rate/100;
-			mob_db[class_].mexpper=atoi(str[46]);
+			// MVP EXP Bonus, Chance: MEXP,ExpPer
+			mob_db[class_].mexp=atoi(str[49])*battle_config.mvp_exp_rate/100;
+			mob_db[class_].mexpper=atoi(str[50]);
+			// MVP Drops: MVP1id,MVP1per,MVP2id,MVP2per,MVP3id,MVP3per
 			for(i=0;i<3;i++){
-				mob_db[class_].mvpitem[i].nameid=atoi(str[47+i*2]);
-				mob_db[class_].mvpitem[i].p=atoi(str[48+i*2])*battle_config.mvp_item_rate/100;
+				mob_db[class_].mvpitem[i].nameid=atoi(str[51+i*2]);
+				mob_db[class_].mvpitem[i].p=atoi(str[52+i*2])*battle_config.mvp_item_rate/100;
 			}
 			for(i=0;i<MAX_RANDOMMONSTER;i++)
 				mob_db[class_].summonper[i]=0;
@@ -4315,6 +4336,57 @@ static int mob_readskilldb(void)
 	}
 	return 0;
 }
+/*==========================================
+ * db/mob_race_db.txt reading
+ *------------------------------------------
+ */
+static int mob_readdb_race(void)
+{
+	FILE *fp;
+	char line[1024];
+	int race,j,k;
+	char *str[20],*p,*np;
+
+	if( (fp=savefopen("db/mob_race2_db.txt","r"))==NULL ){
+		ShowError("can't read db/mob_race2_db.txt\n");
+		return -1;
+	}
+	
+	while(fgets(line,1020,fp)){
+		if(line[0]=='/' && line[1]=='/')
+			continue;
+		memset(str,0,sizeof(str));
+
+		for(j=0,p=line;j<12;j++){
+			if((np=strchr(p,','))!=NULL){
+				str[j]=p;
+				*np=0;
+				p=np+1;
+			} else
+				str[j]=p;
+		}
+		if(str[0]==NULL)
+			continue;
+
+		race=atoi(str[0]);
+		if (race < 0 || race >= MAX_MOB_RACE_DB)
+			continue;
+
+		for (j=1; j<20; j++) {
+			if (!str[j])
+				break;
+			k=atoi(str[j]);
+			if (k < 1000 || k > MAX_MOB_DB)
+				continue;
+			mob_db[k].race2 = race;
+			//mob_race_db[race][j] = k;
+		}
+	}
+	fclose(fp);
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","db/mob_race2_db.txt");
+
+	return 0;
+}
 
 void mob_reload(void)
 {
@@ -4338,7 +4410,7 @@ static int mob_read_sqldb(void)
 	char line[1024];
 	int i,class_;
 	unsigned long ln=0;
-	char *str[55],*p,*np;
+	char *str[60],*p,*np; // 55->60 Lupus
 
 	memset(mob_db,0,sizeof(mob_db));
 
@@ -4349,7 +4421,7 @@ static int mob_read_sqldb(void)
 	sql_res = mysql_store_result(&mmysql_handle);
 	if (sql_res) {
 		while((sql_row = mysql_fetch_row(sql_res))){
-            sprintf(line,"%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+            sprintf(line,"%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
                         sql_row[0],sql_row[1],sql_row[2],sql_row[3],sql_row[4],
                         sql_row[5],sql_row[6],sql_row[7],sql_row[8],sql_row[9],
                         sql_row[10],sql_row[11],sql_row[12],sql_row[13],sql_row[14],
@@ -4360,9 +4432,10 @@ static int mob_read_sqldb(void)
                         sql_row[35],sql_row[36],sql_row[37],sql_row[38],sql_row[39],
                         sql_row[40],sql_row[41],sql_row[42],sql_row[43],sql_row[44],
                         sql_row[45],sql_row[46],sql_row[47],sql_row[48],sql_row[49],
-                        sql_row[50],sql_row[51],sql_row[52]);
+                        sql_row[50],sql_row[51],sql_row[52],sql_row[53],sql_row[54],
+			sql_row[55],sql_row[56],sql_row[57],sql_row[58],sql_row[59]);
 
-			for(i=0,p=line;i<55;i++){
+			for(i=0,p=line;i<60;i++){
 				if((np=strchr(p,','))!=NULL){
 					str[i]=p;
 					*np=0;
@@ -4413,7 +4486,7 @@ static int mob_read_sqldb(void)
 			mob_db[class_].amotion=atoi(str[27]);
 			mob_db[class_].dmotion=atoi(str[28]);
 
-            for(i=0;i<8;i++){
+			for(i=0;i<10;i++){ // 8 -> 10 Lupus
 				int rate = 0,type,ratemin,ratemax;
 				mob_db[class_].dropitem[i].nameid=atoi(str[29+i*2]);
 				type = itemdb_type(mob_db[class_].dropitem[i].nameid);
@@ -4446,12 +4519,13 @@ static int mob_read_sqldb(void)
 				rate = (rate < ratemin)? ratemin: (rate > ratemax)? ratemax: rate;
 				mob_db[class_].dropitem[i].p = rate;
 			}
-
-			mob_db[class_].mexp=atoi(str[45])*battle_config.mvp_exp_rate/100;
-			mob_db[class_].mexpper=atoi(str[46]);
+			// MVP EXP Bonus, Chance: MEXP,ExpPer
+			mob_db[class_].mexp=atoi(str[49])*battle_config.mvp_exp_rate/100;
+			mob_db[class_].mexpper=atoi(str[50]);
+			// MVP Drops: MVP1id,MVP1per,MVP2id,MVP2per,MVP3id,MVP3per
 			for(i=0;i<3;i++){
-				mob_db[class_].mvpitem[i].nameid=atoi(str[47+i*2]);
-				mob_db[class_].mvpitem[i].p=atoi(str[48+i*2])*battle_config.mvp_item_rate/100;
+				mob_db[class_].mvpitem[i].nameid=atoi(str[51+i*2]);
+				mob_db[class_].mvpitem[i].p=atoi(str[52+i*2])*battle_config.mvp_item_rate/100;
 			}
 			for(i=0;i<MAX_RANDOMMONSTER;i++)
 				mob_db[class_].summonper[i]=0;
@@ -4489,6 +4563,7 @@ int do_init_mob(void)
 	mob_readdb_mobavail();
 	mob_read_randommonster();
 	mob_readskilldb();
+	mob_readdb_race();
 
 	add_timer_func_list(mob_timer,"mob_timer");
 	add_timer_func_list(mob_delayspawn,"mob_delayspawn");
@@ -4499,8 +4574,8 @@ int do_init_mob(void)
 	add_timer_func_list(mobskill_castend_id,"mobskill_castend_id");
 	add_timer_func_list(mobskill_castend_pos,"mobskill_castend_pos");
 	add_timer_func_list(mob_timer_delete,"mob_timer_delete");
-	add_timer_interval(gettick()+MIN_MOBTHINKTIME,mob_ai_hard,0,0,MIN_MOBTHINKTIME);
-	add_timer_interval(gettick()+MIN_MOBTHINKTIME*10,mob_ai_lazy,0,0,MIN_MOBTHINKTIME*10);
+	add_timer_interval(gettick()+MIN_MOBTHINKTIME,MIN_MOBTHINKTIME,mob_ai_hard,0,0);
+	add_timer_interval(gettick()+MIN_MOBTHINKTIME*10,MIN_MOBTHINKTIME*10,mob_ai_lazy,0,0);
 
 	return 0;
 }

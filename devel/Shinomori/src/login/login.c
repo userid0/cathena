@@ -13,6 +13,7 @@
 #include "malloc.h"
 #include "utils.h"
 #include "showmsg.h"
+#include "../common/strlib.h"
 
 #ifdef PASSWORDENC
 #include "md5calc.h"
@@ -875,7 +876,7 @@ void mmo_auth_sync(void) {
 //       immediatly and set  the minimum of
 //       authentifications to its initialization value.
 //-----------------------------------------------------
-int check_auth_sync(int tid, unsigned int tick, int id, int data) {
+int check_auth_sync(int tid, unsigned long tick, int id, int data) {
 	// we only save if necessary:
 	// we have do some authentifications without do saving
 	if (auth_before_save_file < AUTH_BEFORE_SAVE_FILE ||
@@ -927,7 +928,7 @@ void send_GM_accounts() {
 //-----------------------------------------------------
 // Check if GM file account have been changed
 //-----------------------------------------------------
-int check_GM_file(int tid, unsigned int tick, int id, int data) {
+int check_GM_file(int tid, unsigned long tick, int id, int data) {
 	struct stat file_stat;
 	long new_time;
 
@@ -1030,29 +1031,30 @@ int mmo_auth(struct mmo_account* account, int fd) {
 	char md5str[64], md5bin[32];
 	char user_password[256];
 	char ip_str[16];
-	//unsigned char *sin_addr = (unsigned char *)&session[fd]->client_addr.sin_addr;
 	unsigned long client_ip = session[fd]->client_ip;
 
-//	sprintf(ip_str, "%d.%d.%d.%d", sin_addr[0], sin_addr[1], sin_addr[2], sin_addr[3]);
 	sprintf(ip_str, "%ld.%ld.%ld.%ld", (client_ip>>24)&0xFF, (client_ip>>16)&0xFF, (client_ip>>8)&0xFF, (client_ip)&0xFF);
+
+	//EXE Version check [Sirius]
+	if( (check_client_version == 1) && 
+		(account->version != 0) &&
+		(account->version != client_version_to_connect) )
+	{
+		return 5;
+	}
 
 	len = strlen(account->userid) - 2;
 	// Account creation with _M/_F
-	if (account->passwdenc == 0 && account->userid[len] == '_' &&
-	    (account->userid[len+1] == 'F' || account->userid[len+1] == 'M') && new_account_flag == 1 &&
-	    account_id_count <= END_ACCOUNT_NUM && len >= 4 && strlen(account->passwd) >= 4) {
-		if (new_account_flag == 1)
+	if( (new_account_flag == 1) &&
+		(account->passwdenc == 0) && 
+		(account->userid[len] == '_') &&
+	    ( (account->userid[len+1] == 'F') || (account->userid[len+1] == 'M')) &&
+	    (account_id_count <= END_ACCOUNT_NUM) && 
+		(len >= 4) && 
+		(strlen(account->passwd) >= 4) ) 
+	{
 			newaccount = 1;
 		account->userid[len] = '\0';
-	}
-
-	//EXE Version check [Sirius]
-	if(account->sex != 0){
-	        if(check_client_version == 1){
-        		if(account->version != client_version_to_connect){
-        			return 5;
-			}
-		}
 	}
 	
 	// Strict account search
@@ -1060,7 +1062,9 @@ int mmo_auth(struct mmo_account* account, int fd) {
 		if (strcmp(account->userid, auth_dat[i].userid) == 0)
 			break;
 	}
-	// if there is no creation request and strict account search fails, we do a no sensitive case research for index
+
+	// if there is no creation request and strict account search fails, 
+	// we do a no sensitive case research for index
 	if (newaccount == 0 && i == auth_num) {
 		i = search_account_index(account->userid);
 		if (i == -1)
@@ -1206,7 +1210,7 @@ int mmo_auth(struct mmo_account* account, int fd) {
 //-------------------------------
 // Char-server anti-freeze system
 //-------------------------------
-int char_anti_freeze_system(int tid, unsigned int tick, int id, int data) {
+int char_anti_freeze_system(int tid, unsigned long tick, int id, int data) {
 	int i;
 
 	//ShowMessage("Entering in char_anti_freeze_system function to check freeze of servers.\n");
@@ -1215,9 +1219,8 @@ int char_anti_freeze_system(int tid, unsigned int tick, int id, int data) {
 			//ShowMessage("char_anti_freeze_system: server #%d '%s', flag: %d.\n", i, server[i].name, server_freezeflag[i]);
 			if (server_freezeflag[i]-- < 1) { // Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
 				ShowMessage("Char-server anti-freeze system: char-server #%d '%s' is freezed -> disconnection.\n", i, server[i].name);
-				login_log("Char-server anti-freeze system: char-server #%d '%s' is freezed -> disconnection." RETCODE,
-				          i, server[i].name);
-				session[server_fd[i]]->eof = 1;
+				login_log("Char-server anti-freeze system: char-server #%d '%s' is freezed -> disconnection." RETCODE,i, server[i].name);
+				session_Remove(server_fd[i]);
 			} else {
 				// send alive packet to check connection
 				WFIFOW(server_fd[i],0) = 0x2718;
@@ -1241,26 +1244,26 @@ int parse_fromchar(int fd) {
 	sprintf(ip_str, "%ld.%ld.%ld.%ld", (client_ip>>24)&0xFF, (client_ip>>16)&0xFF, (client_ip>>8)&0xFF, (client_ip)&0xFF);
 
 
-
 	for(id = 0; id < MAX_SERVERS; id++)
 		if (server_fd[id] == fd)
 			break;
-	if (id == MAX_SERVERS)
-		session[fd]->eof = 1;
-	if(session[fd]->eof) {
-		if (id < MAX_SERVERS) {
-			ShowMessage("Char-server '%s' has disconnected.\n", server[id].name);
-			login_log("Char-server '%s' has disconnected (ip: %s)." RETCODE,
-			          server[id].name, ip_str);
-			server_fd[id] = -1;
-			memset(&server[id], 0, sizeof(struct mmo_char_server));
-		}
-		close(fd);
-		delete_session(fd);
+
+	if (id == MAX_SERVERS) {	
+		session_Remove(fd);
 		return 0;
 	}
 
-	while (RFIFOREST(fd) >= 2) {
+	if( !session_isActive(fd) ) {
+		// check if a char server is disconnecting
+		ShowMessage("Char-server '%s' has disconnected.\n", server[id].name);
+		login_log("Char-server '%s' has disconnected (ip: %s)." RETCODE,server[id].name, ip_str);
+		server_fd[id] = -1;
+		session_Remove(fd);// have it removed by do_sendrecv
+		return 0;
+	}
+
+
+	while(RFIFOREST(fd) >= 2) {
 		if (display_parse_fromchar == 2 || (display_parse_fromchar == 1 && RFIFOW(fd,0) != 0x2714)) // 0x2714 is done very often (number of players)
 			ShowMessage("parse_fromchar: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, (unsigned short)RFIFOW(fd,0), RFIFOREST(fd));
 
@@ -1780,7 +1783,7 @@ int parse_fromchar(int fd) {
 				}
 			}
 			ShowMessage("parse_fromchar: Unknown packet 0x%x (from a char-server)! -> disconnection.\n", (unsigned short)RFIFOW(fd,0));
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			ShowMessage("Char-server has been disconnected (unknown packet).\n");
 			return 0;
 		}
@@ -1799,10 +1802,9 @@ int parse_admin(int fd) {
 	unsigned long client_ip = session[fd]->client_ip;
 	sprintf(ip_str, "%ld.%ld.%ld.%ld", (client_ip>>24)&0xFF, (client_ip>>16)&0xFF, (client_ip>>8)&0xFF, (client_ip)&0xFF);
 
-	if (session[fd]->eof) {
-		close(fd);
-		delete_session(fd);
+	if( !session_isActive(fd) ) {
 		ShowMessage("Remote administration has disconnected (session #%d).\n", fd);
+		session_Remove(fd);// have it removed by do_sendrecv
 		return 0;
 	}
 
@@ -1828,7 +1830,7 @@ int parse_admin(int fd) {
 		case 0x7532:	// Request of end of connection
 			login_log("'ladmin': End of connection (ip: %s)" RETCODE, ip_str);
 			RFIFOSKIP(fd,2);
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			break;
 
 		case 0x7920:	// Request of an accounts list
@@ -2741,7 +2743,7 @@ int parse_admin(int fd) {
 				}
 			}
 			login_log("'ladmin': End of connection, unknown packet (ip: %s)" RETCODE, ip_str);
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			ShowMessage("Remote administration has been disconnected (unknown packet).\n");
 			return 0;
 		}
@@ -2764,19 +2766,17 @@ int lan_ip_check(unsigned long ip){
 }
 
 //----------------------------------------------------------------------------------------
-// Default packet parsing (normal players or administation/char-server connexion requests)
+// Default packet parsing (normal players or administation/char-server connection requests)
 //----------------------------------------------------------------------------------------
 int parse_login(int fd) {
 	struct mmo_account account;
 	int result, i, j;
 	char ip_str[16];
-//	unsigned long client_ip = ntohl(session[fd]->client_addr.sin_addr.s_addr);
 	unsigned long client_ip = session[fd]->client_ip;
 	sprintf(ip_str, "%ld.%ld.%ld.%ld", (client_ip>>24)&0xFF, (client_ip>>16)&0xFF, (client_ip>>8)&0xFF, (client_ip)&0xFF);
 
-	if (session[fd]->eof) {
-		close(fd);
-		delete_session(fd);
+	if ( !session_isActive(fd) ) {
+		session_Remove(fd);// have it removed by do_sendrecv
 		return 0;
 	}
 
@@ -2809,7 +2809,7 @@ int parse_login(int fd) {
 		case 0x01dd:	// Ask connection of a client (encryption mode)
 			if (RFIFOREST(fd) < ((RFIFOW(fd,0) == 0x64) ? 55 : 47))
 				return 0;
-
+			
 			account.version = RFIFOL(fd, 2);	//for exe version check [Sirius]
 			account.userid = (char*)RFIFOP(fd,6);
 			account.userid[23] = '\0';
@@ -2827,7 +2827,7 @@ int parse_login(int fd) {
 #else
 			account.passwdenc = 0;
 #endif
-			
+
 			if (RFIFOW(fd,0) == 0x64)
 				login_log("Request for connection (non encryption mode) of %s (ip: %s)." RETCODE, account.userid, ip_str);
 			else
@@ -2928,13 +2928,13 @@ int parse_login(int fd) {
 				struct login_session_data *ld;
 				if (session[fd]->session_data) {
 					ShowMessage("login: abnormal request of MD5 key (already opened session).\n");
-					session[fd]->eof = 1;
+					session_Remove(fd);
 					return 0;
 				}
 				ld = (struct login_session_data*)(session[fd]->session_data = aCalloc(1, sizeof(struct login_session_data)));
 				if (!ld) {
 					ShowMessage("login: Request for md5 key: memory allocation failure (malloc)!\n");
-					session[fd]->eof = 1;
+					session_Remove(fd);
 					return 0;
 				}
 				if (RFIFOW(fd,0) == 0x01db)
@@ -3041,7 +3041,7 @@ int parse_login(int fd) {
 
 		case 0x7532:	// Request to end connection
 			login_log("End of connection (ip: %s)" RETCODE, ip_str);
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			return 0;
 
 		case 0x7918:	// Request for administation login
@@ -3138,7 +3138,7 @@ int parse_login(int fd) {
 				}
 			}
 			login_log("End of connection, unknown packet (ip: %s)" RETCODE, ip_str);
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			return 0;
 		}
 	}
@@ -3243,8 +3243,8 @@ int login_lan_config_read(const char *lancfgName) {
 				strcpy(ip_str, w2);
 			subnet_mask = ntohl(inet_addr(ip_str));
 			ShowMessage("Sub-network mask of the char-server: %d.%d.%d.%d.\n", (subnet_mask>>24)&0xFF,(subnet_mask>>16)&0xFF,(subnet_mask>>8)&0xFF,(subnet_mask)&0xFF);
+			}
 		}
-	}
 	fclose(fp);
 
 	// log the LAN configuration
@@ -3799,7 +3799,7 @@ void save_config_in_log(void) {
 //Used to output 'I'm Alive' every few seconds
 //Intended to let frontends know if the app froze
 //-----------------------------------------------------
-int imalive_timer(int tid, unsigned int tick, int id, int data){
+int imalive_timer(int tid, unsigned long tick, int id, int data){
 	ShowMessage("I'm Alive\n");
 	return 0;
 }
@@ -3808,7 +3808,7 @@ int imalive_timer(int tid, unsigned int tick, int id, int data){
 //Flush stdout
 //stdout buffer needs flushed to be seen in GUI
 //-----------------------------------------------------
-int flush_timer(int tid, unsigned int tick, int id, int data){
+int flush_timer(int tid, unsigned long tick, int id, int data){
 	fflush(stdout);
 	return 0;
 }
@@ -3817,33 +3817,32 @@ int flush_timer(int tid, unsigned int tick, int id, int data){
 // Function called at exit of the server
 //--------------------------------------
 void do_final(void) {
-	int i, fd;
-	ShowMessage("Terminating...\n");
-	fflush(stdout);
+	int i;
+	ShowStatus("Terminating...\n");
+	///////////////////////////////////////////////////////////////////////////
 	mmo_auth_sync();
-
 	if(auth_dat) aFree(auth_dat);
 	if(gm_account_db) aFree(gm_account_db);
 	if(access_ladmin_allow) aFree(access_ladmin_allow);
 	if(access_allow) aFree(access_allow);
 	if(access_deny) aFree(access_deny);
-	for (i = 0; i < MAX_SERVERS; i++) {
-		if ((fd = server_fd[i]) >= 0) {
-			server_fd[i] = -1;
-			memset(&server[i], 0, sizeof(struct mmo_char_server));
-			close(fd);
-			delete_session(fd);
-			if(session[fd]) aFree(session[fd]);
-		}
+	///////////////////////////////////////////////////////////////////////////
+	// delete sessions
+	for (i = 0; i < fd_max; i++) {
+		if (session[i])
+			session_Delete(i);
 	}
-	close(login_fd);
-	delete_session(login_fd);
-
+	// clear externaly stored fd's
+	for (i = 0; i < MAX_SERVERS; i++) {
+			server_fd[i] = -1;
+		}
+	login_fd = -1;
+	///////////////////////////////////////////////////////////////////////////
 	login_log("----End of login-server (normal end with closing of all files)." RETCODE);
-
 	if(log_fp)
 		fclose(log_fp);
-	ShowMessage("Finished.\n");
+	///////////////////////////////////////////////////////////////////////////
+	ShowStatus("Successfully terminated.\n");
 }
 
 //------------------------------
@@ -3878,10 +3877,10 @@ int do_init(int argc, char **argv) {
 
 	if(anti_freeze_enable > 0) {
 		add_timer_func_list(char_anti_freeze_system, "char_anti_freeze_system");
-		i = add_timer_interval(gettick() + 1000, char_anti_freeze_system, 0, 0, ANTI_FREEZE_INTERVAL * 1000);
+		add_timer_interval(gettick() + 1000, ANTI_FREEZE_INTERVAL * 1000, char_anti_freeze_system, 0, 0);
 	}
 	add_timer_func_list(check_auth_sync, "check_auth_sync");
-	i = add_timer_interval(gettick() + 60000, check_auth_sync, 0, 0, 60000); // every 60 sec we check if we must save accounts file (only if necessary to save)
+	add_timer_interval(gettick() + 60000, 60000, check_auth_sync, 0, 0); // every 60 sec we check if we must save accounts file (only if necessary to save)
 
 	// add timer to check GM accounts file modification
 	j = gm_account_filename_check_timer;
@@ -3890,14 +3889,14 @@ int do_init(int argc, char **argv) {
 
 	//Added for Mugendais I'm Alive mod
 	if(imalive_on)
-		add_timer_interval(gettick()+10, imalive_timer,0,0,imalive_time*1000);
+		add_timer_interval(gettick()+10,imalive_time*1000, imalive_timer,0,0);
 
 	//Added by Mugendai for GUI support
 	if(flush_on)
-		add_timer_interval(gettick()+10, flush_timer,0,0,flush_time);
+		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
 
 	add_timer_func_list(check_GM_file, "check_GM_file");
-	i = add_timer_interval(gettick() + j * 1000, check_GM_file, 0, 0, j * 1000); // every x sec we check if gm file has been changed
+	add_timer_interval(gettick() + j * 1000, j * 1000, check_GM_file, 0, 0); // every x sec we check if gm file has been changed
 
 	if(console) {
 		set_defaultconsoleparse(parse_console);

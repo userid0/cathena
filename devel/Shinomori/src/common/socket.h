@@ -4,8 +4,8 @@
 #define _SOCKET_H_
 
 #include "base.h"
-
 #include "malloc.h"
+#include "timer.h"
 
 extern time_t tick_;
 extern time_t stall_time_;
@@ -190,7 +190,6 @@ public:
 #define RFIFOL(fd,pos) (objL(session[fd]->rdata+session[fd]->rdata_pos+(pos)))
 #define RFIFOLIP(fd,pos) (objLIP(session[fd]->rdata+session[fd]->rdata_pos+(pos)))
 #define RFIFOREST(fd) (session[fd]->rdata_size-session[fd]->rdata_pos)
-#define RFIFOFLUSH(fd) (memmove(session[fd]->rdata,RFIFOP(fd,0),RFIFOREST(fd)),session[fd]->rdata_size=RFIFOREST(fd),session[fd]->rdata_pos=0)
 #define RFIFOSPACE(fd) (session[fd]->max_rdata-session[fd]->rdata_size)
 #define RBUFP(p,pos) (((unsigned char*)(p))+(pos))
 #define RBUFB(p,pos) (*((unsigned char*)RBUFP((p),(pos))))
@@ -223,7 +222,6 @@ public:
 
 //#define RFIFOSKIP(fd,len) ((session[fd]->rdata_size-session[fd]->rdata_pos-(len)<0) ? (fprintf(stderr,"too many skip\n"),exit(1)) : (session[fd]->rdata_pos+=(len)))
 #define RFIFOREST(fd) (session[fd]->rdata_size-session[fd]->rdata_pos)
-#define RFIFOFLUSH(fd) (memmove(session[fd]->rdata,RFIFOP(fd,0),RFIFOREST(fd)),session[fd]->rdata_size=RFIFOREST(fd),session[fd]->rdata_pos=0)
 #define RFIFOSPACE(fd) (session[fd]->max_rdata-session[fd]->rdata_size)
 #define RBUFP(p,pos) (((unsigned char*)(p))+(pos))
 #define RBUFB(p,pos) (*((unsigned char*)RBUFP((p),(pos))))
@@ -263,29 +261,35 @@ public:
 /* Removed Cygwin FD_SETSIZE declarations, now are directly passed on to the compiler through Makefile [Valaris] */
 
 // Struct declaration
-
 struct socket_data{
-	int eof;
+	struct {
+		bool connected : 1;	// true when connected
+		bool remove : 1;	// true when to be removed
+		bool marked : 1;	// true when deleayed removal is initiated (optional)
+	}flag;
 	unsigned char *rdata;
-	unsigned char *wdata;
 	int max_rdata;
-	int	max_wdata;
 	int rdata_size;
-	int wdata_size;
-	time_t rdata_tick;
 	int rdata_pos;
+	time_t rdata_tick;
+
+	unsigned char *wdata;
+	int max_wdata;
+	int wdata_size;
+
 	unsigned long client_ip;	// just an ip in host byte order is enough (4byte instead of 16)
-	//struct sockaddr_in client_addr;
+
 	int (*func_recv)(int);
 	int (*func_send)(int);
 	int (*func_parse)(int);
+	int (*func_term)(int);
 	int (*func_console)(char*);
 	void* session_data;
 };
 
 // Data prototype declaration
 
-#ifdef _WIN32
+#ifdef WIN32
 		#undef FD_SETSIZE
 		#define FD_SETSIZE 4096
 #endif
@@ -296,18 +300,47 @@ extern int fd_max;
 extern int rfifo_size,wfifo_size;
 
 
+extern inline bool session_isValid(int fd)
+{
+	return ( (fd>=0) && (fd<FD_SETSIZE) && (NULL!=session[fd]) );
+}
+extern inline bool session_isActive(int fd)
+{
+	return ( session_isValid(fd) && session[fd]->flag.connected );
+}
+extern inline bool session_isRemoved(int fd)
+{
+	return ( session_isValid(fd) && session[fd]->flag.remove );
+}
+extern inline bool session_Remove(int fd)
+{
+	if( session_isValid(fd) && !session[fd]->flag.marked )
+		session[fd]->flag.remove = true;
+	return session[fd]->flag.remove;
+}
+extern inline bool session_SetTermFunction(int fd, int (*term)(int))
+{
+	if( session_isValid(fd) )
+		session[fd]->func_term = term;
+	return true;
+}
+
+bool session_SetWaitClose(int fd, unsigned long timeoffset);
+bool session_Delete(int fd);
+
 // Function prototype declaration
 
 int make_listen    (unsigned long, unsigned short);
 int make_connection(unsigned long, unsigned short);
-int delete_session(int);
+
 int realloc_fifo(int fd,int rfifo_size,int wfifo_size);
 int WFIFOSET(int fd,int len);
 int RFIFOSKIP(int fd,int len);
 
 int do_sendrecv(int next);
-int do_parsepacket(void);
-void do_socket(void);
+
+void socket_init(void);
+void socket_final(void);
 
 extern void flush_fifos();
 extern void set_nonblocking(int fd, int yes);
@@ -316,8 +349,6 @@ int start_console(void);
 
 void set_defaultparse(int (*defaultparse)(int));
 void set_defaultconsoleparse(int (*defaultparse)(char*));
-
-int  Net_Init(void);
 
 extern unsigned long addr_[16];	// ip addresses of local host (host byte order)
 extern unsigned int naddr_;		// # of ip addresses

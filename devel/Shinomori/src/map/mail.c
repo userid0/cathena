@@ -292,33 +292,28 @@ int mail_send(struct map_session_data *sd, char *name, char *message, int flag)
 	return 0;
 }
 
-int mail_check_timer(int tid,unsigned int tick,int id,int data)
+int mail_check_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct map_session_data *sd = NULL;
 	int i;
-
+	
 	if(mail_timer != tid)
 		return 0;
-
 	sprintf(tmp_msql,"SELECT DISTINCT `to_account_id` FROM `%s` WHERE `read_flag` = '0' AND `check_flag` = '0'", mail_db);
-
 	if (mysql_query(&mail_handle, tmp_msql)) {
 		ShowMessage("Database server error (executing query for %s): %s\n", char_db, mysql_error(&mail_handle));
 		mail_timer=add_timer(gettick()+MAIL_CHECK_TIME,mail_check_timer,0,0);
 		return 0;
-   	}
-
+	}
+	
 	mail_res = mysql_store_result(&mail_handle);
-
 	if (mail_res) {
-
-	        if (mysql_num_rows(mail_res) == 0) {
+		if (mysql_num_rows(mail_res) == 0) {
 			mysql_free_result(mail_res);
 			mail_timer=add_timer(gettick()+MAIL_CHECK_TIME,mail_check_timer,0,0);
-		        return 0;
-	       }
-
-	       while ((mail_row = mysql_fetch_row(mail_res))) {
+			return 0;
+		}
+		while ((mail_row = mysql_fetch_row(mail_res))) {
 			for (i = 0; i < fd_max; i++) {
 				if (session[i] && (sd = session[i]->session_data) && sd->state.auth){
 					if(pc_isGM(sd) < 80 && sd->mail_counter > 0)
@@ -330,12 +325,11 @@ int mail_check_timer(int tid,unsigned int tick,int id,int data)
 			}
 		}
 	}
-
+	
 	sprintf(tmp_msql,"UPDATE `%s` SET `check_flag`='1' WHERE `check_flag`= '0' ", mail_db);
-        if(mysql_query(&mail_handle, tmp_msql) ) {
+	if(mysql_query(&mail_handle, tmp_msql) ) {
 		ShowMessage("DB server Error (update Read `%s`)- %s\n", mail_db, mysql_error(&mail_handle) );
 	}
-
 	mail_timer=add_timer(gettick()+MAIL_CHECK_TIME,mail_check_timer,0,0);
 	return 0;
 }

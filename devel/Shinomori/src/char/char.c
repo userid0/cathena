@@ -2,6 +2,7 @@
 // original : char2.c 2003/03/14 11:58:35 Rev.1.5
 
 #include "base.h"
+#include "../common/strlib.h"
 #include "core.h"
 #include "socket.h"
 #include "timer.h"
@@ -29,10 +30,11 @@ int server_freezeflag[MAX_MAP_SERVERS]; // Map-server anti-freeze system. Counte
 int anti_freeze_enable = 0;
 int ANTI_FREEZE_INTERVAL = 6;
 
-int login_fd, char_fd;
-char userid[24];
-char passwd[24];
-char server_name[20];
+int login_fd= -1;
+int char_fd = -1;
+char userid[24]="";
+char passwd[24]="";
+char server_name[20] = "Server";
 char wisp_server_name[24] = "Server";
 
 
@@ -48,8 +50,8 @@ unsigned long	subnet_ip	= INADDR_LOOPBACK;	//127.0.0.1
 unsigned long	subnet_mask	= INADDR_BROADCAST;	//255.255.255.255
 
 
-int char_maintenance;
-int char_new;
+int char_maintenance = 0;
+int char_new = 0;
 int email_creation = 0; // disabled by default
 char char_txt[1024]="save/athena.txt";
 char backup_txt[1024]="save/backup.txt"; //By zanetheinsane
@@ -225,7 +227,7 @@ int mmo_friends_list_data_str(char *str, struct mmo_charstatus *p) {
 	int i;
 	char *str_p = str;
 	str_p += sprintf(str_p, "%d", p->char_id);
-	
+
 	for (i=0;i<20;i++)
 	{
 		str_p += sprintf(str_p, ",%d,%s", p->friend_id[i],p->friend_name[i]);
@@ -556,14 +558,14 @@ int parse_friend_txt(struct mmo_charstatus *p)
 	char line[1024];
 	int i,cid=0,temp[20];
 	FILE *fp;
-	
+
 	// Open the file and look for the ID
 	fp = savefopen(friends_txt, "r");
 	if(NULL==fp)
 		return 1;
-	
+
 	while(fgets(line, sizeof(line)-1, fp)) {
-		
+
 		if(line[0] == '/' && line[1] == '/')
 			continue;
 
@@ -592,7 +594,7 @@ int parse_friend_txt(struct mmo_charstatus *p)
 		if (cid == p->char_id)
 			break;
 	}//end while
-	
+
 	// No register of friends list
 	if (cid == 0) {
 		fclose(fp);
@@ -666,10 +668,10 @@ int mmo_char_init(void) {
 		}
 
 		ret = mmo_char_fromstr(line, &char_dat[char_num]);
-		
+
 		// Initialize friends list
 		parse_friend_txt(&char_dat[char_num]);  // Grab friends for the character
-		
+
 		if (ret > 0) { // negative value or zero for errors
 			if (char_dat[char_num].char_id >= char_id_count)
 				char_id_count = char_dat[char_num].char_id + 1;
@@ -733,7 +735,7 @@ void mmo_char_sync(void) {
 	int lock;
 	FILE *fp,*f_fp;
 
-	CREATE_BUFFER(id,int,char_num);
+	CREATE_BUFFER(id, int, char_num);
 
 	// Sorting before save (by [Yor])
 	for(i = 0; i < char_num; i++) {
@@ -790,9 +792,9 @@ void mmo_char_sync(void) {
 		mmo_friends_list_data_str(f_line, &char_dat[id[i]]);
 		fprintf(f_fp, "%s" RETCODE, f_line);
 	}
-	
+
 	lock_fclose(f_fp, friends_txt, &lock);
-	
+
 	DELETE_BUFFER(id);
 	return;
 }
@@ -800,7 +802,7 @@ void mmo_char_sync(void) {
 //----------------------------------------------------
 // Function to save (in a periodic way) datas in files
 //----------------------------------------------------
-int mmo_char_sync_timer(int tid, unsigned int tick, int id, int data) {
+int mmo_char_sync_timer(int tid, unsigned long tick, int id, int data) {
 	mmo_char_sync();
 	inter_save();
 	return 0;
@@ -813,7 +815,7 @@ int make_new_char(int fd, char *dat) {
 	int i, j;
 	struct char_session_data *sd;
 
-	sd = (struct char_session_data *)session[fd]->session_data;
+	sd = (struct char_session_data*)session[fd]->session_data;
 
 	// remove control characters from the name
 	dat[23] = '\0';
@@ -1399,7 +1401,13 @@ int mmo_char_send006b(int fd, struct char_session_data *sd) {
 		WFIFOW(fd,j+50) = DEFAULT_WALK_SPEED; // p->speed;
 		WFIFOW(fd,j+52) = p->class_;
 		WFIFOW(fd,j+54) = p->hair;
-		WFIFOW(fd,j+56) = p->weapon;
+
+		// pecopeco knights/crusaders crash fix
+		if (p->class_ == 13 || p->class_ == 21 ||
+			p->class_ == 4014 || p->class_ == 4022)
+			WFIFOW(fd,j+56) = 0;
+		else WFIFOW(fd,j+56) = p->weapon;
+
 		WFIFOW(fd,j+58) = p->base_level;
 		WFIFOW(fd,j+60) = p->skill_point;
 		WFIFOW(fd,j+62) = p->head_bottom;
@@ -1467,19 +1475,18 @@ int char_divorce(struct mmo_charstatus *cs) {
 // Force disconnection of an online player (with account value) by [Yor]
 //----------------------------------------------------------------------
 int disconnect_player(int accound_id) {
-	int i;
+	int fd;
 	struct char_session_data *sd;
 
 	// disconnect player if online on char-server
-	for(i = 0; i < fd_max; i++) {
-		if (session[i] && (sd = (struct char_session_data *)session[i]->session_data)) {
+	for(fd = 0; fd < fd_max; fd++) {
+		if (session[fd] && (sd = (struct char_session_data *)session[fd]->session_data)) {
 			if (sd->account_id == accound_id) {
-				session[i]->eof = 1;
+				session_Remove(fd);
 				return 1;
 			}
 		}
 	}
-
 	return 0;
 }
 
@@ -1522,19 +1529,20 @@ int parse_tologin(int fd) {
 
 	// only login-server can have an access to here.
 	// so, if it isn't the login-server, we disconnect the session (fd != login_fd).
-	if (fd != login_fd)
-		session[fd]->eof = 1;
-	if(session[fd]->eof) {
-		if (fd == login_fd) {
-			ShowMessage("Char-server can't connect to login-server (connection #%d).\n", fd);
-			login_fd = -1;
+	if (fd != login_fd) {
+		session_Remove(fd);
+		return 0;
 		}
-		close(fd);
-		delete_session(fd);
+	// else it is the login_fd
+	if( !session_isActive(fd) ) {
+		// login is disconnecting
+		ShowMessage("Connection to login-server dropped (connection #%d).\n", fd);
+		login_fd = -1;
+		session_Remove(fd);// have it removed by do_sendrecv
 		return 0;
 	}
 
-	sd = (struct char_session_data *)session[fd]->session_data;
+	sd = (struct char_session_data*)session[fd]->session_data;
 
 	while(RFIFOREST(fd) >= 2) {
 //		ShowMessage("parse_tologin: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, RFIFOW(fd,0), RFIFOREST(fd));
@@ -1605,7 +1613,7 @@ int parse_tologin(int fd) {
 			if (RFIFOREST(fd) < 50)
 				return 0;
 			for(i = 0; i < fd_max; i++) {
-				if (session[i] && (sd = (struct char_session_data *)session[i]->session_data)) {
+				if (session[i] && (sd = (struct char_session_data*)session[i]->session_data)) {
 					if (sd->account_id == (int)RFIFOL(fd,2)) {
 						memcpy(sd->email, RFIFOP(fd,6), 40);
 						if (e_mail_check(sd->email) == 0)
@@ -1816,7 +1824,7 @@ int parse_tologin(int fd) {
 							int j, k;
 							struct char_session_data *sd2;
 							for (j = 0; j < fd_max; j++) {
-								if (session[j] && (sd2 = (struct char_session_data *)session[j]->session_data) &&
+								if (session[j] && (sd2 = (struct char_session_data*)session[j]->session_data) &&
 									sd2->account_id == char_dat[char_num-1].account_id) {
 									for (k = 0; k < 9; k++) {
 										if (sd2->found_char[k] == char_num-1) {
@@ -1893,19 +1901,17 @@ int parse_tologin(int fd) {
 
 		default:
 			ShowMessage("parse_tologin: unknown packet %x! \n", (unsigned short)RFIFOW(fd,0));
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			return 0;
 		}
 	}
-	RFIFOFLUSH(fd);
-
 	return 0;
 }
 
 //--------------------------------
 // Map-server anti-freeze system
 //--------------------------------
-int map_anti_freeze_system(int tid, unsigned int tick, int id, int data) {
+int map_anti_freeze_system(int tid, unsigned long tick, int id, int data) {
 	int i;
 
 	//ShowMessage("Entering in map_anti_freeze_system function to check freeze of servers.\n");
@@ -1914,9 +1920,8 @@ int map_anti_freeze_system(int tid, unsigned int tick, int id, int data) {
 			//ShowMessage("map_anti_freeze_system: server #%d, flag: %d.\n", i, server_freezeflag[i]);
 			if (server_freezeflag[i]-- < 1) { // Map-server anti-freeze system. Counter. 5 ok, 4...0 freezed
 				ShowMessage("Map-server anti-freeze system: char-server #%d is freezed -> disconnection.\n", i);
-				char_log("Map-server anti-freeze system: char-server #%d is freezed -> disconnection." RETCODE,
-				         i);
-				session[server_fd[i]]->eof = 1;
+				char_log("Map-server anti-freeze system: char-server #%d is freezed -> disconnection." RETCODE,i);
+				session_Remove(server_fd[i]);
 			}
 		}
 	}
@@ -1931,23 +1936,23 @@ int parse_frommap(int fd) {
 	for(id = 0; id < MAX_MAP_SERVERS; id++)
 		if (server_fd[id] == fd)
 			break;
-	if(id==MAX_MAP_SERVERS)
-		session[fd]->eof=1;
-	if(session[fd]->eof){
-		for(i = 0; i < MAX_MAP_SERVERS; i++)
-			if (server_fd[i] == fd) {
-				ShowMessage("Map-server %d has disconnected.\n", i);
-				server_fd[i] = -1;
-			}
-		close(fd);
-		delete_session(fd);
+	if(id==MAX_MAP_SERVERS) {
+		// not a map server
+		session_Remove(fd);
+		return 0;
+	}
+	// else it is a valid map server
+	if( !session_isActive(fd) ) {
+		// a map server is disconnecting
+		ShowMessage("Map-server %d has disconnected.\n", id);
+		server_fd[id] = -1;
+		session_Remove(fd);// have it removed by do_sendrecv
 		create_online_files();
 		return 0;
 	}
 
 	while(RFIFOREST(fd) >= 2) {
 //		ShowMessage("parse_frommap: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, RFIFOW(fd,0), RFIFOREST(fd));
-
 		switch(RFIFOW(fd,0)) {
 		// request from map-server to reload GM accounts. Transmission to login-server (by Yor)
 		case 0x2af7:
@@ -1971,12 +1976,11 @@ int parse_frommap(int fd) {
 				j++;
 			}
 			{
-				unsigned char *p = (unsigned char *)&server[id].ip;
 				ShowMessage("Map-Server %d connected: %d maps, from IP %d.%d.%d.%d port %d.\n",
-				       id, j, p[0], p[1], p[2], p[3], server[id].port);
+				       id, j, (server[id].ip>>24)&0xFF, (server[id].ip>>16)&0xFF, (server[id].ip>>8)&0xFF, (server[id].ip)&0xFF, server[id].port);
 				ShowMessage("Map-server %d loading complete.\n", id);
 				char_log("Map-Server %d connected: %d maps, from IP %d.%d.%d.%d port %d. Map-server %d loading complete." RETCODE,
-				         id, j, p[0], p[1], p[2], p[3], server[id].port, id);
+				         id, j, (server[id].ip>>24)&0xFF, (server[id].ip>>16)&0xFF, (server[id].ip>>8)&0xFF, (server[id].ip)&0xFF, server[id].port, id);
 			}
 			WFIFOW(fd,0) = 0x2afb;
 			WFIFOB(fd,2) = 0;
@@ -2362,7 +2366,7 @@ int parse_frommap(int fd) {
 			}
 			// inter server処理でもない場合は切断
 			ShowMessage("char: unknown packet 0x%04x (%d bytes to read in buffer)! (from map).\n", (unsigned short)RFIFOW(fd,0), RFIFOREST(fd));
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			return 0;
 		}
 	}
@@ -2415,21 +2419,22 @@ int parse_char(int fd) {
 	int i, ch;
 	unsigned short cmd;
 	char email[40];
-	struct char_session_data *sd;
-//	unsigned long client_ip = ntohl(session[fd]->client_addr.sin_addr.s_addr);
 	unsigned long client_ip = session[fd]->client_ip;
+	struct char_session_data *sd = (struct char_session_data *)session[fd]->session_data;
 
 	if (login_fd < 0)
-		session[fd]->eof = 1;
-	if(session[fd]->eof) { // disconnect any player (already connected to char-server or coming back from map-server) if login-server is diconnected.
-		if (fd == login_fd)
-			login_fd = -1;
-		close(fd);
-		delete_session(fd);
+	{	// no login server available, reject connection
+		session_Remove(fd);
 		return 0;
 	}
 
-	sd = (struct char_session_data *)session[fd]->session_data;
+	if( !session_isActive(fd) ) 
+	{	// is disconnecting
+		if (fd == login_fd) // when it is the login
+			login_fd = -1;
+		session_Remove(fd);// have it removed by do_sendrecv
+		return 0;
+	}
 
 	while (RFIFOREST(fd) >= 2) {
 		cmd = RFIFOW(fd,0);
@@ -2438,7 +2443,8 @@ int parse_char(int fd) {
 			RFIFOREST(fd)>=4	&&	// 最低バイト数制限 ＆ 0x7530,0x7532管理パケ除去
 			RFIFOREST(fd)<=21	&&	// 最大バイト数制限 ＆ サーバーログイン除去
 			cmd!=0x20b	&&	// md5通知パケット除去
-			(RFIFOREST(fd)<6 || RFIFOW(fd,4)==0x65)	){	// 次に何かパケットが来てるなら、接続でないとだめ
+			(RFIFOREST(fd)<6 || RFIFOW(fd,4)==0x65)	)
+		{	// 次に何かパケットが来てるなら、接続でないとだめ
 			RFIFOSKIP(fd,4);
 			cmd = RFIFOW(fd,0);
 			ShowMessage("parse_char : %d crc32 skipped\n",fd);
@@ -2453,7 +2459,7 @@ int parse_char(int fd) {
 //		if (sd == NULL && cmd != 0x65 && cmd != 0x20b && cmd != 0x187 &&
 //					 cmd != 0x2af8 && cmd != 0x7530 && cmd != 0x7532)
 //			cmd = 0xffff;	// パケットダンプを表示させる
-		
+
 		switch(cmd){
 		case 0x20b:	//20040622暗号化ragexe対応
 			if (RFIFOREST(fd) < 19)
@@ -2751,7 +2757,7 @@ int parse_char(int fd) {
 									int j, k;
 									struct char_session_data *sd2;
 									for (j = 0; j < fd_max; j++) {
-										if (session[j] && (sd2 = (struct char_session_data *)session[j]->session_data) &&
+										if (session[j] && (sd2 = (struct char_session_data*)session[j]->session_data) &&
 											sd2->account_id == char_dat[char_num-1].account_id) {
 											for (k = 0; k < 9; k++) {
 												if (sd2->found_char[k] == char_num-1) {
@@ -2805,11 +2811,11 @@ int parse_char(int fd) {
 				if(anti_freeze_enable)
 					server_freezeflag[i] = 5; // Map anti-freeze system. Counter. 5 ok, 4...0 freezed
 				server[i].ip	= RFIFOLIP(fd,54);
-				server[i].port	= RFIFOW(fd,58);
+				server[i].port = RFIFOW(fd,58);
 				server[i].users = 0;
 				memset(server[i].map, 0, sizeof(server[i].map));
-				WFIFOSET(fd,3);
 				RFIFOSKIP(fd,60);
+				WFIFOSET(fd,3);
 				realloc_fifo(fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
 				char_mapif_init(fd);
 				// send gm acccounts level to map-servers
@@ -2846,44 +2852,43 @@ int parse_char(int fd) {
 			return 0;
 
 		case 0x7532:	// 接続の切断(defaultと処理は一緒だが明示的にするため)
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			return 0;
 
 		default:
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			return 0;
 		}
 	}
-	RFIFOFLUSH(fd);
 	return 0;
 }
 
 // Console Command Parser [Wizputer]
 int parse_console(char *buf) {
     char *type,*command;
-    
+
     type	= (char *)aCalloc(64, sizeof(char));
     command = (char *)aCalloc(64, sizeof(char));
-    
+
     ShowMessage("Console: %s\n",buf);
-    
+
     if ( sscanf(buf, "%[^:]:%[^\n]", type , command ) < 2 )
         sscanf(buf,"%[^\n]",type);
-    
+
     ShowMessage("Type of command: %s || Command: %s \n",type,command);
-    
+
     if(buf) aFree(buf);
     if(type) aFree(type);
     if(command) aFree(command);
-    
+
     return 0;
 }
 
 // 全てのMAPサーバーにデータ送信（送信したmap鯖の数を返す）
 int mapif_sendall(unsigned char *buf, unsigned int len) {
-	int i, c;
+	int i, c=0;
 
-	c = 0;
+	if(buf)
 	for(i = 0; i < MAX_MAP_SERVERS; i++) {
 		int fd;
 		if ((fd = server_fd[i]) >= 0) {
@@ -2926,7 +2931,7 @@ int mapif_send(int fd, unsigned char *buf, unsigned int len) {
 	return 0;
 }
 
-int send_users_tologin(int tid, unsigned int tick, int id, int data) {
+int send_users_tologin(int tid, unsigned long tick, int id, int data) {
 	int users = count_users();
 	unsigned char buf[16];
 
@@ -2944,7 +2949,7 @@ int send_users_tologin(int tid, unsigned int tick, int id, int data) {
 	return 0;
 }
 
-int check_connect_login_server(int tid, unsigned int tick, int id, int data) {
+int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 	if (login_fd <= 0 || session[login_fd] == NULL) {
 		ShowMessage("Attempt to connect to login-server...\n");
 		login_fd = make_connection(login_ip, login_port);
@@ -3033,8 +3038,8 @@ int lan_config_read(const char *lancfgName) {
 				strcpy(ip_str, w2);
 			subnet_mask  = ntohl(inet_addr(ip_str));
 			ShowMessage("Sub-network mask of the map-server: %d.%d.%d.%d.\n",  (subnet_mask>>24)&0xFF,(subnet_mask>>16)&0xFF,(subnet_mask>>8)&0xFF,(subnet_mask)&0xFF);
+			}
 		}
-	}
 	fclose(fp);
 
 	// sub-network check of the map-server
@@ -3217,7 +3222,7 @@ int char_config_read(const char *cfgName) {
 //Used to output 'I'm Alive' every few seconds
 //Intended to let frontends know if the app froze
 //-----------------------------------------------------
-int imalive_timer(int tid, unsigned int tick, int id, int data){
+int imalive_timer(int tid, unsigned long tick, int id, int data){
 	ShowMessage("I'm Alive\n");
 	return 0;
 }
@@ -3226,20 +3231,20 @@ int imalive_timer(int tid, unsigned int tick, int id, int data){
 //Flush stdout
 //stdout buffer needs flushed to be seen in GUI
 //-----------------------------------------------------
-int flush_timer(int tid, unsigned int tick, int id, int data){
+int flush_timer(int tid, unsigned long tick, int id, int data){
 	fflush(stdout);
 	return 0;
 }
 
 void do_final(void) {
 	int i;
-	ShowMessage("Terminating server.\n");
+	ShowStatus("Terminating server.\n");
+	///////////////////////////////////////////////////////////////////////////
 	// write online players files with no player
 	for(i = 0; i < online_players_max; i++) {
 		online_chars[i].char_id = -1;
 		online_chars[i].server = -1;
 	}
-
 	create_online_files();
 	if(online_chars) aFree(online_chars);
 
@@ -3248,14 +3253,17 @@ void do_final(void) {
 
 	if(gm_account) aFree(gm_account);
 	if(char_dat) aFree(char_dat);
-
-	delete_session(login_fd);
-	delete_session(char_fd);
-
+	///////////////////////////////////////////////////////////////////////////
+	// delete sessions
 	for(i = 0; i < fd_max; i++)
-		if(session[i] != NULL) aFree(session[i]);
-
+		if(session[i] != NULL) 
+			session_Delete(i);
+	// clear externaly stored fd's
+	login_fd=-1;
+	char_fd=-1;
+	///////////////////////////////////////////////////////////////////////////
 	char_log("----End of char-server (normal end with closing of all files)." RETCODE);
+	ShowStatus("Successfully terminated.\n");
 }
 
 int do_init(int argc, char **argv) {
@@ -3264,10 +3272,10 @@ int do_init(int argc, char **argv) {
 	char_config_read((argc < 2) ? CHAR_CONF_NAME : argv[1]);
 	lan_config_read((argc > 1) ? argv[1] : LOGIN_LAN_CONF_NAME);
 
-	// a newline in the log...
-	char_log("");
-	// moved behind char_config_read in case we changed the filename [celest]
-	char_log("The char-server starting..." RETCODE);
+		// a newline in the log...
+		char_log("");
+		// moved behind char_config_read in case we changed the filename [celest]
+		char_log("The char-server starting..." RETCODE);
 
 
 	if( naddr_ == 0 ) {
@@ -3276,13 +3284,13 @@ int do_init(int argc, char **argv) {
 		ShowMessage("(127.0.0.1 is valid if you have no network interface)\n");    
 	}
     else if( login_ip == INADDR_LOOPBACK || char_ip == INADDR_ANY ) { 
-		// The char server should know what IP address it is running on
-		//   - MouseJstr
+          // The char server should know what IP address it is running on
+          //   - MouseJstr
 		unsigned long localaddr = addr_[0]; // host order network address
-		if (naddr_ != 1) 
+          if (naddr_ != 1)
 			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n", 
 								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
-		else
+          else
 			ShowMessage("Defaulting to %d.%d.%d.%d as our IP address\n", 
 								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
 		if (login_ip == INADDR_LOOPBACK)
@@ -3291,7 +3299,7 @@ int do_init(int argc, char **argv) {
 			char_ip  = localaddr;
 		if (localaddr&0xFFFF0000 == 0xC0A80000)//192.168.x.x
 			ShowMessage("Private Network detected.. edit lan_support.conf and char_athena.conf\n");
-	} 
+        }
 
 	for(i = 0; i < MAX_MAP_SERVERS; i++) {
 		memset(&server[i], 0, sizeof(struct mmo_map_server));
@@ -3321,26 +3329,26 @@ int do_init(int argc, char **argv) {
 	add_timer_func_list(check_connect_login_server, "check_connect_login_server");
 	add_timer_func_list(send_users_tologin, "send_users_tologin");
 	add_timer_func_list(mmo_char_sync_timer, "mmo_char_sync_timer");
-	
-	i = add_timer_interval(gettick() + 1000, check_connect_login_server, 0, 0, 10 * 1000);
-	i = add_timer_interval(gettick() + 1000, send_users_tologin, 0, 0, 5 * 1000);
-	i = add_timer_interval(gettick() + autosave_interval, mmo_char_sync_timer, 0, 0, autosave_interval);
+
+	add_timer_interval(gettick() + 1000, 10 * 1000, check_connect_login_server, 0, 0);
+	add_timer_interval(gettick() + 1000, 5 * 1000, send_users_tologin, 0, 0);
+	add_timer_interval(gettick() + autosave_interval, autosave_interval, mmo_char_sync_timer, 0, 0);
 
 	//Added for Mugendais I'm Alive mod
 	if (imalive_on)
-		add_timer_interval(gettick()+10, imalive_timer,0,0,imalive_time*1000);
+		add_timer_interval(gettick()+10,imalive_time*1000, imalive_timer,0,0);
 
 	//Added by Mugendai for GUI support
 	if (flush_on)
-		add_timer_interval(gettick()+10, flush_timer,0,0,flush_time);
+		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
 
 
-	
+
 	if(anti_freeze_enable > 0) {
 		add_timer_func_list(map_anti_freeze_system, "map_anti_freeze_system");
-		i = add_timer_interval(gettick() + 1000, map_anti_freeze_system, 0, 0, ANTI_FREEZE_INTERVAL * 1000); // checks every X seconds user specifies
+		add_timer_interval(gettick() + 1000, ANTI_FREEZE_INTERVAL * 1000, map_anti_freeze_system, 0, 0); // checks every X seconds user specifies
 	}
-	
+
 	if(console) {
 	    set_defaultconsoleparse(parse_console);
 	   	start_console();

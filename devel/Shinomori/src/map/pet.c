@@ -35,7 +35,7 @@ struct pet_db pet_db[MAX_PET_DB];
 static int dirx[8]={0,-1,-1,-1,0,1,1,1};
 static int diry[8]={1,1,0,-1,-1,-1,0,1};
 
-static int pet_timer(int tid,unsigned int tick,int id,int data);
+static int pet_timer(int tid,unsigned long tick,int id,int data);
 static int pet_walktoxy_sub(struct pet_data *pd);
 
 static int distance(int x0,int y0,int x1,int y1)
@@ -384,7 +384,7 @@ int pet_changestate(struct pet_data *pd,int state,int type)
 	return 0;
 }
 
-static int pet_timer(int tid,unsigned int tick,int id,int data)
+static int pet_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct pet_data *pd;
 
@@ -488,7 +488,7 @@ int pet_stop_walking(struct pet_data *pd,int type)
 	return 0;
 }
 
-static int pet_hungry(int tid,unsigned int tick,int id,int data)
+static int pet_hungry(int tid,unsigned long tick,int id,int data)
 {
 	struct map_session_data *sd;
 	int interval,t;
@@ -1323,7 +1323,7 @@ static int pet_ai_sub_foreachclient(struct map_session_data *sd,va_list ap)
 	return 0;
 }
 
-static int pet_ai_hard(int tid,unsigned int tick,int id,int data)
+static int pet_ai_hard(int tid,unsigned long tick,int id,int data)
 {
 	clif_foreachclient(pet_ai_sub_foreachclient,tick);
 
@@ -1398,7 +1398,7 @@ int pet_lootitem_drop(struct pet_data *pd,struct map_session_data *sd)
 	return 1;
 }
 
-int pet_delay_item_drop2(int tid,unsigned int tick,int id,int data)
+int pet_delay_item_drop2(int tid,unsigned long tick,int id,int data)
 {
 	struct delay_item_drop2 *ditem;
 
@@ -1431,7 +1431,7 @@ int pet_skill_bonus(struct map_session_data *sd,struct pet_data *pd,int type,int
 
 }
 
-int pet_skill_bonus_timer(int tid,unsigned int tick,int id,int data)
+int pet_skill_bonus_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct map_session_data *sd=(struct map_session_data*)map_id2bl(id);
 	struct pet_data *pd;
@@ -1456,7 +1456,7 @@ int pet_skill_bonus_timer(int tid,unsigned int tick,int id,int data)
 	return 0;
 }
 
-int pet_skill_bonus_duration(int tid,unsigned int tick,int id,int data)
+int pet_skill_bonus_duration(int tid,unsigned long tick,int id,int data)
 {
 	struct map_session_data *sd=(struct map_session_data*)map_id2bl(id);
 	struct pet_data *pd;
@@ -1482,7 +1482,7 @@ int pet_skill_bonus_duration(int tid,unsigned int tick,int id,int data)
 	return 0;
 }
 
-int pet_recovery_timer(int tid,unsigned int tick,int id,int data)
+int pet_recovery_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct map_session_data *sd=(struct map_session_data*)map_id2bl(id);
 	struct pet_data *pd;
@@ -1507,7 +1507,7 @@ int pet_recovery_timer(int tid,unsigned int tick,int id,int data)
 	return 0;
 }
 
-int pet_heal_timer(int tid,unsigned int tick,int id,int data)
+int pet_heal_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct map_session_data *sd=(struct map_session_data*)map_id2bl(id);
 	struct pet_data *pd;
@@ -1533,7 +1533,7 @@ int pet_heal_timer(int tid,unsigned int tick,int id,int data)
 	return 0;
 }
 
-int pet_mag_timer(int tid,unsigned int tick,int id,int data)
+int pet_mag_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct pet_data *pd;
 	struct map_session_data *sd=(struct map_session_data*)map_id2bl(id);
@@ -1559,7 +1559,7 @@ int pet_mag_timer(int tid,unsigned int tick,int id,int data)
 	return 0;
 }
 
-int pet_skillattack_timer(int tid,unsigned int tick,int id,int data)
+int pet_skillattack_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct mob_data *md;
 	struct map_session_data *sd=(struct map_session_data*)map_id2bl(id);
@@ -1705,7 +1705,7 @@ int do_init_pet(void)
 	add_timer_func_list(pet_mag_timer,"pet_mag_timer"); // [Valaris]
 	add_timer_func_list(pet_heal_timer,"pet_heal_timer"); // [Valaris]
 	add_timer_func_list(pet_skillattack_timer,"pet_skillattack_timer"); // [Valaris]
-	add_timer_interval(gettick()+MIN_PETTHINKTIME,pet_ai_hard,0,0,MIN_PETTHINKTIME);
+	add_timer_interval(gettick()+MIN_PETTHINKTIME,MIN_PETTHINKTIME,pet_ai_hard,0,0);
 
 	return 0;
 }

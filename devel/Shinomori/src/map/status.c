@@ -24,6 +24,237 @@
 #include "showmsg.h"
 #include "utils.h"
 
+/* スキル番?＝＞ステ?タス異常番??換テ?ブル */
+int SkillStatusChangeTable[]={	/* status.hのenumのSC_***とあわせること */
+/* 0- */
+	-1,-1,-1,-1,-1,-1,
+	SC_PROVOKE,			/* プロボック */
+	-1, 1,-1,
+/* 10- */
+	SC_SIGHT,			/* サイト */
+	-1,-1,-1,-1,
+	SC_FREEZE,			/* フロストダイバ? */
+	SC_STONE,			/* スト?ンカ?ス */
+	-1,-1,-1,
+/* 20- */
+	-1,-1,-1,-1,
+	SC_RUWACH,			/* ルアフ */
+	-1,-1,-1,-1,
+	SC_INCREASEAGI,		/* 速度?加 */
+/* 30- */
+	SC_DECREASEAGI,		/* 速度減少 */
+	-1,
+	SC_SIGNUMCRUCIS,	/* シグナムクルシス */
+	SC_ANGELUS,			/* エンジェラス */
+	SC_BLESSING,		/* ブレッシング */
+	-1,-1,-1,-1,-1,
+/* 40- */
+	-1,-1,-1,-1,-1,
+	SC_CONCENTRATE,		/* 集中力向上 */
+	-1,-1,-1,-1,
+/* 50- */
+	-1,
+	SC_HIDING,			/* ハイディング */
+	-1,-1,-1,-1,-1,-1,-1,-1,
+/* 60- */
+	SC_TWOHANDQUICKEN,	/* 2HQ */
+	SC_AUTOCOUNTER,
+	-1,-1,-1,-1,
+	SC_IMPOSITIO,		/* インポシティオマヌス */
+	SC_SUFFRAGIUM,		/* サフラギウム */
+	SC_ASPERSIO,		/* アスペルシオ */
+	SC_BENEDICTIO,		/* 聖?降福 */
+/* 70- */
+	-1,
+	SC_SLOWPOISON,
+	-1,
+	SC_KYRIE,			/* キリエエレイソン */
+	SC_MAGNIFICAT,		/* マグニフィカ?ト */
+	SC_GLORIA,			/* グロリア */
+	SC_DIVINA,			/* レックスディビ?ナ */
+	-1,
+	SC_AETERNA,			/* レックスエ?テルナ */
+	-1,
+/* 80- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+/* 90- */
+	-1,-1,
+	SC_QUAGMIRE,		/* クァグマイア */
+	-1,-1,-1,-1,-1,-1,-1,
+/* 100- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+/* 110- */
+	-1,
+	SC_ADRENALINE,		/* アドレナリンラッシュ */
+	SC_WEAPONPERFECTION,/* ウェポンパ?フェクション */
+	SC_OVERTHRUST,		/* オ?バ?トラスト */
+	SC_MAXIMIZEPOWER,	/* マキシマイズパワ? */
+	-1,-1,-1,-1,-1,
+/* 120- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+/* 130- */
+	-1,-1,-1,-1,-1,
+	SC_CLOAKING,		/* クロ?キング */
+	SC_STAN,			/* ソニックブロ? */
+	-1,
+	SC_ENCPOISON,		/* エンチャントポイズン */
+	SC_POISONREACT,		/* ポイズンリアクト */
+/* 140- */
+	SC_POISON,			/* ベノムダスト */
+	SC_SPLASHER,		/* ベナムスプラッシャ? */
+	-1,
+	SC_TRICKDEAD,		/* 死んだふり */
+	-1,-1,SC_AUTOBERSERK,-1,-1,-1,
+/* 150- */
+	-1,-1,-1,-1,-1,
+	SC_LOUD,			/* ラウドボイス */
+	-1,
+	SC_ENERGYCOAT,		/* エナジ?コ?ト */
+	-1,-1,
+/* 160- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,
+	SC_SELFDESTRUCTION,
+	-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,
+	SC_KEEPING,
+	-1,-1,
+	SC_BARRIER,
+	-1,-1,
+	SC_HALLUCINATION,
+	-1,-1,
+/* 210- */
+	-1,-1,-1,-1,-1,
+	SC_STRIPWEAPON,
+	SC_STRIPSHIELD,
+	SC_STRIPARMOR,
+	SC_STRIPHELM,
+	-1,
+/* 220- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+/* 230- */
+	-1,-1,-1,-1,
+	SC_CP_WEAPON,
+	SC_CP_SHIELD,
+	SC_CP_ARMOR,
+	SC_CP_HELM,
+	-1,-1,
+/* 240- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	SC_AUTOGUARD,
+/* 250- */
+	-1,-1,
+	SC_REFLECTSHIELD,
+	-1,-1,
+	SC_DEVOTION,
+	SC_PROVIDENCE,
+	SC_DEFENDER,
+	SC_SPEARSQUICKEN,
+	-1,
+/* 260- */
+	-1,-1,-1,-1,-1,-1,-1,-1,
+	SC_STEELBODY,
+	SC_BLADESTOP_WAIT,
+/* 270- */
+	SC_EXPLOSIONSPIRITS,
+	SC_EXTREMITYFIST,
+	-1,-1,-1,-1,
+	SC_MAGICROD,
+	-1,-1,-1,
+/* 280- */
+	SC_FLAMELAUNCHER,
+	SC_FROSTWEAPON,
+	SC_LIGHTNINGLOADER,
+	SC_SEISMICWEAPON,
+	-1,
+	SC_VOLCANO,
+	SC_DELUGE,
+	SC_VIOLENTGALE,
+	SC_LANDPROTECTOR,
+	-1,
+/* 290- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+/* 300- */
+	-1,-1,-1,-1,-1,-1,
+	SC_LULLABY,
+	SC_RICHMANKIM,
+	SC_ETERNALCHAOS,
+	SC_DRUMBATTLE,
+/* 310- */
+	SC_NIBELUNGEN,
+	SC_ROKISWEIL,
+	SC_INTOABYSS,
+	SC_SIEGFRIED,
+	-1,-1,-1,
+	SC_DISSONANCE,
+	-1,
+	SC_WHISTLE,
+/* 320- */
+	SC_ASSNCROS,
+	SC_POEMBRAGI,
+	SC_APPLEIDUN,
+	-1,-1,
+	SC_UGLYDANCE,
+	-1,
+	SC_HUMMING,
+	SC_DONTFORGETME,
+	SC_FORTUNE,
+/* 330- */
+	SC_SERVICE4U,
+	SC_SELFDESTRUCTION,
+	-1,-1,-1,-1,-1,-1,-1,-1,
+/* 340- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+/* 350- */
+	-1,-1,-1,-1,-1,
+	SC_AURABLADE,
+	SC_PARRYING,
+	SC_CONCENTRATION,
+	SC_TENSIONRELAX,
+	SC_BERSERK,
+/* 360- */
+	SC_BERSERK,
+	SC_ASSUMPTIO,
+	SC_BASILICA,
+	-1,-1,-1,
+	SC_MAGICPOWER,
+	-1,
+	SC_SACRIFICE,
+	SC_GOSPEL,
+/* 370- */
+	-1,-1,-1,-1,-1,-1,-1,-1,
+	SC_EDP,
+	-1,
+/* 380- */
+	SC_TRUESIGHT,
+	-1,-1,
+	SC_WINDWALK,
+	SC_MELTDOWN,
+	-1,-1,
+	SC_CARTBOOST,
+	-1,
+	SC_CHASEWALK,
+/* 390- */
+	SC_REJECTSWORD,
+	-1,-1,-1,-1,
+	SC_MOONLIT,
+	SC_MARIONETTE,
+	-1,
+	SC_HEADCRUSH,
+	SC_JOINTBEAT,
+/* 400 */
+	-1,-1,
+	SC_MINDBREAKER,
+	SC_MEMORIZE,
+	SC_FOGWALL,
+	SC_SPIDERWEB,
+	-1,-1,-1,-1,
+/* 410- */
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+};
+
 static int max_weight_base[MAX_PC_CLASS];
 static int hp_coefficient[MAX_PC_CLASS];
 static int hp_coefficient2[MAX_PC_CLASS];
@@ -253,6 +484,38 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	sd->hp_drain_value = sd->hp_drain_value_ = sd->sp_drain_value = sd->sp_drain_value_ = 0;
 	sd->unbreakable_equip = 0;
 
+	sd->break_weapon_rate = sd->break_armor_rate = 0;
+	sd->add_steal_rate = 0;
+	sd->crit_atk_rate = 0;
+	sd->no_regen = 0;
+	sd->unstripable_equip = 0;
+	sd->autospell2_id = sd->autospell2_lv = sd->autospell2_rate = 0;
+	memset(sd->critaddrace,0,sizeof(sd->critaddrace));
+	memset(sd->addeff3,0,sizeof(sd->addeff3));
+	memset(sd->skillatk,0,sizeof(sd->skillatk));
+	sd->add_damage_class_count = sd->add_damage_class_count_ = sd->add_magic_damage_class_count = 0;
+	sd->add_def_class_count = sd->add_mdef_class_count = 0;
+	sd->add_damage_class_count2 = 0;
+	memset(sd->add_damage_classid,0,sizeof(sd->add_damage_classid));
+	memset(sd->add_damage_classid_,0,sizeof(sd->add_damage_classid_));
+	memset(sd->add_magic_damage_classid,0,sizeof(sd->add_magic_damage_classid));
+	memset(sd->add_damage_classrate,0,sizeof(sd->add_damage_classrate));
+	memset(sd->add_damage_classrate_,0,sizeof(sd->add_damage_classrate_));
+	memset(sd->add_magic_damage_classrate,0,sizeof(sd->add_magic_damage_classrate));
+	memset(sd->add_def_classid,0,sizeof(sd->add_def_classid));
+	memset(sd->add_def_classrate,0,sizeof(sd->add_def_classrate));
+	memset(sd->add_mdef_classid,0,sizeof(sd->add_mdef_classid));
+	memset(sd->add_mdef_classrate,0,sizeof(sd->add_mdef_classrate));
+	memset(sd->add_damage_classid2,0,sizeof(sd->add_damage_classid2));
+	memset(sd->add_damage_classrate2,0,sizeof(sd->add_damage_classrate2));
+	sd->sp_gain_value = 0;
+	sd->ignore_def_mob = sd->ignore_def_mob_ = 0;
+	sd->hp_loss_rate = sd->hp_loss_value = sd->hp_loss_type = 0;
+	memset(sd->addrace2,0,sizeof(sd->addrace2));
+	memset(sd->addrace2_,0,sizeof(sd->addrace2_));
+	sd->hp_gain_value = sd->sp_drain_type = 0;
+	memset(sd->subsize,0,sizeof(sd->subsize));
+	sd->unequip_damage = 0;
 
 	if(!sd->disguiseflag && sd->disguise) {
 		sd->disguise=0;
@@ -2527,11 +2790,16 @@ int status_get_size(struct block_list *bl)
 	nullpo_retr(1, bl);
 	if(bl->type==BL_MOB && (struct mob_data *)bl)
 		return mob_db[((struct mob_data *)bl)->class_].size;
-	else if(bl->type==BL_PC && (struct map_session_data *)bl)
-		return 1;
 	else if(bl->type==BL_PET && (struct pet_data *)bl)
 		return mob_db[((struct pet_data *)bl)->class_].size;
-	else
+	else if(bl->type==BL_PC) {
+		struct map_session_data *sd = (struct map_session_data *)bl;
+		//if (pc_isriding(sd))	// fact or rumour?
+		//	return 2;
+		if (pc_calc_upper(sd->status.class_) == 2)
+			return 0;
+		return 1;
+	} else
 		return 1;
 }
 int status_get_mode(struct block_list *bl)
@@ -2552,6 +2820,16 @@ int status_get_mexp(struct block_list *bl)
 		return mob_db[((struct mob_data *)bl)->class_].mexp;
 	else if(bl->type==BL_PET && (struct pet_data *)bl)
 		return mob_db[((struct pet_data *)bl)->class_].mexp;
+	else
+		return 0;
+}
+int status_get_race2(struct block_list *bl)
+{
+	nullpo_retr(0, bl);
+	if(bl->type == BL_MOB && (struct mob_data *)bl)
+		return mob_db[((struct mob_data *)bl)->class_].race2;
+	else if(bl->type==BL_PET && (struct pet_data *)bl)
+		return mob_db[((struct pet_data *)bl)->class_].race2;
 	else
 		return 0;
 }
@@ -3490,11 +3768,6 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		case SC_PRESERVE:
 			break;
 
-		case SC_BLOCKSKILL:
-			if (!tick) tick = 60000;
-			if (!val3) val3 = -1;
-			break;
-
 		case SC_SLOWDOWN:
 		case SC_SPEEDUP0:
 			calc_flag = 1;
@@ -3590,8 +3863,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 	sc_data[type].val3 = val3;
 	sc_data[type].val4 = val4;
 	/* タイマ?設定 */
-	sc_data[type].timer = add_timer(
-		gettick() + tick, status_change_timer, bl->id, type);
+	sc_data[type].timer = add_timer(gettick() + tick, status_change_timer, bl->id, type);
 
 	if(bl->type==BL_PC && calc_flag)
 		status_calc_pc(sd,0);	/* ステ?タス再計算 */
@@ -3974,19 +4246,29 @@ int status_change_end( struct block_list* bl , int type,int tid )
  * ステータス異常終了タイマー
  *------------------------------------------
  */
-int status_change_timer(int tid, unsigned int tick, int id, int data)
+int status_change_timer(int tid,unsigned long tick,int id,int data)
 {
 	int type=data;
-	struct block_list *bl;
-	struct map_session_data *sd=NULL;
+	
 	struct status_change *sc_data;
+	struct map_session_data *sd=NULL;
+	struct mob_data *md=NULL;
+	struct block_list *bl=map_id2bl(id);
 	//short *sc_count; //使ってない？
 
-	nullpo_retr(0, bl=map_id2bl(id));
+#ifdef nullpo_retr_f
+	nullpo_retr_f(0, bl, "id=%d data=%d",id,data);
+#else
+	nullpo_retr(0, bl);
+#endif
+	
 	nullpo_retr(0, sc_data=status_get_sc_data(bl));
 
 	if(bl->type==BL_PC)
-		nullpo_retr(0, sd=(struct map_session_data *)bl);
+		sd=(struct map_session_data *)bl;
+	else if(bl->type==BL_MOB)
+		md=(struct mob_data *)bl;
+
 
 	//sc_count=status_get_sc_count(bl); //使ってない？
 
@@ -4083,9 +4365,11 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 	case SC_WATERBALL:	/* ウォ?タ?ボ?ル */
 		{
 			struct block_list *target=map_id2bl(sc_data[type].val2);
-			nullpo_retb(target);
-			nullpo_retb(target->prev);
+			if (!target || !target->prev)
+				break;	// target has been killed in previous hits, no need to raise an alarm ^^;
+
 			skill_attack(BF_MAGIC,bl,bl,target,WZ_WATERBALL,sc_data[type].val1,tick,0);
+
 			if((--sc_data[type].val3)>0) {
 				sc_data[type].timer=add_timer( 150+tick,status_change_timer, bl->id, data );
 				return 0;
@@ -4096,30 +4380,25 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 	case SC_ENDURE:	/* インデュア */
 	case SC_AUTOBERSERK: // Celest
 		if(sd && sd->special_state.infinite_endure) {
-#ifdef TWILIGHT
-			sc_data[type].timer=add_timer( 1000*600+tick,status_change_timer, bl->id, data );
-#else
 			sc_data[type].timer=add_timer( 1000*60+tick,status_change_timer, bl->id, data );
-#endif
-			//sc_data[type].val2=1;
 			return 0;
 		}
 		break;
 
 	case SC_DISSONANCE:	/* 不協和音 */
 		if( (--sc_data[type].val2)>0){
-			struct skill_unit *unit=
-				(struct skill_unit *)sc_data[type].val4;
+			struct skill_unit *unit = (struct skill_unit *)sc_data[type].val4;
 			struct block_list *src;
-			/*if(!unit || !unit->group)
-				break;
-			src=map_id2bl(unit->group->src_id);
-			if(!src)
-				break;*/
+
 			nullpo_retb(unit);
 			nullpo_retb(unit->group);
-			nullpo_retr(0, src=map_id2bl(unit->group->src_id));
+			nullpo_retb(src=map_id2bl(unit->group->src_id));
 			skill_attack(BF_MISC,src,&unit->bl,bl,unit->group->skill_id,sc_data[type].val1,tick,0);
+
+			if( ( md && (MS_DEAD==md->state.state) ) ||
+				( sd && pc_isdead(sd) )              )
+				break;
+
 			sc_data[type].timer=add_timer(skill_get_time2(unit->group->skill_id,unit->group->skill_lv)+tick,
 				status_change_timer, bl->id, data );
 			return 0;
@@ -4128,8 +4407,7 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 
 	case SC_LULLABY:	/* 子守唄 */
 		if( (--sc_data[type].val2)>0){
-			struct skill_unit *unit=
-				(struct skill_unit *)sc_data[type].val4;
+			struct skill_unit *unit = (struct skill_unit *)sc_data[type].val4;
 			nullpo_retb(unit);
 			nullpo_retb(unit->group);
 			if(unit->group->src_id == bl->id)
@@ -4162,10 +4440,7 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 				if(hp < 1) hp = 1;
 				if(sd)
 					pc_heal(sd,-hp,0);
-				else if(bl->type == BL_MOB){
-					struct mob_data *md;
-					if((md=((struct mob_data *)bl)) == NULL)
-						break;
+				else if(md){
 					md->hp -= hp;
 				}
 			}
@@ -4182,11 +4457,7 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 						hp = 3 + hp*3/200;
 						pc_heal((struct map_session_data *)bl,-hp,0);
 					}
-					else if(bl->type == BL_MOB) {
-						struct mob_data *md;
-						nullpo_retr(0, md=(struct mob_data *)bl);
-						/*if((md=((struct mob_data *)bl)) == NULL)
-							break;*/
+					else if(md) {
 						hp = 3 + hp/200;
 						md->hp -= hp;
 					}
@@ -4204,11 +4475,7 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 				if(sd) {
 					hp = 3 + hp/50;
 					pc_heal(sd, -hp, 0);
-				} else if (bl->type == BL_MOB) {
-					struct mob_data *md;
-					nullpo_retr(0, md=(struct mob_data *)bl);
-					/*if ((md=((struct mob_data *)bl)) == NULL)
-						break;*/
+				} else if(md) {
 					hp = 3 + hp/100;
 					md->hp -= hp;
 				}
@@ -4242,11 +4509,7 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 				hp = 3 + hp*3/200;
 				pc_heal(sd,-hp,0);
 			}
-			else if(bl->type == BL_MOB) {
-				struct mob_data *md;
-				nullpo_retr(0, md=(struct mob_data *)bl);
-				/*if((md=((struct mob_data *)bl)) == NULL)
-					break;*/
+			else if(md) {
 				hp = 3 + hp/200;
 				md->hp -= hp;
 			}
@@ -4267,7 +4530,6 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 	case SC_BROKNWEAPON:
 	case SC_BROKNARMOR:
 	case SC_SACRIFICE:
-//		if(sc_data[type].timer==tid)
 			sc_data[type].timer=add_timer( 1000*600+tick,status_change_timer, bl->id, data );
 		return 0;
 
@@ -4356,8 +4618,7 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 		break;
 	case SC_SELFDESTRUCTION:		/* 自爆 */
 		if(--sc_data[type].val3>0){
-			struct mob_data *md;
-			if(bl->type==BL_MOB && (md=(struct mob_data *)bl) && md->speed > 250){
+			if(md && md->speed > 250){
 				md->speed -= 250;
 				md->next_walktime=tick;
 			}
@@ -4411,11 +4672,10 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 	case SC_CONFUSION:
 		{
 			int i = 3000;
-			//struct mob_data *md;
 			if (sd) {
 				pc_randomwalk (sd, gettick());
 				sd->next_walktime = tick + (i=1000 + rand()%1000);
-			} /*else if (bl->type==BL_MOB && (md=(struct mob_data *)bl) && md->mode&1 && mob_can_move(md)) {
+			} /*else if (md && md->mode&1 && mob_can_move(md)) {
 				md->state.state=MS_WALK;
 				if( DIFF_TICK(md->next_walktime,tick) > + 7000 &&
 					(md->walkpath.path_len==0 || md->walkpath.path_pos>=md->walkpath.path_len) )
@@ -4449,9 +4709,7 @@ int status_change_timer(int tid, unsigned int tick, int id, int data)
 					clif_updatestatus(sd,SP_HP);
 					clif_updatestatus(sd,SP_SP);
 					if ((sc_data[type].val2 -= 10000) > 0) {
-						sc_data[type].timer = add_timer(
-							10000+tick, status_change_timer,
-							bl->id, data);
+						sc_data[type].timer = add_timer(10000+tick, status_change_timer,bl->id, data);
 						return 0;
 					}
 				}

@@ -9,4 +9,5 @@ unsigned char* jstrescape (unsigned char* pt);
 unsigned char* jstrescapecpy (unsigned char* pt,unsigned char* spt);
 size_t jmemescapecpy (unsigned char* pt,unsigned char* spt, int size);
 
+
 #endif

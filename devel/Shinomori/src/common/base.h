@@ -13,50 +13,110 @@
 #include <time.h>
 #include <fcntl.h>
 #include <math.h>
+#include <limits.h>
+#include <signal.h>
 
 #include <assert.h>
 
 
-
-#if defined(__WIN32__) || defined(__WIN32) || defined(_WIN32) && !defined(WIN32)
+#if (defined(__WIN32__) || defined(__WIN32) || defined(_WIN32) || defined(_MSC_VER) || defined(__BORLANDC__)) && !defined(WIN32)
 #define WIN32
 #endif
 
 
 
 //////////////////////////////
-#ifdef _WIN32
+#ifdef WIN32
 //////////////////////////////
 #define WIN32_LEAN_AND_MEAN
+#define _WINSOCKAPI_	// prevent inclusion of winsock.h
 
 #include <windows.h>
 #include <winsock2.h>
 #include <conio.h>
+
 //////////////////////////////
 #else
 //////////////////////////////
 
 #include <arpa/inet.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/time.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/un.h>
 #include <unistd.h>
-
-
-
+#ifndef FIONREAD
+#include <sys/filio.h>	// FIONREAD on Solaris, might be 
+#endif
 #ifndef SIOCGIFCONF
 #include <sys/sockio.h> // SIOCGIFCONF on Solaris, maybe others?
 #endif
 
-
-
 //////////////////////////////
 #endif
 //////////////////////////////
+
+
+
+
+//////////////////////////////
+#ifdef __cplusplus
+//////////////////////////////
+
+// starting over in another project and transfering 
+// after coding and testing is finished
+
+
+#ifdef min // windef has macros for that, kill'em
+#undef min
+#endif
+template <class T> inline T &min(const T &i1, const T &i2)
+{	if(i1 < i2) return (T&)i1; else return (T&)i2;
+}
+#ifdef max // windef has macros for that, kill'em
+#undef max
+#endif
+template <class T> inline T &max(const T &i1, const T &i2)	
+{	if(i1 > i2) return (T&)i1; else return (T&)i2;
+}
+
+#ifdef swap // just to be sure
+#undef swap
+#endif
+template <class T> inline void swap(T &i1, T &i2)
+{	T dummy = i1; i1=i2; i2=dummy;
+}
+
+//////////////////////////////
+#else // not cplusplus
+//////////////////////////////
+
+// boolean types for C
+typedef int bool;
+#define false	(1==0)
+#define true	(1==1)
+
+#ifndef swap
+// hmm only ints?
+//#define swap(a,b) { int temp=a; a=b; b=temp;} 
+// if macros then something that is type independent
+#define swap(a,b) ((a == b) || ((a ^= b), (b ^= a), (a ^= b)))
+#endif swap
+
+//////////////////////////////
+#endif // not cplusplus
+//////////////////////////////
+
+
+
+
+
+
 
 
 
@@ -72,7 +132,7 @@
 
 
 //////////////////////////////
-#ifdef _WIN32/////////////////
+#ifdef WIN32
 //////////////////////////////
 
 // keywords
@@ -100,7 +160,6 @@
 
 #define	sleep				Sleep
 
-#define close(fd)			closesocket(fd)
 #define read(fd,buf,sz)		recv(fd,buf,sz,0)
 #define write(fd,buf,sz)	send(fd,buf,sz,0)
 
@@ -113,12 +172,6 @@ extern inline void gettimeofday(struct timeval *timenow, void *dummy)
 	timenow->tv_usec = t;
 	timenow->tv_sec = t / CLK_TCK;
 	return;
-}
-
-extern inline void socket_nonblocking(int fd)
-{
-	unsigned long val = 1;
-	ioctlsocket(fd, FIONBIO, &val);
 }
 
 
@@ -143,7 +196,8 @@ typedef int		SOCKET;
 
 // abnormal function definitions
 
-
+#define closesocket(fd) close(fd)
+#define ioctlsocket		ioctl
 
 // missing functions and helpers
 
@@ -151,12 +205,6 @@ extern inline unsigned long GetTickCount() {
 	 struct timeval tv;
 	 gettimeofday( &tv, NULL );
 	 return (unsigned long)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
-}
-
-extern inline void socket_nonblocking(int fd)
-{
-	int result;
-	result = fcntl(fd, F_SETFL, O_NONBLOCK);
 }
 
 //////////////////////////////
@@ -308,64 +356,44 @@ extern inline unsigned long SwapFourBytes(unsigned long w)
 
 
 
-
-
-
-#ifdef __cplusplus
-
-///////////////////////////////////////////////
-///////////////////////////////////////////////
-// starting over in another project and transfering 
-// after coding and testing is finished
-
-template<class T> class Buffer
+// Find the log base 2 of an N-bit integer in O(lg(N)) operations
+// in this case for 32bit input it would be 11 operations
+extern inline unsigned long log2(unsigned long v)
 {
-	T		*cArray;
-public:
-
-	Buffer(size_t sz=0):cArray(NULL)
-	{	
-		if(sz>0)
-			cArray = new T[sz];
-	}
-	~Buffer()
-	{	
-		if(cArray)
-			delete[] cArray;
-	}
-
-	operator T*()	{return cArray;}
-};
-
-///////////////////////////////////////////////
-///////////////////////////////////////////////
-
-template<class T> class autoptr
-{
-
-
-};
-
-
-template <class T> inline void swap(T &i1, T &i2)
-{	T dummy = i1; i1=i2; i2=dummy;
+//	static const unsigned long b[] = 
+//		{0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000};
+//	static const unsigned long S[] = 
+//		{1, 2, 4, 8, 16};
+	// result of log2(v) will go here
+	register unsigned long c = 0; 
+//	int i;
+//	for (i = 4; i >= 0; i--) 
+//	{
+//	  if (v & b[i])
+//	  {
+//		v >>= S[i];
+//		c |= S[i];
+//	  } 
+//	}
+	// unroll for speed...
+//	if (v & b[4]) { v >>= S[4]; c |= S[4]; } 
+//	if (v & b[3]) { v >>= S[3]; c |= S[3]; }
+//	if (v & b[2]) { v >>= S[2]; c |= S[2]; }
+//	if (v & b[1]) { v >>= S[1]; c |= S[1]; }
+//	if (v & b[0]) { v >>= S[0]; c |= S[0]; }
+	// put values in for more speed...
+	if (v & 0xFFFF0000) { v >>= 0x10; c |= 0x10; } 
+	if (v & 0x0000FF00) { v >>= 0x08; c |= 0x08; }
+	if (v & 0x000000F0) { v >>= 0x04; c |= 0x04; }
+	if (v & 0x0000000C) { v >>= 0x02; c |= 0x02; }
+	if (v & 0x00000002) { v >>= 0x01; c |= 0x01; }
+	return c;
 }
 
 
 
-#else // not cplusplus
 
 
-typedef int bool;
-#define false	(1==0)
-#define true	(1==1)
-
-#ifndef swap
-#define swap(a,b) ((a == b) || ((a ^= b), (b ^= a), (a ^= b)))
-//#define swap(a,b) { int temp=a; a=b; b=temp;}
-#endif swap
-
-#endif // not cplusplus
 
 
 

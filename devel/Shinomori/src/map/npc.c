@@ -58,7 +58,7 @@ struct event_data {
 };
 static struct tm ev_tm_b;	// 時計イベント用
 
-static int npc_walktimer(int,unsigned int,int,int); // [Valaris]
+static int npc_walktimer(int tid,unsigned long tick,int id,int data); // [Valaris]
 static int npc_walktoxy_sub(struct npc_data *nd); // [Valaris]
 
 
@@ -75,10 +75,11 @@ int npc_event_doall_attached_sub(void *key,void *data,va_list ap)
 	nullpo_retr(0, ev=(struct event_data *)data);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, c=va_arg(ap,int *));
-
 	nad=va_arg(ap,struct npc_att_data *);
-	if( (p=strchr(p,':')) && p && strcasecmp(nad->buf,p)==0 ){
-		if(ev && ev->nd && ev->nd->u.scr.ref)
+
+	if( (p=strchr(p,':')) && p && strcasecmp(nad->buf,p)==0 )
+	if(ev && ev->nd && ev->nd->u.scr.ref)
+	{
 		run_script(ev->nd->u.scr.ref->script,ev->pos,nad->sd->bl.id,ev->nd->bl.id);
 		(*c)++;
 	}
@@ -88,13 +89,17 @@ int npc_event_doall_attached(const char *name, struct map_session_data *sd)
 {
 	int c=0;
 	struct npc_att_data nad;
+	if(name)
+	{	size_t len = strlen(name)+1;
+		if( len+2 > sizeof(nad.buf) ) len = sizeof(nad.buf)-2;
 
-	memset(&nad, 0, sizeof(struct npc_att_data));
-	memcpy(nad.buf,"::",2);
-	memcpy(nad.buf+2,name,sizeof(nad.buf)-2); // might read outside the string
-	nad.buf[sizeof(nad.buf)-1]=0;
-	nad.sd=sd;
-	strdb_foreach(ev_db, npc_event_doall_attached_sub, &c, &nad);
+		memset(&nad, 0, sizeof(struct npc_att_data));
+		memcpy(nad.buf,"::",2);
+		memcpy(nad.buf+2,name,len);
+		nad.buf[sizeof(nad.buf)-1]=0;//force EOS
+		nad.sd=sd;
+		strdb_foreach(ev_db, npc_event_doall_attached_sub, &c, &nad);
+	}
 	return c;   
 }
 // END ADDITION
@@ -122,7 +127,7 @@ int npc_enable_sub( struct block_list *bl, va_list ap )
 		if(sd->areanpc_id==nd->bl.id)
 			return 1;
 		sd->areanpc_id=nd->bl.id;
-		
+
 		sprintf(name,"%s::OnTouch", nd->name);
 		npc_event(sd,name,0);
 	}
@@ -131,10 +136,10 @@ int npc_enable_sub( struct block_list *bl, va_list ap )
 }
 int npc_enable(const char *name,int flag)
 {
-	struct npc_data *nd = (struct npc_data *)strdb_search(npcname_db,name);
+	struct npc_data *nd= (struct npc_data *) strdb_search(npcname_db,name);
 	if (nd==NULL)
 		return 0;
-	
+
 	if (flag&1) {	// 有効化
 		nd->flag&=~1;
 		clif_spawnnpc(nd);
@@ -162,7 +167,7 @@ int npc_enable(const char *name,int flag)
  */
 struct npc_data* npc_name2id(const char *name)
 {
-	return (struct npc_data *)strdb_search(npcname_db,name);
+	return (struct npc_data *) strdb_search(npcname_db,name);
 }
 /*==========================================
  * イベントキューのイベント処理
@@ -180,7 +185,7 @@ int npc_event_dequeue(struct map_session_data *sd)
 		memcpy(name,sd->eventqueue[0],50);
 		for(i=MAX_EVENTQUEUE-2;i>=0;i--)
 			memcpy(sd->eventqueue[i],sd->eventqueue[i+1],50);
-		add_timer(gettick()+100,npc_event_timer,sd->bl.id,(int)name);
+		add_timer(gettick()+100,npc_event_timer,sd->bl.id,(int)name);//!!todo!!
 	}
 	return 0;
 }
@@ -201,22 +206,40 @@ int npc_delete(struct npc_data *nd)
  * イベントの遅延実行
  *------------------------------------------
  */
-int npc_event_timer(int tid,unsigned int tick,int id,int data)
+int npc_event_timer(int tid,unsigned long tick,int id,int data)
 {
+	char *eventname = (char *)data;
+	struct event_data *ev = (struct event_data *)strdb_search(ev_db,eventname);
+	struct npc_data *nd;
 	struct map_session_data *sd=map_id2sd(id);
-	if (sd==NULL)
-		return 0;
-	
-	npc_event(sd,(const char *)data,0);
-	aFree((void*)data);
+	size_t i;
+
+	if((ev==NULL || (nd=ev->nd)==NULL))
+	{
+		if(battle_config.error_log)
+			ShowWarning("npc_event: event not found [%s]\n",eventname);
+	}	
+	else
+	{
+		for(i=0;i<MAX_EVENTTIMER;i++) {
+			if( nd->eventtimer[i]==tid ) {
+				nd->eventtimer[i]=-1;
+				npc_event(sd,eventname,0); // sd NULL check is within
+				break;
+			}
+		}
+		if(i==MAX_EVENTTIMER && battle_config.error_log)
+			ShowWarning("npc_event_timer: event timer not found [%s]!\n",eventname);
+	}
+
+	aFree(eventname);
 	return 0;
 }
 
 int npc_timer_event(const char *eventname)	// Added by RoVeRT
 {
-	struct event_data *ev = (struct event_data *)strdb_search(ev_db,eventname);
+	struct event_data *ev=(struct event_data *) strdb_search(ev_db,eventname);
 	struct npc_data *nd;
-//	int xs,ys;
 
 	if((ev==NULL || (nd=ev->nd)==NULL)){
 		ShowMessage("npc_event: event not found [%s]\n",eventname);
@@ -264,7 +287,7 @@ int npc_timer_sub(void *key,void *data,va_list ap)	// Added by RoVeRT
 	return 0;
 }
 
-int npc_timer(int tid,unsigned int tick,int id,int data)	// Added by RoVeRT
+int npc_timer(int tid,unsigned long tick,int id,int data)	// Added by RoVeRT
 {
 	strdb_foreach(npcname_db,npc_timer_sub);
 
@@ -281,7 +304,7 @@ int npc_event_export(void *key,void *data,va_list ap)
 	char *lname=(char *)key;
 	int pos=(int)data;
 	struct npc_data *nd=va_arg(ap,struct npc_data *);
-	
+
 	if ((lname[0]=='O' || lname[0]=='o')&&(lname[1]=='N' || lname[1]=='n')) {
 		struct event_data *ev;
 		char *buf;
@@ -327,7 +350,7 @@ int npc_event_doall_sub(void *key,void *data,va_list ap)
 		run_script(ev->nd->u.scr.ref->script,ev->pos,0,ev->nd->bl.id);
 		(*c)++;
 	}
-	
+
 	return 0;
 }
 int npc_event_doall(const char *name)
@@ -337,7 +360,7 @@ int npc_event_doall(const char *name)
 	memcpy(buf+2,name,sizeof(buf)-2);
 	buf[sizeof(buf)-1]=0;
 	strdb_foreach(ev_db,npc_event_doall_sub,&c,buf);
-	return c;	
+	return c;
 }
 
 int npc_event_do_sub(void *key,void *data,va_list ap)
@@ -362,7 +385,7 @@ int npc_event_do_sub(void *key,void *data,va_list ap)
 int npc_event_do(const char *name)
 {
 	int c=0;
-	
+
 	if (*name==':' && name[1]==':') {
 		return npc_event_doall(name+2);
 	}
@@ -375,18 +398,18 @@ int npc_event_do(const char *name)
  * 時計イベント実行
  *------------------------------------------
  */
-int npc_event_do_clock(int tid,unsigned int tick,int id,int data)
+int npc_event_do_clock(int tid,unsigned long tick,int id,int data)
 {
 	time_t timer;
 	struct tm *t;
 	char buf[64];
-	char *day="";
+        char *day="";
 	int c=0;
-	
+
 	time(&timer);
 	t=localtime(&timer);
-	
-	switch (t->tm_wday) {
+
+        switch (t->tm_wday) {
 	case 0: day = "Sun"; break;
 	case 1: day = "Mon"; break;
 	case 2: day = "Tue"; break;
@@ -395,7 +418,7 @@ int npc_event_do_clock(int tid,unsigned int tick,int id,int data)
 	case 5: day = "Fri"; break;
 	case 6: day = "Sat"; break;
 	}
-	
+
 	if (t->tm_min != ev_tm_b.tm_min ) {
 		sprintf(buf,"OnMinute%02d",t->tm_min);
 		c+=npc_event_doall(buf);
@@ -425,7 +448,7 @@ int npc_event_do_oninit(void)
 	ShowStatus("Event '"CL_WHITE"OnInit"CL_RESET"' executed with '"
 	CL_WHITE"%d"CL_RESET"' NPCs.\n",npc_event_doall("OnInit"));
 
-	add_timer_interval(gettick()+100, npc_event_do_clock, 0, 0, 1000);
+	add_timer_interval(gettick()+100, 1000, npc_event_do_clock, 0, 0);
 
 	return 0;
 }
@@ -442,8 +465,7 @@ int npc_addeventtimer(struct npc_data *nd,int tick,const char *name)
 	if(i<MAX_EVENTTIMER){
 		char *evname = (char *)aMalloc((strlen(name)+1)*sizeof(char));
 		memcpy(evname,name,strlen(name)+1);//EOS included
-		nd->eventtimer[i]=add_timer(gettick()+tick,
-			npc_event_timer,nd->bl.id,(int)evname);
+		nd->eventtimer[i]=add_timer(gettick()+tick,npc_event_timer,nd->bl.id,(int)evname);//!!todo!!
 	}else
 		ShowMessage("npc_addtimer: event timer is full !\n");
 
@@ -460,9 +482,9 @@ int npc_deleventtimer(struct npc_data *nd,const char *name)
 		if( nd->eventtimer[i]!=-1 && strcmp(evname, name)==0 ){
 			aFree(evname);
 			get_timer(nd->eventtimer[i])->data = 0;
-			delete_timer(nd->eventtimer[i],npc_event_timer);
-			nd->eventtimer[i]=-1;
-			break;
+				delete_timer(nd->eventtimer[i],npc_event_timer);
+				nd->eventtimer[i]=-1;
+				break;
 		}
 	}
 	return 0;
@@ -478,7 +500,7 @@ int npc_cleareventtimer(struct npc_data *nd)
 			evname = (char *)(get_timer(nd->eventtimer[i])->data);
 			aFree(evname);
 			get_timer(nd->eventtimer[i])->data = 0;
-			delete_timer(nd->eventtimer[i], npc_event_timer);
+			delete_timer(nd->eventtimer[i],npc_event_timer);
 			nd->eventtimer[i]=-1;
 		}
 
@@ -527,7 +549,7 @@ int npc_timerevent_import(void *key,void *data,va_list ap)
 	int pos=(int)data;
 	struct npc_data *nd=va_arg(ap,struct npc_data *);
 	int t=0,i=0;
-	
+
 	if(sscanf(lname,"OnTimer%d%n",&t,&i)==1 && lname[i]==':') {
 		// タイマーイベント
 		struct npc_timerevent_list *te=nd->u.scr.timer_event;
@@ -554,7 +576,7 @@ int npc_timerevent_import(void *key,void *data,va_list ap)
  * タイマーイベント実行
  *------------------------------------------
  */
-int npc_timerevent(int tid,unsigned int tick,int id,int data)
+int npc_timerevent(int tid,unsigned long tick,int id,int data)
 {
 	int next,t;
 	struct npc_data* nd=(struct npc_data *)map_id2bl(id);
@@ -566,7 +588,7 @@ int npc_timerevent(int tid,unsigned int tick,int id,int data)
 	nd->u.scr.timertick=tick;
 	te=nd->u.scr.timer_event+ nd->u.scr.nexttimer;
 	nd->u.scr.timerid = -1;
-	
+
 	t = nd->u.scr.timer+=data;
 	nd->u.scr.nexttimer++;
 	if( nd->u.scr.timeramount>nd->u.scr.nexttimer ){
@@ -590,7 +612,7 @@ int npc_timerevent_start(struct npc_data *nd, int rid)
 	n=nd->u.scr.timeramount;
 	if( nd->u.scr.nexttimer>=0 || n==0 )
 		return 0;
-	
+
 	for(j=0;j<n;j++){
 		if( nd->u.scr.timer_event[j].timer > nd->u.scr.timer )
 			break;
@@ -602,7 +624,7 @@ int npc_timerevent_start(struct npc_data *nd, int rid)
 	nd->u.scr.timertick=gettick();
 	if (rid >= 0) nd->u.scr.rid=rid;	// changed to: attaching to given rid by default [Shinomori]
 	// if rid is less than 0 leave it unchanged [celest]
-	
+
 	next = nd->u.scr.timer_event[j].timer - nd->u.scr.timer;
 	nd->u.scr.timerid = add_timer(nd->u.scr.timertick+next,npc_timerevent,nd->bl.id,next);
 	return 0;
@@ -667,7 +689,7 @@ int npc_settimerevent_tick(struct npc_data *nd,int newtimer)
  */
 int npc_event(struct map_session_data *sd,const char *eventname,int mob_kill)
 {
-	struct event_data *ev = (struct event_data *)strdb_search(ev_db,eventname);
+	struct event_data *ev=(struct event_data *) strdb_search(ev_db,eventname);
 	struct npc_data *nd;
 	int xs,ys;
 	char mobevent[100];
@@ -677,14 +699,14 @@ int npc_event(struct map_session_data *sd,const char *eventname,int mob_kill)
 	}
 
 	if(ev==NULL && eventname && strcmp(((eventname)+strlen(eventname)-9),"::OnTouch") == 0)
-		return 1;
+	return 1;
 
 	if(ev==NULL || (nd=ev->nd)==NULL){
 		if(mob_kill && (ev==NULL || (nd=ev->nd)==NULL)){
 			strcpy( mobevent, eventname);
 			strcat( mobevent, "::OnMyMobDead");
-			ev = (struct event_data *)strdb_search(ev_db,mobevent);
-		if (ev==NULL || (nd=ev->nd)==NULL) {
+			ev= (struct event_data *) strdb_search(ev_db,mobevent);
+	if (ev==NULL || (nd=ev->nd)==NULL) {
 				if (strncasecmp(eventname,"GM_MONSTER",10)!=0)
 					ShowMessage("npc_event: event not found [%s]\n",mobevent);
 				return 0;
@@ -729,7 +751,7 @@ int npc_event(struct map_session_data *sd,const char *eventname,int mob_kill)
 		npc_event_dequeue(sd);
 		return 0;
 	}
-	
+
 	sd->npc_id=nd->bl.id;
 	if(nd->u.scr.ref)
 	sd->npc_pos=run_script(nd->u.scr.ref->script, ev->pos, sd->bl.id, nd->bl.id);
@@ -754,7 +776,7 @@ int npc_command_sub(void *key,void *data,va_list ap)
 		if( (strcmp(command,temp)==0) && ev->nd->u.scr.ref)
 			run_script(ev->nd->u.scr.ref->script,ev->pos,0,ev->nd->bl.id);
 	}
-	
+
 	return 0;
 }
 
@@ -784,7 +806,7 @@ int npc_touch_areanpc(struct map_session_data *sd,int m,int x,int y)
 			f=0;
 			continue;
 		}
-	
+
 		switch(map[m].npc[i]->bl.subtype) {
 		case WARP:
 			xs=map[m].npc[i]->u.warp.xs;
@@ -850,7 +872,7 @@ int npc_checknear(struct map_session_data *sd,int id)
 			ShowMessage("no such npc : %d\n",id);
 		return 1;
 	}
-	
+
 	if (nd->class_<0)	// イベント系は常にOK
 		return 0;
 
@@ -1148,7 +1170,7 @@ static int calc_next_walk_step(struct npc_data *nd)
  * npc Walk processing
  *------------------------------------------
  */
-static int npc_walk(struct npc_data *nd,unsigned int tick,int data)
+static int npc_walk(struct npc_data *nd,unsigned long tick,int data)
 {
 	int moveblock;
 	int i,j;
@@ -1237,11 +1259,11 @@ static int npc_walk(struct npc_data *nd,unsigned int tick,int data)
 
 		nd->state.state=MS_WALK;
 		nd->walktimer=add_timer(tick+i,npc_walktimer,nd->bl.id,nd->walkpath.path_pos);
-		
+
 
 		if(nd->walkpath.path_pos>=nd->walkpath.path_len)
 			clif_fixnpcpos(nd);	// When npc stops, retransmission current of a position.
-		
+
 	}
 	return 0;
 }
@@ -1260,7 +1282,7 @@ int npc_changestate(struct npc_data *nd,int state,int type)
 
 	switch(state){
 	case MS_WALK:
-		if((i=calc_next_walk_step(nd))>0) {
+		if((i=calc_next_walk_step(nd))>0){
 			i = i>>2;
 			nd->walktimer=add_timer(gettick()+i,npc_walktimer,nd->bl.id,0);
 		}
@@ -1278,7 +1300,7 @@ int npc_changestate(struct npc_data *nd,int state,int type)
 	return 0;
 }
 
-static int npc_walktimer(int tid,unsigned int tick,int id,int data)
+static int npc_walktimer(int tid,unsigned long tick,int id,int data)
 {
 	struct npc_data *nd;
 
@@ -1289,7 +1311,7 @@ static int npc_walktimer(int tid,unsigned int tick,int id,int data)
 	if(nd->walktimer != tid){
 		return 0;
 	}
-	
+
 	nd->walktimer=-1;
 
 	if(nd->bl.prev == NULL)
@@ -1354,7 +1376,7 @@ int npc_stop_walking(struct npc_data *nd,int type)
 
 	if(nd->state.state == MS_WALK || nd->state.state == MS_IDLE) {
 		int dx=0,dy=0;
-		
+
 		nd->walkpath.path_len=0;
 		if(type&4){
 			dx=nd->to_x-nd->bl.x;
@@ -1616,7 +1638,7 @@ static int npc_parse_shop(char *w1,char *w2,char *w3,char *w4)
 	nd->opt1 = 0;
 	nd->opt2 = 0;
 	nd->opt3 = 0;
-	
+
 	nd = (struct npc_data *)aRealloc(nd,
 		sizeof(struct npc_data) + sizeof(nd->u.shop_item[0]) * pos);
 
@@ -1643,7 +1665,7 @@ int npc_convertlabel_db(void *key,void *data,va_list ap)
 	struct npc_label_list *lst;
 	int num;
 	char *p=strchr(lname,':');
-	
+
 	if(NULL==p)	return 0;
 	
 	nullpo_retr(0, ap);
@@ -1710,17 +1732,17 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 			for(i=strlen((char*)srcbuf)-1;i>=0 && isspace(srcbuf[i]);i--);
 		if (i>=0 && srcbuf[i]=='}')
 			break;
-			fgets((char*)line,1020,fp);
+		fgets((char *) line,1020,fp);
 		(*lines)++;
 		if (feof(fp))
 			break;
-			if (strlen((char*)srcbuf)+strlen((char*)line)+1>=srcsize) {
+		if (strlen((char *) srcbuf)+strlen((char *) line)+1>=srcsize) {
 			srcsize += 65536;
 			srcbuf = (unsigned char *)aRealloc(srcbuf, srcsize*sizeof(unsigned char));
 			memset(srcbuf + srcsize - 65536, 0, 65536*sizeof(unsigned char));
 			}//end while
 		if (srcbuf[0]!='{') {
-				if (strchr((char*)line,'{')) {
+			if (strchr((char *) line,'{')) {
 					strcpy((char*)srcbuf,strchr((char*)line,'{'));
 				startline=*lines;
 			}
@@ -1770,19 +1792,19 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	}else if( sscanf(w4,"%d,%d,%d",&class_,&xs,&ys)==3) {
 		// 接触型NPC
 		int i,j;
-		
+
 		if (xs>=0)xs=xs*2+1;
 		if (ys>=0)ys=ys*2+1;
-		
+
 		if (class_>=0) {
 			for(i=0;i<ys;i++)
-			for(j=0;j<xs;j++) {
-				if(map_getcell(m,x-xs/2+j,y-ys/2+i,CELL_CHKNOPASS))
-					continue;
-				map_setcell(m,x-xs/2+j,y-ys/2+i,CELL_SETNPC);
+				for(j=0;j<xs;j++) {
+					if(map_getcell(m,x-xs/2+j,y-ys/2+i,CELL_CHKNOPASS))
+						continue;
+					map_setcell(m,x-xs/2+j,y-ys/2+i,CELL_SETNPC);
+				}
 			}
-		}
-		
+
 		nd->u.scr.xs=xs;
 		nd->u.scr.ys=ys;
 	} else {	// クリック型NPC
@@ -1846,13 +1868,13 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	strdb_insert(npcname_db,nd->exname,nd);
 
 	//-----------------------------------------
-	// ラベルデータの準備	
+	// ラベルデータの準備
 	if(srcbuf){
 		// script本体がある場合の処理
 		// ラベルデータのコンバート
 		if(!dummy_npc)
 		strdb_foreach( script_get_label_db() ,npc_convertlabel_db,nd);
-	
+
 		// もう使わないのでバッファ解放
 		aFree(srcbuf);
 	}else{
@@ -1871,14 +1893,14 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	for(i=0;i<nd->u.scr.ref->label_list_num;i++){
 		char *lname=nd->u.scr.ref->label_list[i].name;
 		int pos=nd->u.scr.ref->label_list[i].pos;
-	
+
 		if ((lname[0]=='O' || lname[0]=='o')&&(lname[1]=='N' || lname[1]=='n')) {
 			struct event_data *ev;
 			char *buf;
 			// エクスポートされる
 			ev=(struct event_data *)aCalloc(1,sizeof(struct event_data));
 			
-			if (strlen(lname) > 24) {
+			if (strlen(lname)>24) {
 				ShowError("npc_parse_script: label name longer than 24 chars! '%s'\n", lname);
 				exit(1);
 			}else{
@@ -1980,9 +2002,9 @@ static int npc_parse_function(char *w1,char *w2,char *w3,char *w4,char *first_li
 
 	// もう使わないのでバッファ解放
 	aFree(srcbuf);
-	
+
 //	ShowMessage("function %s => %p\n",p,script);
-	
+
 	return 0;
 }
 
@@ -2200,19 +2222,19 @@ static int npc_parse_mapflag(char *w1,char *w2,char *w3,char *w4)
 	}
 	else if (strcasecmp(w3,"noicewall")==0) { // noicewall [Valaris]
 		map[m].flag.noicewall=1;
-	}	
+	}
 	else if (strcasecmp(w3,"snow")==0) { // snow [Valaris]
 		map[m].flag.snow=1;
-	}	
+	}
 	else if (strcasecmp(w3,"fog")==0) { // fog [Valaris]
 		map[m].flag.fog=1;
-	}	
+	}
 	else if (strcasecmp(w3,"sakura")==0) { // sakura [Valaris]
 		map[m].flag.sakura=1;
-	}	
+	}
 	else if (strcasecmp(w3,"leaves")==0) { // leaves [Valaris]
 		map[m].flag.leaves=1;
-	}	
+	}
 	else if (strcasecmp(w3,"rain")==0) { // rain [Valaris]
 		map[m].flag.rain=1;
 	}
@@ -2222,7 +2244,7 @@ static int npc_parse_mapflag(char *w1,char *w2,char *w3,char *w4)
 	else if (strcasecmp(w3,"nogo")==0) { // celest
 		map[m].flag.nogo=1;
 	}
-	
+
 	return 0;
 }
 
@@ -2231,7 +2253,7 @@ static int npc_read_indoors(void)
 	char *buf,*p;
 	int s, m;
 
-	buf = (char *)grfio_reads("data\\indoorrswtable.txt",&s);
+	buf=(char *) grfio_reads("data\\indoorrswtable.txt",&s);
 
 	if(buf==NULL)
 		return -1;
@@ -2247,7 +2269,7 @@ static int npc_read_indoors(void)
 			if ((m = map_mapname2mapid(map_name)) >= 0)
 				map[m].flag.indoors=1;
 		}
-		
+
 		p=strchr(p, '\n');
 		if(!p) break;
 		p++;
@@ -2337,7 +2359,7 @@ int do_final_npc(void)
 }
 
 
-void ev_release(struct dbn *db, int which) 
+void ev_release(struct dbn *db, int which)
 {
     if (which & 0x1)
         aFree(db->key);
@@ -2413,13 +2435,13 @@ int do_init_npc(void)
 			}
 			// マップの存在確認
 			if( strcmp(w1,"-")!=0 && strcasecmp(w1,"function")!=0 ){
-				sscanf(w1,"%[^,]",mapname);
-				m = map_mapname2mapid(mapname);
-				if (strlen(mapname)>16 || m<0) {
-					// "mapname" is not assigned to this server
+			sscanf(w1,"%[^,]",mapname);
+			m = map_mapname2mapid(mapname);
+			if (strlen(mapname)>16 || m<0) {
+				// "mapname" is not assigned to this server
 						m = -1;
 //						continue;
-				}
+			}
 			}
 			else m=0;
 			if (strcasecmp(w2,"warp")==0 && count > 3 && m>=0) {
@@ -2470,13 +2492,13 @@ int do_init_npc(void)
 			npc_npcclear(marker->nd);
 			aFree(marker->nd);
 			aFree(marker);
+			}
 		}
-	}
 	
-	ShowInfo("\rDone loading '"CL_WHITE"%d"CL_RESET"' NPCs:%30s\n\t-'"
-		CL_WHITE"%d"CL_RESET"' Warps\n\t-'"
-		CL_WHITE"%d"CL_RESET"' Shops\n\t-'"
-		CL_WHITE"%d"CL_RESET"' Scripts\n\t-'"
+	ShowStatus("\rDone loading '"CL_WHITE"%d"CL_RESET"' NPCs:%30s\n\t\t-'"
+		CL_WHITE"%d"CL_RESET"' Warps\n\t\t-'"
+		CL_WHITE"%d"CL_RESET"' Shops\n\t\t-'"
+		CL_WHITE"%d"CL_RESET"' Scripts\n\t\t-'"
 		CL_WHITE"%d"CL_RESET"' Mobs\n",
 		npc_id-START_NPC_NUM,"",npc_warp,npc_shop,npc_script,npc_mob);
 

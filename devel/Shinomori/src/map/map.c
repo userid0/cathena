@@ -98,7 +98,7 @@ int read_gm_interval = 600000;
 
 char char_db[32] = "char";
 
-static int online_timer(int,unsigned int,int,int);
+int online_timer(int tid,unsigned long tick,int id,int data);
 
 int CHECK_INTERVAL = 3600000; // [Valaris]
 int check_online_timer=0; // [Valaris]
@@ -190,7 +190,6 @@ int map_freeblock( void *bl )
 {
 	if(block_free_lock==0){
 		aFree(bl);
-		bl = NULL;
 	}
 	else{
 		if( block_free_count>=block_free_max ) {
@@ -947,7 +946,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 	if(bl_list_count>=BL_LIST_MAX) {
 		if(battle_config.error_log)
-			printf("map_foreachinarea: *WARNING* block count too many!\n");
+			ShowWarning("map_foreachinarea: *WARNING* block count too many!\n");
 	}
 
 	va_start(ap,type);
@@ -1070,7 +1069,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 	if(bl_list_count>=BL_LIST_MAX) {
 		if(battle_config.error_log)
-			printf("map_foreachinarea: *WARNING* block count too many!\n");
+			ShowWarning("map_foreachinarea: *WARNING* block count too many!\n");
 	}
 
 	va_start(ap,type);
@@ -1207,7 +1206,7 @@ void map_foreachobject(int (*func)(struct block_list*,va_list),int type,...) {
  * map.h?で#defineしてある
  *------------------------------------------
  */
-int map_clearflooritem_timer(int tid,unsigned int tick,int id,int data) {
+int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data) {
 	struct flooritem_data *fitem=NULL;
 
 	fitem = (struct flooritem_data *)objects[id];
@@ -1429,9 +1428,10 @@ int map_quit(struct map_session_data *sd) {
 
 	if (sd->state.event_disconnect) {
 		struct npc_data *npc;
-		if ( (npc = npc_name2id("PCLogoutEvent")) && npc->u.scr.ref) {
+		if ((npc = npc_name2id(script_config.logout_event_name))) {
+			if(npc && npc->u.scr.ref)
 			run_script(npc->u.scr.ref->script,0,sd->bl.id,npc->bl.id); // PCLogoutNPC
-			ShowStatus("Event '"CL_WHITE"PCLogoutEvent"CL_RESET"' executed.\n");
+			ShowStatus("Event '"CL_WHITE"%s"CL_RESET"' executed.\n", script_config.logout_event_name);
 		}
 	}
 
@@ -1469,25 +1469,24 @@ int map_quit(struct map_session_data *sd) {
 	if(sd->sc_data && sd->sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中の終了はHPを100に
 		sd->status.hp = 100;
 
-	status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
-	skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
-	skill_cleartimerskill(&sd->bl);
-
 	// check if we've been authenticated [celest]
 	if (sd->state.auth) {
 		pc_stop_walking(sd,0);
 		pc_stopattack(sd);
 		pc_delinvincibletimer(sd);
 	}
+
+	status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
+	skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
+	skill_cleartimerskill(&sd->bl);
+
+	if( sd->state.auth )
+		status_calc_pc(sd,4);
+
 	pc_delspiritball(sd,sd->spiritball,1);
 	skill_gangsterparadise(sd,0);
 
-	if (sd->state.auth)
-		status_calc_pc(sd,4);
-//	skill_clear_unitgroup(&sd->bl);	// [Sara-chan]
-
 	clif_clearchar_area(&sd->bl,2);
-
 	if(sd->status.pet_id && sd->pd) {
 		pet_lootitem_drop(sd->pd,sd);
 		pet_remove_map(sd);
@@ -1500,7 +1499,6 @@ int map_quit(struct map_session_data *sd) {
 		else
 			intif_save_petdata(sd->status.account_id,&sd->pet);
 	}
-
 	if(pc_isdead(sd))
 		pc_setrestartvalue(sd,2);
 
@@ -1527,7 +1525,7 @@ int map_quit(struct map_session_data *sd) {
 			aFree(p);
 		}
 	}
-	
+
 	strdb_erase(nick_db,sd->status.name);
 	numdb_erase(charid_db,sd->status.char_id);
 	numdb_erase(id_db,sd->bl.id);
@@ -1542,6 +1540,7 @@ int map_quit(struct map_session_data *sd) {
 			aFree(p);
 		}
 	} 
+
 	return 0;
 }
 
@@ -1567,10 +1566,10 @@ struct map_session_data * map_id2sd(int id) {
 	int i;
 	struct map_session_data *sd=NULL;
 
+	if(id) // skip if zero id's are searched
 	for(i = 0; i < fd_max; i++)
 		if (session[i] && (sd = (struct map_session_data*)session[i]->session_data) && sd->bl.id == id)
 			return sd;
-
 	return NULL;
 }
 
@@ -1909,7 +1908,7 @@ void map_setcell(int m,int x,int y,int cell)
 	else
 	{	// set the lower 3 bit
 		map[m].gat[j] = (map[m].gat[j] & ~0x07) | (cell & 0x07);
-	}
+}
 }
 void map_resetcell(int m,int x,int y,int cell)
 {
@@ -2026,16 +2025,16 @@ struct map_cache_info {
 	size_t compressed_len; // zilb通せるようにする為の予約
 }; // 56 byte
 
-	struct map_cache_head {
+struct map_cache_head {
 	size_t sizeof_header;
 	size_t sizeof_map;
-		// 上の２つ改変不可
+    // 上の２つ改変不可
 	size_t nmaps; // マップの個数
 	long filesize;
 };
 
 struct map_cache {
-	struct map_cache_head head;
+        struct map_cache_head head;
 	struct map_cache_info *map;
 	FILE *fp;
 	int dirty;
@@ -2075,7 +2074,7 @@ static int map_cache_open(char *fn)
 	map_cache.fp = savefopen(fn,"wb");
 	if(map_cache.fp) {
 		memset(&map_cache.head,0,sizeof(struct map_cache_head));
-		map_cache.map   = (struct map_cache_info *)aCalloc(sizeof(struct map_cache_info),MAX_MAP_CACHE);
+		map_cache.map   = (struct map_cache_info *) aCalloc(sizeof(struct map_cache_info),MAX_MAP_CACHE);
 		map_cache.head.nmaps         = MAX_MAP_CACHE;
 		map_cache.head.sizeof_header = sizeof(struct map_cache_head);
 		map_cache.head.sizeof_map    = sizeof(struct map_cache_info);
@@ -2414,10 +2413,10 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 			if(wh!=NO_WATER && pp.type==0){
 				// ﾉ倏揮ｩﾆ
 				map[m].gat[x+y*map[m].xs]=(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0;
-			} else {
+				} else {
 				map[m].gat[x+y*map[m].xs]=(pp.type)&0x07;
+				}
 			}
-		}
 		map_cache_write(&map[m]);
 		aFree(gat);
 	}
@@ -2929,7 +2928,7 @@ int log_sql_init(void){
 	return 0;
 }
 
-int online_timer(int tid,unsigned int tick,int id,int data)
+int online_timer(int tid,unsigned long tick,int id,int data)
 {
 	if(check_online_timer != tid)
 		return 0;
@@ -2971,7 +2970,7 @@ void char_online_check(void)
 //Used to output 'I'm Alive' every few seconds
 //Intended to let frontends know if the app froze
 //-----------------------------------------------------
-int imalive_timer(int tid, unsigned int tick, int id, int data){
+int imalive_timer(int tid, unsigned long tick, int id, int data){
 	ShowMessage("I'm Alive\n");
 	return 0;
 }
@@ -2980,7 +2979,7 @@ int imalive_timer(int tid, unsigned int tick, int id, int data){
 //Flush stdout
 //stdout buffer needs flushed to be seen in GUI
 //-----------------------------------------------------
-int flush_timer(int tid, unsigned int tick, int id, int data){
+int flush_timer(int tid, unsigned long tick, int id, int data){
 	fflush(stdout);
 	return 0;
 }
@@ -3042,6 +3041,7 @@ static int cleanup_sub(struct block_list *bl, va_list ap) {
 void do_final(void) {
     int map_id, i;
 	ShowStatus("Terminating...\n");
+	///////////////////////////////////////////////////////////////////////////
 
     for (map_id = 0; map_id < map_num;map_id++)
 		if(map[map_id].m)
@@ -3053,14 +3053,8 @@ void do_final(void) {
 
     chrif_flush_fifo();
 
-    for (i = 0; i < fd_max; i++)
-        delete_session(i);
-
-#if 0
     map_removenpc();
 
-//    do_final_timer(); (we used timer_final() instead)
-    timer_final();
 //    numdb_final(id_db, id_db_final);
     strdb_final(map_db, map_db_final);
     strdb_final(nick_db, nick_db_final);
@@ -3072,24 +3066,29 @@ void do_final(void) {
 	do_final_storage();
 	do_final_guild();
 	do_final_pet();
-/*
+
 	for(i=0;i<map_num;i++){
 		if(map[i].gat) {
 			aFree(map[i].gat);
-			map[i].gat=NULL; //isn't it NULL already o_O?
+			map[i].gat=NULL;
 		}
 		if(map[i].block) aFree(map[i].block);
 		if(map[i].block_mob) aFree(map[i].block_mob);
 		if(map[i].block_count) aFree(map[i].block_count);
 		if(map[i].block_mob_count) aFree(map[i].block_mob_count);
 	}
-*/
-#endif
-
 #ifndef TXT_ONLY
     map_sql_close();
 #endif /* not TXT_ONLY */
-	ShowStatus("Successfully terminated.\n");
+
+	///////////////////////////////////////////////////////////////////////////
+	// delete sessions
+	for(i = 0; i < fd_max; i++)
+		if(session[i] != NULL) 
+			session_Delete(i);
+	// clear externaly stored fd's
+	//char_fd = -1;
+	///////////////////////////////////////////////////////////////////////////
 }
 
 /*======================================================
@@ -3147,8 +3146,6 @@ int do_init(int argc, char *argv[]) {
 	GC_enable_incremental();
 #endif
 
-//	chrif_connected = 0;
-
 	char *INTER_CONF_NAME="conf/inter_athena.conf";
 	char *LOG_CONF_NAME="conf/log_athena.conf";
 	char *MAP_CONF_NAME = "conf/map_athena.conf";
@@ -3199,15 +3196,15 @@ int do_init(int argc, char *argv[]) {
 		ShowMessage("\nUnable to automatically determine the IP address.\n");
 		ShowMessage("please edit the map_athena.conf file and set it to correct values.\n");
 		ShowMessage("(127.0.0.1 is valid if you have no network interface)\n");    
-	}
+        }
 	else if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK || chrif_getip() == INADDR_LOOPBACK) {
-		// The map server should know what IP address it is running on
-		//   - MouseJstr
+          // The map server should know what IP address it is running on
+          //   - MouseJstr
 		unsigned long localaddr = addr_[0]; // host order network address
-		if (naddr_ != 1) 
+          if (naddr_ != 1)
 			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n", 
 								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
-		else
+          else
 			ShowMessage("Defaulting to %d.%d.%d.%d as our IP address\n", 
 								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
 
@@ -3217,7 +3214,7 @@ int do_init(int argc, char *argv[]) {
 			chrif_setip(localaddr);
 		if (localaddr&0xFFFF0000 == 0xC0A80000)//192.168.x.x
 			ShowMessage("\nPrivate Network detected.. \nedit lan_support.conf and map_athena.conf\n\n");
-	}
+        }
 	if (SHOW_DEBUG_MSG) ShowNotice("Server running in '"CL_WHITE"Debug Mode"CL_RESET"'.\n");
 	battle_config_read(BATTLE_CONF_FILENAME);
 	msg_config_read(MSG_CONF_NAME);
@@ -3258,7 +3255,7 @@ int do_init(int argc, char *argv[]) {
 
 	//Added by Mugendai for GUI support
 	if (flush_on)
-		add_timer_interval(gettick()+10, flush_timer,0,0,flush_time);
+		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
 
 #ifndef TXT_ONLY // online status timer, checks every hour [Valaris]
 	add_timer_func_list(online_timer, "online_timer");
@@ -3303,7 +3300,7 @@ int do_init(int argc, char *argv[]) {
 
 	//Added for Mugendais I'm Alive mod
 	if (imalive_on)
-		add_timer_interval(gettick()+10, imalive_timer,0,0,imalive_time*1000);
+		add_timer_interval(gettick()+10,imalive_time*1000, imalive_timer,0,0);
 
 	ShowStatus("Server is '"CL_GREEN"ready"CL_RESET"' and listening on port '"CL_WHITE"%d"CL_RESET"'.\n\n", map_port);
 

@@ -35,7 +35,7 @@ void dump(unsigned char *buffer, int num)
 }
 
 
-#ifdef _WIN32
+#ifdef WIN32
 
 // replace with strrchr
 char *rindex(char *str, char c)
@@ -192,7 +192,7 @@ int remove_control_chars(char *str) {
 	int change = 0;
 	if(str)
 	while( *str ) {
-		if ( *str < 32) {
+		if ( *str&0x7f < 32) {
 			*str = '_';
 			change = 1;
 		}
@@ -244,7 +244,7 @@ int e_mail_check(char *email) {
 
 
 
-#ifdef _WIN32
+#ifdef WIN32
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>

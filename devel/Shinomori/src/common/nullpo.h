@@ -16,7 +16,7 @@
 # endif
 #endif
 
-#ifdef _WIN32
+#ifdef WIN32
 #define __attribute__(x)	/* nothing */
 #endif
 
@@ -111,7 +111,6 @@
 #else
 
 /* ‚»‚Ì‘¼‚Ìê‡EEE orz */
-
 #endif
 
 #else /* NULLPO_CHECK */

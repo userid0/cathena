@@ -161,6 +161,7 @@ struct map_session_data {
 		unsigned event_death : 1;
 		unsigned event_kill : 1;
 		unsigned event_disconnect : 1;
+		unsigned event_onconnect : 1;
 	} state;
 	struct {
 		unsigned killer : 1;
@@ -173,7 +174,6 @@ struct map_session_data {
 		unsigned no_weapon_damage : 1;
 		unsigned no_gemstone : 1;
 		unsigned infinite_endure : 1;
-		unsigned infinite_autospell : 1;
 	} special_state;
 	int char_id;
 	int login_id1;
@@ -221,7 +221,7 @@ struct map_session_data {
 	char *npc_stackbuf;
 	char npc_str[256];
 	unsigned int chatID;
-	unsigned long idletime;
+	time_t idletime;
 
 	struct{
 		char name[24];
@@ -232,9 +232,9 @@ struct map_session_data {
 	int attacktarget;
 	short attacktarget_lv;
 	unsigned int attackabletime;
-
-        int followtimer; // [MouseJstr]
-        int followtarget;
+	
+	int followtimer; // [MouseJstr]
+	int followtarget;
 
 	short attackrange;
 	short attackrange_;
@@ -253,6 +253,7 @@ struct map_session_data {
 	struct skill_unit_group skillunit[MAX_SKILLUNITGROUP];
 	struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
 	struct skill_timerskill skilltimerskill[MAX_SKILLTIMERSKILL];
+	char blockskill[MAX_SKILL];	// [celest]	
 	unsigned short timerskill_count; // [celest]
 	int cloneskill_id;
 	int cloneskill_lv;
@@ -341,6 +342,24 @@ struct map_session_data {
 	short break_weapon_rate;
 	short break_armor_rate;
 	short add_steal_rate;
+	//--- 02/15's new card effects [celest]
+	int crit_atk_rate;
+	int critaddrace[12];
+	short no_regen;
+	int addeff3[10];
+	short autospell2_id,autospell2_lv,autospell2_rate,autospell2_type;
+	int skillatk[2];
+	unsigned short unstripable_equip;
+	short add_damage_classid2[10],add_damage_class_count2;
+	int add_damage_classrate2[10];
+	short sp_gain_value, hp_gain_value;
+	short sp_drain_type;
+	short ignore_def_mob, ignore_def_mob_;
+	int hp_loss_tick, hp_loss_rate;
+	short hp_loss_value, hp_loss_type;
+	int addrace2[6],addrace2_[6];
+	int subsize[3];
+	short unequip_damage;
 
 	short spiritball;
 	short spiritball_old;
@@ -405,18 +424,7 @@ struct map_session_data {
 	int eventtimer[MAX_EVENTTIMER];
 	unsigned short eventcount; // [celest]
 
-//	int last_skillid;
-//	int last_skilllv;		// Added by RoVeRT
-	
 	unsigned short change_level;	// [celest]
-
-	// ============================================
-	// ADDITION Qamera death/disconnect/connect event mod
-	unsigned event_death : 1;
-	unsigned event_disconnect : 1;
-	unsigned event_onconnect : 1;
-	// END ADDITION
-	// ============================================ 
 	int autoloot : 1; //by Upa-Kun
 
 #ifndef TXT_ONLY
@@ -495,6 +503,7 @@ struct npc_data {
 	int eventtimer[MAX_EVENTTIMER];
 	short arenaflag;
 };
+
 struct mob_data {
 	struct block_list bl;
 	short n;
@@ -754,7 +763,12 @@ enum {
 
 	SP_RESTART_FULL_RECORVER=2000,SP_NO_CASTCANCEL,SP_NO_SIZEFIX,SP_NO_MAGIC_DAMAGE,SP_NO_WEAPON_DAMAGE,SP_NO_GEMSTONE, // 2000-2005
 	SP_NO_CASTCANCEL2,SP_INFINITE_ENDURE,SP_UNBREAKABLE_WEAPON,SP_UNBREAKABLE_ARMOR, SP_UNBREAKABLE_HELM, // 2006-2010
-	SP_UNBREAKABLE_SHIELD, SP_LONG_ATK_RATE // 2011-2012
+	SP_UNBREAKABLE_SHIELD, SP_LONG_ATK_RATE, // 2011-2012
+
+	SP_CRIT_ATK_RATE, SP_CRITICAL_ADDRACE, SP_NO_REGEN, SP_ADDEFF_WHENHIT, SP_AUTOSPELL_WHENHIT, // 2013-2017
+	SP_SKILL_ATK, SP_UNSTRIPABLE, SP_ADD_DAMAGE_BY_CLASS, // 2018-2020
+	SP_SP_GAIN_VALUE, SP_IGNORE_DEF_MOB, SP_HP_LOSS_RATE, SP_ADDRACE2, SP_HP_GAIN_VALUE, // 2021-2025
+	SP_SUBSIZE, SP_DAMAGE_WHEN_UNEQUIP	// 2026
 };
 
 enum {
@@ -763,7 +777,7 @@ enum {
 
 /*
  * map_getcell()ªÇŞÅéÄªµªìªë«Õ«é«°
-*/
+ */
 typedef enum { 
 	CELL_CHKWALL=1,		// Ûú(«»«ë«¿«¤«×1)
 	CELL_CHKWATER=3,	// â©íŞ(«»«ë«¿«¤«×3)
@@ -804,7 +818,7 @@ void map_setcell(int,int,int,int);
 void map_resetcell(int,int,int,int);
 
 extern int map_read_flag; // 0: grf«Õ«¡«¤«ë 1: «­«ã«Ã«·«å 2: «­«ã«Ã«·«å(?õê)
-enum { 
+enum {
 	READ_FROM_GAT, READ_FROM_AFM,
 	READ_FROM_BITMAP, CREATE_BITMAP,
 	READ_FROM_BITMAP_COMPRESSED, CREATE_BITMAP_COMPRESSED
@@ -847,7 +861,7 @@ int map_quit(struct map_session_data *);
 int map_addnpc(int,struct npc_data *);
 
 // °ƒAƒCƒeƒ€ŠÖ˜A
-int map_clearflooritem_timer(int,unsigned int,int,int);
+int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data);
 #define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
 int map_addflooritem(struct item *,int,int,int,int,struct map_session_data *,struct map_session_data *,struct map_session_data *,int);
 int map_searchrandfreecell(int,int,int,int);

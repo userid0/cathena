@@ -7,9 +7,6 @@
 
 #define BASE_TICK 5
 
-#define TIMER_ONCE_AUTODEL 1
-#define TIMER_INTERVAL 2
-//#define TIMER_REMOVE_HEAP 16
 
 #define DIFF_TICK(a,b) (((int)(a)-(int)(b)))
 
@@ -17,32 +14,46 @@
 
 struct TimerData {
 	unsigned long	tick;
-	int (*func)(int,unsigned int,int,int);
+	unsigned long	interval;
+
+	struct{
+		bool		pt : 1;
+	}				type;
+
+	int (*func)(int,unsigned long,int,int);
 	int				id;
 	int				data;
-	int				type;
-	unsigned long	interval;
-//	size_t			heap_pos; // not used and maybe useless, heap positiona are changing
+
 };
 
 // Function prototype declaration
 
-unsigned long gettick_nocache(void);
-unsigned long gettick(void);
+//unsigned long gettick_nocache(void);
+//unsigned long gettick(void);
+// just trying without tick_cache
+extern inline unsigned long gettick_nocache(void)	{return GetTickCount();}
+extern inline unsigned long gettick(void)			{return GetTickCount();}
 
-int add_timer(unsigned long,int (*)(int,unsigned int,int,int),int,int);
-int add_timer_interval(unsigned long,int (*)(int,unsigned int,int,int),int,int,int);
-int delete_timer(size_t,int (*)(int,unsigned int,int,int));
+
+int add_timer_p(unsigned long tick, int (*func)(int,unsigned long,int,int),int id, void* pdata);
+int add_timer(unsigned long tick, int (*func)(int,unsigned long,int,int),int id, int data);
+int add_timer_interval(unsigned long tick,unsigned long interval,int (*func)(int,unsigned long,int,int),int id,int data);
+int add_timer_interval_p(unsigned long tick,unsigned long interval, int (*func)(int,unsigned long,int,int),int id,void* pdata);
+int delete_timer(size_t tid, int (*func)(int,unsigned long,int,int));
 
 int addtick_timer(size_t tid,unsigned long tick);
 struct TimerData *get_timer(size_t tid);
 
 int do_timer(unsigned long tick);
 
-int add_timer_func_list(int (*)(int,unsigned int,int,int),char*);
-void do_final_timer(void);
-char* search_timer_func_list(int (*)(int,unsigned int,int,int));
 
-extern void timer_final();
+
+int add_timer_func_list(int (*)(int,unsigned long,int,int),char*);
+void do_final_timer(void);
+char* search_timer_func_list(int (*)(int,unsigned long,int,int));
+
+
+void timer_init(void);
+void timer_final(void);
 
 #endif	// _TIMER_H_

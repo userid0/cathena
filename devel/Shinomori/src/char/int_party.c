@@ -184,7 +184,8 @@ int party_check_exp_share(struct party *p) {
 }
 
 // パーティが空かどうかチェック
-int party_check_empty(struct party *p) {
+int party_check_empty(struct party *p) 
+{
 	int i;
 
 //	ShowMessage("party check empty %08X\n", (int)p);
@@ -194,7 +195,7 @@ int party_check_empty(struct party *p) {
 			return 0;
 		}
 	}
-		// 誰もいないので解散
+	// 誰もいないので解散
 	mapif_party_broken(p->party_id, 0);
 	numdb_erase(party_db, p->party_id);
 	aFree(p);
@@ -503,7 +504,6 @@ int mapif_parse_PartyLeave(int fd, int party_id, int account_id) {
 			}
 		}
 	}
-
 	return 0;
 }
 

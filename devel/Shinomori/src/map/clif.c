@@ -515,7 +515,7 @@ int clif_authfail_fd(int fd, int type) {
 	WFIFOL(fd,2) = type;
 	WFIFOSET(fd,packet_len_table[0x81]);
 
-	clif_setwaitclose(fd);
+	session_SetWaitClose(fd, 5000);
 
 	return 0;
 }
@@ -629,7 +629,9 @@ int clif_clearchar(struct block_list *bl, int type) {
 	return 0;
 }
 
-static int clif_clearchar_delay_sub(int tid, unsigned int tick, int id, int data) {
+
+static int clif_clearchar_delay_sub(int tid, unsigned long tick, int id, int data) 
+{
 	struct block_list *bl = (struct block_list *)id;
 
 	clif_clearchar(bl,data);
@@ -638,12 +640,13 @@ static int clif_clearchar_delay_sub(int tid, unsigned int tick, int id, int data
 	return 0;
 }
 
-int clif_clearchar_delay(unsigned int tick, struct block_list *bl, int type) {
+int clif_clearchar_delay(unsigned int tick, struct block_list *bl, int type) 
+{
 	struct block_list *tmpbl;
 
 	tmpbl = (struct block_list*)aMalloc( sizeof(struct block_list) );
 	memcpy(tmpbl, bl, sizeof(struct block_list));
-	add_timer(tick, clif_clearchar_delay_sub, (int)tmpbl, type);
+	add_timer(tick, clif_clearchar_delay_sub, (int)tmpbl, type); // !!todo!!
 
 	return 0;
 }
@@ -1490,42 +1493,6 @@ int clif_movechar(struct map_session_data *sd) {
 		clif_changelook(&sd->bl, LOOK_CLOTHES_COLOR, sd->status.clothes_color);
 
 	return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_quitsave(int fd,struct map_session_data *sd)
-{
-	map_quit(sd);
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static int clif_waitclose(int tid, unsigned int tick, int id, int data) {
-	if (session[id])
-		session[id]->eof = 1;
-
-	close(id);
-	return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_setwaitclose(int fd) {
-	struct map_session_data *sd;
-
-	// if player is not already in the game (double connection probably)
-	if ((sd = (struct map_session_data*)session[fd]->session_data) == NULL) {
-		// limited timer, just to send information.
-		add_timer(gettick() + 1000, clif_waitclose, fd, 0);
-	} else
-		add_timer(gettick() + 5000, clif_waitclose, fd, 0);
 }
 
 /*==========================================
@@ -7116,8 +7083,6 @@ int clif_GM_kickack(struct map_session_data *sd, int id)
 	return 0;
 }
 
-void clif_parse_QuitGame(int fd,struct map_session_data *sd);
-
 int clif_GM_kick(struct map_session_data *sd,struct map_session_data *tsd,int type)
 {
 	nullpo_retr(0, tsd);
@@ -7128,7 +7093,7 @@ int clif_GM_kick(struct map_session_data *sd,struct map_session_data *tsd,int ty
 	WFIFOW(tsd->fd,0) = 0x18b;
 	WFIFOW(tsd->fd,2) = 0;
 	WFIFOSET(tsd->fd,packet_len_table[0x18b]);
-	clif_setwaitclose(tsd->fd);
+	session_SetWaitClose(tsd->fd, 5000);
 
 	return 0;
 }
@@ -7145,8 +7110,8 @@ int clif_timedout(struct map_session_data *sd)
 	ShowInfo("%sCharacter with Account ID '"CL_WHITE"%d"CL_RESET"' timed out.\n", (pc_isGM(sd))?"GM ":"", sd->bl.id);
 	map_quit(sd);
 	clif_authfail_fd(sd->fd,3); // Even if player is not on we still send anyway
-	clif_setwaitclose(sd->fd); // Set session to EOF
 
+	session_Remove(sd->fd); // Set session to EOF
 	return 0;
 }
 
@@ -7331,7 +7296,7 @@ void clif_parse_WantToConnection(int fd, struct map_session_data *sd)
 		clif_authfail_fd(fd, 8); // still recognizes last connection
 		clif_authfail_fd(old_sd->fd, 2); // same id
 		if (sd != 0)
-			clif_setwaitclose(sd->fd); // Set session to EOF
+			session_Remove(fd); // Set session to EOF
 	} else {
 		sd = (struct map_session_data *) (session[fd]->session_data = aCalloc(1,sizeof(struct map_session_data)));
 		sd->fd = fd;
@@ -7559,9 +7524,9 @@ void clif_parse_LoadEndAck(int fd,struct map_session_data *sd)
 
 	// ============================================
 	// ADDITION Qamera death/disconnect/connect event mod
-	if(!sd->event_onconnect){
+	if(!sd->state.event_onconnect){
 		npc_event_doall_attached("OnConnect",sd);
-		sd->event_onconnect=1;
+		sd->state.event_onconnect=1;
 	}
 	// END ADDITION
 	// ============================================ 
@@ -7727,7 +7692,6 @@ void clif_parse_QuitGame(int fd, struct map_session_data *sd) {
 	struct skill_unit_group* sg;
 
 	nullpo_retv(sd);
-
 	WFIFOW(fd,0) = 0x18b;
 	if ((!pc_isdead(sd) && (sd->opt1 || (sd->opt2 && !(night_flag == 1 && sd->opt2 == STATE_BLIND)))) ||
 	    sd->skilltimer != -1 ||
@@ -7739,14 +7703,13 @@ void clif_parse_QuitGame(int fd, struct map_session_data *sd) {
 	}
 
 	/*	Rovert's prevent logout option fixed [Valaris]	*/
-	if ((battle_config.prevent_logout && (gettick() - sd->canlog_tick) >= 10000) || (!battle_config.prevent_logout)) {
-		clif_setwaitclose(fd);
+	if ( ((gettick() - sd->canlog_tick) >= 10000) || (!battle_config.prevent_logout)) {
+		session_SetWaitClose(fd, 1000);
 		WFIFOW(fd,2)=0;
 	} else {
 		WFIFOW(fd,2)=1;
 	}
 	WFIFOSET(fd,packet_len_table[0x18b]);
-
 }
 
 /*==========================================
@@ -7920,11 +7883,9 @@ void clif_parse_GlobalMessage(int fd, struct map_session_data *sd) { // S 008c <
 		// if we ban people
 		if (battle_config.ban_spoof_namer > 0) {
 			chrif_char_ask_name(-1, sd->status.name, 2, 0, 0, 0, 0, battle_config.ban_spoof_namer, 0); // type: 2 - ban (year, month, day, hour, minute, second)
-			clif_setwaitclose(fd); // forced to disconnect because of the hack
-
+			session_SetWaitClose(fd, 1000); // forced to disconnect because of the hack
 			if(message) aFree(message);
 			if(buf) aFree(buf);
-
 			return;
 		}
 		// but for the hacker, we display on his screen (he see/look no difference).
@@ -8272,12 +8233,12 @@ void clif_parse_Restart(int fd, struct map_session_data *sd) {
 			return;
 
 		/*	Rovert's Prevent logout option - Fixed [Valaris]	*/
-		if ((battle_config.prevent_logout && (gettick() - sd->canlog_tick) >= 10000) || (!battle_config.prevent_logout)) {
+		if( ((gettick() - sd->canlog_tick) >= 10000) || (!battle_config.prevent_logout)) {
 			chrif_charselectreq(sd);
+			session_SetWaitClose(fd, 1000);
 		} else {
 			WFIFOW(fd,0)=0x18b;
 			WFIFOW(fd,2)=1;
-
 			WFIFOSET(fd,packet_len_table[0x018b]);
 		}
 		break;
@@ -10537,255 +10498,271 @@ static void (*clif_parse_func_table[MAX_PACKET_DB])(int, struct map_session_data
 };
 
 /*==========================================
+ * terminate function on logout ans session delete
+ * 
+ *------------------------------------------
+ */
+int clif_terminate(int fd)
+{
+	if( session_isRemoved(fd) )
+	{	
+		struct map_session_data *sd = (struct map_session_data*)session[fd]->session_data;
+		if( sd!=NULL )
+		{
+			if( sd->state.event_disconnect )
+				npc_event_doall_attached("OnDisconnect",sd);   
+
+			if (sd->state.auth) 
+			{	// the function doesn't send to inter-server/char-server if it is not connected [Yor]
+				map_quit(sd);
+
+				if (sd->status.name != NULL)
+					ShowInfo("%sCharacter '"CL_WHITE"%s"CL_RESET"' logged off.\n", (pc_isGM(sd))?"GM ":"",sd->status.name); // Player logout display [Valaris]
+				else
+					ShowInfo("%sCharacter with Account ID '"CL_WHITE"%d"CL_RESET"' logged off.\n", (pc_isGM(sd))?"GM ":"", sd->bl.id); // Player logout display [Yor]
+			}
+			else 
+			{	// not authentified! (refused by char-server or disconnect before to be authentified)
+				ShowInfo("Player not authenticated with Account ID '"CL_WHITE"%d"CL_RESET"' logged off.\n", sd->bl.id); // Player logout display [Yor]
+				map_deliddb(&sd->bl); // account_id has been included in the DB before auth answer [Yor]
+			} 
+		} 
+		else
+		{
+			unsigned long ip = session[fd]->client_ip;
+			ShowWarning("Player not identified with IP '"CL_WHITE"%d.%d.%d.%d"CL_RESET"' logged off.\n", (ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF);
+		}
+	}
+	return 0;
+}
+
+/*==========================================
  * クライアントからのパケット解析
  * socket.cのdo_parsepacketから呼び出される
  *------------------------------------------
  */
 static int clif_parse(int fd) {
 	int packet_len = 0, cmd, packet_ver, dump = 0;
-	struct map_session_data *sd;
 
+	struct map_session_data *sd;
+	
+	if( !session_isValid(fd) )
+		return 0;
+	
 	sd = (struct map_session_data*)session[fd]->session_data;
 
 	// 接続が切れてるので後始末
-	if (!chrif_isconnect() || session[fd]->eof) { // char鯖に繋がってない間は接続禁止 (!chrif_isconnect())
-		// ============================================
-		// ADDITION Qamera death/disconnect/connect event mod
-		if( (sd!=NULL) && (sd->event_disconnect) )
-			npc_event_doall_attached("OnDisconnect",sd);   
-		// END ADDITION
-		// ============================================
-		if (sd && sd->state.auth) {
-			clif_quitsave(fd, sd); // the function doesn't send to inter-server/char-server if it is not connected [Yor]
-			if (sd->status.name != NULL)
-				ShowInfo("%sCharacter '"CL_WHITE"%s"CL_RESET"' logged off.\n", (pc_isGM(sd))?"GM ":"",sd->status.name); // Player logout display [Valaris]
-			else
-				ShowInfo("%sCharacter with Account ID '"CL_WHITE"%d"CL_RESET"' logged off.\n", (pc_isGM(sd))?"GM ":"", sd->bl.id); // Player logout display [Yor]
-		} else if (sd) { // not authentified! (refused by char-server or disconnect before to be authentified)
-			ShowInfo("Player not authenticated with Account ID '"CL_WHITE"%d"CL_RESET"' logged off.\n", sd->bl.id); // Player logout display [Yor]
-//			if (chrif_isconnect())
-//				clif_quitsave(fd, sd);
-			map_deliddb(&sd->bl); // account_id has been included in the DB before auth answer [Yor]
-//			sd = 0;
-		} else {
-			//unsigned char *ip = (unsigned char *) &session[fd]->client_addr.sin_addr;
-			//ShowWarning("Player not identified with IP '"CL_WHITE"%d.%d.%d.%d"CL_RESET"' logged off.\n", ip[0],ip[1],ip[2],ip[3]);
-			unsigned long ip = session[fd]->client_ip;
-			ShowWarning("Player not identified with IP '"CL_WHITE"%d.%d.%d.%d"CL_RESET"' logged off.\n", (ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF);		
-		}
-		close(fd);
-//		if (sd) // 追加
-//			map_deliddb(&sd->bl); // 追加
-		delete_session(fd);
+	// char鯖に繋がってない間は接続禁止 (!chrif_isconnect())
+	if( //!chrif_isconnect() || // I try not to delete userd on a char server drop
+		!session_isActive(fd) )
+	{ 
+		// wait some time (10sec) before removing the pc after a forced logout
+		// other disconnections get a different WaitClose time
+		session_SetWaitClose(fd, 10000);
 		return 0;
 	}
 
-	if (RFIFOREST(fd) < 2)
-		return 0;
+	while(RFIFOREST(fd) >= 2)
+	{
+		//ShowMessage("clif_parse: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, RFIFOW(fd,0), RFIFOREST(fd));
+		cmd = RFIFOW(fd,0);
+		// 管理用パケット処理
+		if (cmd >= 30000) {
+			switch(cmd) {
+			case 0x7530: // Athena情報所得
+				WFIFOW(fd,0) = 0x7531;
+				WFIFOB(fd,2) = ATHENA_MAJOR_VERSION;
+				WFIFOB(fd,3) = ATHENA_MINOR_VERSION;
+				WFIFOB(fd,4) = ATHENA_REVISION;
+				WFIFOB(fd,5) = ATHENA_RELEASE_FLAG;
+				WFIFOB(fd,6) = ATHENA_OFFICIAL_FLAG;
+				WFIFOB(fd,7) = ATHENA_SERVER_MAP;
+				WFIFOW(fd,8) = ATHENA_MOD_VERSION;
+				WFIFOSET(fd,10);
+				RFIFOSKIP(fd,2);
+				break;
 
-//	ShowMessage("clif_parse: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, RFIFOW(fd,0), RFIFOREST(fd));
-
-	cmd = RFIFOW(fd,0);
-
-	// 管理用パケット処理
-	if (cmd >= 30000) {
-		switch(cmd) {
-		case 0x7530: // Athena情報所得
-			WFIFOW(fd,0) = 0x7531;
-			WFIFOB(fd,2) = ATHENA_MAJOR_VERSION;
-			WFIFOB(fd,3) = ATHENA_MINOR_VERSION;
-			WFIFOB(fd,4) = ATHENA_REVISION;
-			WFIFOB(fd,5) = ATHENA_RELEASE_FLAG;
-			WFIFOB(fd,6) = ATHENA_OFFICIAL_FLAG;
-			WFIFOB(fd,7) = ATHENA_SERVER_MAP;
-			WFIFOW(fd,8) = ATHENA_MOD_VERSION;
-			WFIFOSET(fd,10);
-			RFIFOSKIP(fd,2);
-			break;
-		case 0x7532: // 接続の切断
-			close(fd);
-			session[fd]->eof=1;
-			break;
-		}
-		return 0;
-	}
-
-	// get packet version before to parse
-	packet_ver = 0;
-	if (sd)
-		packet_ver = sd->packet_ver;
-	// check authentification packet to know packet version
-	else {
-		// packet DB
-		if (IS_PACKET_DB_VER (cmd)) {
-			if (RFIFOREST(fd) >= packet_db[clif_config.packet_db_ver][cmd].len &&
-				(RFIFOB(fd,packet_db[clif_config.packet_db_ver][cmd].pos[4]) == 0 ||
-				RFIFOB(fd,packet_db[clif_config.packet_db_ver][cmd].pos[4]) == 1)) {// 00 = Female, 01 = Male
-				packet_ver = clif_config.packet_db_ver;
+			case 0x7532: // 接続の切断
+				session_Remove(fd);
+				break;
 			}
-		// 0x72
-		} else if (cmd == 0x72) {
-			if (RFIFOREST(fd) >= 39 && (RFIFOB(fd,38) == 0 || RFIFOB(fd,38) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 7; // 7: 13july04
-			else if (RFIFOREST(fd) >= 22 && (RFIFOB(fd,21) == 0 || RFIFOB(fd,21) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 6; // 6: 7july04
-			else if (RFIFOREST(fd) >= 19 && (RFIFOB(fd,18) == 0 || RFIFOB(fd,18) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 5; // 5: old
-			// else probably incomplete packet
-			else if (RFIFOREST(fd) < 19)
-				return 0;
-		// 0x7E
-		} else if (cmd == 0x7E) {
-			if (RFIFOREST(fd) >= 37 && (RFIFOB(fd,36) == 0 || RFIFOB(fd,36) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 9; // 9: 9aug04/16aug04/17aug04
-			else if (RFIFOREST(fd) >= 33 && (RFIFOB(fd,32) == 0 || RFIFOB(fd,32) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 8; // 8: 26july04
-			// else probably incomplete packet
-			else if (RFIFOREST(fd) < 33)
-				return 0;
-		// 0xF5
-		} else if (cmd == 0xF5) {
-			if (RFIFOREST(fd) >= 34 && (RFIFOB(fd,33) == 0 || RFIFOB(fd,33) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 10; // 10: 6sept04
-			else if (RFIFOREST(fd) >= 33 && (RFIFOB(fd,32) == 0 || RFIFOB(fd,32) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 12; // 12: 18oct04
-			else if (RFIFOREST(fd) >= 32 && (RFIFOB(fd,31) == 0 || RFIFOB(fd,31) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 11; // 11: 21sept04
-			else if (RFIFOREST(fd) >= 29 && (RFIFOB(fd,28) == 0 || RFIFOB(fd,28) == 1)) {	// 00 = Female, 01 = Male
-				/*if (RFIFOW(fd,1) == 0)	// testing ^^;
-					packet_ver = 15;
-				else*/
-					packet_ver = 13; // 13: 25oct04 (by [Yor])
-			}
-			// -- some way to identify version 14 and 15? --
-			// else probably incomplete packet
-			else if (RFIFOREST(fd) < 29)
-				return 0;
-		// 0x9B
-		} else if (cmd == 0x9B) {
-			if (RFIFOREST(fd) >= 32 && (RFIFOB(fd,31) == 0 || RFIFOB(fd,31) == 1)) // 00 = Female, 01 = Male
-				packet_ver = 16; // 16: 10jan05
-			else if (RFIFOREST(fd) < 32)
-				return 0;
-		} else {
-			// unknown client? leave packet ver as 0 so it'll disconnect anyway
-		}
-
-		// check if version is accepted
-		if (packet_ver < 5 ||	// reject really old client versions
-			(packet_ver <= 9 && (battle_config.packet_ver_flag &	1) == 0) ||	// older than 6sept04
-			(packet_ver == 10 && (battle_config.packet_ver_flag &	2) == 0) ||
-			(packet_ver == 11 && (battle_config.packet_ver_flag &	4) == 0) ||
-			(packet_ver == 12 && (battle_config.packet_ver_flag &	8) == 0) ||
-			(packet_ver == 13 && (battle_config.packet_ver_flag &	16) == 0) ||
-			(packet_ver == 14 && (battle_config.packet_ver_flag &	32) == 0) ||
-			(packet_ver == 15 && (battle_config.packet_ver_flag &	64) == 0) ||
-			(packet_ver == 16 && (battle_config.packet_ver_flag &	128) == 0) ||
-			packet_ver > MAX_PACKET_VER ||	// no packet version support yet
-			// identified version, but unknown client?
-			(!sd && packet_db[packet_ver][cmd].func != clif_parse_WantToConnection)) {
-			WFIFOW(fd,0) = 0x6a;
-			WFIFOB(fd,2) = 5; // 05 = Game's EXE is not the latest version
-			WFIFOSET(fd,23);
-			clif_setwaitclose(fd);
 			return 0;
 		}
-	}
 
-	// ゲーム用以外パケットか、認証を終える前に0072以外が来たら、切断する
-	if (cmd >= MAX_PACKET_DB || packet_db[packet_ver][cmd].len == 0) {	// if packet is not inside these values: session is incorrect?? or auth packet is unknown
-		if (!fd)
-			return 0;
-		close(fd);
-		session[fd]->eof = 1;
-		ShowMessage("clif_parse: session #%d, packet 0x%x (%d bytes received) -> disconnected.\n", fd, cmd, RFIFOREST(fd));
-		return 0;
-	}
-
-	// パケット長を計算
-	packet_len = packet_db[packet_ver][cmd].len;
-	if (packet_len == -1) {
-		if (RFIFOREST(fd) < 4)
-			return 0; // 可変長パケットで長さの所までデータが来てない
-		packet_len = RFIFOW(fd,2);
-		if (packet_len < 4 || packet_len > 32768) {
-			close(fd);
-			session[fd]->eof =1;
-			return 0;
-		}
-	}
-	if (RFIFOREST(fd) < packet_len)
-		return 0; // まだ1パケット分データが揃ってない
-
-	#if DUMP_ALL_PACKETS
-		dump = 1;
-	#endif
-
-	if (sd && sd->state.auth == 1 && sd->state.waitingdisconnect == 1) { // 切断待ちの場合パケットを処理しない
-
-	} else if (packet_db[packet_ver][cmd].func) { // packet version 5-6-7 use same functions, but size are different
-		// パケット処理
-		packet_db[packet_ver][cmd].func(fd, sd);
-	} else {
-		// 不明なパケット
-		if (battle_config.error_log) {
-#if DUMP_UNKNOWN_PACKET
-			{
-				int i;
-				FILE *fp;
-				char packet_txt[256] = "save/packet.txt";
-				time_t now;
-				dump = 1;
-
-				if ((fp = savefopen(packet_txt, "a")) == NULL) {
-					ShowMessage("clif.c: cant write [%s] !!! data is lost !!!\n", packet_txt);
-					return 1;
-				} else {
-					time(&now);
-					if (sd && sd->state.auth) {
-						if (sd->status.name != NULL)
-							fprintf(fp, "%sPlayer with account ID %d (character ID %d, player name %s) sent wrong packet:\n",
-							        asctime(localtime(&now)), sd->status.account_id, sd->status.char_id, sd->status.name);
-						else
-							fprintf(fp, "%sPlayer with account ID %d sent wrong packet:\n", asctime(localtime(&now)), sd->bl.id);
-					} else if (sd) // not authentified! (refused by char-server or disconnect before to be authentified)
-						fprintf(fp, "%sPlayer with account ID %d sent wrong packet:\n", asctime(localtime(&now)), sd->bl.id);
-
-					fprintf(fp, "\t---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
-					for(i = 0; i < packet_len; i++) {
-						if ((i & 15) == 0)
-							fprintf(fp, "\n\t%04X ", i);
-						fprintf(fp, "%02X ", RFIFOB(fd,i));
-					}
-					fprintf(fp, "\n\n");
-					fclose(fp);
+		// get packet version before to parse
+		packet_ver = 0;
+		if (sd)
+			packet_ver = sd->packet_ver;
+		// check authentification packet to know packet version
+		else {
+			// packet DB
+			if (IS_PACKET_DB_VER (cmd)) {
+				if (RFIFOREST(fd) >= packet_db[clif_config.packet_db_ver][cmd].len &&
+					(RFIFOB(fd,packet_db[clif_config.packet_db_ver][cmd].pos[4]) == 0 ||
+					RFIFOB(fd,packet_db[clif_config.packet_db_ver][cmd].pos[4]) == 1)) {// 00 = Female, 01 = Male
+					packet_ver = clif_config.packet_db_ver;
 				}
+			// 0x72
+			} else if (cmd == 0x72) {
+				if (RFIFOREST(fd) >= 39 && (RFIFOB(fd,38) == 0 || RFIFOB(fd,38) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 7; // 7: 13july04
+				else if (RFIFOREST(fd) >= 22 && (RFIFOB(fd,21) == 0 || RFIFOB(fd,21) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 6; // 6: 7july04
+				else if (RFIFOREST(fd) >= 19 && (RFIFOB(fd,18) == 0 || RFIFOB(fd,18) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 5; // 5: old
+				// else probably incomplete packet
+				else if (RFIFOREST(fd) < 19)
+					return 0;
+			// 0x7E
+			} else if (cmd == 0x7E) {
+				if (RFIFOREST(fd) >= 37 && (RFIFOB(fd,36) == 0 || RFIFOB(fd,36) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 9; // 9: 9aug04/16aug04/17aug04
+				else if (RFIFOREST(fd) >= 33 && (RFIFOB(fd,32) == 0 || RFIFOB(fd,32) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 8; // 8: 26july04
+				// else probably incomplete packet
+				else if (RFIFOREST(fd) < 33)
+					return 0;
+			// 0xF5
+			} else if (cmd == 0xF5) {
+				if (RFIFOREST(fd) >= 34 && (RFIFOB(fd,33) == 0 || RFIFOB(fd,33) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 10; // 10: 6sept04
+				else if (RFIFOREST(fd) >= 33 && (RFIFOB(fd,32) == 0 || RFIFOB(fd,32) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 12; // 12: 18oct04
+				else if (RFIFOREST(fd) >= 32 && (RFIFOB(fd,31) == 0 || RFIFOB(fd,31) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 11; // 11: 21sept04
+				else if (RFIFOREST(fd) >= 29 && (RFIFOB(fd,28) == 0 || RFIFOB(fd,28) == 1)) {	// 00 = Female, 01 = Male
+					/*if (RFIFOW(fd,1) == 0)	// testing ^^;
+						packet_ver = 15;
+					else*/
+						packet_ver = 13; // 13: 25oct04 (by [Yor])
+				}
+				// -- some way to identify version 14 and 15? --
+				// else probably incomplete packet
+				else if (RFIFOREST(fd) < 29)
+					return 0;
+			// 0x9B
+			} else if (cmd == 0x9B) {
+				if (RFIFOREST(fd) >= 32 && (RFIFOB(fd,31) == 0 || RFIFOB(fd,31) == 1)) // 00 = Female, 01 = Male
+					packet_ver = 16; // 16: 10jan05
+				else if (RFIFOREST(fd) < 32)
+					return 0;
+			} else {
+				// unknown client? leave packet ver as 0 so it'll disconnect anyway
 			}
+
+			// check if version is accepted
+			if (packet_ver < 5 ||	// reject really old client versions
+				(packet_ver <= 9 && (battle_config.packet_ver_flag &	1) == 0) ||	// older than 6sept04
+				(packet_ver == 10 && (battle_config.packet_ver_flag &	2) == 0) ||
+				(packet_ver == 11 && (battle_config.packet_ver_flag &	4) == 0) ||
+				(packet_ver == 12 && (battle_config.packet_ver_flag &	8) == 0) ||
+				(packet_ver == 13 && (battle_config.packet_ver_flag &	16) == 0) ||
+				(packet_ver == 14 && (battle_config.packet_ver_flag &	32) == 0) ||
+				(packet_ver == 15 && (battle_config.packet_ver_flag &	64) == 0) ||
+				(packet_ver == 16 && (battle_config.packet_ver_flag &	128) == 0) ||
+				packet_ver > MAX_PACKET_VER ||	// no packet version support yet
+				// identified version, but unknown client?
+				(!sd && packet_db[packet_ver][cmd].func != clif_parse_WantToConnection)) {
+				WFIFOW(fd,0) = 0x6a;
+				WFIFOB(fd,2) = 5; // 05 = Game's EXE is not the latest version
+				WFIFOSET(fd,23);
+				session_SetWaitClose(fd, 5000);
+				return 0;
+			}
+		}
+
+		// ゲーム用以外パケットか、認証を終える前に0072以外が来たら、切断する
+		if (cmd >= MAX_PACKET_DB || packet_db[packet_ver][cmd].len == 0) 
+		{	// if packet is not inside these values: session is incorrect?? or auth packet is unknown
+			ShowMessage("clif_parse: session #%d, packet 0x%x (%d bytes received) -> disconnected.\n", fd, cmd, RFIFOREST(fd));
+			session_Remove(fd);
+			return 0;
+		}
+
+		// パケット長を計算
+		packet_len = packet_db[packet_ver][cmd].len;
+		if( packet_len == -1 ) {
+			if (RFIFOREST(fd) < 4)
+				return 0; // 可変長パケットで長さの所までデータが来てない
+			packet_len = RFIFOW(fd,2);
+			if (packet_len < 4 || packet_len > 32768) {
+				session_Remove(fd);
+				return 0;
+			}
+		}
+		if( RFIFOREST(fd) < packet_len )
+			return 0; // まだ1パケット分データが揃ってない
+
+		#if DUMP_ALL_PACKETS
+			dump = 1;
+		#endif
+
+		if (sd && sd->state.auth == 1 && sd->state.waitingdisconnect == 1) { // 切断待ちの場合パケットを処理しない
+
+		} else if (packet_db[packet_ver][cmd].func) { // packet version 5-6-7 use same functions, but size are different
+			// パケット処理
+			packet_db[packet_ver][cmd].func(fd, sd);
+		} else {
+			// 不明なパケット
+			if (battle_config.error_log) {
+#if DUMP_UNKNOWN_PACKET
+				{
+					int i;
+					FILE *fp;
+					char packet_txt[256] = "save/packet.txt";
+					time_t now;
+					dump = 1;
+
+					if ((fp = savefopen(packet_txt, "a")) == NULL) {
+						ShowMessage("clif.c: cant write [%s] !!! data is lost !!!\n", packet_txt);
+						return 1;
+					} else {
+						time(&now);
+						if (sd && sd->state.auth) {
+							if (sd->status.name != NULL)
+								fprintf(fp, "%sPlayer with account ID %d (character ID %d, player name %s) sent wrong packet:\n",
+										asctime(localtime(&now)), sd->status.account_id, sd->status.char_id, sd->status.name);
+							else
+								fprintf(fp, "%sPlayer with account ID %d sent wrong packet:\n", asctime(localtime(&now)), sd->bl.id);
+						} else if (sd) // not authentified! (refused by char-server or disconnect before to be authentified)
+							fprintf(fp, "%sPlayer with account ID %d sent wrong packet:\n", asctime(localtime(&now)), sd->bl.id);
+
+						fprintf(fp, "\t---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
+						for(i = 0; i < packet_len; i++) {
+							if ((i & 15) == 0)
+								fprintf(fp, "\n\t%04X ", i);
+							fprintf(fp, "%02X ", RFIFOB(fd,i));
+						}
+						fprintf(fp, "\n\n");
+						fclose(fp);
+					}
+				}
 #endif
+			}
 		}
-	}
 
-	if (dump) {
-		int i;
-		if (fd)
-			ShowMessage("\nclif_parse: session #%d, packet 0x%x, lenght %d\n", fd, cmd, packet_len);
-		ShowMessage("---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
-		for(i = 0; i < packet_len; i++) {
-			if ((i & 15) == 0)
-				ShowMessage("\n%04X ",i);
-			ShowMessage("%02X ", RFIFOB(fd,i));
-		}
-		if (sd && sd->state.auth) {
-			if (sd->status.name != NULL)
-				ShowMessage("\nAccount ID %d, character ID %d, player name %s.\n",
-			       sd->status.account_id, sd->status.char_id, sd->status.name);
-			else
+		if (dump) {
+			int i;
+			if (fd)
+				ShowMessage("\nclif_parse: session #%d, packet 0x%x, lenght %d\n", fd, cmd, packet_len);
+			ShowMessage("---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
+			for(i = 0; i < packet_len; i++) {
+				if ((i & 15) == 0)
+					ShowMessage("\n%04X ",i);
+				ShowMessage("%02X ", RFIFOB(fd,i));
+			}
+			if (sd && sd->state.auth) {
+				if (sd->status.name != NULL)
+					ShowMessage("\nAccount ID %d, character ID %d, player name %s.\n",
+					   sd->status.account_id, sd->status.char_id, sd->status.name);
+				else
+					ShowMessage("\nAccount ID %d.\n", sd->bl.id);
+			} else if (sd) // not authentified! (refused by char-server or disconnect before to be authentified)
 				ShowMessage("\nAccount ID %d.\n", sd->bl.id);
-		} else if (sd) // not authentified! (refused by char-server or disconnect before to be authentified)
-			ShowMessage("\nAccount ID %d.\n", sd->bl.id);
-	}
+		}
 
-	RFIFOSKIP(fd, packet_len);
+		RFIFOSKIP(fd, packet_len);
+	}// end while
 
 	return 0;
 }
@@ -11363,24 +11340,15 @@ int do_init_clif(void) {
 		packetdb_readdb();
 
 	set_defaultparse(clif_parse);
-#ifdef __WIN32
-	if (!make_listen(map_ip, map_port)) {
-		ShowMessage("cant bind game port\n");
-		exit(1);
-	}
-#else
+
+
 	for(i = 0; i < 10; i++) {
-		if ( make_listen(map_ip, map_port) )
+		if ( make_listen(map_ip, map_port) >= 0 )
 			break;
 		sleep(20);
 	}
-	if (i == 10) {
-		ShowError("cant bind game port\n");
-		exit(1);
-	}
-#endif
 
-	add_timer_func_list(clif_waitclose, "clif_waitclose");
+
 	add_timer_func_list(clif_clearchar_delay_sub, "clif_clearchar_delay_sub");
 
 	return 0;

@@ -89,3 +89,4 @@ size_t jmemescapecpy (unsigned char* pt,unsigned char* spt, int size) {
 	*p = '\0';
 	return (p-pt);
 }
+

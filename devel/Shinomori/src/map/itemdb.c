@@ -384,6 +384,7 @@ static int itemdb_readdb(void)
 		fclose(fp);
 		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,filename[i]);
 
+		ln=0;	// reset to 0
 	}
 	return 0;
 }

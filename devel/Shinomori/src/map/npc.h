@@ -9,7 +9,7 @@
 #define INVISIBLE_CLASS 32767
 
 int npc_event_dequeue(struct map_session_data *sd);
-int npc_event_timer(int tid,unsigned int tick,int id,int data);
+int npc_event_timer(int tid,unsigned long tick,int id,int data);
 int npc_event(struct map_session_data *sd,const char *npcname,int);
 int npc_timer_event(const char *eventname);				// Added by RoVeRT
 int npc_command(struct map_session_data *sd,char *npcname,char *command);

@@ -3,6 +3,7 @@
 #define _MOB_H_
 
 #define MAX_RANDOMMONSTER 3
+#define MAX_MOB_RACE_DB 6
 
 struct mob_skill {
 	short state;
@@ -26,9 +27,10 @@ struct mob_db {
 	int str,agi,vit,int_,dex,luk;
 	int range,range2,range3;
 	int size,race,element,mode;
+	short race2;	// celest
 	int speed,adelay,amotion,dmotion;
 	int mexp,mexpper;
-	struct { int nameid,p; } dropitem[8];
+	struct { int nameid,p; } dropitem[10]; //8 -> 10 Lupus
 	struct { int nameid,p; } mvpitem[3];
 	int view_class,sex;
 	short hair,hair_color,weapon,shield,head_top,head_mid,head_buttom,option,clothes_color; // [Valaris]
@@ -120,7 +122,7 @@ int do_init_mob(void);
 
 int mob_delete(struct mob_data *md);
 int mob_catch_delete(struct mob_data *md,int type);
-int mob_timer_delete(int tid, unsigned int tick, int id, int data);
+int mob_timer_delete(int tid, unsigned long tick, int id, int data);
 
 int mob_deleteslave(struct mob_data *md);
 
@@ -131,8 +133,8 @@ int mob_warp(struct mob_data *md,int m,int x,int y,int type);
 
 int mobskill_use(struct mob_data *md,unsigned int tick,int event);
 int mobskill_event(struct mob_data *md,int flag);
-int mobskill_castend_id( int tid, unsigned int tick, int id,int data );
-int mobskill_castend_pos( int tid, unsigned int tick, int id,int data );
+int mobskill_castend_id( int tid, unsigned long tick, int id,int data );
+int mobskill_castend_pos( int tid, unsigned long tick, int id,int data );
 int mob_summonslave(struct mob_data *md2,int *value,int amount,int flag);
 
 int mob_gvmobcheck(struct map_session_data *sd, struct block_list *bl);

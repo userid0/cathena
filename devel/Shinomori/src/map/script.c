@@ -45,6 +45,7 @@
 #endif
 
 #define SCRIPT_BLOCK_SIZE 256
+
 enum { LABEL_NEXTLINE=1,LABEL_START };
 static char * script_buf;
 static int script_pos,script_size;
@@ -151,6 +152,7 @@ int buildin_statusup2(struct script_state *st);
 int buildin_bonus(struct script_state *st);
 int buildin_bonus2(struct script_state *st);
 int buildin_bonus3(struct script_state *st);
+int buildin_bonus4(struct script_state *st);
 int buildin_skill(struct script_state *st);
 int buildin_addtoskill(struct script_state *st); // [Valaris]
 int buildin_guildskill(struct script_state *st);
@@ -301,6 +303,8 @@ int buildin_logmes(struct script_state *st); // [Lupus]
 int buildin_summon(struct script_state *st); // [celest]
 int buildin_isnight(struct script_state *st); // [celest]
 int buildin_isday(struct script_state *st); // [celest]
+int buildin_isequipped(struct script_state *st); // [celest]
+int buildin_isequippedcnt(struct script_state *st); // [celest]
 
 // ADDITION Qamera death/disconnect/connect event mod
 int buildin_pcstrcharinfo(struct script_state *st);
@@ -380,6 +384,7 @@ struct {
 	{buildin_bonus,"bonus","ii"},
 	{buildin_bonus2,"bonus2","iii"},
 	{buildin_bonus3,"bonus3","iiii"},
+	{buildin_bonus4,"bonus4","iiiii"},
 	{buildin_skill,"skill","ii*"},
 	{buildin_addtoskill,"addtoskill","ii*"}, // [Valaris]
 	{buildin_guildskill,"guildskill","ii"},
@@ -533,6 +538,8 @@ struct {
 	{buildin_summon,"summon","si*"}, // summons a slave monster [Celest]
 	{buildin_isnight,"isnight",""}, // check whether it is night time [Celest]
 	{buildin_isday,"isday",""}, // check whether it is day time [Celest]
+	{buildin_isequipped,"isequipped","i*"}, // check whether another item/card has been equipped [Celest]
+	{buildin_isequippedcnt,"isequippedcnt","i*"}, // check how many items/cards are being equipped [Celest]
 	{NULL,NULL,NULL},
 };
 int buildin_message(struct script_state *st); // [MouseJstr]
@@ -1299,7 +1306,7 @@ enum {STOP=1,END,RERUNLINE,GOTO,RETFUNC};
 struct map_session_data *script_rid2sd(struct script_state *st)
 {
 	struct map_session_data *sd=map_id2sd(st->rid);
-	if(!sd){
+	if(!sd) {
 		ShowError("script_rid2sd: fatal error ! player not attached!\n");
 	}
 	return sd;
@@ -2314,7 +2321,7 @@ int buildin_checkweight(struct script_state *st)
  */
 int buildin_getitem(struct script_state *st)
 {
-	int nameid,amount,flag = 0;
+	int nameid,nameidsrc,amount,flag = 0;
 	struct item item_tmp;
 	struct map_session_data *sd;
 	struct script_data *data;
@@ -2336,12 +2343,12 @@ int buildin_getitem(struct script_state *st)
 		return 0; //return if amount <=0, skip the useles iteration
 	}
 	//Violet Box, Blue Box, etc - random item pick
-	if(nameid<0) { // ÉâÉìÉ_ÉÄ
+	if((nameidsrc = nameid)<0) { // Save real ID of the source Box [Lupus]
 		nameid=itemdb_searchrandomid(-nameid);
-		#ifndef TXT_ONLY
+
 		if(log_config.present > 0)
-			log_present(sd, -nameid, nameid);
-		#endif //USE_SQL
+			log_present(sd, -nameidsrc, nameid); //fixed missing ID by Lupus
+
 		flag = 1;
 	}
 
@@ -3068,10 +3075,8 @@ int buildin_successrefitem(struct script_state *st)
 	if(i >= 0) {
 		ep=sd->status.inventory[i].equip;
 
-		#ifndef TXT_ONLY
 		if(log_config.refine > 0)
 			log_refine(sd, i, 1);
-		#endif //USE_SQL
 
 		sd->status.inventory[i].refine++;
 		pc_unequipitem(sd,i,2);
@@ -3098,10 +3103,8 @@ int buildin_failedrefitem(struct script_state *st)
 	sd=script_rid2sd(st);
 	i=pc_checkequip(sd,equip[num-1]);
 	if(i >= 0) {
-		#ifndef TXT_ONLY
 		if(log_config.refine > 0)
 			log_refine(sd, i, 0);
-		#endif //USE_SQL
 
 		sd->status.inventory[i].refine = 0;
 		pc_unequipitem(sd,i,3);
@@ -3194,6 +3197,22 @@ int buildin_bonus3(struct script_state *st)
 	val=conv_num(st,& (st->stack->stack_data[st->start+5]));
 	sd=script_rid2sd(st);
 	pc_bonus3(sd,type,type2,type3,val);
+
+	return 0;
+}
+
+int buildin_bonus4(struct script_state *st)
+{
+	int type,type2,type3,type4,val;
+	struct map_session_data *sd;
+
+	type=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	type2=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	type3=conv_num(st,& (st->stack->stack_data[st->start+4]));
+	type4=conv_num(st,& (st->stack->stack_data[st->start+5]));
+	val=conv_num(st,& (st->stack->stack_data[st->start+6]));
+	sd=script_rid2sd(st);
+	pc_bonus4(sd,type,type2,type3,type4,val);
 
 	return 0;
 }
@@ -5897,11 +5916,11 @@ int buildin_petrecovery(struct script_state *st)
 	if(pd==NULL)
 		return 0;
 
-	pd->skilltype    =conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skilltimer   =conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	pd->skillval     =0;
 	pd->skillduration=0;
-	
+
 	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_recovery_timer,sd->bl.id,0);
 
 	return 0;
@@ -5925,9 +5944,9 @@ int buildin_petheal(struct script_state *st)
 	if(pd==NULL)
 		return 0;
 
-	pd->skilltype    =conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skillval     =conv_num(st,& (st->stack->stack_data[st->start+3]));
-	pd->skilltimer   =conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->skillval=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+4]));
 	pd->skillduration=0;
 
 	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_heal_timer,sd->bl.id,0);
@@ -5952,10 +5971,10 @@ int buildin_petmag(struct script_state *st)
 	if(pd==NULL)
 		return 0;
 
-	pd->skilltype    =conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	pd->skillduration=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	pd->skillval     =conv_num(st,& (st->stack->stack_data[st->start+4]));
-	pd->skilltimer   =conv_num(st,& (st->stack->stack_data[st->start+5]));
+	pd->skillval=conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+5]));
 
 	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_mag_timer,sd->bl.id,0);
 
@@ -5979,10 +5998,10 @@ int buildin_petskillattack(struct script_state *st)
 	if(pd==NULL)
 		return 0;
 
-	pd->skilltype    =conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skillval     =conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->skillval=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	pd->skillduration=conv_num(st,& (st->stack->stack_data[st->start+4]));
-	pd->skilltimer   =conv_num(st,& (st->stack->stack_data[st->start+5]));
+	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+5]));
 
 	pd->skillbonustimer=add_timer(gettick()+100,pet_skillattack_timer,sd->bl.id,0);
 
@@ -6534,6 +6553,126 @@ int buildin_isday(struct script_state *st)
 	return 0;
 }
 
+/*================================================
+ * Check whether another item/card has been
+ * equipped - used for 2/15's cards patch [celest]
+ *------------------------------------------------
+ */
+int buildin_isequipped(struct script_state *st)
+{
+	struct map_session_data *sd;
+	int i, j, k, id = 1;
+	int ret = -1;
+
+	sd = script_rid2sd(st);
+	
+	for (i=0; id!=0; i++) {
+		int flag = 0;
+
+		if(st->end > st->start+i+2)
+			id = conv_num(st,&(st->stack->stack_data[st->start+i+2]));
+		else 
+			id = 0;
+
+		if (id <= 0)
+			continue;
+		
+		for (j=0; j<10; j++) {
+			int index, type;
+			index = sd->equip_index[j];
+			if(index < 0) continue;
+			if(j == 9 && sd->equip_index[8] == index) continue;
+			if(j == 5 && sd->equip_index[4] == index) continue;
+			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+			type = itemdb_type(id);
+			
+			if(sd->inventory_data[index]) {
+				if (type == 4 || type == 5) {
+					if (sd->inventory_data[index]->nameid == id)
+						flag = 1;
+				} else if (type == 6) {
+					for(k=0; k<sd->inventory_data[index]->slot; k++) {
+						if (sd->status.inventory[index].card[0]!=0x00ff &&
+							sd->status.inventory[index].card[0]!=0x00fe &&
+							sd->status.inventory[index].card[0]!=(short)0xff00 &&
+							sd->status.inventory[index].card[k] == id) {
+							flag = 1;
+							break;
+						}
+					}
+				}
+				if (flag) break;
+			}
+		}
+		if (ret == -1)
+			ret = flag;
+		else
+			ret &= flag;
+		if (!ret) break;
+	}
+	
+	push_val(st->stack,C_INT,ret);
+	return 0;
+}
+
+/*================================================
+ * Check how many items/cards in the list are
+ * equipped - used for 2/15's cards patch [celest]
+ *------------------------------------------------
+ */
+int buildin_isequippedcnt(struct script_state *st)
+{
+	struct map_session_data *sd;
+	int i, j, k, id = 1;
+	int ret = 0;
+
+	sd = script_rid2sd(st);
+	
+	for (i=0; id!=0; i++) {
+
+		if(st->end > st->start+i+2)
+			id = conv_num(st,&(st->stack->stack_data[st->start+i+2]));
+		else 
+			id = 0;
+
+		if (id <= 0)
+			continue;
+		
+		for (j=0; j<10; j++) {
+			int index, type, flag = 0;
+			index = sd->equip_index[j];
+			if(index < 0) continue;
+			if(j == 9 && sd->equip_index[8] == index) continue;
+			if(j == 5 && sd->equip_index[4] == index) continue;
+			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+			type = itemdb_type(id);
+			
+			if(sd->inventory_data[index]) {
+				if (type == 4 || type == 5) {
+					if (sd->inventory_data[index]->nameid == id)
+						flag = 1;
+				} else if (type == 6) {
+					for(k=0; k<sd->inventory_data[index]->slot; k++) {
+						if (sd->status.inventory[index].card[0]!=0x00ff &&
+							sd->status.inventory[index].card[0]!=0x00fe &&
+							sd->status.inventory[index].card[0]!=(short)0xff00 &&
+							sd->status.inventory[index].card[k] == id) {
+							flag = 1;
+							break;
+						}
+					}
+				}				
+				if (flag) {
+					ret++;
+					break;
+				}
+			}
+		}
+	}
+	
+	push_val(st->stack,C_INT,ret);
+	return 0;
+}
 //
 // é¿çsïîmain
 //
@@ -7187,7 +7326,7 @@ static int script_save_mapreg()
 	mapreg_dirty=0;
 	return 0;
 }
-static int script_autosave_mapreg(int tid,unsigned int tick,int id,int data)
+static int script_autosave_mapreg(int tid,unsigned long tick,int id,int data)
 {
 	if(mapreg_dirty)
 		script_save_mapreg();
@@ -7230,6 +7369,14 @@ int script_config_read(const char *cfgName)
 	script_config.check_cmdcount=16384;
 	script_config.check_gotocount=1024;
 
+	script_config.die_event_name = (char *)aCallocA(24,sizeof(char));
+	script_config.kill_event_name = (char *)aCallocA(24,sizeof(char));
+	script_config.login_event_name = (char *)aCallocA(24,sizeof(char));
+	script_config.logout_event_name = (char *)aCallocA(24,sizeof(char));
+
+	script_config.event_script_type = 0;
+	script_config.event_requires_trigger = 1;
+
 	fp=savefopen(cfgName,"r");
 	if(fp==NULL){
 		ShowMessage("file not found: %s\n",cfgName);
@@ -7261,6 +7408,24 @@ int script_config_read(const char *cfgName)
 		}
 		else if(strcasecmp(w1,"check_gotocount")==0) {
 			script_config.check_gotocount = battle_config_switch(w2);
+		}
+		else if(strcasecmp(w1,"event_script_type")==0) {
+			script_config.event_script_type = battle_config_switch(w2);
+		}
+		else if(strcasecmp(w1,"die_event_name")==0) {			
+			strcpy(script_config.die_event_name, w2);			
+		}
+		else if(strcasecmp(w1,"kill_event_name")==0) {
+			strcpy(script_config.kill_event_name, w2);
+		}
+		else if(strcasecmp(w1,"login_event_name")==0) {
+			strcpy(script_config.login_event_name, w2);
+		}
+		else if(strcasecmp(w1,"logout_event_name")==0) {
+			strcpy(script_config.logout_event_name, w2);
+		}
+		else if(strcasecmp(w1,"require_set_trigger")==0) {
+			script_config.event_requires_trigger = battle_config_switch(w2);
 		}
 		else if(strcasecmp(w1,"import")==0){
 			script_config_read(w2);
@@ -7313,6 +7478,15 @@ int do_final_script()
 	if (str_data)	aFree(str_data);
 	if (str_buf)	aFree(str_buf);
 
+	if (script_config.die_event_name)
+		aFree(script_config.die_event_name);
+	if (script_config.kill_event_name)
+		aFree(script_config.die_event_name);
+	if (script_config.login_event_name)
+		aFree(script_config.die_event_name);
+	if (script_config.logout_event_name)
+		aFree(script_config.die_event_name);
+
 	return 0;
 }
 /*==========================================
@@ -7326,8 +7500,8 @@ int do_init_script()
 	script_load_mapreg();
 
 	add_timer_func_list(script_autosave_mapreg,"script_autosave_mapreg");
-	add_timer_interval(gettick()+MAPREG_AUTOSAVE_INTERVAL,
-		script_autosave_mapreg,0,0,MAPREG_AUTOSAVE_INTERVAL);
+	add_timer_interval(gettick()+MAPREG_AUTOSAVE_INTERVAL,MAPREG_AUTOSAVE_INTERVAL,
+		script_autosave_mapreg,0,0);
 
 	scriptlabel_db=strdb_init(50);
 	return 0;

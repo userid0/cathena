@@ -17,12 +17,19 @@
 #include "memwatch.h"
 #endif
 
-static void (*term_func)(void)=NULL;
 
+
+
+
+
+int runflag = 1;
 /*======================================
  *	CORE : Set function
  *--------------------------------------
  */
+
+static void (*term_func)(void)=NULL;
+
 void set_termfunc(void (*termfunc)(void))
 {
 	term_func = termfunc;
@@ -66,19 +73,23 @@ sigfunc *compat_signal(int signo, sigfunc *func)
 
 static void sig_proc(int sn)
 {
-	int i;
 	switch(sn){
 	case SIGINT:
 	case SIGTERM:
-		if(term_func)
-			term_func();
-		for(i=0;i<fd_max;i++){
-			if(!session[i])
-				continue;
-			close(i);
-		}
+		//////////////////////////////////
+		// shut down main loop if possible
+		runflag=0;
+		///////////////////////////////////////////////////////////////////////////
+		// user termination
+		if(term_func) term_func();
+		///////////////////////////////////////////////////////////////////////////
+		// core module termination
+		socket_final();
+		//timer_final();
+		///////////////////////////////////////////////////////////////////////////
+		// force exit
 		exit(0);
-		break;
+		///////////////////////////////////////////////////////////////////////////
 	}
 }
 
@@ -178,15 +189,13 @@ static void display_title(void)
  *--------------------------------------
  */
 
-int runflag = 1;
+
 
 int main(int argc,char **argv)
 {
 	int next;
-
-	Net_Init();
-	do_socket();
-	
+	///////////////////////////////////////////////////////////////////////////
+	// signal initialisation
 	compat_signal(SIGPIPE,SIG_IGN);
 	compat_signal(SIGTERM,sig_proc);
 	compat_signal(SIGINT,sig_proc);
@@ -196,7 +205,7 @@ int main(int argc,char **argv)
  	compat_signal(SIGSEGV, SIG_DFL);
 	compat_signal(SIGFPE, SIG_DFL);
 	compat_signal(SIGILL, SIG_DFL);
-	#ifndef _WIN32
+	#ifndef WIN32
 		compat_signal(SIGBUS, SIG_DFL);
 		compat_signal(SIGTRAP, SIG_DFL); 
 	#endif
@@ -204,22 +213,31 @@ int main(int argc,char **argv)
 	compat_signal(SIGSEGV, sig_dump);
 	compat_signal(SIGFPE, sig_dump);
 	compat_signal(SIGILL, sig_dump);
-	#ifndef _WIN32
+	#ifndef WIN32
 		compat_signal(SIGBUS, sig_dump);
 		compat_signal(SIGTRAP, SIG_DFL); 
 	#endif
 #endif
-
+	///////////////////////////////////////////////////////////////////////////
+	//
 	display_title();
-
 	tick_ = time(0);
-
+	///////////////////////////////////////////////////////////////////////////
+	// core component initialisation
+	timer_init();
+	socket_init();
+	///////////////////////////////////////////////////////////////////////////
+	// user module initialisation
 	do_init(argc,argv);
-
+	///////////////////////////////////////////////////////////////////////////
+	// run loop
 	while(runflag){
 		next=do_timer(gettick_nocache());
 		do_sendrecv(next);
-		do_parsepacket();
 	}
+	///////////////////////////////////////////////////////////////////////////
+	// wait for termination
+	while(1) sleep(100);
+	///////////////////////////////////////////////////////////////////////////
 	return 0;
 }

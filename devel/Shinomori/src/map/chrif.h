@@ -30,7 +30,7 @@ int chrif_char_reset_offline(void);
 int chrif_char_online(struct map_session_data *sd);
 int chrif_changesex(int id, int sex);
 int chrif_chardisconnect(struct map_session_data *sd);
-int check_connect_char_server(int tid, unsigned int tick, int id, int data);
+int check_connect_char_server(int tid, unsigned long tick, int id, int data);
 
 int do_init_chrif(void);
 

@@ -234,7 +234,6 @@ int bytes_to_read = 0; // flag to know if we waiting bytes from login-server
 char command[1024];
 char parameters[1024];
 int list_first, list_last, list_type, list_count; // parameter to display a list of accounts
-int already_exit_function = 0; // sometimes, the exit function is called twice... so, don't log twice the message
 
 //------------------------------
 // Writing function of logs file
@@ -3163,7 +3162,7 @@ int prompt() {
 int parse_fromlogin(int fd) {
 	struct char_session_data *sd;
 
-	if (session[fd]->eof) {
+	if( !session_isActive(fd) ) {
 		if (defaultlanguage == 'F') {
 			ShowMessage("Impossible de se connecter au serveur de login [%s:%d] !\n", loginserverip, loginserverport);
 			ladmin_log("Impossible de se connecter au serveur de login [%s:%d] !" RETCODE, loginserverip, loginserverport);
@@ -3171,13 +3170,14 @@ int parse_fromlogin(int fd) {
 			ShowMessage("Impossible to have a connection with the login-server [%s:%d] !\n", loginserverip, loginserverport);
 			ladmin_log("Impossible to have a connection with the login-server [%s:%d] !" RETCODE, loginserverip, loginserverport);
 		}
-		close(fd);
-		delete_session(fd);
+		//session_Remove(fd);// have it removed by do_sendrecv
+		//remove it explicitely here and finish
+		session_Delete(fd);
 		exit (0);
 	}
 
 //	ShowMessage("parse_fromlogin : %d %d %d\n", fd, RFIFOREST(fd), RFIFOW(fd,0));
-	sd = (struct char_session_data *)session[fd]->session_data;
+	sd = (struct char_session_data*)session[fd]->session_data;
 
 	while(RFIFOREST(fd) >= 2) {
 		switch(RFIFOW(fd,0)) {
@@ -3198,7 +3198,7 @@ int parse_fromlogin(int fd) {
 					ShowMessage(" - unauthorised IP.\n");
 					ladmin_log("Error at login: incorrect password, administration system not activated, or unauthorised IP." RETCODE);
 				}
-				session[fd]->eof = 1;
+				session_Remove(fd);
 				//bytes_to_read = 1; // not stop at prompt
 			} else {
 				if (defaultlanguage == 'F') {
@@ -4090,7 +4090,7 @@ int parse_fromlogin(int fd) {
 		default:
 			ShowMessage("Remote administration has been disconnected (unknown packet).\n");
 			ladmin_log("'End of connection, unknown packet." RETCODE);
-			session[fd]->eof = 1;
+			session_Remove(fd);
 			return 0;
 		}
 	}
@@ -4257,21 +4257,24 @@ int ladmin_config_read(const char *cfgName) {
 // Function called at exit of the server
 //--------------------------------------
 void do_final(void) {
-
-	if (already_exit_function == 0) {
-		delete_session(login_fd);
-
+	int i;
+	///////////////////////////////////////////////////////////////////////////
 		if (defaultlanguage == 'F') {
-			ShowMessage(CL_NORM"----Fin de Ladmin (fin normale avec fermeture de tous les fichiers).\n");
+		ShowStatus(CL_NORM"----Fin de Ladmin (fin normale avec fermeture de tous les fichiers).\n");
 			ladmin_log("----Fin de Ladmin (fin normale avec fermeture de tous les fichiers)." RETCODE);
 		} else {
-			ShowMessage(CL_NORM"----End of Ladmin (normal end with closing of all files).\n");
+		ShowStatus(CL_NORM"----End of Ladmin (normal end with closing of all files).\n");
 			ladmin_log("----End of Ladmin (normal end with closing of all files)." RETCODE);
 		}
-
-		already_exit_function = 1;
+	///////////////////////////////////////////////////////////////////////////
+	// delete sessions
+	for(i = 0; i < fd_max; i++)
+		if(session[i] != NULL) 
+			session_Delete(i);
+	// clear externaly stored fd's
+	login_fd = -1;
+	///////////////////////////////////////////////////////////////////////////
 	}
-}
 
 //------------------------
 // Main function of ladmin
