@@ -1313,6 +1313,7 @@ int mapif_parse_GuildEmblem(int fd, int len, int guild_id, int dummy, const char
 }
 
 int mapif_parse_GuildCastleDataLoad(int fd, int castle_id, int index) {
+
 	struct guild_castle *gc = (struct guild_castle *)numdb_search(castle_db, castle_id);
 
 	if (gc == NULL) {

@@ -119,6 +119,11 @@ public:
 // necessary for IP numbers, which are always in network byte order
 // it is implemented this way and I currently won't interfere with that
 // even if it is quite questionable
+
+// changes: 
+// transfered all IP addresses in the programms to host byte order
+// since IPs are transfered in network byte order
+// we cannot use objL but its complementary here
 class objLIP	
 {
 	unsigned char *ip;
@@ -141,9 +146,15 @@ public:
 	{
 		if(ip)
 		{	
-			register unsigned long tmp;
-			memcpy(&tmp,ip,4);
-			return tmp;
+//			register unsigned long tmp;
+//			memcpy(&tmp,ip,4);
+//			return tmp;
+			return	 ( ((unsigned long)(ip[3]))        )
+					|( ((unsigned long)(ip[2])) << 0x08)
+					|( ((unsigned long)(ip[1])) << 0x10)
+					|( ((unsigned long)(ip[0])) << 0x18);
+
+
 		}
 		return 0;
 	}
@@ -159,7 +170,12 @@ public:
 	{	
 		if(ip)
 		{
-			memcpy(ip, &valin, 4);
+//			memcpy(ip, &valin, 4);
+
+			ip[3] = (unsigned char)((valin & 0x000000FF)          );
+			ip[2] = (unsigned char)((valin & 0x0000FF00)  >> 0x08 );
+			ip[1] = (unsigned char)((valin & 0x00FF0000)  >> 0x10 );
+			ip[0] = (unsigned char)((valin & 0xFF000000)  >> 0x18 );
 		}
 		return valin;
 	}
@@ -258,7 +274,8 @@ struct socket_data{
 	int wdata_size;
 	time_t rdata_tick;
 	int rdata_pos;
-	struct sockaddr_in client_addr;
+	unsigned long client_ip;	// just an ip in host byte order is enough (4byte instead of 16)
+	//struct sockaddr_in client_addr;
 	int (*func_recv)(int);
 	int (*func_send)(int);
 	int (*func_parse)(int);
@@ -281,8 +298,8 @@ extern int rfifo_size,wfifo_size;
 
 // Function prototype declaration
 
-int make_listen    (in_addr_t, unsigned short);
-int make_connection(in_addr_t, unsigned short);
+int make_listen    (unsigned long, unsigned short);
+int make_connection(unsigned long, unsigned short);
 int delete_session(int);
 int realloc_fifo(int fd,int rfifo_size,int wfifo_size);
 int WFIFOSET(int fd,int len);

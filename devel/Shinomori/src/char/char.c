@@ -36,11 +36,17 @@ char server_name[20];
 char wisp_server_name[24] = "Server";
 
 
-in_addr_t login_ip = INADDR_LOOPBACK; // use localhost as default
-unsigned short login_port = 6900;
+unsigned long	login_ip	= INADDR_LOOPBACK; // use localhost as default
+unsigned short	login_port	= 6900;
 
-in_addr_t char_ip = INADDR_ANY;	// bind on all addresses by default
-unsigned short char_port = 6121;
+unsigned long	char_ip		= INADDR_ANY;	// bind on all addresses by default
+unsigned short	char_port	= 6121;
+
+//Added for lan support
+unsigned long	lan_map_ip	= INADDR_LOOPBACK;	//127.0.0.1
+unsigned long	subnet_ip	= INADDR_LOOPBACK;	//127.0.0.1
+unsigned long	subnet_mask	= INADDR_BROADCAST;	//255.255.255.255
+
 
 int char_maintenance;
 int char_new;
@@ -52,10 +58,7 @@ char backup_txt_flag = 0; // The backup_txt file was created because char deleti
 char unknown_char_name[1024] = "Unknown";
 char char_log_filename[1024] = "log/char.log";
 char db_path[1024]="db";
-//Added for lan support
-char lan_map_ip[128];
-int subneti[4];
-int subnetmaski[4];
+
 int name_ignoring_case = 0; // Allow or not identical name for characters but with a different case by [Yor]
 int char_name_option = 0; // Option to know which letters/symbols are authorised in the name of a character (0: all, 1: only those in char_name_letters, 2: all EXCEPT those in char_name_letters) by [Yor]
 char char_name_letters[1024] = ""; // list of letters/symbols authorised (or not) in a character name. by [Yor]
@@ -83,7 +86,7 @@ struct {
 	int char_id;
 	int login_id1;
 	int login_id2;
-	in_addr_t ip;
+	unsigned long ip;
 	int char_pos;
 	int delflag;
 	int sex;
@@ -2399,20 +2402,11 @@ static int char_mapif_init(int fd) {
 //-----------------------------------------------------
 // Test to know if an IP come from LAN or WAN. by [Yor]
 //-----------------------------------------------------
-int lan_ip_check(unsigned char *p){
-	int i;
-	int lancheck = 1;
+int lan_ip_check(unsigned long ip){
+	int lancheck;
+//	ShowMessage("lan_ip_check: to compare: %X, network: %X/%X\n", ip, subnet_ip, subnet_mask);
 
-//	ShowMessage("lan_ip_check: to compare: %d.%d.%d.%d, network: %d.%d.%d.%d/%d.%d.%d.%d\n",
-//	       p[0], p[1], p[2], p[3],
-//	       subneti[0], subneti[1], subneti[2], subneti[3],
-//	       subnetmaski[0], subnetmaski[1], subnetmaski[2], subnetmaski[3]);
-	for(i = 0; i < 4; i++) {
-		if ((subneti[i] & subnetmaski[i]) != (p[i] & subnetmaski[i])) {
-			lancheck = 0;
-			break;
-		}
-	}
+	lancheck = (subnet_ip & subnet_mask) == (ip & subnet_mask);
 	ShowMessage("LAN test (result): %s source.\n"CL_NORM, (lancheck) ? CL_BT_CYAN"LAN" : CL_BT_GREEN"WAN");
 	return lancheck;
 }
@@ -2422,7 +2416,8 @@ int parse_char(int fd) {
 	unsigned short cmd;
 	char email[40];
 	struct char_session_data *sd;
-	unsigned char *p = (unsigned char *) &session[fd]->client_addr.sin_addr;
+//	unsigned long client_ip = ntohl(session[fd]->client_addr.sin_addr.s_addr);
+	unsigned long client_ip = session[fd]->client_ip;
 
 	if (login_fd < 0)
 		session[fd]->eof = 1;
@@ -2494,7 +2489,7 @@ int parse_char(int fd) {
 #if CMP_AUTHFIFO_LOGIN2 != 0
 				    auth_fifo[i].login_id2 == sd->login_id2 && // relate to the versions higher than 18
 #endif
-				    (!check_ip_flag || auth_fifo[i].ip == session[fd]->client_addr.sin_addr.s_addr) &&
+				    (!check_ip_flag || auth_fifo[i].ip == client_ip) &&
 				    auth_fifo[i].delflag == 2) {
 					auth_fifo[i].delflag = 1;
 					if (max_connect_user == 0 || count_users() < max_connect_user) {
@@ -2523,7 +2518,7 @@ int parse_char(int fd) {
 					WFIFOL(login_fd,6) = sd->login_id1;
 					WFIFOL(login_fd,10) = sd->login_id2; // relate to the versions higher than 18
 					WFIFOB(login_fd,14) = sd->sex;
-					WFIFOLIP(login_fd,15) = session[fd]->client_addr.sin_addr.s_addr;
+					WFIFOLIP(login_fd,15) = client_ip;
 					WFIFOSET(login_fd,19);
 				} else { // if no login-server, we must refuse connection
 					WFIFOW(fd,0) = 0x6c;
@@ -2608,8 +2603,8 @@ int parse_char(int fd) {
 					memcpy(WFIFOP(fd,6), char_dat[sd->found_char[ch]].last_point.map, 16);
 					ShowMessage("Character selection '%s' (account: %d, slot: %d).\n", char_dat[sd->found_char[ch]].name, sd->account_id, ch);
 					ShowMessage("--Send IP of map-server. ");
-					if (lan_ip_check(p))
-						WFIFOLIP(fd, 22) = inet_addr(lan_map_ip);
+					if (lan_ip_check(client_ip))
+						WFIFOLIP(fd, 22) = lan_map_ip;
 					else
 						WFIFOLIP(fd, 22) = server[i].ip;
 					WFIFOW(fd,26) = server[i].port;
@@ -2625,7 +2620,8 @@ int parse_char(int fd) {
 					auth_fifo[auth_fifo_pos].char_pos = sd->found_char[ch];
 					auth_fifo[auth_fifo_pos].sex = sd->sex;
 					auth_fifo[auth_fifo_pos].connect_until_time = sd->connect_until_time;
-					auth_fifo[auth_fifo_pos].ip = session[fd]->client_addr.sin_addr.s_addr;
+					//auth_fifo[auth_fifo_pos].ip = ntohl(session[fd]->client_addr.sin_addr.s_addr);
+					auth_fifo[auth_fifo_pos].ip = session[fd]->client_ip;
 					auth_fifo_pos++;
 				}
 			}
@@ -2989,19 +2985,10 @@ int config_switch(const char *str) {
 // Reading Lan Support configuration by [Yor]
 //-------------------------------------------
 int lan_config_read(const char *lancfgName) {
-	int j;
 	struct hostent * h = NULL;
+	char ip_str[16];
 	char line[1024], w1[1024], w2[1024];
 	FILE *fp;
-
-	// set default configuration
-	strncpy(lan_map_ip, "127.0.0.1", sizeof(lan_map_ip));
-	subneti[0] = 127;
-	subneti[1] = 0;
-	subneti[2] = 0;
-	subneti[3] = 1;
-	for(j = 0; j < 4; j++)
-		subnetmaski[j] = 255;
 
 	fp = savefopen(lancfgName, "r");
 
@@ -3025,46 +3012,34 @@ int lan_config_read(const char *lancfgName) {
 		if (strcasecmp(w1, "lan_map_ip") == 0) { // Read map-server Lan IP Address
 			h = gethostbyname(w2);
 			if (h != NULL) {
-				sprintf(lan_map_ip, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
-			} else {
-				strncpy(lan_map_ip, w2, sizeof(lan_map_ip));
-				lan_map_ip[sizeof(lan_map_ip)-1] = 0;
-			}
-			ShowMessage("LAN IP of map-server: %s.\n", lan_map_ip);
+				sprintf(ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
+			} else
+				strcpy(ip_str, w2);
+			lan_map_ip  = ntohl(inet_addr(ip_str));
+			ShowMessage("LAN IP of map-server: %d.%d.%d.%d.\n", (lan_map_ip>>24)&0xFF,(lan_map_ip>>16)&0xFF,(lan_map_ip>>8)&0xFF,(lan_map_ip)&0xFF);
 		} else if (strcasecmp(w1, "subnet") == 0) { // Read Subnetwork
-			for(j = 0; j < 4; j++)
-				subneti[j] = 0;
 			h = gethostbyname(w2);
 			if (h != NULL) {
-				for(j = 0; j < 4; j++)
-					subneti[j] = (unsigned char)h->h_addr[j];
-			} else {
-				sscanf(w2, "%d.%d.%d.%d", &subneti[0], &subneti[1], &subneti[2], &subneti[3]);
-			}
-			ShowMessage("Sub-network of the map-server: %d.%d.%d.%d.\n", subneti[0], subneti[1], subneti[2], subneti[3]);
+				sprintf(ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
+			} else
+				strcpy(ip_str, w2);
+			subnet_ip  = ntohl(inet_addr(ip_str));
+			ShowMessage("Sub-network of the map-server: %d.%d.%d.%d.\n", (subnet_ip>>24)&0xFF,(subnet_ip>>16)&0xFF,(subnet_ip>>8)&0xFF,(subnet_ip)&0xFF);
 		} else if (strcasecmp(w1, "subnetmask") == 0){ // Read Subnetwork Mask
-			for(j = 0; j < 4; j++)
-				subnetmaski[j] = 255;
 			h = gethostbyname(w2);
 			if (h != NULL) {
-				for(j = 0; j < 4; j++)
-					subnetmaski[j] = (unsigned char)h->h_addr[j];
-			} else {
-				sscanf(w2, "%d.%d.%d.%d", &subnetmaski[0], &subnetmaski[1], &subnetmaski[2], &subnetmaski[3]);
-			}
-			ShowMessage("Sub-network mask of the map-server: %d.%d.%d.%d.\n", subnetmaski[0], subnetmaski[1], subnetmaski[2], subnetmaski[3]);
+				sprintf(ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
+			} else
+				strcpy(ip_str, w2);
+			subnet_mask  = ntohl(inet_addr(ip_str));
+			ShowMessage("Sub-network mask of the map-server: %d.%d.%d.%d.\n",  (subnet_mask>>24)&0xFF,(subnet_mask>>16)&0xFF,(subnet_mask>>8)&0xFF,(subnet_mask)&0xFF);
 		}
 	}
 	fclose(fp);
 
 	// sub-network check of the map-server
 	{
-		unsigned int a0, a1, a2, a3;
-		unsigned char p[4];
-		sscanf(lan_map_ip, "%d.%d.%d.%d", &a0, &a1, &a2, &a3);
-		p[0] = a0; p[1] = a1; p[2] = a2; p[3] = a3;
-		ShowMessage("LAN test of LAN IP of the map-server: ");
-		if (lan_ip_check(p) == 0) {
+		if (lan_ip_check(lan_map_ip) == 0) {
 			ShowMessage(CL_BT_RED"***ERROR: LAN IP of the map-server doesn't belong to the specified Sub-network.\n"CL_NORM);
 		}
 	}
@@ -3115,7 +3090,7 @@ int char_config_read(const char *cfgName) {
 				sprintf(login_ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 			} else
 				memcpy(login_ip_str, w2, 16);
-			login_ip = inet_addr(login_ip_str);
+			login_ip = ntohl(inet_addr(login_ip_str));
 		} else if (strcasecmp(w1, "login_port") == 0) {
 			login_port = atoi(w2);
 		} else if (strcasecmp(w1, "char_ip") == 0) {
@@ -3126,7 +3101,7 @@ int char_config_read(const char *cfgName) {
 				sprintf(char_ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 			} else
 				memcpy(char_ip_str, w2, 16);
-			char_ip  = inet_addr(char_ip_str);
+			char_ip  = ntohl(inet_addr(char_ip_str));
 		} else if (strcasecmp(w1, "char_port") == 0) {
 			char_port = atoi(w2);
 		} else if (strcasecmp(w1, "char_maintenance") == 0) {
@@ -3303,19 +3278,18 @@ int do_init(int argc, char **argv) {
     else if( login_ip == INADDR_LOOPBACK || char_ip == INADDR_ANY ) { 
 		// The char server should know what IP address it is running on
 		//   - MouseJstr
-		unsigned long localaddr = ntohl(addr_[0]); // host order network address
-		unsigned char *ptr = (unsigned char *) &localaddr;
-		char buf[16];
-		sprintf(buf, "%d.%d.%d.%d", ptr[0], ptr[1], ptr[2], ptr[3]);
+		unsigned long localaddr = addr_[0]; // host order network address
 		if (naddr_ != 1) 
-			ShowMessage("Multiple interfaces detected...  using %s as primary IP address\n", buf);
+			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n", 
+								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
 		else
-			ShowMessage("Defaulting to %s as our IP address\n", buf);
+			ShowMessage("Defaulting to %d.%d.%d.%d as our IP address\n", 
+								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
 		if (login_ip == INADDR_LOOPBACK)
-			login_ip  = inet_addr(buf);
+			login_ip  = localaddr;
 		if (char_ip == INADDR_ANY)
-			char_ip  = inet_addr(buf);
-		if (ptr[0] == 192 && ptr[1] == 168)  
+			char_ip  = localaddr;
+		if (localaddr&0xFFFF0000 == 0xC0A80000)//192.168.x.x
 			ShowMessage("Private Network detected.. edit lan_support.conf and char_athena.conf\n");
 	} 
 

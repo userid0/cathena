@@ -422,14 +422,15 @@ static int connect_client(int listen_fd)
 	session[fd]->func_recv   = recv_to_fifo;
 	session[fd]->func_send   = send_from_fifo;
 	session[fd]->func_parse  = default_func_parse;
-	session[fd]->client_addr = client_address;
+	//session[fd]->client_addr = client_address;
+	session[fd]->client_ip	 = ntohl(client_address.sin_addr.s_addr);
 	session[fd]->rdata_tick  = tick_;
 
   //ShowMessage("new_session : %d %d\n",fd,session[fd]->eof);
 	return fd;
 }
 
-int make_listen(in_addr_t ip, unsigned short port)
+int make_listen(unsigned long ip, unsigned short port)
 {
 	struct sockaddr_in server_address;
 	SOCKET sock;
@@ -453,7 +454,7 @@ int make_listen(in_addr_t ip, unsigned short port)
 	setsocketopts(sock);
 
 	server_address.sin_family      = AF_INET;
-	server_address.sin_addr.s_addr = ip; // ip is in network byte order
+	server_address.sin_addr.s_addr = htonl( ip );
 	server_address.sin_port        = htons(port);
 
 	result = bind(sock, (struct sockaddr*)&server_address, sizeof(server_address));
@@ -544,7 +545,7 @@ int start_console(void) {
 	return 0;
 }   
     
-int make_connection(in_addr_t ip, unsigned short port)
+int make_connection(unsigned long ip, unsigned short port)
 {
 	struct sockaddr_in server_address;
 	int fd;
@@ -566,9 +567,9 @@ int make_connection(in_addr_t ip, unsigned short port)
 
 	setsocketopts(sock);
 
-	server_address.sin_family = AF_INET;
-	server_address.sin_addr.s_addr = ip; // ip is in network byte order
-	server_address.sin_port = htons(port);
+	server_address.sin_family		= AF_INET;
+	server_address.sin_addr.s_addr	= htonl( ip );
+	server_address.sin_port			= htons(port);
 
 	socket_nonblocking(sock);
 
@@ -639,9 +640,11 @@ int WFIFOSET(int fd,int len)
 	if (s == NULL  || s->wdata == NULL)
 		return 0;
 	if( s->wdata_size+len+16384 > s->max_wdata ){
-		unsigned char *sin_addr = (unsigned char *)&s->client_addr.sin_addr;
+		//unsigned char *sin_addr = (unsigned char *)&s->client_addr.sin_addr;
+		unsigned long ip = s->client_ip;
 		realloc_fifo(fd,s->max_rdata, s->max_wdata <<1 );
-		ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, sin_addr[0], sin_addr[1], sin_addr[2], sin_addr[3], s->max_wdata);
+		//ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, sin_addr[0], sin_addr[1], sin_addr[2], sin_addr[3], s->max_wdata);
+		ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, s->max_wdata);
 	}
 	s->wdata_size=(s->wdata_size+(len)+2048 < s->max_wdata) ?
 		 s->wdata_size+len : (ShowMessage("socket: %d wdata lost !!\n",fd),s->wdata_size);

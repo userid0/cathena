@@ -1367,15 +1367,15 @@ int guild_castledataloadack(int castle_id,int index,int value)
 		return 0;
 	}
 	switch(index){
-	case 1: gc->guild_id = value; break;
-	case 2: gc->economy = value; break;
-	case 3: gc->defense = value; break;
-	case 4: gc->triggerE = value; break;
-	case 5: gc->triggerD = value; break;
-	case 6: gc->nextTime = value; break;
-	case 7: gc->payTime = value; break;
-	case 8: gc->createTime = value; break;
-	case 9: gc->visibleC = value; break;
+	case  1: gc->guild_id = value; break;
+	case  2: gc->economy = value; break;
+	case  3: gc->defense = value; break;
+	case  4: gc->triggerE = value; break;
+	case  5: gc->triggerD = value; break;
+	case  6: gc->nextTime = value; break;
+	case  7: gc->payTime = value; break;
+	case  8: gc->createTime = value; break;
+	case  9: gc->visibleC = value; break;
 	case 10: gc->visibleG0 = value; break;
 	case 11: gc->visibleG1 = value; break;
 	case 12: gc->visibleG2 = value; break;
@@ -1393,13 +1393,22 @@ int guild_castledataloadack(int castle_id,int index,int value)
 	case 24: gc->Ghp6 = value; break;
 	case 25: gc->Ghp7 = value; break;	// end additions [Valaris]
 	default:
-		ShowMessage("guild_castledataloadack ERROR!! (Not found index=%d)\n", index);
+		ShowMessage("guild_castledataloadack ERROR!! (Not found index=%d, castle %d)\n", index,castle_id);
 		return 0;
 	}
-	if( (ev=(struct eventlist *)numdb_search(guild_castleinfoevent_db,code))!=NULL ){
+	ev=(struct eventlist *)numdb_search(guild_castleinfoevent_db,code);
+	if( ev != NULL ){
 		numdb_erase(guild_castleinfoevent_db,code);
-		for(;ev;ev2=ev->next,aFree(ev),ev=ev2){
+//		for(;ev;ev2=ev->next,aFree(ev),ev=ev2){
+//			npc_event_do(ev->name);
+//		}
+		// same assembler result but more clear to read
+		while(ev)
+		{
 			npc_event_do(ev->name);
+			ev2 = ev->next;
+			aFree(ev);
+			ev = ev2;
 		}
 	}
 	return 1;

@@ -14,6 +14,7 @@
 #define END_ACCOUNT_NUM 100000000
 
 struct mmo_account {
+	int version;	//Added for version check [Sirius]
 	char* userid;
 	char passwd[33];
 	int passwdenc;
@@ -28,7 +29,7 @@ struct mmo_account {
 
 struct mmo_char_server {
 	char name[21];
-	in_addr_t ip;
+	unsigned long ip;
 	unsigned short port;
 	int users;
 	int maintenance;

@@ -137,10 +137,10 @@ int get_svn_revision(char *svnentry) { // Warning: minor syntax checking
 		}
 		fclose(fp);
 		if (sscanf(line," %*[^\"]\"%d%*[^\n]",&rev)==1) 
-			return rev;
+		return rev;
 	}
-	return 0;
-}
+		return 0;
+	}
 
 /*======================================
  *	CORE : Display title

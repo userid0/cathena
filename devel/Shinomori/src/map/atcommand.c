@@ -2173,7 +2173,7 @@ int atcommand_kami(
 	}
 
 	sscanf(message, "%199[^\n]", output);
-	intif_GMmessage(output, strlen(output) + 1, (*(command + 5) == 'b') ? 0x10 : 0);
+	intif_GMmessage(output, (*(command + 5) == 'b') ? 0x10 : 0);
 
 	return 0;
 }
@@ -6543,7 +6543,7 @@ int atcommand_broadcast(
 	}
 
 	sprintf(output, "%s : %s", sd->status.name, message);
-	intif_GMmessage(output, strlen(output) + 1, 0);
+	intif_GMmessage(output, 0);
 
 	return 0;
 }
@@ -6568,7 +6568,7 @@ int atcommand_localbroadcast(
 
 	sprintf(output, "%s : %s", sd->status.name, message);
 
-	clif_GMmessage(&sd->bl, output, strlen(output) + 1, 1); // 1: ALL_SAMEMAP
+	clif_GMmessage(&sd->bl, output, 1); // 1: ALL_SAMEMAP
 
 	return 0;
 }
@@ -8197,23 +8197,23 @@ atcommand_identify(
 int
 atcommand_gmotd(const int fd, struct map_session_data* sd, const char* command, const char* message)
 {
-		char buf[256];
-		FILE *fp;
+	char buf[256];
+	FILE *fp;
 	nullpo_retr(-1, sd);
 	if(	(fp = savefopen(motd_txt, "r"))!=NULL){
-			while (fgets(buf, 250, fp) != NULL){
-				int i;
-				for( i=0; buf[i]; i++){
-					if( buf[i]=='\r' || buf[i]=='\n'){
-						buf[i]=0;
-						break;
-					}
+		while (fgets(buf, 250, fp) != NULL){
+			int i;
+			for( i=0; buf[i]; i++){
+				if( buf[i]=='\r' || buf[i]=='\n'){
+					buf[i]=0;
+					break;
 				}
-				intif_GMmessage(buf,strlen(buf)+1,8);
 			}
-			fclose(fp);
+			intif_GMmessage(buf,8);
 		}
-		return 0;
+		fclose(fp);
+	}
+	return 0;
 }
 
 int atcommand_misceffect(

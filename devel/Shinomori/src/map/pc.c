@@ -50,7 +50,7 @@ static int exp_table[14][MAX_LEVEL];
 static char statp[255][7];
 
 // h-files are for declarations, not for implementations... [Shinomori]
-struct skill_tree_entry skill_tree[3][MAX_PC_CLASS][100];
+struct skill_tree_entry skill_tree[3][25][MAX_SKILL_TREE];
 // timer for night.day implementation
 int day_timer_tid;
 int night_timer_tid;
@@ -721,7 +721,6 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 		return 1;
 	}
 	sd->login_id2 = login_id2;
-//	memcpy(&sd->status, buf, sizeof(struct mmo_charstatus));
 	mmo_charstatus_frombuffer(&sd->status, buf);
 
 	if (sd->status.sex != sd->sex) {
@@ -915,7 +914,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 					}
 				}
 				if (battle_config.motd_type)
-					clif_disp_onlyself(sd,buf,strlen(buf));
+					clif_disp_onlyself(sd,buf);
 				else
 					clif_displaymessage(sd->fd, buf);
 			}
@@ -2783,7 +2782,7 @@ int pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clrt
 
 	if(m<0){
 		if(sd->mapname[0]){
-			in_addr_t ip;
+			unsigned long ip;
 			unsigned short port;
 			if(map_mapname2ipport(mapname,&ip,&port)==0){
 				skill_stop_dancing(&sd->bl,1);
@@ -3870,7 +3869,7 @@ int pc_gainexp(struct map_session_data *sd,int base_exp,int job_exp)
 	if(battle_config.disp_experience){
 		sprintf(output, 
 			"Experienced Gained Base:%d Job:%d",base_exp,job_exp);
-		clif_disp_onlyself(sd,output,strlen(output));
+		clif_disp_onlyself(sd,output);
 	}
 
 	return 0;
@@ -4542,7 +4541,7 @@ int pc_damage(struct block_list *src,struct map_session_data *sd,int damage)
 	if (s_class.job == 23) {
 		if ((i=pc_nextbaseexp(sd))<=0)
 			i=sd->status.base_exp;
-		if ((j=sd->status.base_exp*1000/i)>=990 && j<=1000)
+		if ((i>0) && (j=sd->status.base_exp*1000/i)>=990 && j<=1000)
 			sd->state.snovice_flag = 4;
 	}
 
@@ -6862,7 +6861,12 @@ int pc_readdb(void)
 		s_class = pc_calc_base_job(atoi(split[0]));
 		i = s_class.job;
 		u = s_class.upper;
-		for(j=0;skill_tree[u][i][j].id;j++);
+		// check for bounds [celest]
+		if (i > 25 || u > 3)
+			continue;
+		for(j = 0; skill_tree[u][i][j].id && j < MAX_SKILL_TREE; j++);
+		if (j == MAX_SKILL_TREE)
+			continue;
 		skill_tree[u][i][j].id=atoi(split[1]);
 		skill_tree[u][i][j].max=atoi(split[2]);
 		

@@ -697,7 +697,7 @@ struct map_data {
 struct map_data_other_server {
 	char name[24];
 	unsigned char *gat;	// NULLŒÅ’è‚É‚µ‚Ä”»’f
-	in_addr_t ip;
+	unsigned long ip;
 	unsigned short port;
 };
 
@@ -833,6 +833,7 @@ void map_foreachinarea(int (*)(struct block_list*,va_list),int,int,int,int,int,i
 // -- moonsoul (added map_foreachincell)
 void map_foreachincell(int (*)(struct block_list*,va_list),int,int,int,int,...);
 void map_foreachinmovearea(int (*)(struct block_list*,va_list),int,int,int,int,int,int,int,int,...);
+void map_foreachinpath(int (*)(struct block_list*,va_list),int,int,int,int,int,int,int,int,...); // Celest
 int map_countnearpc(int,int,int);
 //blockŠÖ˜A‚É’Ç‰Á
 int map_count_oncell(int m,int x,int y);
@@ -862,9 +863,9 @@ char * map_charid2nick(int);
 struct map_session_data * map_id2sd(int);
 struct block_list * map_id2bl(int);
 int map_mapname2mapid(char*);
-int map_mapname2ipport(char *name, in_addr_t *ip,unsigned short *port);
-int map_setipport(char *name, in_addr_t ip, unsigned short port);
-int map_eraseipport(char *name, in_addr_t ip,unsigned short port);
+int map_mapname2ipport(char *name, unsigned long *ip,unsigned short *port);
+int map_setipport(char *name, unsigned long ip, unsigned short port);
+int map_eraseipport(char *name, unsigned long ip,unsigned short port);
 void map_addiddb(struct block_list *);
 void map_deliddb(struct block_list *bl);
 int map_foreachiddb(int (*)(void*,void*,va_list),...);

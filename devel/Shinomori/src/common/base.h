@@ -88,10 +88,6 @@
 #define PATHSEP '\\'
 
 
-// typedefs
-typedef unsigned long		in_addr_t;	// inet addr in network byte order
-
-
 
 // abnormal function definitions
 #define vsnprintf			_vsnprintf

@@ -64,7 +64,7 @@
 #define CL_NORMAL	CL_RESET
 #define CL_NONE		CL_RESET
 
-enum msg_type {MSG_NONE,MSG_STATUS,MSG_SQL,MSG_INFORMATION,MSG_NOTICE,MSG_WARNING,MSG_DEBUG,MSG_ERROR,MSG_FATALERROR};
+enum msg_type {MSG_NONE,MSG_STATUS,MSG_SQL,MSG_INFORMATION,MSG_CONSOLE,MSG_NOTICE,MSG_WARNING,MSG_DEBUG,MSG_ERROR,MSG_FATALERROR};
 
 extern int _vShowMessage(enum msg_type flag, const char *string, va_list va);
 extern int _ShowMessage(enum msg_type flag, const char *string, ...);
@@ -92,6 +92,10 @@ extern int _ShowMessage(enum msg_type flag, const char *string, ...);
 //	#define DisplayInfo(string...) _ShowMessage(MSG_INFORMATION,##string)
 //	#define ShowInformation(string...) _ShowMessage(MSG_INFORMATION,##string)
 //	#define DisplayInformation(string...) _ShowMessage(MSG_INFORMATION,##string)
+
+/* MSG_CONSOLE */
+	#define ShowConsole(string...) _ShowMessage(MSG_CONSOLE,##string)
+//	#define DisplayNotice(string...) _ShowMessage(MSG_NOTICE,##string)
 
 /* MSG_NOTICE */
 	#define ShowNotice(string...) _ShowMessage(MSG_NOTICE,##string)
@@ -181,6 +185,16 @@ extern inline int ShowInfo(const char *string, ...)
 	int ret;
 	va_start(va,string);
 	ret = _vShowMessage(MSG_INFORMATION, string, va);
+	va_end(va);
+	return ret;
+}
+/* MSG_CONSOLE */
+extern inline int ShowConsole(const char *string, ...)
+{
+	va_list va;
+	int ret;
+	va_start(va,string);
+	ret = _vShowMessage(MSG_CONSOLE, string, va);
 	va_end(va);
 	return ret;
 }

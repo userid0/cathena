@@ -134,8 +134,8 @@ enum {
 #define WFIFOPOS2(fd,pos,x0,y0,x1,y1) { WBUFPOS2(WFIFOP(fd,pos),0,x0,y0,x1,y1); }
 
 
-static in_addr_t map_ip = INADDR_ANY;
-static unsigned short map_port = 5121;
+static unsigned long	map_ip	= INADDR_ANY;
+static unsigned short	map_port= 5121;
 int map_fd;
 char talkie_mes[80];
 
@@ -144,10 +144,9 @@ char talkie_mes[80];
  * mapŽI‚ÌipÝ’è
  *------------------------------------------
  */
-void clif_setip(char *ip)
+void clif_setip(unsigned long ip)
 {
-	if(ip)
-	map_ip = inet_addr(ip);
+	map_ip = ip;
 }
 
 /*==========================================
@@ -163,7 +162,7 @@ void clif_setport(int port)
  * mapŽI‚Ìip“Ç‚Ýo‚µ
  *------------------------------------------
  */
-in_addr_t clif_getip(void)
+unsigned long clif_getip(void)
 {
 	return map_ip;
 }
@@ -1556,7 +1555,7 @@ int clif_changemap(struct map_session_data *sd, char *mapname, int x, int y) {
  *
  *------------------------------------------
  */
-int clif_changemapserver(struct map_session_data *sd, char *mapname, int x, int y, in_addr_t ip, unsigned short port) {
+int clif_changemapserver(struct map_session_data *sd, char *mapname, int x, int y, unsigned long ip, unsigned short port) {
 	int fd;
 
 	nullpo_retr(0, sd);
@@ -4692,17 +4691,16 @@ int clif_displaymessage(const int fd, char* mes)
 {
 	//Console [Wizputer]
 	if (fd == 0)
-		ShowMessage(CL_LT_CYAN"Console:"CL_NORM" "CL_BOLD"%s\n"CL_NORM, mes);
-	else {
-		size_t len;
-		if ( mes && ( (len=strlen(mes))> 0)) { // don't send a void message (it's not displaying on the client chat). @help can send void line.
+		ShowConsole(CL_BOLD"%s\n"CL_NORM, mes);
+	else if(mes){
+		size_t len=strlen(mes);
+		if ( len > 0 ) { // don't send a void message (it's not displaying on the client chat). @help can send void line.
 			WFIFOW(fd,0) = 0x8e;
-			WFIFOW(fd,2) = 5 + len; // 4 + len + NULL teminate
-			memcpy(WFIFOP(fd,4), mes, len + 1);
-			WFIFOSET(fd, 5 + len);
+			WFIFOW(fd,2) = 4 + len+1; // 4 + len + NULL terminate
+			memcpy(WFIFOP(fd,4), mes, len+1);
+			WFIFOSET(fd, 4 + len+1);
 		}
 	}
-
 	return 0;
 }
 
@@ -4710,26 +4708,33 @@ int clif_displaymessage(const int fd, char* mes)
  * “V‚Ìº‚ð‘—M‚·‚é
  *------------------------------------------
  */
-int clif_GMmessage(struct block_list *bl, char* mes, int len, int flag)
+int clif_GMmessage(struct block_list *bl, char* mes, int flag)
 {
-	unsigned char *buf;
-	int lp;
+	if(mes)
+	{
+		unsigned char buf[512];
+		int lp;
+		int len = sizeof(mes);
 
-	lp = (flag & 0x10) ? 8 : 4;
-	buf = (unsigned char*)aMalloc( (len + lp) * sizeof(unsigned char));
+		lp = (flag & 0x10) ? 8 : 4;
+//		buf = (unsigned char*)aMalloc( (len + lp) * sizeof(unsigned char));
+		if( len > 512-lp ) len = 512-lp;
 
-	WBUFW(buf,0) = 0x9a;
-	WBUFW(buf,2) = len + lp;
-	WBUFL(buf,4) = 0x65756c62;
-	memcpy(WBUFP(buf,lp), mes, len);
-	flag &= 0x07;
-	clif_send(buf, WBUFW(buf,2), bl,
-	          (flag == 1) ? ALL_SAMEMAP :
-	          (flag == 2) ? AREA :
-	          (flag == 3) ? SELF :
-	          ALL_CLIENT);
 
-	if(buf) aFree(buf);
+		WBUFW(buf,0) = 0x9a;
+		WBUFW(buf,2) = len + lp;
+		WBUFL(buf,4) = 0x65756c62;
+		memcpy(WBUFP(buf,lp), mes, len);
+		buf[511] = 0; //force EOS
+		flag &= 0x07;
+		clif_send(buf, WBUFW(buf,2), bl,
+				  (flag == 1) ? ALL_SAMEMAP :
+				  (flag == 2) ? AREA :
+				  (flag == 3) ? SELF :
+				  ALL_CLIENT);
+
+//		if(buf) aFree(buf);
+	}
 
 	return 0;
 }
@@ -7070,22 +7075,24 @@ void clif_sitting(struct map_session_data *sd)
  *
  *------------------------------------------
  */
-int clif_disp_onlyself(struct map_session_data *sd, char *mes, int len)
+int clif_disp_onlyself(struct map_session_data *sd, char *mes)
 {
-	unsigned char *buf;
+	if(mes)
+	{
+		unsigned char *buf;
+		int len = strlen(mes)+1;
+		nullpo_retr(0, sd);
 
-	nullpo_retr(0, sd);
+		buf = (unsigned char*)aMalloc( (len+4) * sizeof(unsigned char) );
 
-	buf = (unsigned char*)aMalloc( (len + 8) * sizeof(unsigned char));
+		WBUFW(buf, 0) = 0x17f;
+		WBUFW(buf, 2) = len+4;
+		memcpy(WBUFP(buf,4), mes, len);
 
-	WBUFW(buf, 0) = 0x17f;
-	WBUFW(buf, 2) = len + 8;
-	memcpy(WBUFP(buf,4), mes, len + 4);
+		clif_send(buf, len+4, &sd->bl, SELF);
 
-	clif_send(buf, WBUFW(buf,2), &sd->bl, SELF);
-
-	if(buf) aFree(buf);
-
+		if(buf) aFree(buf);
+	}
 	return 0;
 }
 
@@ -7936,7 +7943,8 @@ void clif_parse_GlobalMessage(int fd, struct map_session_data *sd) { // S 008c <
 	// Celest
 	if (pc_calc_base_job2 (sd->status.class_) == 23 ) {
 		int next = pc_nextbaseexp(sd)>0 ? pc_nextbaseexp(sd) : sd->status.base_exp;
-		if ((sd->status.base_exp*100/next)%10 == 0) {
+
+		if ((next == 0) || ((sd->status.base_exp*100/next)%10 == 0)) {
 			estr_lower((char*)RFIFOP(fd,4));
 			if (sd->state.snovice_flag == 0 && strstr((char*)RFIFOP(fd,4), msg_txt(540)))
 				sd->state.snovice_flag = 1;
@@ -7966,18 +7974,23 @@ void clif_parse_GlobalMessage(int fd, struct map_session_data *sd) { // S 008c <
 
 int clif_message(struct block_list *bl, char* msg)
 {
-	unsigned short msg_len = strlen(msg) + 1;
-	unsigned char buf[256];
+	if(msg)
+	{
+		unsigned short msg_len = strlen(msg) + 1;
+		unsigned char buf[256];
 
-	nullpo_retr(0, bl);
+		if(msg_len>256-8)	msg_len=256-8;
 
-	WBUFW(buf, 0) = 0x8d;
-	WBUFW(buf, 2) = msg_len + 8;
-	WBUFL(buf, 4) = bl->id;
-	memcpy(WBUFP(buf, 8), msg, msg_len);
+		nullpo_retr(0, bl);
 
-	clif_send(buf, WBUFW(buf,2), bl, AREA_CHAT_WOC);	// by Gengar
+		WBUFW(buf, 0) = 0x8d;
+		WBUFW(buf, 2) = msg_len + 8;
+		WBUFL(buf, 4) = bl->id;
+		memcpy(WBUFP(buf, 8), msg, msg_len);
+		buf[255] = 0;// force EOS
 
+		clif_send(buf, WBUFW(buf,2), bl, AREA_CHAT_WOC);	// by Gengar
+	}
 	return 0;
 }
 
@@ -8345,7 +8358,7 @@ void clif_parse_GMmessage(int fd, struct map_session_data *sd) {
 
 	if ((battle_config.atc_gmonly == 0 || pc_isGM(sd)) &&
 	    (pc_isGM(sd) >= get_atcommand_level(AtCommand_Broadcast)))
-		intif_GMmessage((char*)RFIFOP(fd,4), RFIFOW(fd,2)-4, 0);
+		intif_GMmessage((char*)RFIFOP(fd,4), 0);
 }
 
 /*==========================================
@@ -8983,6 +8996,20 @@ void clif_parse_UseSkillToId(int fd, struct map_session_data *sd) {
 					return;
 				} else if (sd->bl.id == target_id) {
 					clif_skillinfo(sd, MO_EXTREMITYFIST, 1, -1);
+					return;
+				}
+			}
+		} else if (skillnum == CH_TIGERFIST) {
+			if (sd->sc_data[SC_COMBO].timer == -1 || sd->sc_data[SC_COMBO].val1 != MO_COMBOFINISH) {
+				if (!sd->state.skill_flag ) {
+					sd->state.skill_flag = 1;
+					if (!sd->attacktarget) {
+						clif_skillinfo(sd, CH_TIGERFIST, 1, -2);
+						return;
+					} else
+						target_id = sd->attacktarget;
+				} else if (sd->bl.id == target_id) {
+					clif_skillinfo(sd, CH_TIGERFIST, 1, -2);
 					return;
 				}
 			}
@@ -10540,8 +10567,10 @@ static int clif_parse(int fd) {
 			map_deliddb(&sd->bl); // account_id has been included in the DB before auth answer [Yor]
 //			sd = 0;
 		} else {
-			unsigned char *ip = (unsigned char *) &session[fd]->client_addr.sin_addr;
-			ShowWarning("Player not identified with IP '"CL_WHITE"%d.%d.%d.%d"CL_RESET"' logged off.\n", ip[0],ip[1],ip[2],ip[3]);
+			//unsigned char *ip = (unsigned char *) &session[fd]->client_addr.sin_addr;
+			//ShowWarning("Player not identified with IP '"CL_WHITE"%d.%d.%d.%d"CL_RESET"' logged off.\n", ip[0],ip[1],ip[2],ip[3]);
+			unsigned long ip = session[fd]->client_ip;
+			ShowWarning("Player not identified with IP '"CL_WHITE"%d.%d.%d.%d"CL_RESET"' logged off.\n", (ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF);		
 		}
 		close(fd);
 //		if (sd) // ’Ç‰Á

@@ -22,11 +22,10 @@ extern struct Clif_Config {
 	int connect_cmd;
 } clif_config;
 
-void clif_setip(char*);
-void clif_setbindip(char*);
+void clif_setip(unsigned long );
 void clif_setport(int);
 
-in_addr_t clif_getip(void);
+unsigned long clif_getip(void);
 int clif_getport(void);
 int clif_countusers(void);
 void clif_setwaitclose(int);
@@ -50,7 +49,7 @@ int clif_movemob(struct mob_data*);	//area
 int clif_movepet(struct pet_data *pd);	//area
 int clif_movenpc(struct npc_data *nd);	// [Valaris]
 int clif_changemap(struct map_session_data*,char*,int,int);	//self
-int clif_changemapserver(struct map_session_data*,char*,int,int,in_addr_t,unsigned short);	//self
+int clif_changemapserver(struct map_session_data*,char*,int,int,unsigned long,unsigned short);	//self
 int clif_fixpos(struct block_list *);	// area
 int clif_fixmobpos(struct mob_data *md);
 int clif_fixpcpos(struct map_session_data *sd);
@@ -262,8 +261,8 @@ int clif_guild_broken(struct map_session_data *sd,int flag);
 
 // atcommand
 int clif_displaymessage(const int fd,char* mes);
-int clif_disp_onlyself(struct map_session_data *sd,char *mes,int len);
-int clif_GMmessage(struct block_list *bl,char* mes,int len,int flag);
+int clif_disp_onlyself(struct map_session_data *sd,char *mes);
+int clif_GMmessage(struct block_list *bl,char* mes,int flag);
 int clif_heal(int fd,int type,int val);
 int clif_resurrection(struct block_list *bl,int type);
 int clif_set0199(int fd,int type);

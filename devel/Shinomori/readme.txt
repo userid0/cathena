@@ -1,6 +1,6 @@
 my personal kingdom
 
-based on svn1057
+based on svn1073
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
@@ -46,4 +46,8 @@ reading npcs recursively from folder
 fix for moving npcs with ontouch event
 a fast hack, should generally reconsider structure 
 and access to map_data
+///////////////////////////////////////////////////////////
+changed all usages of ip numbers to host byte order 
+for better consitency, 
+still cleaning and simplifying code
 ///////////////////////////////////////////////////////////

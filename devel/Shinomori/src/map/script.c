@@ -299,6 +299,8 @@ int buildin_skilluseid(struct script_state *st); // originally by Qamera [celest
 int buildin_skillusepos(struct script_state *st); // originally by Qamera [celest]
 int buildin_logmes(struct script_state *st); // [Lupus]
 int buildin_summon(struct script_state *st); // [celest]
+int buildin_isnight(struct script_state *st); // [celest]
+int buildin_isday(struct script_state *st); // [celest]
 
 // ADDITION Qamera death/disconnect/connect event mod
 int buildin_pcstrcharinfo(struct script_state *st);
@@ -529,13 +531,8 @@ struct {
 	{buildin_skillusepos,"skillusepos","iiii"}, // [Celest]
 	{buildin_logmes,"logmes","s"}, //this command actls as MES but prints info into LOG file either SQL/TXT [Lupus]
 	{buildin_summon,"summon","si*"}, // summons a slave monster [Celest]
-	
-	// ADDITION Qamera death/disconnect/connect event mod
-	{buildin_pcstrcharinfo,"pcstrcharinfo","ii"},
-	{buildin_pcgetcharid,"pcgetcharid","si"},
-	{buildin_disconnectevent,"disconnectevent","i"},
-	{buildin_deathevent,"deathevent","i"},
-	// END ADDITION
+	{buildin_isnight,"isnight",""}, // check whether it is night time [Celest]
+	{buildin_isday,"isday",""}, // check whether it is day time [Celest]
 	{NULL,NULL,NULL},
 };
 int buildin_message(struct script_state *st); // [MouseJstr]
@@ -594,8 +591,6 @@ static int add_str(const char *p)
 //	char *lowcase = aStrdup((char*)p);
 //	for(i=0;lowcase[i];i++)
 //		lowcase[i]=tolower(lowcase[i]);
-//	if(strcmp((char*)lowcase,(char*)lowcase1)!=0)
-//		printf("'%s' %s'\n", lowcase,lowcase1);
 //	if((i=search_str((unsigned char*)lowcase))>=0){
 //		aFree(lowcase);
 //		return i;
@@ -612,7 +607,7 @@ static int add_str(const char *p)
 		lowcase[i]=tolower(p[i]);
 	lowcase[i] = 0;//EOS
 	i=search_str(lowcase);
-	aFree(lowcase);
+		aFree(lowcase);
 	if(i >= 0) return i;
 
 	i=calc_hash(p);
@@ -648,7 +643,7 @@ static int add_str(const char *p)
 	str_data[str_num].func=NULL;
 	str_data[str_num].backpatch=-1;
 	str_data[str_num].label=-1;
-	str_pos+=strlen((char*)p)+1;
+	str_pos+=strlen( (char *) p)+1;
 	return str_num++;
 }
 
@@ -824,7 +819,7 @@ static void disp_error_message(const char *mes,const char *pos)
 	int line,c=0,i;
 	char *p,*linestart,*lineend;
 
-	for(line=startline,p=startptr; p && *p; line++){
+	for(line=startline,p=startptr;p && *p;line++){
 		linestart=p;
 		lineend=strchr(p,'\n');
 		if(lineend){
@@ -920,7 +915,7 @@ char* parse_simpleexpr(char *p)
 			disp_error_message("prefix 'l' is DEPRECATED. use prefix '@' instead.",p2);
 		}
 */
-		*p2=c;
+		*p2=c;	
 		p=p2;
 
 		if(str_data[l].type!=C_FUNC && c=='['){
@@ -1110,7 +1105,7 @@ char* parse_line(char *p)
 		p=skip_space(p);
 		i++;
 	}
-	plist[i]=(char*)p;
+	plist[i]=(char *) p;
 	if(!p || *(p++)!=';'){
 		disp_error_message("need ';'",p);
 		exit(1);
@@ -4046,9 +4041,9 @@ int buildin_announce(struct script_state *st)
 	if(flag&0x0f){
 		struct block_list *bl=(flag&0x08)? map_id2bl(st->oid) :
 			(struct block_list *)script_rid2sd(st);
-		clif_GMmessage(bl,str,strlen(str)+1,flag);
+		clif_GMmessage(bl,str,flag);
 	}else
-		intif_GMmessage(str,strlen(str)+1,flag);
+		intif_GMmessage(str,flag);
 	return 0;
 }
 /*==========================================
@@ -4062,7 +4057,7 @@ int buildin_mapannounce_sub(struct block_list *bl,va_list ap)
 	str=va_arg(ap,char *);
 	len=va_arg(ap,int);
 	flag=va_arg(ap,int);
-	clif_GMmessage(bl,str,len,flag|3);
+	clif_GMmessage(bl,str,flag|3);
 	return 0;
 }
 int buildin_mapannounce(struct script_state *st)
@@ -5591,20 +5586,20 @@ int buildin_strmobinfo(struct script_state *st)
 	switch (num) {
 	case 1:
 		{
-		char *buf;
+			char *buf;
 		buf = (char*)aMalloc(24*sizeof(char));
-		strcpy(buf,mob_db[class_].name);
+			strcpy(buf,mob_db[class_].name);
 		push_str(st->stack,C_STR,(unsigned char*)buf);
 			break;
-	}
+		}
 	case 2:
 		{
-		char *buf;
+			char *buf;
 		buf=(char*)aMalloc(24*sizeof(char));
-		strcpy(buf,mob_db[class_].jname);
+			strcpy(buf,mob_db[class_].jname);
 		push_str(st->stack,C_STR,(unsigned char*)buf);
 			break;
-	}
+		}
 	case 3:
 		push_val(st->stack,C_INT,mob_db[class_].lv);
 		break;
@@ -6524,97 +6519,17 @@ int buildin_summon(struct script_state *st)
 	return 0;
 }
 
-// ============================================
-// ADDITION Qamera death/disconnect/connect event mod
-int buildin_pcgetcharid(struct script_state *st)
+int buildin_isnight(struct script_state *st)
 {
-	char *name;
-	int num;
-	struct map_session_data *sd;
-
-	name=conv_str(st,& (st->stack->stack_data[st->start+2]));
-	num=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	sd = map_nick2sd(name);
-//!! broadcast command if not on this mapserver
-	if(sd==NULL){
-		push_val(st->stack,C_INT,0);
-		num=-1;
-	}
-	if(num==0)
-	push_val(st->stack,C_INT,sd->status.char_id);
-	if(num==1)
-	push_val(st->stack,C_INT,sd->status.party_id);
-	if(num==2)
-	push_val(st->stack,C_INT,sd->status.guild_id);
-	if(num==3)
-	push_val(st->stack,C_INT,sd->status.account_id);
+	push_val(st->stack,C_INT, (night_flag == 1));
 	return 0;
 }
-int buildin_pcstrcharinfo(struct script_state *st)
-{
-	int aid,num;
-	struct map_session_data *sd;
 
-	aid=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	num=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	sd=map_id2sd(aid);
-//!! broadcast command if not on this mapserver
-	if(sd==NULL){
-		push_str(st->stack,C_CONSTSTR,(unsigned char*)"");
-		num=-1;
-	}
-	if(num==0){
-		char *buf;
-		buf=(char *)aMalloc(24*sizeof(char));
-		memcpy(buf,sd->status.name, 24);//EOS included
-		push_str(st->stack,C_STR,(unsigned char*)buf);
-	}
-	if(num==1){
-		char *buf;
-		buf=buildin_getpartyname_sub(sd->status.party_id);
-		if(buf!=0)
-			push_str(st->stack,C_STR,(unsigned char*)buf);
-		else
-			push_str(st->stack,C_CONSTSTR,(unsigned char*)"");
-	}
-	if(num==2){
-		char *buf;
-		buf=buildin_getguildname_sub(sd->status.guild_id);
-		if(buf!=0)
-			push_str(st->stack,C_STR,(unsigned char*)buf);
-		else
-			push_str(st->stack,C_CONSTSTR,(unsigned char*)"");
-	}
+int buildin_isday(struct script_state *st)
+{
+	push_val(st->stack,C_INT, (night_flag == 0));
 	return 0;
 }
-int buildin_disconnectevent(struct script_state *st)
-{
-	int fl;
-	struct map_session_data *sd;
-
-	fl=conv_num(st,& (st->stack->stack_data[st->start+2]));
-
-	sd=script_rid2sd(st);
-	if(sd!=NULL)
-		sd->event_disconnect=fl;
-
-	return 0;
-}
-int buildin_deathevent(struct script_state *st)
-{
-	int fl;
-	struct map_session_data *sd;
-
-	fl=conv_num(st,& (st->stack->stack_data[st->start+2]));
-
-	sd=script_rid2sd(st);
-	if(sd!=NULL)
-		sd->event_death=fl;
-	return 0;
-}
-// END ADDITION
-// ============================================= 
-
 
 //
 // é¿çsïîmain

@@ -282,6 +282,9 @@ int _vShowMessage(enum msg_type flag, const char *string, va_list ap){
 		case MSG_INFORMATION: //Bright White (Variable information)
 			strcpy(prefix,CL_BT_WHITE"[Info]"CL_RESET":");
 			break;
+		case MSG_CONSOLE: //
+			strcpy(prefix,CL_LT_CYAN"[Console]"CL_RESET":");
+			break;
 		case MSG_NOTICE: //Bright White (Less than a warning)
 			strcpy(prefix,CL_BT_WHITE"[Notice]"CL_RESET":");
 			break;

@@ -224,7 +224,7 @@ int inter_log(char *fmt,...) {
 
 	va_start(ap,fmt);
 	logfp = savefopen(inter_log_filename, "a");
-	if (logfp) {
+	if (logfp && fmt) {
 		vfprintf(logfp, fmt, ap);
 		fclose(logfp);
 	}

@@ -228,7 +228,7 @@ char date_format[32] = "%Y-%m-%d %H:%M:%S";
 //
 //-------------------------------------------------------------------------
 int login_fd;
-in_addr_t login_ip;
+unsigned long login_ip;
 
 int bytes_to_read = 0; // flag to know if we waiting bytes from login-server
 char command[1024];
@@ -4242,7 +4242,7 @@ int ladmin_config_read(const char *cfgName) {
 	}
 	fclose(fp);
 
-	login_ip = inet_addr(loginserverip);
+	login_ip = ntohl(inet_addr(loginserverip));
 
 	if (defaultlanguage == 'F') {
 		ShowMessage("---Lecture du fichier de configuration Ladmin terminée.\n");
@@ -4287,7 +4287,7 @@ int do_init(int argc, char **argv) {
 		ladmin_log("Configuration file readed." RETCODE);
 	}
 
-	srand(time(NULL));
+	srand(time(NULL)^3141592654UL);
 
 	set_termfunc(do_final);
 	set_defaultparse(parse_fromlogin);

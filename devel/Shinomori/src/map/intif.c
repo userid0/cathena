@@ -106,20 +106,23 @@ int intif_delete_petdata(int pet_id)
 }
 
 // GMメッセージを送信
-int intif_GMmessage(char* mes,int len,int flag)
+int intif_GMmessage(char* mes,int flag)
 {
-	int lp = (flag&0x10) ? 8 : 4;
-	if (CheckForCharServer())
-		return 0;
-	WFIFOW(inter_fd,0) = 0x3000;
-	WFIFOW(inter_fd,2) = lp + len;
-	WFIFOL(inter_fd,4) = 0x65756c62;
-	memcpy(WFIFOP(inter_fd,lp), mes, len);
-	WFIFOSET(inter_fd, WFIFOW(inter_fd,2));
+	if(mes)
+	{
+		int lp = (flag&0x10) ? 8 : 4;
+		int len = strlen(mes)+1;
+		if (CheckForCharServer())
+			return 0;
+		WFIFOW(inter_fd,0) = 0x3000;
+		WFIFOW(inter_fd,2) = lp + len;
+		WFIFOL(inter_fd,4) = 0x65756c62;
+		memcpy(WFIFOP(inter_fd,lp), mes, len);
+		WFIFOSET(inter_fd, lp + len);
 
-        // Send to the local players
-        clif_GMmessage(NULL, mes, len, 0);
-
+		// Send to the local players
+		clif_GMmessage(NULL, mes, 0);
+	}
 	return 0;
 }
 
@@ -1131,7 +1134,7 @@ int intif_parse(int fd)
 	}
 	// 処理分岐
 	switch(cmd){
-	case 0x3800:	clif_GMmessage(NULL,(char*)RFIFOP(fd,4),packet_len-4,0); break;
+	case 0x3800:	clif_GMmessage(NULL,(char*)RFIFOP(fd,4),0); break;
 	case 0x3801:	intif_parse_WisMessage(fd); break;
 	case 0x3802:	intif_parse_WisEnd(fd); break;
 	case 0x3803:	mapif_parse_WisToGM(fd); break;

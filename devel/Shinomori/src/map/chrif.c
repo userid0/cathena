@@ -30,8 +30,8 @@ static const int packet_len_table[0x20] = {
 int char_fd = -1;
 int srvinfo;
 
-static in_addr_t  char_ip   = INADDR_LOOPBACK;
-static unsigned short char_port = 6121;
+static unsigned long	char_ip   = INADDR_LOOPBACK;
+static unsigned short	char_port = 6121;
 static char userid[24];
 static char passwd[24];
 static int chrif_state = 0;
@@ -61,13 +61,12 @@ void chrif_setpasswd(char *pwd)
  *
  *------------------------------------------
  */
-void chrif_setip(char *ip) 
+void chrif_setip(unsigned long ip) 
 {
-	if(ip)
-	char_ip = inet_addr(ip);
+	char_ip = ip;
 }
 
-in_addr_t chrif_getip()
+unsigned long chrif_getip()
 {
 	return char_ip;
 }
@@ -157,7 +156,7 @@ int chrif_sendmap(int fd)
 int chrif_recvmap(int fd)
 {
 	int i, j;
-	in_addr_t ip;
+	unsigned long ip;
 	unsigned short port;
 	unsigned char *p = (unsigned char *)&ip;
 
@@ -181,10 +180,10 @@ int chrif_recvmap(int fd)
  * マップ鯖間移動のためのデータ準備要求
  *------------------------------------------
  */
-int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y, in_addr_t ip, unsigned short port) 
+int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y, unsigned long ip, unsigned short port) 
 {
 	int i;
-	in_addr_t s_ip;
+	unsigned long s_ip;
 
 	nullpo_retr(-1, sd);
 	
@@ -194,7 +193,8 @@ int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y,
 	s_ip = 0;
 	for(i = 0; i < fd_max; i++)
 		if (session[i] && session[i]->session_data == sd) {
-			s_ip = session[i]->client_addr.sin_addr.s_addr;
+			//s_ip = ntohl(session[i]->client_addr.sin_addr.s_addr);
+			s_ip = session[i]->client_ip;
 			break;
 		}
 
@@ -306,7 +306,8 @@ int chrif_authreq(struct map_session_data *sd)
 			WFIFOL(char_fd, 6) = sd->char_id;
 			WFIFOL(char_fd,10) = sd->login_id1;
 			WFIFOL(char_fd,14) = sd->login_id2;
-			WFIFOLIP(char_fd,18) = session[i]->client_addr.sin_addr.s_addr;
+			//WFIFOLIP(char_fd,18) = ntohl(session[i]->client_addr.sin_addr.s_addr);
+			WFIFOLIP(char_fd,18) = session[i]->client_ip;
 			WFIFOSET(char_fd,22);
 			break;
 		}
@@ -321,7 +322,7 @@ int chrif_authreq(struct map_session_data *sd)
 int chrif_charselectreq(struct map_session_data *sd) 
 {
 	int i; 
-	in_addr_t s_ip;
+	unsigned long s_ip;
 
 	nullpo_retr(-1, sd);
 
@@ -331,7 +332,8 @@ int chrif_charselectreq(struct map_session_data *sd)
 	s_ip = 0;
 	for(i = 0; i < fd_max; i++)
 		if (session[i] && session[i]->session_data == sd) {
-			s_ip = session[i]->client_addr.sin_addr.s_addr;
+			//s_ip = ntohl( session[i]->client_addr.sin_addr.s_addr );
+			s_ip = session[i]->client_ip;
 			break;
 		}
 

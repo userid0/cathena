@@ -648,6 +648,134 @@ void map_foreachincell(int (*func)(struct block_list*,va_list),int m,int x,int y
 	bl_list_count = blockcount;
 }
 
+/*============================================================
+* For checking a path between two points (x0, y0) and (x1, y1)
+*------------------------------------------------------------
+ */
+void map_foreachinpath(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int range,int length,int type,...) {
+	va_list ap;
+	int bx,by;
+	struct block_list *bl=NULL;
+	int blockcount=bl_list_count,i,c;
+	double s;
+	int in;	// slope, interception
+
+	if(m < 0)
+		return;
+	va_start(ap,type);
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 >= map[m].xs) x1 = map[m].xs-1;
+	if (y1 >= map[m].ys) y1 = map[m].ys-1;
+
+//	y = ax + c	// ugh, algebra! xp
+//	x = (y - c) / a
+
+// I'm not finished thinking on it
+// but first it might better use a parameter equation
+// x=(x1-x0)*t+x0; y=(y1-y0)*t+y0; t=[0,1]
+// would not need special case aproximating for infinity/zero slope
+//
+// so maybe this way:
+/*
+	double deltax = 0.0;
+	double deltay = 0.0;
+	int t;
+	// find maximum runindex
+	int tmax = abs(y1-y0);
+	if(tmax < abs(x1-x0))	
+		tmax = abs(x1-x0);
+
+	// pre-calculate delta values for x and y destination
+	// should speed up cause you don't need to divide in the loop
+	if(tmax>0)
+	{
+		deltax = ((double)(x1-x0)) / ((double)tmax);
+		deltay = ((double)(y1-y0)) / ((double)tmax);
+	}
+	// go along the index
+	for(t=0; t<=tmax; t++)
+	{
+		int x = (int)floor(deltax * (double)t +0.5)+x0;
+		int y = (int)floor(deltay * (double)t +0.5)+y0;
+		// the xy pairs of points in line between x0y0 and x1y1 
+		// including start and end point
+		printf("%i\t%i\n",x,y);
+	}
+ */
+
+
+
+
+	if (x0 == x1) {
+		s = 999; in = 0;
+	} else if (y0 == y1) {
+		s = 0; in = y0;
+	} else {
+		s = (double)(y1 - y0)/(double)(x1 - x0);
+		in = y0 - int(s * x0);
+	}
+	//printf ("%lf %d\n", s, in);
+
+	if (type == 0 || type != BL_MOB)
+		for(by = y0 / BLOCK_SIZE; by <= y1 / BLOCK_SIZE; by++)
+		for(bx = x0 / BLOCK_SIZE; bx <= x1 / BLOCK_SIZE; bx++){
+			bl = map[m].block[bx+by*map[m].bxs];
+			c  = map[m].block_count[bx+by*map[m].bxs];
+			for(i=0;i<c && bl;i++,bl=bl->next){
+				if(bl)
+				{
+					if(type && bl->type!=type)
+						continue;
+
+					printf ("%f %f\n", s * bl->x + in - bl->y, (in - bl->y)/s - bl->x);
+
+					if (((s == 999 && bl->x == x0) ||
+						(s == 0 && in == y0 && bl->y == y0) ||
+						(int)fabs(s * bl->x + in - bl->y) <= range ||
+						(int)fabs((bl->y - in)/s - bl->x) <= range) &&
+						bl_list_count<BL_LIST_MAX)
+						bl_list[bl_list_count++]=bl;
+				}
+			}
+		}
+
+	if(type==0 || type==BL_MOB)
+		for(by=y0/BLOCK_SIZE;by<=y1/BLOCK_SIZE;by++){
+			for(bx=x0/BLOCK_SIZE;bx<=x1/BLOCK_SIZE;bx++){
+				bl = map[m].block_mob[bx+by*map[m].bxs];
+				c = map[m].block_mob_count[bx+by*map[m].bxs];
+				for(i=0;i<c && bl;i++,bl=bl->next){
+					if(bl) {
+						printf ("%f %f\n", s * bl->x + in - bl->y, (bl->y - in)/s - bl->x);
+						if (((s == 999 && bl->x == x0) ||
+							(s == 0 && in == y0 && bl->y == y0) ||
+							(int)fabs(s * bl->x + in - bl->y) <= range ||
+							(int)fabs((bl->y - in)/s - bl->x) <= range) &&
+							bl_list_count<BL_LIST_MAX)
+							bl_list[bl_list_count++]=bl;
+					}
+				}
+			}
+		}
+
+	if(bl_list_count>=BL_LIST_MAX) {
+		if(battle_config.error_log)
+			printf("map_foreachinarea: *WARNING* block count too many!\n");
+	}
+
+	map_freeblock_lock();	// メモリからの解放を禁止する
+
+	for(i=blockcount;i<bl_list_count;i++)
+		if(bl_list[i]->prev)	// 有?かどうかチェック
+			func(bl_list[i],ap);
+
+	map_freeblock_unlock();	// 解放を許可する
+
+	va_end(ap);
+	bl_list_count = blockcount;
+}
+
 /*==========================================
  * 床アイテムやエフェクト用の一時obj割り?て
  * object[]への保存とid_db登?まで
@@ -1298,14 +1426,14 @@ int map_mapname2mapid(char *name) {
  * 他鯖map名からip,port?換
  *------------------------------------------
  */
-int map_mapname2ipport(char *name, in_addr_t *ip, unsigned short *port) {
+int map_mapname2ipport(char *name, unsigned long *ip, unsigned short *port) {
 	struct map_data_other_server *mdos=NULL;
 
 	mdos = (struct map_data_other_server*)strdb_search(map_db,name);
 	if(mdos==NULL || mdos->gat)
 		return -1;
-	*ip=mdos->ip;
-	*port=mdos->port;
+	if(ip)	 *ip  =mdos->ip;
+	if(port) *port=mdos->port;
 	return 0;
 }
 
@@ -1470,7 +1598,7 @@ void map_setcell(int m,int x,int y,int cell)
 	}
 	else
 	{	// set the lower 3 bit
-		map[m].gat[j] = (map[m].gat[j] & ~0x07) | cell;
+		map[m].gat[j] = (map[m].gat[j] & ~0x07) | (cell & 0x07);
 	}
 }
 void map_resetcell(int m,int x,int y,int cell)
@@ -1494,7 +1622,7 @@ void map_resetcell(int m,int x,int y,int cell)
  * 他鯖管理のマップをdbに追加
  *------------------------------------------
  */
-int map_setipport(char *name, in_addr_t ip, unsigned short port) {
+int map_setipport(char *name, unsigned long ip, unsigned short port) {
 	struct map_data *md=NULL;
 	struct map_data_other_server *mdos=NULL;
 
@@ -2182,7 +2310,7 @@ int parse_console(char *buf) {
         if ( m >= 0 )
             sd->bl.m = m;
         else {
-            ShowMessage("Console: Unknown map\n");
+			ShowConsole(CL_BOLD"Unknown map\n"CL_NORM);
             goto end;
         }
     }
@@ -2192,7 +2320,7 @@ int parse_console(char *buf) {
     if ( strcasecmp("admin",type) == 0 && n == 5 ) {
         sprintf(buf2,"console: %s",command);
         if( is_atcommand(sd->fd,sd,buf2,99) == AtCommand_None )
-            ShowMessage("Console: not atcommand\n");
+			ShowConsole(CL_BOLD"no valid atcommand\n"CL_NORM);
     } else if ( strcasecmp("server",type) == 0 && n == 2 ) {
         if ( strcasecmp("shutdown", command) == 0 || strcasecmp("exit",command) == 0 || strcasecmp("quit",command) == 0 ) {
             exit(0);
@@ -2248,7 +2376,8 @@ int map_config_read(const char *cfgName) {
 					ShowInfo("Char Server IP Address : '"CL_WHITE"%s"CL_RESET"' -> '"CL_WHITE"%d.%d.%d.%d"CL_RESET"'.\n", w2, (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 					sprintf(w2,"%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 				}
-				chrif_setip(w2);
+				chrif_setip( ntohl(inet_addr(w2)) );
+
 			} else if (strcasecmp(w1, "char_port") == 0) {
 				chrif_setport(atoi(w2));
 			} else if (strcasecmp(w1, "map_ip") == 0) {
@@ -2257,7 +2386,7 @@ int map_config_read(const char *cfgName) {
 					ShowInfo("Map Server IP Address : '"CL_WHITE"%s"CL_RESET"' -> '"CL_WHITE"%d.%d.%d.%d"CL_RESET"'.\n", w2, (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 					sprintf(w2, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 				}
-				clif_setip(w2);
+				clif_setip( ntohl(inet_addr(w2)) );
 			} else if (strcasecmp(w1, "map_port") == 0) {
 				clif_setport(atoi(w2));
 				map_port = (atoi(w2));
@@ -2317,7 +2446,6 @@ int map_config_read(const char *cfgName) {
 			} else if(strcasecmp(w1,"flush_time")==0){		//Added by Mugendai for GUI
 				flush_time = atoi(w2);					//Added by Mugendai for GUI
 			}
-
 		}
 	}
 	fclose(fp);
@@ -2724,7 +2852,7 @@ int do_init(int argc, char *argv[]) {
 	// just clear all maps
 	memset(map, 0, MAX_MAP_PER_SERVER*sizeof(struct map_data));
 
-	srand(gettick());
+	srand(gettick()^3141592654UL);
 
 	for (i = 1; i < argc ; i++) {
 		if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "--h") == 0 || strcmp(argv[i], "--?") == 0 || strcmp(argv[i], "/?") == 0)
@@ -2765,19 +2893,19 @@ int do_init(int argc, char *argv[]) {
 	else if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK || chrif_getip() == INADDR_LOOPBACK) {
 		// The map server should know what IP address it is running on
 		//   - MouseJstr
-		int localaddr = ntohl(addr_[0]);
-		unsigned char *ptr = (unsigned char *) &localaddr;
-		char buf[16];
-		sprintf(buf, "%d.%d.%d.%d", ptr[0], ptr[1], ptr[2], ptr[3]);
-		if (naddr_ != 1)
-			ShowMessage("Multiple interfaces detected..  using %s as our IP address\n", buf);
+		unsigned long localaddr = addr_[0]; // host order network address
+		if (naddr_ != 1) 
+			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n", 
+								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
 		else
-			ShowMessage("Defaulting to %s as our IP address\n", buf);
+			ShowMessage("Defaulting to %d.%d.%d.%d as our IP address\n", 
+								(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
+
 		if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK)
-			clif_setip(buf);
+			clif_setip(localaddr);
 		if (chrif_getip() == INADDR_LOOPBACK)
-			chrif_setip(buf);
-		if (ptr[0] == 192 && ptr[1] == 168)
+			chrif_setip(localaddr);
+		if (localaddr&0xFFFF0000 == 0xC0A80000)//192.168.x.x
 			ShowMessage("\nPrivate Network detected.. \nedit lan_support.conf and map_athena.conf\n\n");
 	}
 	if (SHOW_DEBUG_MSG) ShowNotice("Server running in '"CL_WHITE"Debug Mode"CL_RESET"'.\n");
