@@ -1545,7 +1545,7 @@ int parse_tologin(int fd) {
 	sd = (struct char_session_data*)session[fd]->session_data;
 
 	while(RFIFOREST(fd) >= 2) {
-//		ShowMessage("parse_tologin: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, RFIFOW(fd,0), RFIFOREST(fd));
+//		ShowMessage("parse_tologin: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, (unsigned short)RFIFOW(fd,0), RFIFOREST(fd));
 
 		switch(RFIFOW(fd,0)) {
 		case 0x2711:
@@ -1952,7 +1952,7 @@ int parse_frommap(int fd) {
 	}
 
 	while(RFIFOREST(fd) >= 2) {
-//		ShowMessage("parse_frommap: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, RFIFOW(fd,0), RFIFOREST(fd));
+//		ShowMessage("parse_frommap: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, (unsigned short)RFIFOW(fd,0), RFIFOREST(fd));
 		switch(RFIFOW(fd,0)) {
 		// request from map-server to reload GM accounts. Transmission to login-server (by Yor)
 		case 0x2af7:
@@ -2026,7 +2026,7 @@ int parse_frommap(int fd) {
 		case 0x2afc:
 			if (RFIFOREST(fd) < 22)
 				return 0;
-			//ShowMessage("auth_fifo search: account: %d, char: %d, secure: %08x-%08x\n", RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10), RFIFOL(fd,14));
+			//ShowMessage("auth_fifo search: account: %d, char: %d, secure: %08x-%08x\n", (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6), (unsigned long)RFIFOL(fd,10), (unsigned long)RFIFOL(fd,14));
 			for(i = 0; i < AUTH_FIFO_SIZE; i++) {
 				if (auth_fifo[i].account_id == (int)RFIFOL(fd,2) &&
 				    auth_fifo[i].char_id == (int)RFIFOL(fd,6) &&
@@ -2047,7 +2047,7 @@ int parse_frommap(int fd) {
 					//memcpy(WFIFOP(fd,16), &char_dat[auth_fifo[i].char_pos], sizeof(struct mmo_charstatus));
 					mmo_charstatus_tobuffer(&char_dat[auth_fifo[i].char_pos], WFIFOP(fd,16));
 					WFIFOSET(fd, WFIFOW(fd,2));
-					//ShowMessage("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, RFIFOL(fd,2), RFIFOL(fd,6));
+					//ShowMessage("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6));
 					break;
 				}
 			}
@@ -2128,7 +2128,7 @@ int parse_frommap(int fd) {
 				return 0;
 			if (auth_fifo_pos >= AUTH_FIFO_SIZE)
 				auth_fifo_pos = 0;
-			//ShowMessage("auth_fifo set (auth #%d) - account: %d, secure: %08x-%08x\n", auth_fifo_pos, RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10));
+			//ShowMessage("auth_fifo set (auth #%d) - account: %d, secure: %08x-%08x\n", auth_fifo_pos, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6), (unsigned long)RFIFOL(fd,10));
 			auth_fifo[auth_fifo_pos].account_id = RFIFOL(fd,2);
 			auth_fifo[auth_fifo_pos].char_id = 0;
 			auth_fifo[auth_fifo_pos].login_id1 = RFIFOL(fd,6);
@@ -2153,7 +2153,7 @@ int parse_frommap(int fd) {
 				auth_fifo_pos = 0;
 			WFIFOW(fd,0) = 0x2b06;
 			memcpy(WFIFOP(fd,2), RFIFOP(fd,2), 42);
-			//ShowMessage("auth_fifo set (auth#%d) - account: %d, secure: 0x%08x-0x%08x\n", auth_fifo_pos, RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10));
+			//ShowMessage("auth_fifo set (auth#%d) - account: %d, secure: 0x%08x-0x%08x\n", auth_fifo_pos, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6), (unsigned long)RFIFOL(fd,10));
 			auth_fifo[auth_fifo_pos].account_id = RFIFOL(fd,2);
 			auth_fifo[auth_fifo_pos].char_id = RFIFOL(fd,14);
 			auth_fifo[auth_fifo_pos].login_id1 = RFIFOL(fd,6);

@@ -184,9 +184,19 @@ typedef int bool;
 
 
 
+//////////////////////////////
+// socketlen type definition
+//////////////////////////////
+#ifndef __socklen_t_defined
 
+#ifdef WIN32
+typedef int socklen_t;
+#else
+typedef unsigned int socklen_t;
+#endif
 
-
+#define __socklen_t_defined
+#endif
 
 
 

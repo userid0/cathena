@@ -1,5 +1,6 @@
 // original : core.c 2003/02/26 18:03:12 Rev 1.7
 
+
 #include "socket.h"
 #include "mmo.h"	// [Valaris] thanks to fov
 #include "utils.h"
@@ -612,15 +613,13 @@ static int connect_client(int listen_fd)
 	SOCKET sock;
 	int fd;
 	struct sockaddr_in client_address;
-	int len;
-
-	len=sizeof(client_address);
+	socklen_t len = sizeof(client_address);
 
 	// quite dangerous, app is dead in this case
 	if( !session_isActive(listen_fd) )
 		return -1;
 
-	sock=accept(SessionGetSocket(listen_fd),(struct sockaddr*)&client_address,&len);
+	sock = accept(SessionGetSocket(listen_fd),(struct sockaddr*)&client_address,&len);
 	if(sock==-1) 
 	{	// same here, app might have passed away
 		perror("accept");
@@ -1007,7 +1006,7 @@ size_t process_fdset2(fd_set* fds, void(*func)(size_t) )
 				val ++;
 			}
 			//calculate the socket number
-			sock = nfd*FD_NFDBITS + val;
+			sock = nfd*NFDBITS + val;
 			// shift one more for the next loop entrance
 			bits >>= 1;
 			val ++;

@@ -17,7 +17,16 @@
 //#define PATH_STANDALONETEST
 
 #define MAX_HEAP 150
-struct tmp_path { short x,y,dist,before,cost; char dir,flag;};
+struct tmp_path 
+{
+	short x;
+	short y;
+	short dist;
+	short before;
+	short cost;
+	char dir;
+	char flag;
+};
 #define calc_index(x,y) (((x)+(y)*MAX_WALKPATH) & (MAX_WALKPATH*MAX_WALKPATH-1))
 
 /*==========================================
@@ -314,7 +323,9 @@ int path_search(struct walkpath_data *wpd,int m,int x0,int y0,int x1,int y1,int 
 
 	if(!map[m].gat)
 		return -1;
+
 	md=&map[m];
+
 	if(x1<0 || x1>=md->xs || y1<0 || y1>=md->ys || map_getcellp(md,x1,y1,CELL_CHKNOPASS))
 		return -1;
 
@@ -348,6 +359,7 @@ int path_search(struct walkpath_data *wpd,int m,int x0,int y0,int x1,int y1,int 
 			return 0;
 		}
 	}
+
 	if(flag&1)
 		return -1;
 

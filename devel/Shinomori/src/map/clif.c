@@ -4678,12 +4678,10 @@ int clif_GMmessage(struct block_list *bl, char* mes, int flag)
 	{
 		unsigned char buf[512];
 		int lp;
-		int len = sizeof(mes);
+		int len = strlen(mes)+1;
 
 		lp = (flag & 0x10) ? 8 : 4;
-//		buf = (unsigned char*)aMalloc( (len + lp) * sizeof(unsigned char));
 		if( len > 512-lp ) len = 512-lp;
-
 
 		WBUFW(buf,0) = 0x9a;
 		WBUFW(buf,2) = len + lp;
@@ -4691,11 +4689,11 @@ int clif_GMmessage(struct block_list *bl, char* mes, int flag)
 		memcpy(WBUFP(buf,lp), mes, len);
 		buf[511] = 0; //force EOS
 		flag &= 0x07;
-		clif_send(buf, WBUFW(buf,2), bl,
+		clif_send(buf, len + lp, bl,
 				  (flag == 1) ? ALL_SAMEMAP :
 				  (flag == 2) ? AREA :
 				  (flag == 3) ? SELF :
-				  ALL_CLIENT);
+				                ALL_CLIENT);
 
 //		if(buf) aFree(buf);
 	}
@@ -4780,8 +4778,7 @@ int clif_pvpset(struct map_session_data *sd,int pvprank,int pvpnum,int type)
 		WBUFW(buf,0) = 0x19a;
 		WBUFL(buf,2) = sd->bl.id;
 		if(sd->status.option&0x46)
-		// WTF? a -1 to an unsigned value...
-			WBUFL(buf,6) = -1;
+			WBUFL(buf,6) = ~0;
 		else
 			if(pvprank<=0)
 				pc_calc_pvprank(sd);
@@ -9998,7 +9995,7 @@ void clif_parse_Recall(int fd, struct map_session_data *sd) {	// Added by RoVeRT
 void clif_parse_GMHide(int fd, struct map_session_data *sd) {	// Modified by [Yor]
 	nullpo_retv(sd);
 
-	//ShowMessage("%2x %2x %2x\n", RFIFOW(fd,0), RFIFOW(fd,2), RFIFOW(fd,4)); // R 019d <Option_value>.2B <flag>.2B
+	//ShowMessage("%2x %2x %2x\n", (unsigned short)RFIFOW(fd,0), (unsigned short)RFIFOW(fd,2), (unsigned short)RFIFOW(fd,4)); // R 019d <Option_value>.2B <flag>.2B
 	if ((battle_config.atc_gmonly == 0 || pc_isGM(sd)) &&
 	    (pc_isGM(sd) >= get_atcommand_level(AtCommand_Hide))) {
 		if (sd->status.option & OPTION_HIDE) { // OPTION_HIDE = 0x40

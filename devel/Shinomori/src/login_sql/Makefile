@@ -1,5 +1,5 @@
 all: login-server_sql
-txt: login-server_sql
+sql: login-server_sql
 
 COMMON_OBJ = ../common/core.o ../common/db.o ../common/lock.o ../common/malloc.o ../common/md5calc.o ../common/nullpo.o ../common/showmsg.o ../common/socket.o ../common/strlib.o ../common/timer.o ../common/utils.o
 

@@ -1335,7 +1335,7 @@ int parse_fromchar(int fd) {
 		case 0x2714:
 			if (RFIFOREST(fd) < 6)
 				return 0;
-			//ShowMessage("parse_fromchar: Receiving of the users number of the server '%s': %d\n", server[id].name, RFIFOL(fd,2));
+			//ShowMessage("parse_fromchar: Receiving of the users number of the server '%s': %ld\n", server[id].name, (unsigned long)RFIFOL(fd,2));
 			server[id].users = RFIFOL(fd,2);
 			if(anti_freeze_enable)
 				server_freezeflag[id] = 5; // Char anti-freeze system. Counter. 5 ok, 4...0 freezed
@@ -1379,7 +1379,7 @@ int parse_fromchar(int fd) {
 		case 0x2716:
 			if (RFIFOREST(fd) < 6)
 				return 0;
-			//ShowMessage("parse_fromchar: E-mail/limited time request from '%s' server (concerned account: %d)\n", server[id].name, RFIFOL(fd,2));
+			//ShowMessage("parse_fromchar: E-mail/limited time request from '%s' server (concerned account: %ld)\n", server[id].name, (unsigned long)RFIFOL(fd,2));
 			for(i = 0; i < auth_num; i++) {
 				if (auth_dat[i].account_id == (int)RFIFOL(fd,2)) {
 					login_log("Char-server '%s': e-mail of the account %d found (ip: %s)." RETCODE,
@@ -1895,7 +1895,7 @@ int parse_admin(int fd) {
 				memcpy(ma.lastlogin, "-", 2);
 				ma.sex = RFIFOB(fd,50);
 				WFIFOW(fd,0) = 0x7931;
-				WFIFOL(fd,2) = -1; // WTF? usigned being set to a -1???
+				WFIFOL(fd,2) = ~0;
 				memcpy(WFIFOP(fd,6), RFIFOP(fd,2), 24);
 				if (strlen(ma.userid) > 23 || strlen(ma.passwd) > 23) {
 					login_log("'ladmin': Attempt to create an invalid account (account or pass is too long, ip: %s)" RETCODE,
@@ -1941,7 +1941,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 26)
 				return 0;
 			WFIFOW(fd,0) = 0x7933;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);
@@ -1977,7 +1977,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 50)
 				return 0;
 			WFIFOW(fd,0) = 0x7935;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);
@@ -2007,7 +2007,7 @@ int parse_admin(int fd) {
 				char error_message[20];
 				int statut;
 				WFIFOW(fd,0) = 0x7937;
-				WFIFOL(fd,2) = -1;
+				WFIFOL(fd,2) = ~0;
 				account_name = (char*)RFIFOP(fd,2);
 				account_name[23] = '\0';
 				remove_control_chars(account_name);
@@ -2082,7 +2082,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 50)
 				return 0;
 			WFIFOW(fd,0) = 0x793b;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);
@@ -2114,7 +2114,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 27)
 				return 0;
 			WFIFOW(fd,0) = 0x793d;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);
@@ -2166,7 +2166,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 27)
 				return 0;
 			WFIFOW(fd,0) = 0x793f;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);
@@ -2256,7 +2256,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 66)
 				return 0;
 			WFIFOW(fd,0) = 0x7941;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);
@@ -2291,7 +2291,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 28 || RFIFOREST(fd) < (28 + RFIFOW(fd,26)))
 				return 0;
 			WFIFOW(fd,0) = 0x7943;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);
@@ -2325,7 +2325,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 26)
 				return 0;
 			WFIFOW(fd,0) = 0x7945;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);
@@ -2354,13 +2354,13 @@ int parse_admin(int fd) {
 				if (auth_dat[i].account_id == (int)RFIFOL(fd,2)) {
 					strncpy((char*)WFIFOP(fd,6), auth_dat[i].userid, 24);
 					login_log("'ladmin': Request (by id) of an account name (account: %s, id: %d, ip: %s)" RETCODE,
-					          auth_dat[i].userid, RFIFOL(fd,2), ip_str);
+					          auth_dat[i].userid, (unsigned long)RFIFOL(fd,2), ip_str);
 					break;
 				}
 			}
 			if (i == auth_num) {
 				login_log("'ladmin': Name request (by id) of an unknown account (id: %d, ip: %s)" RETCODE,
-				          RFIFOL(fd,2), ip_str);
+				          (unsigned long)RFIFOL(fd,2), ip_str);
 				strncpy((char*)WFIFOP(fd,6), "", 24);
 			}
 			WFIFOSET(fd,30);
@@ -2374,7 +2374,7 @@ int parse_admin(int fd) {
 				time_t timestamp;
 				char tmpstr[2048];
 				WFIFOW(fd,0) = 0x7949;
-				WFIFOL(fd,2) = -1;
+				WFIFOL(fd,2) = ~0;
 				account_name = (char*)RFIFOP(fd,2);
 				account_name[23] = '\0';
 				remove_control_chars(account_name);
@@ -2406,7 +2406,7 @@ int parse_admin(int fd) {
 				time_t timestamp;
 				char tmpstr[2048];
 				WFIFOW(fd,0) = 0x794b;
-				WFIFOL(fd,2) = -1;
+				WFIFOL(fd,2) = ~0;
 				account_name = (char*)RFIFOP(fd,2);
 				account_name[23] = '\0';
 				remove_control_chars(account_name);
@@ -2454,7 +2454,7 @@ int parse_admin(int fd) {
 				struct tm *tmtime;
 				char tmpstr[2048];
 				WFIFOW(fd,0) = 0x794d;
-				WFIFOL(fd,2) = -1;
+				WFIFOL(fd,2) = ~0;
 				account_name = (char*)RFIFOP(fd,2);
 				account_name[23] = '\0';
 				remove_control_chars(account_name);
@@ -2516,7 +2516,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 8 || RFIFOREST(fd) < (8 + (int)RFIFOL(fd,4)))
 				return 0;
 			WFIFOW(fd,0) = 0x794f;
-			WFIFOW(fd,2) = -1; // WTF???
+			WFIFOW(fd,2) = ~0;
 			if (RFIFOL(fd,4) < 1) {
 				login_log("'ladmin': Receiving a message for broadcast, but message is void (ip: %s)" RETCODE,
 				          ip_str);
@@ -2561,7 +2561,7 @@ int parse_admin(int fd) {
 				char tmpstr[2048];
 				char tmpstr2[2048];
 				WFIFOW(fd,0) = 0x7951;
-				WFIFOL(fd,2) = -1;
+				WFIFOL(fd,2) = ~0;
 				account_name = (char*)RFIFOP(fd,2);
 				account_name[23] = '\0';
 				remove_control_chars(account_name);
@@ -2615,7 +2615,7 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 26)
 				return 0;
 			WFIFOW(fd,0) = 0x7953;
-			WFIFOL(fd,2) = -1;
+			WFIFOL(fd,2) = ~0;
 			account_name = (char*)RFIFOP(fd,2);
 			account_name[23] = '\0';
 			remove_control_chars(account_name);

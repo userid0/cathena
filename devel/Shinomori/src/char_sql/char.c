@@ -1610,7 +1610,7 @@ int parse_tologin(int fd) {
 	// hehe. no need to set user limite on SQL version. :P
 	// but char limitation is good way to maintain server. :D
 	while(RFIFOREST(fd) >= 2) {
-//		ShowMessage("parse_tologin : %d %d %x\n", fd, RFIFOREST(fd), RFIFOW(fd, 0));
+//		ShowMessage("parse_tologin : %d %d %x\n", fd, RFIFOREST(fd), (unsigned short)RFIFOW(fd, 0));
 
 		switch(RFIFOW(fd, 0)){
 		case 0x2711:
@@ -1905,7 +1905,7 @@ int parse_frommap(int fd) {
 	}
 
 	while(RFIFOREST(fd) >= 2) {
-//		ShowMessage("parse_frommap : %d %d %x\n", fd, RFIFOREST(fd), RFIFOW(fd,0));
+//		ShowMessage("parse_frommap : %d %d %x\n", fd, RFIFOREST(fd), (unsigned short)RFIFOW(fd,0));
 
 		switch(RFIFOW(fd, 0)) {
 		case 0x2af7:
@@ -1974,7 +1974,7 @@ int parse_frommap(int fd) {
 		case 0x2afc:
 			if (RFIFOREST(fd) < 22)
 				return 0;
-//			ShowMessage("(AUTH request) auth_fifo search %d %d %d\n", RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOL(fd, 10));
+//			ShowMessage("(AUTH request) auth_fifo search %d %d %d\n", (unsigned long)RFIFOL(fd, 2), (unsigned long)RFIFOL(fd, 6), (unsigned long)RFIFOL(fd, 10));
 			for(i = 0; i < AUTH_FIFO_SIZE; i++) {
 				if (auth_fifo[i].account_id == (int)RFIFOL(fd,2) &&
 				    auth_fifo[i].char_id == (int)RFIFOL(fd,6) &&
@@ -1996,7 +1996,7 @@ int parse_frommap(int fd) {
 					//memcpy(WFIFOP(fd,16), &char_dat[0], sizeof(struct mmo_charstatus));
 					mmo_charstatus_tobuffer(char_dat,WFIFOP(fd,16));
 					WFIFOSET(fd, WFIFOW(fd,2));
-					//ShowMessage("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, RFIFOL(fd,2), RFIFOL(fd,6));
+					//ShowMessage("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6));
 					break;
 				}
 			}
@@ -2014,7 +2014,7 @@ int parse_frommap(int fd) {
 			if (RFIFOREST(fd) < 6 || RFIFOREST(fd) < RFIFOW(fd,2))
 				return 0;
 			if ( server[id].users != (unsigned short)RFIFOW(fd,4) )
-				ShowMessage("[UserCount]: %d (Server: %d)\n", RFIFOW(fd,4), id);
+				ShowMessage("[UserCount]: %d (Server: %d)\n", (unsigned short)RFIFOW(fd,4), id);
 			server[id].users = RFIFOW(fd,4);
 			if(anti_freeze_enable)
 				server_freezeflag[id] = 5; // Map anti-freeze system. Counter. 5 ok, 4...0 freezed
@@ -2056,7 +2056,7 @@ int parse_frommap(int fd) {
 			if (auth_fifo_pos >= AUTH_FIFO_SIZE)
 				auth_fifo_pos = 0;
 
-//			ShowMessage("(charselect) auth_fifo set %d - account_id:%08x login_id1:%08x\n", auth_fifo_pos, RFIFOL(fd, 2), RFIFOL(fd, 6));
+//			ShowMessage("(charselect) auth_fifo set %d - account_id:%08x login_id1:%08x\n", auth_fifo_pos, (unsigned long)RFIFOL(fd, 2), (unsigned long)RFIFOL(fd, 6));
 			auth_fifo[auth_fifo_pos].account_id = RFIFOL(fd, 2);
 			auth_fifo[auth_fifo_pos].char_id = 0;
 			auth_fifo[auth_fifo_pos].login_id1 = RFIFOL(fd, 6);
@@ -2085,7 +2085,7 @@ int parse_frommap(int fd) {
 
 			WFIFOW(fd, 0) = 0x2b06;
 			memcpy(WFIFOP(fd,2), RFIFOP(fd,2), 42);
-//			ShowMessage("(map change) auth_fifo set %d - account_id:%08x login_id1:%08x\n", auth_fifo_pos, RFIFOL(fd, 2), RFIFOL(fd, 6));
+//			ShowMessage("(map change) auth_fifo set %d - account_id:%08x login_id1:%08x\n", auth_fifo_pos, (unsigned long)RFIFOL(fd, 2), (unsigned long)RFIFOL(fd, 6));
 			ShowMessage("[MapChange] ");
 			auth_fifo[auth_fifo_pos].account_id = RFIFOL(fd, 2);
 			auth_fifo[auth_fifo_pos].login_id1 = RFIFOL(fd, 6);
@@ -2103,7 +2103,7 @@ int parse_frommap(int fd) {
 			i = 0;
 			if(sql_res){
 				i = atoi(sql_row[0]);
-				ShowMessage("aid: %d, cid: %d, name: %s", RFIFOL(fd,2), atoi(sql_row[0]), sql_row[1]);
+				ShowMessage("aid: %d, cid: %d, name: %s", (unsigned long)RFIFOL(fd,2), atoi(sql_row[0]), sql_row[1]);
 				mysql_free_result(sql_res);
 				auth_fifo[auth_fifo_pos].char_pos = auth_fifo[auth_fifo_pos].char_id;
 				auth_fifo_pos++;
@@ -2177,7 +2177,7 @@ int parse_frommap(int fd) {
 			memcpy(WFIFOP(login_fd,2),RFIFOP(fd,2),RFIFOW(fd,2)-2);
 			WFIFOW(login_fd,0)=0x2720;
 			WFIFOSET(login_fd,RFIFOW(fd,2));
-//			ShowMessage("char : change gm -> login %d %s %d\n", RFIFOL(fd, 4), RFIFOP(fd, 8), RFIFOW(fd, 2));
+//			ShowMessage("char : change gm -> login %d %s %d\n", (unsigned long)RFIFOL(fd, 4), RFIFOP(fd, 8), (unsigned short)RFIFOW(fd, 2));
 			RFIFOSKIP(fd, RFIFOW(fd, 2));
 			break;
 		*/
@@ -2348,7 +2348,7 @@ int parse_frommap(int fd) {
 		case 0x2b17:
 			if (RFIFOREST(fd) < 6 )
 				return 0;
-			//ShowMessage("Setting %d char offline\n",RFIFOL(fd,2));
+			//ShowMessage("Setting %d char offline\n",(unsigned long)RFIFOL(fd,2));
 			set_char_offline(RFIFOL(fd,2),RFIFOL(fd,6));
 			RFIFOSKIP(fd,10);
 			break;
@@ -2361,7 +2361,7 @@ int parse_frommap(int fd) {
 		case 0x2b19:
 			if (RFIFOREST(fd) < 6 )
 				return 0;
-			//ShowMessage("Setting %d char online\n",RFIFOL(fd,2));
+			//ShowMessage("Setting %d char online\n",(unsigned long)RFIFOL(fd,2));
 			set_char_online(RFIFOL(fd,2),RFIFOL(fd,6));
 			RFIFOSKIP(fd,10);
 			break;
@@ -2375,7 +2375,7 @@ int parse_frommap(int fd) {
 			}
 
 			// no inter server packet. no char server packet -> disconnect
-			ShowMessage("parse_frommap: unknown packet %x! \n", RFIFOW(fd,0));
+			ShowMessage("parse_frommap: unknown packet %x! \n", (unsigned short)RFIFOW(fd,0));
 			session_Remove(fd);
 			return 0;
 		}
@@ -2480,15 +2480,16 @@ int parse_char(int fd) {
 			break;
 
 		case 0x65: // request to connect
-			ShowMessage("request connect - account_id:%d/login_id1:%d/login_id2:%d\n", RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOL(fd, 10));
+			ShowMessage("request connect - account_id:%d/login_id1:%d/login_id2:%d\n", 
+				(unsigned long)RFIFOL(fd, 2), (unsigned long)RFIFOL(fd, 6), (unsigned long)RFIFOL(fd, 10));
 			if (RFIFOREST(fd) < 17)
 				return 0;
 		  {
 /*removed from isGM setup
 			if (isGM(RFIFOL(fd,2)))
-				ShowMessage("Account Logged On; Account ID: %d (GM level %d).\n", RFIFOL(fd,2), isGM(RFIFOL(fd,2)));
+				ShowMessage("Account Logged On; Account ID: %d (GM level %d).\n", (unsigned long)RFIFOL(fd,2), isGM(RFIFOL(fd,2)));
 			else
-				ShowMessage("Account Logged On; Account ID: %d.\n", RFIFOL(fd,2));
+				ShowMessage("Account Logged On; Account ID: %d.\n", (unsigned long)RFIFOL(fd,2));
 */
 			if (sd == NULL) {
 				CREATE(session[fd]->session_data, struct char_session_data, 1);
@@ -2753,7 +2754,7 @@ int parse_char(int fd) {
 		case 0x68: // delete
 			if (RFIFOREST(fd) < 46)
 				return 0;
-			ShowMessage(CL_BT_RED" Request Char Del:"CL_NORM" "CL_BT_GREEN"%d"CL_NORM"("CL_BT_GREEN"%d"CL_NORM")\n", sd->account_id, RFIFOL(fd, 2));
+			ShowMessage(CL_BT_RED" Request Char Del:"CL_NORM" "CL_BT_GREEN"%d"CL_NORM"("CL_BT_GREEN"%d"CL_NORM")\n", sd->account_id, (unsigned long)RFIFOL(fd, 2));
 			memcpy(email, RFIFOP(fd,6), 40);
 			sprintf(tmp_sql, "SELECT `email` FROM `%s` WHERE `%s`='%d'",login_db, login_db_account_id, sd->account_id);
 			if (mysql_query(&lmysql_handle, tmp_sql)) {

@@ -611,7 +611,7 @@ int parse_fromchar(int fd){
 	}
 
 	while(RFIFOREST(fd) >= 2) {
-//		ShowMessage("char_parse: %d %d packet case=%x\n", fd, RFIFOREST(fd), RFIFOW(fd, 0));
+//		ShowMessage("char_parse: %d %d packet case=%x\n", fd, RFIFOREST(fd), (unsigned short)RFIFOW(fd, 0));
 
 		switch (RFIFOW(fd,0)) {
 		case 0x2712:
@@ -695,7 +695,7 @@ int parse_fromchar(int fd){
 				return 0;
 			// how many users on world? (update)
 			if (server[id].users != RFIFOL(fd,2))
-				ShowMessage("set users %s : %d\n", server[id].name, RFIFOL(fd,2));
+				ShowMessage("set users %s : %ld\n", server[id].name, (unsigned long)RFIFOL(fd,2));
 			server[id].users = RFIFOL(fd,2);
 			if(anti_freeze_enable)
 				server_freezeflag[id] = 5; // Char anti-freeze system. Counter. 5 ok, 4...0 freezed
@@ -728,7 +728,7 @@ int parse_fromchar(int fd){
 				strcpy(email, sql_row[0]);
 			}
 			mysql_free_result(sql_res);
-			//ShowMessage("parse_fromchar: E-mail/limited time request from '%s' server (concerned account: %d)\n", server[id].name, RFIFOL(fd,2));
+			//ShowMessage("parse_fromchar: E-mail/limited time request from '%s' server (concerned account: %ld)\n", server[id].name, (unsigned long)RFIFOL(fd,2));
 			WFIFOW(fd,0) = 0x2717;
 			WFIFOL(fd,2) = RFIFOL(fd,2);
 			memcpy(WFIFOP(fd, 6), email, 40);
@@ -999,7 +999,7 @@ int parse_fromchar(int fd){
         break;
 
 	default:
-		ShowMessage("login: unknown packet %x! (from char).\n", RFIFOW(fd,0));
+		ShowMessage("login: unknown packet %x! (from char).\n", (unsigned short)RFIFOW(fd,0));
 		session_Remove(fd);
 	return 0;
 	}
@@ -1080,7 +1080,7 @@ int parse_login(int fd) {
 	}
 
 	while(RFIFOREST(fd)>=2){
-		ShowMessage("parse_login : %d %d packet case=%x\n", fd, RFIFOREST(fd), RFIFOW(fd,0));
+		ShowMessage("parse_login : %d %d packet case=%x\n", fd, RFIFOREST(fd), (unsigned short)RFIFOW(fd,0));
 
 		switch(RFIFOW(fd,0)){
 		case 0x200:		// New alive packet: structure: 0x200 <account.userid>.24B. used to verify if client is always alive.
@@ -1311,7 +1311,7 @@ int parse_login(int fd) {
 				return 0;
 			{
 				unsigned char* server_name;
-				sprintf(tmpsql,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '%d.%d.%d.%d', '%s@%s','100', 'charserver - %s@%d.%d.%d.%d:%d')", loginlog_db, p[0], p[1], p[2], p[3], RFIFOP(fd, 2),RFIFOP(fd, 60),RFIFOP(fd, 60), RFIFOB(fd, 54), RFIFOB(fd, 55), RFIFOB(fd, 56), RFIFOB(fd, 57), RFIFOW(fd, 58));
+				sprintf(tmpsql,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '%d.%d.%d.%d', '%s@%s','100', 'charserver - %s@%d.%d.%d.%d:%d')", loginlog_db, p[0], p[1], p[2], p[3], RFIFOP(fd, 2),RFIFOP(fd, 60),RFIFOP(fd, 60), RFIFOB(fd, 54), RFIFOB(fd, 55), RFIFOB(fd, 56), RFIFOB(fd, 57), (unsigned short)RFIFOW(fd, 58));
 				//query
 				if(mysql_query(&mysql_handle, tmpsql)) {
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));

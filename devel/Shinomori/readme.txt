@@ -1,6 +1,6 @@
 my personal kingdom
 
-based on svn1140
+based on svn1173
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
@@ -69,6 +69,9 @@ for 10 seconds so Alt-F4 cannot be used to flee a fight
 moved the clif_waitclose to the session,
 might reconsider the wide usage of waitclose in clif.c, 
 it is not useful on every existing position
+///////////////////////////////////////////////////////////
+removed parts of RoVeRT's npc timer system
+still centralising and cleaning code
 ///////////////////////////////////////////////////////////
 (not online)
 preparing a new script machine that pre-compiles the text 

@@ -56,6 +56,7 @@ struct event_data {
 	struct npc_data *nd;
 	int pos;
 };
+
 static struct tm ev_tm_b;	// 時計イベント用
 
 static int npc_walktimer(int tid,unsigned long tick,int id,int data); // [Valaris]
@@ -185,7 +186,7 @@ int npc_event_dequeue(struct map_session_data *sd)
 		for(ev=0;ev<MAX_EVENTTIMER;ev++)
 			if( sd->eventtimer[ev]==-1 )
 				break;
-		if(ev<MAX_EVENTTIMER)
+		if(ev < MAX_EVENTTIMER)
 		{	// generate and insert the timer
 			int i;
 			// copy the first event
@@ -230,7 +231,7 @@ int npc_event_timer(int tid,unsigned long tick,int id,int data)
 	char *eventname = (char *)data;
 	struct event_data *ev = (struct event_data *)strdb_search(ev_db,eventname);
 	struct npc_data *nd;
-	struct map_session_data *sd=map_id2sd(id);
+	struct map_session_data *sd = map_id2sd(id);
 	size_t i;
 
 	if((ev==NULL || (nd=ev->nd)==NULL))
@@ -238,14 +239,24 @@ int npc_event_timer(int tid,unsigned long tick,int id,int data)
 		if(battle_config.error_log)
 			ShowWarning("npc_event: event not found [%s]\n",eventname);
 	}	
-	else
+	else 
+		
+		if(sd)
 	{
 		for(i=0;i<MAX_EVENTTIMER;i++) {
-			if( nd->eventtimer[i]==tid ) {
-				nd->eventtimer[i]=-1;
+			if( sd->eventtimer[i]==tid ) {
+				sd->eventtimer[i]=-1;
 				npc_event(sd,eventname,0); // sd NULL check is within
 				break;
 			}
+
+// removed from OnTimer NPC event
+//		for(i=0;i<MAX_EVENTTIMER;i++) {
+//			if( nd->eventtimer[i]==tid ) {
+//				nd->eventtimer[i]=-1;
+//				npc_event(sd,eventname,0); // sd NULL check is within
+//				break;
+//			}
 		}
 		if(i==MAX_EVENTTIMER && battle_config.error_log)
 			ShowWarning("npc_event_timer: event timer not found [%s]!\n",eventname);
@@ -471,10 +482,12 @@ int npc_event_do_oninit(void)
 
 	return 0;
 }
+
 /*==========================================
  * OnTimer NPC event - by RoVeRT
  *------------------------------------------
  */
+/*
 int npc_addeventtimer(struct npc_data *nd,unsigned long tick,const char *name)
 {
 	int i;
@@ -525,13 +538,13 @@ int npc_cleareventtimer(struct npc_data *nd)
 
 	return 0;
 }
-
+*/
 int npc_do_ontimer_sub(void *key,void *data,va_list ap)
 {
 	char *p=(char *)key;
 	struct event_data *ev=(struct event_data *)data;
 	int *c=va_arg(ap,int *);
-//	struct map_session_data *sd=va_arg(ap,struct map_session_data *);
+	struct map_session_data *sd=va_arg(ap,struct map_session_data *);
 	int option=va_arg(ap,int);
 	unsigned long tick=0;
 	char temp[10];
@@ -545,9 +558,12 @@ int npc_do_ontimer_sub(void *key,void *data,va_list ap)
 		strcat( event, p);
 
 		if (option!=0) {
-			npc_addeventtimer(ev->nd,tick,event);
+
+			//npc_addeventtimer(ev->nd,tick,event);
+			pc_addeventtimer(sd,tick,event);
 		} else {
-			npc_deleventtimer(ev->nd,event);
+			//npc_deleventtimer(ev->nd,event);
+			pc_deleventtimer(sd,event);
 		}
 	}
 	return 0;
@@ -1876,11 +1892,11 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	map_addblock(&nd->bl);
 
 	if (evflag) {	// イベント型
-			struct event_data *ev=(struct event_data *)aCalloc(1,sizeof(struct event_data));
-			ev->nd=nd;
-			ev->pos=0;
-			strdb_insert(ev_db,nd->exname,ev);
-		}else
+		struct event_data *ev=(struct event_data *)aCalloc(1,sizeof(struct event_data));
+		ev->nd=nd;
+		ev->pos=0;
+		strdb_insert(ev_db,nd->exname,ev);
+	}else
 		clif_spawnnpc(nd);
 	}
 	

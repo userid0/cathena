@@ -2176,10 +2176,8 @@ int atcommand_kami(
 		clif_displaymessage(fd, "Please, enter a message (usage: @kami <message>).");
 		return -1;
 	}
-
 	sscanf(message, "%199[^\n]", output);
 	intif_GMmessage(output, (*(command + 5) == 'b') ? 0x10 : 0);
-
 	return 0;
 }
 

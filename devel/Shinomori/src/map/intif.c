@@ -106,7 +106,7 @@ int intif_delete_petdata(int pet_id)
 }
 
 // GMメッセージを送信
-int intif_GMmessage(char* mes,int flag)
+int intif_GMmessage(char* mes, int flag)
 {
 	if(mes)
 	{
@@ -841,7 +841,7 @@ int intif_parse_PartyInfo(int fd)
 		return 0;
 	}
 
-//	ShowMessage("intif: party info %d\n",RFIFOL(fd,4));
+//	ShowMessage("intif: party info %ld\n",(unsigned long)RFIFOL(fd,4));
 	if( RFIFOW(fd,2)!=sizeof(struct party)+4 ){
 		if(battle_config.error_log)
 			ShowMessage("intif: party info : data size error %ld %d %d\n",(unsigned long)RFIFOL(fd,4),(unsigned short)RFIFOW(fd,2),sizeof(struct party)+4);
@@ -887,7 +887,7 @@ int intif_parse_PartyBroken(int fd)
 int intif_parse_PartyMove(int fd)
 {
 //	if(battle_config.etc_log)
-//		ShowMessage("intif: party move %d %d %s %d %d\n",RFIFOL(fd,2),RFIFOL(fd,6),RFIFOP(fd,10),RFIFOB(fd,26),RFIFOW(fd,27));
+//		ShowMessage("intif: party move %ld %ld %s %d %d\n",(unsigned long)RFIFOL(fd,2),(unsigned long)RFIFOL(fd,6),RFIFOP(fd,10),RFIFOB(fd,26),(unsigned short)RFIFOW(fd,27));
 	party_recv_movemap(RFIFOL(fd,2),RFIFOL(fd,6),(char*)RFIFOP(fd,10),RFIFOB(fd,26),RFIFOW(fd,27));
 	return 0;
 }
@@ -917,7 +917,7 @@ int intif_parse_GuildInfo(int fd)
 	}
 
 //	if(battle_config.etc_log)
-//		ShowMessage("intif: guild info %d\n",RFIFOL(fd,4));
+//		ShowMessage("intif: guild info %ld\n",(unsigned long)RFIFOL(fd,4));
 	if( RFIFOW(fd,2)!=sizeof(struct guild)+4 ){
 		if(battle_config.error_log)
 			ShowMessage("intif: guild info : data size error\n %ld %d %d",(unsigned long)RFIFOL(fd,4),(unsigned short)RFIFOW(fd,2),sizeof(struct guild)+4);
