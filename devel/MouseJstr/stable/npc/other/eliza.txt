@@ -57,11 +57,11 @@ Lquote4:
 	if($foo == 5) goto Lquote4f;
 
 Lquote4a:
-        npctalk "Do you often think of $p2$";
+        npctalk "Do you often think of "+$p2$+"?";
         break;
 
 Lquote4b:
-        npctalk "Does thinking of $p2$ bring anything else to mind?";
+        npctalk "Does thinking of "+$p2$+" bring anything else to mind?";
         break;
 
 Lquote4c:
@@ -69,18 +69,18 @@ Lquote4c:
         break;
 
 Lquote4d:
-        npctalk "Why do you recall $p2$ right now?";
+        npctalk "Why do you recall "+$p2$+" right now?";
         break;
 
 Lquote4e:
-        npctalk "What in the present situation reminds you of $p2$";
+        npctalk "What in the present situation reminds you of "+$p2$+"?";
         break;
 
 Lquote4f:
-        npctalk "What is the connection between me and $p2$";
+        npctalk "What is the connection between me and "+$p2$+"?";
         break;
 
-//   (((?* ?x) do you remember (?* $p2$))
+//    do you remember
 Lquote5:
         set $foo,rand(4);
 	if($foo == 0) goto Lquote5a;
@@ -88,19 +88,19 @@ Lquote5:
 	if($foo == 2) goto Lquote5c;
 	if($foo == 3) goto Lquote5d;
 Lquote5a:
-        npctalk "Did you think I would forget $p2$ ?";
+        npctalk "Did you think I would forget "+$p2$+" ?";
         break;
 
 Lquote5b:
-        npctalk "Why do you think I should recall $p2$ now";
+        npctalk "Why do you think I should recall "+$p2$+" now";
         break;
 
 Lquote5c:
-        npctalk "What about $p2$";
+        npctalk "What about "+$p2$+"";
         break;
 
 Lquote5d:
-        npctalk "You mentioned $p2$";
+        npctalk "You mentioned "+$p2$+"";
         break;
 
 // if
@@ -111,19 +111,19 @@ Lquote6:
 	if($foo == 2) goto Lquote6c;
 	if($foo == 3) goto Lquote6d;
 Lquote6a:
-        npctalk "Do you really think its likely that $p2$";
+        npctalk "Do you really think its likely that "+$p2$+"";
         break;
 
 Lquote6b:
-        npctalk "Do you wish that $p2$";
+        npctalk "Do you wish that "+$p2$+"?";
         break;
 
 Lquote6c:
-        npctalk "What do you think about $p2$";
+        npctalk "What do you think about "+$p2$+"?";
         break;
 
 Lquote6d:
-        npctalk "Really-- if $p2$";
+        npctalk "Really-- if "+$p2$+"?";
         break;
 
 //  i dreamt
@@ -133,21 +133,21 @@ Lquote7:
 	if($foo == 1) goto Lquote7b;
 	if($foo == 2) goto Lquote7c;
 Lquote7a:
-        npctalk "Really-- $p2$";
+        npctalk "Really-- "+$p2$+"";
         break;
 
 Lquote7b:
-        npctalk "Have you ever fantasized $p2$ while you were awake?";
+        npctalk "Have you ever fantasized "+$p2$+" while you were awake?";
         break;
 
 Lquote7c:
-        npctalk "Have you dreamt $p2$ before?";
+        npctalk "Have you dreamt "+$p2$+" before?";
         break;
 
 //   dream about
 
 Lquote8:
-        npctalk "How do you feel about $p2$ in reality?";
+        npctalk "How do you feel about "+$p2$+" in reality?";
         break;
 
 //  dream
@@ -179,7 +179,7 @@ Lquote10:
 	if($foo == 0) goto Lquote10a;
 	if($foo == 1) goto Lquote10b;
 Lquote10a:
-        npctalk "Who else in your family $p2$";
+        npctalk "Who else in your family "+$p2$+"";
         break;
 
 Lquote10b:
@@ -211,25 +211,25 @@ Lquote12:
 	if($foo == 1) goto Lquote12b;
 	if($foo == 2) goto Lquote12c;
 Lquote12a:
-        npctalk "What would it mean if you got $p2$";
+        npctalk "What would it mean if you got "+$p2$+"";
         break;
 
 Lquote12b:
-        npctalk "Why do you want $p2$";
+        npctalk "Why do you want "+$p2$+"";
         break;
 
 Lquote12c:
-        npctalk "Suppose you got $p2$ soon";
+        npctalk "Suppose you got "+$p2$+" soon";
         break;
 
-//   (((?* ?x) I am glad (?* $p2$))
+//    I am glad 
 Lquote13:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote13a;
 	if($foo == 1) goto Lquote13b;
 	if($foo == 2) goto Lquote13c;
 Lquote13a:
-        npctalk "How have I helped you to be $p2$";
+        npctalk "How have I helped you to be "+$p2$+"";
         break;
 
 Lquote13b:
@@ -237,10 +237,10 @@ Lquote13b:
         break;
 
 Lquote13c:
-        npctalk "Can you explain why you are suddenly $p2$";
+        npctalk "Can you explain why you are suddenly "+$p2$+"";
         break;
 
-//   (((?* ?x) I am sad (?* $p2$))
+//    I am sad 
 Lquote14:
         set $foo,rand(2);
 	if($foo == 0) goto Lquote14a;
@@ -253,12 +253,12 @@ Lquote14b:
         npctalk "I'm sure its not pleasant to be sad";
         break;
 
-//   (((?* ?x) are like (?* $p2$))   
+//   $p2 are like "+$p3$+"
 Lquote15:
-        npctalk "What resemblance do you see between ?x and $p2$";
+        npctalk "What resemblance do you see between "+$p2$+" and "+$p3$+"";
         break;
 
-//   (((?* ?x) is like (?* $p2$))    
+//   "+$p2$+" is like "+$p3$+"
 Lquote16:
         set $foo,rand(4);
 	if($foo == 0) goto Lquote16a;
@@ -266,7 +266,7 @@ Lquote16:
 	if($foo == 2) goto Lquote16c;
 	if($foo == 3) goto Lquote16d;
 Lquote16a:
-        npctalk "In what way is it that ?x is like $p2$";
+        npctalk "In what way is it that "+$p2$+" is like "+$p3$+"";
         break;
 
 Lquote16b:
@@ -280,7 +280,7 @@ Lquote16c:
 Lquote16d:
         npctalk "How?";
         break;
-//   (((?* ?x) alike (?* $p2$))      
+//   alike
 Lquote17:
         set $foo,rand(2);
 	if($foo == 0) goto Lquote17a;
@@ -292,12 +292,12 @@ Lquote17a:
 Lquote17b:
         npctalk "What similarities are there?";
         break;
-//   (((?* ?x) same (?* $p2$))       
+//    same 
 Lquote18:
         npctalk "What other connections do you see?";
         break;
 
-//   (((?* ?x) I was (?* $p2$))       
+//   I was "+$p2$+"
 Lquote19:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote19a;
@@ -308,45 +308,45 @@ Lquote19a:
         break;
 
 Lquote19b:
-        npctalk "Perhaps I already knew you were $p2$";
+        npctalk "Perhaps I already knew you were "+$p2$+"";
         break;
 
 Lquote19c:
-        npctalk "Why do you tell me you were $p2$ now?";
+        npctalk "Why do you tell me you were "+$p2$+" now?";
         break;
 
-//   (((?* ?x) was I (?* $p2$))
+//    was I
 Lquote20:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote20a;
 	if($foo == 1) goto Lquote20b;
 	if($foo == 2) goto Lquote20c;
 Lquote20a:
-        npctalk "What if you were $p2$ ?";
+        npctalk "What if you were "+$p2$+" ?";
         break;
 
 Lquote20b:
-        npctalk "Do you thin you were $p2$";
+        npctalk "Do you thin you were "+$p2$+"";
         break;
 
 Lquote20c:
-        npctalk "What would it mean if you were $p2$";
+        npctalk "What would it mean if you were "+$p2$+"";
         break;
 
-//   (((?* ?x) I am (?* $p2$))       
+//    I am
 Lquote21:
         set $foo,rand(2);
 	if($foo == 0) goto Lquote21a;
 	if($foo == 1) goto Lquote21b;
 Lquote21a:
-        npctalk "In what way are you $p2$";
+        npctalk "In what way are you "+$p2$+"";
         break;
 
 Lquote21b:
-        npctalk "Do you want to be $p2$ ?";
+        npctalk "Do you want to be "+$p2$+" ?";
         break;
 
-//   (((?* ?x) am I (?* $p2$))
+//   am I
 Lquote22:
         set $foo,rand(4);
 	if($foo == 0) goto Lquote22a;
@@ -354,22 +354,22 @@ Lquote22:
 	if($foo == 2) goto Lquote22c;
 	if($foo == 3) goto Lquote22d;
 Lquote22a:
-        npctalk "Do you believe you are $p2$";
+        npctalk "Do you believe you are "+$p2$+"";
         break;
 
 Lquote22b:
-        npctalk "Would you want to be $p2$";
+        npctalk "Would you want to be "+$p2$+"";
         break;
 
 Lquote22c:
-        npctalk "You wish I would tell you you are $p2$";
+        npctalk "You wish I would tell you you are "+$p2$+"";
         break;
 
 Lquote22d:
-        npctalk "What would it mean if you were $p2$";
+        npctalk "What would it mean if you were "+$p2$+"";
         break;
 
-//   (((?* ?x) am (?* $p2$))
+//   am
 Lquote23:
         set $foo,rand(2);
 	if($foo == 0) goto Lquote23a;
@@ -383,30 +383,30 @@ Lquote23b:
         npctalk "I don't understand that";
         break;
 
-//   (((?* ?x) are you (?* $p2$))
+//    are you
 Lquote24:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote24a;
 	if($foo == 1) goto Lquote24b;
 	if($foo == 2) goto Lquote24c;
 Lquote24a:
-        npctalk "Why are you interested in whether I am $p2$ or not?";
+        npctalk "Why are you interested in whether I am "+$p2$+" or not?";
         break;
 
 Lquote24b:
-        npctalk "Would you prefer if I weren't $p2$";
+        npctalk "Would you prefer if I weren't "+$p2$+"";
         break;
 
 Lquote24c:
-        npctalk "Perhaps I am $p2$ in your fantasies";
+        npctalk "Perhaps I am "+$p2$+" in your fantasies";
         break;
 
-//   (((?* ?x) you are (?* $p2$))   
+//   you are 
 Lquote25:
-        npctalk "What makes you think I am $p2$ ?";
+        npctalk "What makes you think I am "+$p2$+" ?";
         break;
 
-//   (((?* ?x) because (?* $p2$))
+//   because
 Lquote26:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote26a;
@@ -424,14 +424,14 @@ Lquote26c:
         npctalk "Does that reason seem to explain anything else?";
         break;
 
-//   (((?* ?x) were you (?* $p2$))
+//    were you 
 Lquote27:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote27a;
 	if($foo == 1) goto Lquote27b;
 	if($foo == 2) goto Lquote27c;
 Lquote27a:
-        npctalk "Perhaps I was $p2$";
+        npctalk "Perhaps I was "+$p2$+"";
         break;
 
 Lquote27b:
@@ -439,56 +439,56 @@ Lquote27b:
         break;
 
 Lquote27c:
-        npctalk "What if I had been $p2$";
+        npctalk "What if I had been "+$p2$+"";
         break;
 
-//   (((?* ?x) I can't (?* $p2$))    
+//   I can't 
 Lquote28:
         set $foo,rand(2);
 	if($foo == 0) goto Lquote28a;
 	if($foo == 1) goto Lquote28b;
 Lquote28a:
-        npctalk "Maybe you could $p2$ now";
+        npctalk "Maybe you could "+$p2$+" now";
         break; 
 
 Lquote28b:
-        npctalk "What if you could $p2$ ?";
+        npctalk "What if you could "+$p2$+" ?";
         break;
 
-//   (((?* ?x) I feel (?* $p2$))     
+//    I feel 
 Lquote29:
-        npctalk "Do you often feel $p2$ ?";
+        npctalk "Do you often feel "+$p2$+" ?";
         break;
 
-//   (((?* ?x) I felt (?* $p2$))     
+//    I felt
 Lquote30:
         npctalk "What other feelings do you have?";
         break;
 
-//   (((?* ?x) I (?* $p2$) you (?* ?z))   
+//   $p1$ I $p2$ you $p3$
 Lquote31:
-        npctalk "Perhaps in your fantasy we $p2$ each other?";
+        npctalk "Perhaps in your fantasy we "+$p3$+" each other?";
         break;
 
-//   (((?* ?x) why don't you (?* $p2$))
+//   why don't you 
 Lquote32:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote32a;
 	if($foo == 1) goto Lquote32b;
 	if($foo == 2) goto Lquote32c;
 Lquote32a:
-        npctalk "Should you $p2$ yourself?";
+        npctalk "Should you "+$p2$+" yourself?";
         break;
 
 Lquote32b:
-        npctalk "Do you believe I don't $p2$";
+        npctalk "Do you believe I don't "+$p2$+"";
         break;
 
 Lquote32c:
-        npctalk "Perhaps I will $p2$ in good time";
+        npctalk "Perhaps I will "+$p2$+" in good time";
         break;
 
-//   (((?* ?x) yes (?* $p2$))
+//   yes 
 Lquote33:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote33a;
@@ -506,7 +506,7 @@ Lquote33c:
         npctalk "I understand";
         break;
 
-//   (((?* ?x) no (?* $p2$))
+//    no
 Lquote34:
         set $foo,rand(3);
 	if($foo == 0) goto Lquote34a;
@@ -524,12 +524,12 @@ Lquote34c:
         npctalk "Are you saying NO just to be negative?";
         break;
 
-//   (((?* ?x) someone (?* $p2$))
+//    someone
 Lquote35:
         npctalk "Can you be more specific?";
         break;
 
-//   (((?* ?x) everyone (?* $p2$))
+//    everyone 
 Lquote36:
         set $foo,rand(4);
 	if($foo == 0) goto Lquote36a;
@@ -552,7 +552,7 @@ Lquote36d:
         npctalk "You are thinking of a special person?";
         break;
 
-//   (((?* ?x) always (?* $p2$))
+//  always 
 Lquote37:
         set $foo,rand(4);
 	if($foo == 0) goto Lquote37a;
@@ -575,7 +575,7 @@ Lquote37d:
         npctalk "Really-- always?";
         break;
 
-//   (((?* ?x) what (?* $p2$))
+//   what
 Lquote38:
         set $foo,rand(5);
 	if($foo == 0) goto Lquote38a;
@@ -603,25 +603,25 @@ Lquote38e:
         npctalk "What comes to your mind when you ask that?";
         break;
 
-//   (((?* ?x) perhaps (?* $p2$))    
+//   perhaps 
 Lquote39:
         npctalk "You do not seem quite certain";
         break;
 
-//   (((?* ?x) are (?* $p2$))
+//   are
 Lquote40:
         set $foo,rand(2);
 	if($foo == 0) goto Lquote40a;
 	if($foo == 1) goto Lquote40b;
 Lquote40a:
-        npctalk "Did you think they might not be $p2$";
+        npctalk "Did you think they might not be "+$p2$+"";
         break;
 
 Lquote40b:
-        npctalk "Possibly they are $p2$";
+        npctalk "Possibly they are "+$p2$;
         break;
 
-//   (((?* ?x))               
+//   default
 Lquote41:
         set $foo,rand(6);
 	if($foo == 0) goto Lquote41a;
@@ -658,7 +658,7 @@ OnInit:
         defpattern 1, "([^:]+):.*\scomputer.*", Lquote1;
         defpattern 1, "([^:]+):.*\sname.*", Lquote2;
         defpattern 1, "([^:]+):.*\ssorry.*", Lquote3;
-        defpattern 1, "([^:]+):.*\si\sremember\s+(.*)", Lquote4;
+        defpattern 1, "([^:]+):.*\si\s+remember\s+(.*)", Lquote4;
         defpattern 1, "([^:]+):.*\sdo\s+you\s+remember\s+(.*)", Lquote5;
         defpattern 1, "([^:]+):.*\sif\s+(.*)", Lquote6;
         defpattern 1, "([^:]+):.*\si\s+dreamt\s+(.*)", Lquote7;
@@ -696,5 +696,6 @@ OnInit:
         defpattern 1, "([^:]+):.*\sperhaps\s+(.*)", Lquote39;
         defpattern 1, "([^:]+):.*\sare\s+(.*)", Lquote40;
         defpattern 1, "([^:]+):(.*)", Lquote41;
+        activatepset 1;
         break;
 }
