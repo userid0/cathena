@@ -197,7 +197,6 @@ int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y,
 	s_ip = 0;
 	for(i = 0; i < fd_max; i++)
 		if (session[i] && session[i]->session_data == sd) {
-			//s_ip = ntohl(session[i]->client_addr.sin_addr.s_addr);
 			s_ip = session[i]->client_ip;
 			break;
 		}
@@ -339,7 +338,6 @@ int chrif_charselectreq(struct map_session_data *sd)
 	s_ip = 0;
 	for(i = 0; i < fd_max; i++)
 		if (session[i] && session[i]->session_data == sd) {
-			//s_ip = ntohl( session[i]->client_addr.sin_addr.s_addr );
 			s_ip = session[i]->client_ip;
 			break;
 		}
@@ -963,9 +961,7 @@ int chrif_flush_fifo(void) {
 	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
 		return -1;
 
-	set_nonblocking(char_fd, 0);
 	flush_fifos();
-	set_nonblocking(char_fd, 1);
 
 	return 0;
 }
@@ -1019,6 +1015,8 @@ int chrif_disconnect(int fd) {
 		chrif_state = 0;
 		char_fd = -1;
 		session_Remove(fd);
+		// 他のmap 鯖のデータを消す
+		map_eraseallipport();
 	}
 	return 0;
 }
@@ -1168,6 +1166,16 @@ int check_connect_char_server(int tid, unsigned long tick, int id, int data) {
 #endif /* not TXT_ONLY */
 	}
 	if( chrif_isconnect() ) displayed = 0;
+	return 0;
+}
+/*==========================================
+ * 終了
+ *------------------------------------------
+ */
+int do_final_chrif(void)
+{
+	session_Remove(char_fd);
+	char_fd = -1;
 	return 0;
 }
 

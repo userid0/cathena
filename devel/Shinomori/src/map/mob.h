@@ -95,7 +95,7 @@ int mob_spawn_guardian(struct map_session_data *sd,char *mapname,	// Spawning Gu
 
 
 int mob_walktoxy(struct mob_data *md,int x,int y,int easy);
-//int mob_randomwalk(struct mob_data *md,int tick);
+//int mob_randomwalk(struct mob_data *md,unsigned long tick);
 //int mob_can_move(struct mob_data *md);
 
 int mob_target(struct mob_data *md,struct block_list *bl,int dist);
@@ -131,7 +131,7 @@ int mob_counttargeted(struct mob_data *md,struct block_list *src,int target_lv);
 int mob_class_change(struct mob_data *md,int *value);
 int mob_warp(struct mob_data *md,int m,int x,int y,int type);
 
-int mobskill_use(struct mob_data *md,unsigned int tick,int event);
+int mobskill_use(struct mob_data *md,unsigned long tick,int event);
 int mobskill_event(struct mob_data *md,int flag);
 int mobskill_castend_id( int tid, unsigned long tick, int id,int data );
 int mobskill_castend_pos( int tid, unsigned long tick, int id,int data );

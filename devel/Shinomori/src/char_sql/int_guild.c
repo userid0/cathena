@@ -503,6 +503,7 @@ struct guild * inter_guild_fromsql(int guild_id)
 	return g;
 }
 
+#if 0
 static int _set_guild_castle(void *key, void *data, va_list ap) {
 	int castle_id = va_arg(ap, int);
 	int guild_id = va_arg(ap, int);
@@ -514,7 +515,7 @@ static int _set_guild_castle(void *key, void *data, va_list ap) {
 		g->castle_id = castle_id;
 	return 0;
 }
-
+#endif
 
 // Save guild_castle to sql
 int inter_guildcastle_tosql(struct guild_castle *gc){
@@ -1365,8 +1366,7 @@ int mapif_parse_GuildMessage(int fd,int guild_id,int account_id,char *mes,int le
 	return mapif_guild_message(guild_id,account_id,mes,len, fd);
 }
 // ギルド基本データ変更要求
-int mapif_parse_GuildBasicInfoChange(int fd,int guild_id,
-	int type,const char *data,int len)
+int mapif_parse_GuildBasicInfoChange(int fd,int guild_id,int type,const char *data,int len)
 {
 	struct guild * g = inter_guild_fromsql(guild_id);
 //	int dd=RBUFL(data,0);
@@ -1380,7 +1380,7 @@ int mapif_parse_GuildBasicInfoChange(int fd,int guild_id,
 			if(dw>0 && g->guild_lv+dw<=50){
 				g->guild_lv+=dw;
 				g->skill_point+=dw;
-			}else if(dw<0 && g->guild_lv+dw>=1)
+			}else if(g->guild_lv+dw>=1)
 				g->guild_lv+=dw;
 			mapif_guild_info(-1,g);
 			inter_guild_tosql(g,1);

@@ -64,7 +64,7 @@ static unsigned int strdb_hash(struct dbt* table,void* a)
 	return h;
 }
 
-struct dbt* strdb_init(int maxlen)
+struct dbt* strdb_init_(int maxlen,const char *file,int line)
 {
 	int i;
 	struct dbt* table;
@@ -76,6 +76,9 @@ struct dbt* strdb_init(int maxlen)
 	table->maxlen=maxlen;
 	for(i=0;i<HASH_SIZE;i++)
 		table->ht[i]=NULL;
+	table->alloc_file = file;
+	table->alloc_line = line;
+	table->item_count = 0;
 	return table;
 }
 
@@ -97,7 +100,7 @@ static unsigned int numdb_hash(struct dbt* table,void* a)
 	return (unsigned int)a;
 }
 
-struct dbt* numdb_init(void)
+struct dbt* numdb_init_(const char *file,int line)
 {
 	int i;
 	struct dbt* table;
@@ -109,6 +112,9 @@ struct dbt* numdb_init(void)
 	table->maxlen=sizeof(int);
 	for(i=0;i<HASH_SIZE;i++)
 		table->ht[i]=NULL;
+	table->alloc_file = file;
+	table->alloc_line = line;
+	table->item_count = 0;
 	return table;
 }
 
@@ -399,6 +405,7 @@ struct dbn* db_insert(struct dbt *table,void* key,void* data)
 			db_rebalance(p,&table->ht[hash]);
 		}
 	}
+	table->item_count++;
 	return p;
 }
 
@@ -427,12 +434,14 @@ void* db_erase(struct dbt *table,void* key)
 #else
 	aFree(p);
 #endif
+	table->item_count--;
 	return data;
 }
 
 void db_foreach(struct dbt *table,int (*func)(void*,void*,va_list),...)
 {
 	int i,sp;
+	int count = 0;
 	// red-black tree‚È‚Ì‚Å64ŒÂstack‚ª‚ ‚ê‚Î2^32ŒÂƒm[ƒh‚Ü‚Å‘åä•v
 	struct dbn *p,*pn,*stack[64];
 	va_list ap;
@@ -449,6 +458,7 @@ void db_foreach(struct dbt *table,int (*func)(void*,void*,va_list),...)
 			//} else {
 if (p->data)
 			func(p->key, p->data, ap);
+			count++;
 			//}
 			if((pn=p->left)!=NULL){
 				if(p->right){
@@ -465,6 +475,11 @@ if (p->data)
 				}
 			}
 		}
+	}
+	if(count != table->item_count) {
+		ShowMessage("db_foreach : data lost %d of %d item(s) allocated from %s line %d\n",
+			table->item_count - count,count,table->alloc_file,table->alloc_line
+		);
 	}
 	va_end(ap);
 }

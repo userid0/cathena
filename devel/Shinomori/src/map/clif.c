@@ -640,7 +640,7 @@ static int clif_clearchar_delay_sub(int tid, unsigned long tick, int id, int dat
 	return 0;
 }
 
-int clif_clearchar_delay(unsigned int tick, struct block_list *bl, int type) 
+int clif_clearchar_delay(unsigned long tick, struct block_list *bl, int type) 
 {
 	struct block_list *tmpbl;
 
@@ -4263,7 +4263,7 @@ int clif_skillcastcancel(struct block_list* bl)
  * スキル詠唱失敗
  *------------------------------------------
  */
-int clif_skill_fail(struct map_session_data *sd,int skill_id,int type,int btype)
+int clif_skill_fail(struct map_session_data *sd,short skill_id,int type,int btype)
 {
 	int fd;
 
@@ -4295,8 +4295,7 @@ int clif_skill_fail(struct map_session_data *sd,int skill_id,int type,int btype)
  * スキル攻撃エフェクト＆ダメージ
  *------------------------------------------
  */
-int clif_skill_damage(struct block_list *src,struct block_list *dst,
-	unsigned int tick,int sdelay,int ddelay,int damage,int div,int skill_id,int skill_lv,int type)
+int clif_skill_damage(struct block_list *src,struct block_list *dst,unsigned long tick,int sdelay,int ddelay,int damage,int div,short skill_id,short skill_lv,int type)
 {
 	unsigned char buf[64];
 	struct status_change *sc_data;
@@ -4350,8 +4349,7 @@ int clif_skill_damage(struct block_list *src,struct block_list *dst,
  * 吹き飛ばしスキル攻撃エフェクト＆ダメージ
  *------------------------------------------
  */
-int clif_skill_damage2(struct block_list *src,struct block_list *dst,
-	unsigned int tick,int sdelay,int ddelay,int damage,int div,int skill_id,int skill_lv,int type)
+int clif_skill_damage2(struct block_list *src,struct block_list *dst,unsigned long tick,int sdelay,int ddelay,int damage,int div,short skill_id,short skill_lv,int type)
 {
 	unsigned char buf[64];
 	struct status_change *sc_data;
@@ -4392,8 +4390,7 @@ int clif_skill_damage2(struct block_list *src,struct block_list *dst,
  * 支援/回復スキルエフェクト
  *------------------------------------------
  */
-int clif_skill_nodamage(struct block_list *src,struct block_list *dst,
-	int skill_id,int heal,int fail)
+int clif_skill_nodamage(struct block_list *src,struct block_list *dst,short skill_id,int heal,int fail)
 {
 	unsigned char buf[32];
 
@@ -4415,7 +4412,7 @@ int clif_skill_nodamage(struct block_list *src,struct block_list *dst,
  * 場所スキルエフェクト
  *------------------------------------------
  */
-int clif_skill_poseffect(struct block_list *src,int skill_id,int val,int x,int y,int tick)
+int clif_skill_poseffect(struct block_list *src,short skill_id,int val,int x,int y,unsigned long tick)
 {
 	unsigned char buf[32];
 
@@ -7700,7 +7697,7 @@ void clif_parse_WalkToXY(int fd, struct map_session_data *sd) {
  *------------------------------------------
  */
 void clif_parse_QuitGame(int fd, struct map_session_data *sd) {
-	unsigned int tick=gettick();
+	unsigned long tick=gettick();
 	struct skill_unit_group* sg;
 
 	nullpo_retv(sd);
@@ -7915,6 +7912,10 @@ void clif_parse_GlobalMessage(int fd, struct map_session_data *sd) { // S 008c <
 	WFIFOW(fd,0) = 0x8e;
 	WFIFOSET(fd, WFIFOW(fd,2));
 
+#ifdef PCRE_SUPPORT
+        map_foreachinarea(npc_chat_sub, sd->bl.m, sd->bl.x-AREA_SIZE, sd->bl.y-AREA_SIZE, sd->bl.x+AREA_SIZE, sd->bl.y+AREA_SIZE, BL_NPC, RFIFOP(fd,4), strlen(RFIFOP(fd,4)), &sd->bl);
+#endif
+
 	// Celest
 	if (pc_calc_base_job2 (sd->status.class_) == 23 ) {
 		int next = pc_nextbaseexp(sd)>0 ? pc_nextbaseexp(sd) : sd->status.base_exp;
@@ -8114,7 +8115,7 @@ void clif_parse_HowManyConnections(int fd, struct map_session_data *sd) {
  *------------------------------------------
  */
 void clif_parse_ActionRequest(int fd, struct map_session_data *sd) {
-	unsigned int tick;
+	unsigned long tick;
 	unsigned char buf[64];
 	int action_type, target_id;
 
@@ -8859,7 +8860,7 @@ void clif_parse_SkillUp(int fd,struct map_session_data *sd)
  */
 void clif_parse_UseSkillToId(int fd, struct map_session_data *sd) {
 	int skillnum, skilllv, lv, target_id;
-	unsigned int tick = gettick();
+	unsigned long tick = gettick();
 
 	nullpo_retv(sd);
 
@@ -9004,7 +9005,7 @@ void clif_parse_UseSkillToId(int fd, struct map_session_data *sd) {
  */
 void clif_parse_UseSkillToPos(int fd, struct map_session_data *sd) {
 	int skillnum, skilllv, lv, x, y;
-	unsigned int tick = gettick();
+	unsigned long tick = gettick();
 	int skillmoreinfo;
 
 	nullpo_retv(sd);
@@ -10577,7 +10578,7 @@ static int clif_parse(int fd) {
 	while(RFIFOREST(fd) >= 2)
 	{
 		cmd = RFIFOW(fd,0);
-		ShowMessage("clif_parse: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, cmd, RFIFOREST(fd));
+		//ShowMessage("clif_parse: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, cmd, RFIFOREST(fd));
 		// 管理用パケット処理
 		if (cmd >= 30000) {
 			switch(cmd) {

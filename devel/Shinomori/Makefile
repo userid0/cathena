@@ -1,6 +1,12 @@
-# $Id: Makefile 158 2004-10-01 03:45:15Z PoW $
-
 CC = g++ -pipe
+#CC = gcc -pipe -DGCOLLECT
+#CC = gcc -pipe -DDMALLOC -DDMALLOC_FUNC_CHECK
+#CC = /usr/local/bin/gcc -fbounds-checking -pipe -DBCHECK
+
+GCLIB = -lsocket
+# GCLIB = -lgc
+# GCLIB = -ldmalloc
+
 PACKETDEF = -DPACKETVER=6 -DNEW_006b -DSO_REUSEPORT
 #PACKETDEF = -DPACKETVER=5 -DNEW_006b
 #PACKETDEF = -DPACKETVER=4 -DNEW_006b
@@ -17,52 +23,51 @@ MAKE = make
 endif
 
 OPT = -g -O6 -ffast-math
+# OPT += -DDUMPSTACK -rdynamic
 
 ifeq ($(findstring CYGWIN,$(PLATFORM)), CYGWIN)
 OS_TYPE = -DCYGWIN
-CFLAGS = $(OPT) -Wall -DFD_SETSIZE=4096 -I../common $(PACKETDEF) $(OS_TYPE)
+CFLAGS =  $(OPT) -Wall -DFD_SETSIZE=4096 -I../common $(PACKETDEF) $(OS_TYPE)
 else
 OS_TYPE =
-CFLAGS = -DTWILIGHT $(OPT) -Wall -I../common $(PACKETDEF) $(OS_TYPE)
+CFLAGS =  $(OPT) -Wall -DFD_SETSIZE=4096 -I../common $(PACKETDEF) $(OS_TYPE)
 endif
 
-MYSQLFLAG_INCLUDE_DEFAULT = /usr/local/include/mysql
+# my defaults for mysql libs
+MYSQL_INCLUDE = -I../../../mysql/include/ 
+MYSQL_LIB     = -L../../../mysql/lib -lmysqlclient -lposix4 -lcrypt -lgen -lnsl -lm
 
 ifdef SQLFLAG
 MYSQLFLAG_CONFIG = $(shell which mysql_config)
-ifeq ($(findstring /,$(MYSQLFLAG_CONFIG)), /)
+
+# 'which' does will not work system independend 
+# test for gnu-which or use different findstring params
+
+ifeq ($(findstring /mysql_config,$(MYSQLFLAG_CONFIG)), /mysql_config)
+
 MYSQLFLAG_VERSION = $(shell $(MYSQLFLAG_CONFIG) --version | sed s:\\..*::) 
+
+ifeq ($(findstring 4,$(MYSQLFLAG_VERSION)), 4)
+MYSQLFLAG_CONFIG_ARGUMENT = --cflags
 endif
 
 ifeq ($(findstring 5,$(MYSQLFLAG_VERSION)), 5)
 MYSQLFLAG_CONFIG_ARGUMENT = --include
 endif
-ifeq ($(findstring 4,$(MYSQLFLAG_VERSION)), 4)
-MYSQLFLAG_CONFIG_ARGUMENT = --include
-endif
+
 ifndef MYSQLFLAG_CONFIG_ARGUMENT
 MYSQLFLAG_CONFIG_ARGUMENT = --cflags
 endif
 
-ifeq ($(findstring /,$(MYSQLFLAG_CONFIG)), /)
-MYSQLFLAG_INCLUDE = $(shell $(MYSQLFLAG_CONFIG) $(MYSQLFLAG_CONFIG_ARGUMENT))
-else
-MYSQLFLAG_INCLUDE = -I$(MYSQLFLAG_INCLUDE_DEFAULT)
+MYSQL_INCCLUDE = $(shell $(MYSQLFLAG_CONFIG) $(MYSQLFLAG_CONFIG_ARGUMENT)) 
+MYSQL_LIB      = $(shell $(MYSQLFLAG_CONFIG) --libs)
 endif
 
-LIB_S_DEFAULT = -L/usr/local/lib/mysql -lmysqlclient -lz
-MYSQLFLAG_CONFIG = $(shell which mysql_config)
-ifeq ($(findstring /,$(MYSQLFLAG_CONFIG)), /)
-LIB_S = $(shell $(MYSQLFLAG_CONFIG) --libs)
-else
-LIB_S = $(LIB_S_DEFAULT)
-endif
-
-MYLIB = CC="$(CC)" CFLAGS="$(CFLAGS) $(MYSQLFLAG_INCLUDE)" LIB_S="$(LIB_S)"
+MYLIB = CC="$(CC)" CFLAGS="$(CFLAGS) $(MYSQL_INCLUDE)" LIB_S="$(MYSQL_LIB) $(GCLIB)"
 
 endif
 
-MKDEF = CC="$(CC)" CFLAGS="$(CFLAGS)"
+MKDEF = CC="$(CC)" CFLAGS="$(CFLAGS)" LIB_S="$(GCLIB)"
 
 all: conf txt
 
@@ -71,41 +76,33 @@ conf:
 	rm -rf conf/.svn conf/*/.svn
 
 txt : src/common/GNUmakefile src/login/GNUmakefile src/char/GNUmakefile src/map/GNUmakefile src/ladmin/GNUmakefile conf
-	cd src ; cd common ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd login ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd char ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd map ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd ladmin ; $(MAKE) $(MKDEF) $@ ; cd ..
-
+	cd src ; cd common ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
+	cd src ; cd login ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
+	cd src ; cd char ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
+	cd src ; cd map ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
+	cd src ; cd ladmin ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
 
 ifdef SQLFLAG
 sql: src/common/GNUmakefile src/login_sql/GNUmakefile src/char_sql/GNUmakefile src/map/GNUmakefile src/ladmin/GNUmakefile src/txt-converter/login/GNUmakefile src/txt-converter/char/GNUmakefile conf
-	cd src ; cd common ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd login_sql ; $(MAKE) $(MYLIB) $@ ; cd ..
-	cd src ; cd char_sql ; $(MAKE) $(MYLIB) $@ ; cd ..
-	cd src ; cd map ; $(MAKE) $(MYLIB) $@ ; cd ..
-	cd src ; cd ladmin ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd txt-converter ; cd login ; $(MAKE) $(MYLIB) $@ ; cd ..
-	cd src ; cd txt-converter ; cd char ; $(MAKE) $(MYLIB) $@ ; cd ..
+	cd src ; cd common ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
+	cd src ; cd login_sql ; $(MAKE) $(MYLIB) $@ ; cd .. ; cd ..
+	cd src ; cd char_sql ; $(MAKE) $(MYLIB) $@ ; cd .. ; cd ..
+	cd src ; cd map ; $(MAKE) $(MYLIB) $@ ; cd .. ; cd ..
+	cd src ; cd ladmin ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
 else
 sql:
 	$(MAKE) CC="$(CC)" OPT="$(OPT)" SQLFLAG=1 $@
 endif
 
 clean: src/common/GNUmakefile src/login/GNUmakefile src/char/GNUmakefile src/map/GNUmakefile src/ladmin/GNUmakefile src/txt-converter/login/GNUmakefile src/txt-converter/char/GNUmakefile
-	cd src ; cd common ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd login ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd login_sql ; $(MAKE) $(MKLIB) $@ ; cd ..
-	cd src ; cd char ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd char_sql ; $(MAKE) $(MKLIB) $@ ; cd ..
-	cd src ; cd map ; $(MAKE) $(MKLIB) $@ ; cd ..
-	cd src ; cd ladmin ; $(MAKE) $(MKDEF) $@ ; cd ..
-	cd src ; cd txt-converter ; cd login ; $(MAKE) $(MKLIB) $@ ; cd ..
-	cd src ; cd txt-converter ; cd char ; $(MAKE) $(MKLIB) $@ ; cd ..
+	cd src ; cd common ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
+	cd src ; cd login ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
+	cd src ; cd login_sql ; $(MAKE) $(MKLIB) $@ ; cd .. ; cd ..
+	cd src ; cd char ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
+	cd src ; cd char_sql ; $(MAKE) $(MKLIB) $@ ; cd .. ; cd ..
+	cd src ; cd map ; $(MAKE) $(MKLIB) $@ ; cd .. ; cd ..
+	cd src ; cd ladmin ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
 
-tools:
-	cd tool && $(MAKE) $(MKDEF) && cd ..
-	$(CC) -o setupwizard setupwizard.c	
 
 src/common/GNUmakefile: src/common/Makefile
 	sed -e 's/$$>/$$^/' src/common/Makefile > src/common/GNUmakefile
@@ -121,7 +118,3 @@ src/map/GNUmakefile: src/map/Makefile
 	sed -e 's/$$>/$$^/' src/map/Makefile > src/map/GNUmakefile
 src/ladmin/GNUmakefile: src/ladmin/Makefile
 	sed -e 's/$$>/$$^/' src/ladmin/Makefile > src/ladmin/GNUmakefile
-src/txt-converter/login/GNUmakefile: src/txt-converter/login/Makefile
-	sed -e 's/$$>/$$^/' src/txt-converter/login/Makefile > src/txt-converter/login/GNUmakefile
-src/txt-converter/char/GNUmakefile: src/txt-converter/char/Makefile
-	sed -e 's/$$>/$$^/' src/txt-converter/char/Makefile > src/txt-converter/char/GNUmakefile

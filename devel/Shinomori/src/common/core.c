@@ -2,10 +2,13 @@
 // original : core.c 2003/02/26 18:03:12 Rev 1.7
 
 #ifdef DUMPSTACK
+	#ifndef _WIN32	// HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif
+#endif
 
-#include "../common/mmo.h"
+#include "mmo.h"
+#include "malloc.h"
 #include "core.h"
 #include "socket.h"
 #include "timer.h"
@@ -97,9 +100,9 @@ static void sig_proc(int sn)
  *	Dumps the stack using glibc's backtrace
  *-----------------------------------------
  */
-#ifdef DUMPSTACK
 static void sig_dump(int sn)
 {
+	#ifdef DUMPSTACK
 	FILE *fp;
 	void* array[20];
 
@@ -130,11 +133,11 @@ static void sig_dump(int sn)
 		fclose(fp);
 		free(stack);
 	}
+	#endif
 	// When pass the signal to the system's default handler
 	compat_signal(sn, SIG_DFL);
 	raise(sn);
 }
-#endif
 
 int get_svn_revision(char *svnentry) { // Warning: minor syntax checking
 	char line[1024];
@@ -200,16 +203,7 @@ int main(int argc,char **argv)
 	compat_signal(SIGTERM,sig_proc);
 	compat_signal(SIGINT,sig_proc);
 	
-#ifndef DUMPSTACK
  	// Signal to create coredumps by system when necessary (crash)
- 	compat_signal(SIGSEGV, SIG_DFL);
-	compat_signal(SIGFPE, SIG_DFL);
-	compat_signal(SIGILL, SIG_DFL);
-	#ifndef WIN32
-		compat_signal(SIGBUS, SIG_DFL);
-		compat_signal(SIGTRAP, SIG_DFL); 
-	#endif
-#else
 	compat_signal(SIGSEGV, sig_dump);
 	compat_signal(SIGFPE, sig_dump);
 	compat_signal(SIGILL, sig_dump);
@@ -217,10 +211,11 @@ int main(int argc,char **argv)
 		compat_signal(SIGBUS, sig_dump);
 		compat_signal(SIGTRAP, SIG_DFL); 
 	#endif
-#endif
 	///////////////////////////////////////////////////////////////////////////
 	//
 	display_title();
+	do_init_memmgr(argv[0]); // àÍî‘ç≈èâÇ…é¿çsÇ∑ÇÈïKóvÇ™Ç†ÇÈ
+
 	tick_ = time(0);
 	///////////////////////////////////////////////////////////////////////////
 	// core component initialisation

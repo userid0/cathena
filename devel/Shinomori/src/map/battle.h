@@ -34,7 +34,7 @@ struct Damage  battle_calc_misc_attack(
 int battle_attr_fix(int damage,int atk_elem,int def_elem);
 
 // ダメージ最終計算
-int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,int div_,int skill_num,int skill_lv,int flag);
+int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,int div_,int skill_num,short skill_lv,int flag);
 enum {	// 最終計算のフラグ
 	BF_WEAPON	= 0x0001,
 	BF_MAGIC	= 0x0002,
@@ -164,9 +164,9 @@ extern struct Battle_Config {
 	int combo_delay_rate;
 	int item_check;
 	int wedding_modifydisplay;
-	int natural_healhp_interval;
-	int natural_healsp_interval;
-	int natural_heal_skill_interval;
+	unsigned long  natural_healhp_interval;
+	unsigned long natural_healsp_interval;
+	unsigned long natural_heal_skill_interval;
 	int natural_heal_weight_rate;
 	int item_name_override_grffile;
 	int indoors_override_grffile;	// [Celest]
@@ -280,9 +280,6 @@ extern struct Battle_Config {
 	int gm_can_drop_lv;
 	int disp_hpmeter;
 	int bone_drop;
-	int item_rate_details,item_rate_1,item_rate_10,item_rate_100,item_rate_1000;	//ドロップレート詳細
-	int item_rate_1_min,item_rate_10_min,item_rate_100_min,item_rate_1000_min;	//ドロップレート詳細min
-	int item_rate_1_max,item_rate_10_max,item_rate_100_max,item_rate_1000_max;	//ドロップレート詳細max
 
 	int night_at_start; // added by [Yor]
 	int day_duration; // added by [Yor]

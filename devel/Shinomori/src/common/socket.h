@@ -11,26 +11,32 @@ extern time_t tick_;
 extern time_t stall_time_;
 
 
+
+// just kill the exeption here, will port the exeptions later
+#define exception_bound 
+#define exception_memory
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // IP number stuff
 ///////////////////////////////////////////////////////////////////////////////
 class ipaddress
 {
-public:
     union
     {
-        uchar   data[4];
+        uchar   bdata[4];
         ulong   ldata;
     };
+public:
     ipaddress():ldata(INADDR_LOOPBACK)          {}
     ipaddress(ulong a):ldata(a)                 {}
     ipaddress(const ipaddress& a):ldata(a.ldata){}
     ipaddress(int a, int b, int c, int d)
 	{
-		data[0] = uchar(a);
-		data[1] = uchar(b);
-		data[2] = uchar(c);
-		data[3] = uchar(d);
+		ldata =	 uchar(a) << 0x18
+				|uchar(b) << 0x10
+				|uchar(c) << 0x08
+				|uchar(d)        ;
 	}
     ipaddress& operator= (ulong a)              { ldata = a; return *this; }
     ipaddress& operator= (const ipaddress& a)   { ldata = a.ldata; return *this; }
@@ -47,10 +53,708 @@ public:
 #endif//!CHECK_EXCEPTIONS
 		}
 #endif//CHECK_BOUNDS
-		return data[i]; 
+
+		if( MSB_FIRST == CheckByteOrder() )
+			return bdata[i];
+		else
+			return bdata[3-i];
+	}
+    const uchar& operator [] (int i) const
+	{ 
+#ifdef CHECK_BOUNDS
+		if( (i>=4) || (i<0) )
+		{
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("ipaddress: out of bound access");
+#else//!CHECK_EXCEPTIONS
+			static uchar dummy;
+			return dummy=0;
+#endif//!CHECK_EXCEPTIONS
+		}
+#endif//CHECK_BOUNDS
+
+		if( MSB_FIRST == CheckByteOrder() )
+			return bdata[i];
+		else
+			return bdata[3-i];
 	}
     operator ulong() const                      { return ldata; }
 };
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+//
+//  Basic FIFO Template
+//
+/////////////////////////////////////////////////////////////////////
+template<class T> class TFIFO// : public global, public noncopyable		!!todo!! dont forget to remove when merging with base objects
+{
+public:
+	TFIFO()				{}
+	virtual ~TFIFO()	{}
+	/////////////////////////////////////////////////////////////////
+	virtual bool	isEmpty() const = 0;
+	virtual bool	isFull() const = 0;
+	virtual size_t	usedSize() const = 0;
+	virtual size_t	nextusedSize() const = 0;
+	virtual size_t	freeSize() const = 0;
+	virtual size_t	nextfreeSize() const = 0;
+	size_t	Count() {return usedSize();}
+	/////////////////////////////////////////////////////////////////
+	virtual const T& operator[](size_t i) const = 0;
+	virtual T& operator()(size_t i) = 0;
+	/////////////////////////////////////////////////////////////////
+	virtual bool write(const T* p, size_t sz) = 0;
+	virtual bool read(T* p, size_t sz) = 0;
+	/////////////////////////////////////////////////////////////////
+	virtual bool push(const T& p) = 0;
+	virtual bool top(T& p) = 0;
+	virtual T top() = 0;
+	virtual bool pop(T& p) = 0;
+	virtual T pop() = 0;
+	/////////////////////////////////////////////////////////////////
+};
+
+/////////////////////////////////////////////////////////////////////
+//
+// Dynamically resizable FIFO Template
+// rotating behaviour so no need to memmove data
+//
+/////////////////////////////////////////////////////////////////////
+template<class T> class TFIFODST : public TFIFO<T>
+{
+	///////////////////////////////////////////////////////////////////////////
+	T*		cBuffer;
+	size_t	cSZ;
+	size_t	cRD;
+	size_t	cWR;
+
+private:
+	///////////////////////////////////////////////////////////////////////////
+	// overload with a suitable function for copying your types
+	// can be either memcpy for simple types or a loop with assignments for complex
+	virtual void Copy(T* tar, const T* src, size_t sz)
+	{
+		memcpy(tar,src,sz*sizeof(T));
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// realloc for sz _MORE_ data able to fit into the fifo
+	void ReAlloc(size_t sz)
+	{
+		size_t newsize;
+		if(  freeSize() < sz )
+		{	// grow rule
+			size_t tarsize = usedSize() + sz;
+			newsize = 16 + cSZ*2;
+			while( newsize < tarsize ) newsize *= 2;
+		}
+		else if( cSZ>16 && usedSize() < cSZ/4 )
+		{	// shrink rule
+			newsize = cSZ/2;
+		}
+		else // no change
+			return;
+
+		T *newfield = new T[newsize];
+		if(newfield==NULL)
+			throw exception_memory("TFIFOD: memory allocation failed");
+
+		// copy defragmented fifo content to read-in-line
+		if( cRD > cWR )
+		{
+			Copy(newfield+0,       cBuffer+cRD, cSZ-cRD); // between read ptr and buffer end
+			Copy(newfield+cSZ-cRD, cBuffer    , cWR    ); // between buffer start and write ptr
+			cWR = cWR+cSZ-cRD;
+		}
+		else
+		{
+			Copy(newfield+0,       cBuffer+cRD, cWR-cRD); // between read ptr and write ptr
+			cWR = cWR-cRD;
+		}
+		cRD = 0;
+		cSZ = newsize;
+
+		delete[] cBuffer;
+		cBuffer = newfield;
+	}
+
+public:
+	///////////////////////////////////////////////////////////////////////////
+	TFIFODST(size_t sz=16): cBuffer(new T[sz]),cSZ(sz),cRD(0),cWR(0)
+	{}
+	~TFIFODST()	{if(cBuffer) delete[] cBuffer;}
+
+	///////////////////////////////////////////////////////////////////////////
+	// true when empty
+	virtual bool	isEmpty() const		{return (cRD==cWR);}
+	///////////////////////////////////////////////////////////////////////////
+	// true when full (actually when only one place is left)
+	virtual bool	isFull() const		{return (cRD==((cWR+1)%cSZ));}
+	///////////////////////////////////////////////////////////////////////////
+	// returns the overall used size
+	virtual size_t	usedSize() const	{return (cWR>=cRD) ? (   cWR-cRD):(cSZ-cRD+cWR);}
+	// returns the size of the next used data block
+	virtual size_t	nextusedSize() const{return (cWR>=cRD) ? (   cWR-cRD):(cSZ-cRD    );}
+	///////////////////////////////////////////////////////////////////////////
+	// returns the overall free size, 
+	virtual size_t	freeSize() const	{if(cWR==cRD) return cSZ; return (cWR>cRD) ? (cSZ-cWR+cRD-1):(    cRD-cWR-1);}
+	///////////////////////////////////////////////////////////////////////////
+	// returns the size of the next free data block
+	virtual size_t	nextfreeSize() const{return (cWR>=cRD) ? (cSZ-cWR    ):(    cRD-cWR-1);}
+	///////////////////////////////////////////////////////////////////////////
+	T* ReserveRead(const size_t wish, size_t &sz)
+	{ 
+		sz = nextusedSize();
+		if( wish < sz ) sz = wish;
+		// wish greater cannot be granted because of 
+		// either buffer fragmentation or possible buffer underflow 
+
+		T* ret = cBuffer+cRD;
+		cRD+=sz;
+		if(cRD>=cSZ) cRD-=cSZ;
+
+		return ret;
+	}
+	void UndoReserveRead(const size_t sz)
+	{
+		if(cRD >= sz) // otherwise something is really fishy
+			cRD -= sz;
+	}
+	T* ReserveWrite(const size_t wish, size_t &sz)	
+	{ 
+		size_t totalfree = freeSize();
+
+		// if the data won't fit in we can realloc the buffer already
+		// there will be a second ReserveWrite call anyway would now split the date
+		if( totalfree < wish )
+			ReAlloc(wish);
+
+		sz = nextfreeSize();
+		if( wish < sz ) sz = wish;
+		// wish greater cannot be granted because of buffer fragmentation
+		// possible buffer overflow was already handled above
+
+		T* ret = cBuffer+cWR;
+		cWR+=sz;
+		if(cWR>=cSZ) cWR-=cSZ;
+
+		return ret;
+	}
+	void UndoReserveWrite(const size_t sz)
+	{
+		if(cWR >= sz) // otherwise something is really fishy
+			cWR -= sz;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	virtual const T& operator[](size_t i) const
+	{	// read operator, goes on read pointer
+		static T dummy;
+		if(cWR>=cRD)
+		{	
+			if( (cWR-cRD) > i ) 
+			{	// enough space left between write pointer and read pointer
+				return cBuffer[cRD+i];
+			}
+			else	// does not fit into the buffer
+			{
+#ifdef CHECK_BOUNDS
+				// throw something instead
+				throw exception_bound("FIFO underflow");
+#endif
+				return dummy;
+			}
+		}
+		else
+		{	
+			if( (cSZ-cRD) > i ) 
+			{	// enough space left between write pointer and end of buffer
+				return cBuffer[cRD+i];
+			}
+			else if( cWR > (i-(cSZ-cRD)) )
+			{	// split it up to two potions
+				// check if it fits
+				return cBuffer[i-(cSZ-cRD)];
+			}
+			else	// does not fit into the buffer
+			{
+#ifdef CHECK_BOUNDS
+				// throw something instead
+				throw exception_bound("FIFO underflow");
+#endif
+				return dummy;
+			}
+		}
+	}
+	///////////////////////////////////////////////////////////////////////////
+	virtual T& operator()(size_t i)
+	{	// write operator, goes on write pointer
+		// ignore the max-1 case here
+		if(cWR>=cRD)
+		{	
+			if( (cSZ-cWR) > i ) 
+			{	// enough space left between write pointer and end of buffer
+				return cBuffer[cWR+i];
+			}
+			else if( cRD > (i-(cSZ-cWR)) )
+			{	// split it up to two potions
+				// check if it fits
+				return cBuffer[i-(cSZ-cWR)];
+			}
+			else	// does not fit into the buffer
+			{
+				ReAlloc(i);
+				return cBuffer[cWR+i];
+			}
+		}
+		else
+		{	
+			if( (cRD-cWR) > i ) 
+			{	// enough space left between write pointer and read pointer
+				return cBuffer[cWR+i];
+				
+			}
+			else	// does not fit into the buffer
+			{
+				ReAlloc(i);
+				return cBuffer[cWR+i];
+			}
+		}	
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	virtual bool write(const T* p, size_t sz)
+	{
+		if(p && sz)
+		if(cWR>=cRD)
+		{	
+			if( ((cSZ-cWR) > sz) || (((cSZ-cWR) == sz) && cRD>0) )
+			{	// enough space left between write pointer and end of buffer
+				Copy(cBuffer+cWR, p, sz);
+				cWR += sz;
+				if(cWR>=cSZ) cWR=0;
+			}
+			else if( cRD > (sz-(cSZ-cWR)) )
+			{	// split it up to two potions
+				// check if it fits
+				Copy(cBuffer+cWR, p,            cSZ-cWR);
+				Copy(cBuffer,     p+cSZ-cWR, sz-(cSZ-cWR));
+				cWR = sz-(cSZ-cWR);
+			}
+			else	// does not fit into the buffer
+			{
+				ReAlloc(sz);
+				Copy(cBuffer+cWR, p, sz);
+				cWR += sz;
+			}
+		}
+		else
+		{	
+			if( (cRD-cWR) > sz ) 
+			{	// enough space left between write pointer and read pointer
+				Copy(cBuffer+cWR, p, sz);
+				cWR += sz;
+			}
+			else	// does not fit into the buffer
+			{
+				ReAlloc(sz);
+				Copy(cBuffer+cWR, p, sz);
+				cWR += sz;
+			}
+		}
+		return true;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	virtual bool read(T* p, size_t sz)
+	{
+		if(p && sz)
+		if(cWR>=cRD)
+		{	
+			if( (cWR-cRD) >= sz ) 
+			{	// enough space left between write pointer and read pointer
+				Copy(p, cBuffer+cRD, sz);
+				cRD += sz;
+			}
+			else	// does not fit into the buffer
+			{
+#ifdef CHECK_BOUNDS
+				// throw something instead
+				throw exception_bound("FIFO underflow");
+#endif
+				return false;
+			}
+		}
+		else
+		{	
+			if( (cSZ-cRD) >= sz ) 
+			{	// enough space left between write pointer and end of buffer
+				Copy(p, cBuffer+cRD, sz);
+				cRD += sz;
+				if(cRD>=cSZ) cRD=0;
+			}
+			else if( cWR >= (sz-(cSZ-cRD)) )
+			{	// split it up to two potions
+				// check if it fits
+				Copy(p,        cBuffer+cRD,     cSZ-cRD);
+				Copy(p+cSZ-cRD, cBuffer,     sz-(cSZ-cRD));
+				cRD = sz-(cSZ-cRD);
+			}
+			else	// does not fit into the buffer
+			{
+#ifdef CHECK_BOUNDS
+				// throw something instead
+				throw exception_bound("FIFO underflow");
+#endif
+				return false;
+			}
+
+		}
+		return true;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	virtual bool push(const T& p)
+	{
+
+		if( (cSZ<16) || (((cWR+1)%cSZ)==cRD) )
+		{	// buffer full
+			// actually not really full but we cannot write at the last empty field
+			// because this is necessary to enable an empty/full detection
+			ReAlloc(1);
+		}
+
+		// write between write and read pointer
+		// or between write pointer and end of buffer
+		cBuffer[cWR++] = p;
+		if(cWR>=cSZ) cWR=0;
+		return true;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	virtual bool top(T& p)
+	{
+		if(cWR==cRD)
+		{	// buffer empty
+#ifdef CHECK_BOUNDS
+			throw exception_bound("FIFO underflow");
+#endif
+			return false;
+		}
+		else 
+		{	// read between read and write pointer
+			// or between read pointer and end of buffer
+			p = cBuffer[cRD];
+			return true;
+		}
+	}
+	///////////////////////////////////////////////////////////////////////////
+	virtual T top()
+	{
+#ifdef CHECK_BOUNDS
+		if(cWR==cRD)
+		{	// buffer empty
+			// throw something instead
+			throw exception_bound("FIFO underflow");
+		}
+#endif
+		return cBuffer[cRD];
+	}
+	///////////////////////////////////////////////////////////////////////////
+	virtual bool pop(T& p)
+	{
+		if(cWR==cRD)
+		{	// buffer empty
+#ifdef CHECK_BOUNDS
+			throw exception_bound("FIFO underflow");
+#endif
+			return false;
+		}
+		else 
+		{	// read between read and write pointer
+			// or between read pointer and end of buffer
+			p = cBuffer[cRD++];
+			if(cRD>=cSZ) cRD=0;
+			return true;
+		}
+	}
+	///////////////////////////////////////////////////////////////////////////
+	virtual T pop()
+	{
+		if(cWR==cRD)
+		{	// buffer empty
+#ifdef CHECK_BOUNDS
+			throw exception_bound("FIFO underflow");
+#endif
+			return cBuffer[cRD];
+		}
+		else 
+		{	// read between read and write pointer
+			// or between read pointer and end of buffer
+			T *p = cBuffer+cRD;
+			cRD++;
+			if(cRD>=cSZ) cRD=0;
+			return *p;
+		}
+	}
+};
+
+class CFIFO : public TFIFODST<unsigned char>
+{
+
+	char * cStrBuf;
+	size_t cStrSZ;
+
+public:
+	CFIFO():cStrBuf(NULL),cStrSZ(0)
+	{}
+	~CFIFO()
+	{
+		if(cStrBuf) 
+		{
+			delete[] cStrBuf;
+			cStrBuf = NULL;
+			cStrSZ = 0;
+		}
+	}
+	///////////////////////////////////////////////////////////////////////////
+	unsigned char operator = (const unsigned char ch)
+	{	// no check pust will throw anyway
+		push(ch);
+		return ch;
+	}
+	char operator = (const char ch)
+	{	
+		push((unsigned char)ch);
+		return ch;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	unsigned short operator = (const unsigned short sr)
+	{	// implement little endian buffer format
+		push( (unsigned char)(sr         ) ); 
+		push( (unsigned char)(sr  >> 0x08) );
+		return sr;
+	}
+	short operator = (const short sr)
+	{	// implement little endian buffer format
+		push( (unsigned char)(sr         ) ); 
+		push( (unsigned char)(sr  >> 0x08) );
+		return sr;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	unsigned long operator = (const unsigned long ln)
+	{	// implement little endian buffer format
+		push( (unsigned char)(ln          ) );
+		push( (unsigned char)(ln  >> 0x08 ) );
+		push( (unsigned char)(ln  >> 0x10 ) );
+		push( (unsigned char)(ln  >> 0x18 ) );
+		return ln;
+	}
+	long operator = (const long ln)
+	{	// implement little endian buffer format
+		push( (unsigned char)(ln          ) );
+		push( (unsigned char)(ln  >> 0x08 ) );
+		push( (unsigned char)(ln  >> 0x10 ) );
+		push( (unsigned char)(ln  >> 0x18 ) );
+		return ln;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	ipaddress operator = (const ipaddress ip)
+	{	// implement little endian buffer format
+		// IPs are given in network byte order to the buffer
+		push( (unsigned char)(ip[3]) );
+		push( (unsigned char)(ip[2]) );
+		push( (unsigned char)(ip[1]) );
+		push( (unsigned char)(ip[0]) );
+		return ip;
+	}
+
+
+	///////////////////////////////////////////////////////////////////////////
+	int64 operator = (const int64 lx)
+	{	// implement little endian buffer format
+		push( (unsigned char)(lx          ) );
+		push( (unsigned char)(lx  >> 0x08 ) );
+		push( (unsigned char)(lx  >> 0x10 ) );
+		push( (unsigned char)(lx  >> 0x18 ) );
+		push( (unsigned char)(lx  >> 0x20 ) );
+		push( (unsigned char)(lx  >> 0x28 ) );
+		push( (unsigned char)(lx  >> 0x30 ) );
+		push( (unsigned char)(lx  >> 0x38 ) );
+		return lx;
+	}
+	uint64 operator = (const uint64 lx)
+	{	// implement little endian buffer format
+		push( (unsigned char)(lx          ) );
+		push( (unsigned char)(lx  >> 0x08 ) );
+		push( (unsigned char)(lx  >> 0x10 ) );
+		push( (unsigned char)(lx  >> 0x18 ) );
+		push( (unsigned char)(lx  >> 0x20 ) );
+		push( (unsigned char)(lx  >> 0x28 ) );
+		push( (unsigned char)(lx  >> 0x30 ) );
+		push( (unsigned char)(lx  >> 0x38 ) );
+		return lx;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	operator unsigned char ()
+	{	// no check, pop will return 0 or throw anyway
+		return pop();
+	}
+	operator char()
+	{	// no check, pop will return 0 anyway
+		return pop();
+	}
+	///////////////////////////////////////////////////////////////////////////
+	operator unsigned short()
+	{	// implement little endian buffer format
+		unsigned short sr;
+#ifdef CHECK_BOUNDS
+		if(usedSize()<2)
+			throw exception_bound("FIFO underflow");
+#endif
+		sr  = ((unsigned short)pop()        ); 
+		sr |= ((unsigned short)pop() << 0x08);
+		return sr;
+	}
+	operator short ()
+	{	// implement little endian buffer format
+		short sr;
+#ifdef CHECK_BOUNDS
+		if(usedSize()<2)
+			throw exception_bound("FIFO underflow");
+#endif
+		sr  = ((short)pop()        ); 
+		sr |= ((short)pop() << 0x08);
+		return sr;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	operator unsigned long ()
+	{	// implement little endian buffer format
+		unsigned long ln;
+#ifdef CHECK_BOUNDS
+		if(usedSize()<4)
+			throw exception_bound("FIFO underflow");
+#endif
+		ln  = ((unsigned long)pop()        ); 
+		ln |= ((unsigned long)pop() << 0x08);
+		ln |= ((unsigned long)pop() << 0x10);
+		ln |= ((unsigned long)pop() << 0x18);
+		return ln;
+	}
+	operator long ()
+	{	// implement little endian buffer format
+		long ln;
+#ifdef CHECK_BOUNDS
+		if(usedSize()<4)
+			throw exception_bound("FIFO underflow");
+#endif
+		ln  = ((long)pop()        ); 
+		ln |= ((long)pop() << 0x08);
+		ln |= ((long)pop() << 0x10);
+		ln |= ((long)pop() << 0x18);
+		return ln;
+	}
+	///////////////////////////////////////////////////////////////////////////
+
+	operator ipaddress ()
+	{	// implement little endian buffer format
+#ifdef CHECK_BOUNDS
+		if(usedSize()<4)
+			throw exception_bound("FIFO underflow");
+#endif
+		ipaddress ip( pop(),pop(),pop(),pop() );
+		return  ip;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	operator int64 ()
+	{	// implement little endian buffer format
+		int64 lx;
+#ifdef CHECK_BOUNDS
+		if(usedSize()<8)
+			throw exception_bound("FIFO underflow");
+#endif
+		lx  = ((int64)pop()        ); 
+		lx |= ((int64)pop() << 0x08);
+		lx |= ((int64)pop() << 0x10);
+		lx |= ((int64)pop() << 0x18);
+		lx |= ((int64)pop() << 0x20);
+		lx |= ((int64)pop() << 0x28);
+		lx |= ((int64)pop() << 0x30);
+		lx |= ((int64)pop() << 0x38);
+		return lx;
+	}
+	operator uint64 ()
+	{	// implement little endian buffer format
+		uint64 lx;
+#ifdef CHECK_BOUNDS
+		if(usedSize()<8)
+			throw exception_bound("FIFO underflow");
+#endif
+		lx  = ((uint64)pop()        ); 
+		lx |= ((uint64)pop() << 0x08);
+		lx |= ((uint64)pop() << 0x10);
+		lx |= ((uint64)pop() << 0x18);
+		lx |= ((uint64)pop() << 0x20);
+		lx |= ((uint64)pop() << 0x28);
+		lx |= ((uint64)pop() << 0x30);
+		lx |= ((uint64)pop() << 0x38);
+		return lx;
+	}
+	///////////////////////////////////////////////////////////////////////////
+
+	const char* operator = (const char * c)
+	{	// write will throw exception_bound automatically
+		if(c) write((const unsigned char*)c, strlen(c)+1);
+		return c;
+	}
+
+
+	operator const char*()
+	{
+		size_t i, used = usedSize();
+		// find the EOS
+		// cannot do anything else then going through the array
+		for(i=0; i<used; i++)
+			if( this->operator[](i) == 0 )
+				break;
+		if(i<used)
+		{	
+			// make sure the string buffer is long enough
+			if( cStrSZ < i+1 )
+			{	// buffer is not sufficient, reallocate
+				if(cStrBuf) delete[] cStrBuf;
+				cStrSZ = i+1;
+				cStrBuf = new char[i+1];
+			} 
+			// reuse the existing buffer otherwise
+			read((unsigned char*)cStrBuf, i+1);
+		}
+		else
+		{	// otherwise we did not find an EOS, 
+			// maybe there is no string in the buffer or it is not complete yet
+			if(NULL==cStrBuf)
+			{	// make a default buffer in not exist
+				cStrSZ = 64; 
+				cStrBuf = new char[64];
+			}
+			cStrBuf[0] = 0;
+		}
+		return cStrBuf;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+};
+
+
+
+
+
 
 
 
@@ -314,10 +1018,12 @@ struct socket_data{
 		bool remove : 1;	// true when to be removed
 		bool marked : 1;	// true when deleayed removal is initiated (optional)
 	}flag;
+
 	unsigned char *rdata;
 	int max_rdata;
 	int rdata_size;
 	int rdata_pos;
+
 	time_t rdata_tick;
 
 	unsigned char *wdata;
@@ -377,8 +1083,8 @@ bool session_Delete(int fd);
 
 // Function prototype declaration
 
-int make_listen    (unsigned long, unsigned short);
-int make_connection(unsigned long, unsigned short);
+int make_listen    (unsigned long ip, unsigned short port);
+int make_connection(unsigned long ip, unsigned short port);
 
 int realloc_fifo(int fd,int rfifo_size,int wfifo_size);
 int WFIFOSET(int fd,int len);
@@ -389,8 +1095,7 @@ int do_sendrecv(int next);
 void socket_init(void);
 void socket_final(void);
 
-extern void flush_fifos();
-extern void set_nonblocking(int fd, int yes);
+void flush_fifos();
 
 int start_console(void);
 

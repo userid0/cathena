@@ -1238,7 +1238,6 @@ int parse_fromchar(int fd) {
 	int i, j, id;
 	int acc;
 	char ip_str[16];
-//	unsigned long client_ip = ntohl(session[fd]->client_addr.sin_addr.s_addr);
 	unsigned long client_ip = session[fd]->client_ip;
 	sprintf(ip_str, "%ld.%ld.%ld.%ld", (client_ip>>24)&0xFF, (client_ip>>16)&0xFF, (client_ip>>8)&0xFF, (client_ip)&0xFF);
 
@@ -1796,7 +1795,6 @@ int parse_admin(int fd) {
 	int i, j;
 	char* account_name;
 	char ip_str[16];
-//	unsigned long client_ip = ntohl(session[fd]->client_addr.sin_addr.s_addr);
 	unsigned long client_ip = session[fd]->client_ip;
 	sprintf(ip_str, "%ld.%ld.%ld.%ld", (client_ip>>24)&0xFF, (client_ip>>16)&0xFF, (client_ip>>8)&0xFF, (client_ip)&0xFF);
 

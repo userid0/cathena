@@ -436,15 +436,17 @@ int mapif_parse_GMmessage(int fd)
 int mapif_parse_WisRequest(int fd) {
 	struct WisData* wd;
 	static int wisid = 0;
+	char t_name[32];
 
-	if (RFIFOW(fd,2)-52 >= sizeof(wd->msg)) {
+	if((size_t)RFIFOW(fd,2) >= 52+sizeof(wd->msg) ) {
 		ShowMessage("inter: Wis message size too long.\n");
 		return 0;
-	} else if (RFIFOW(fd,2)-52 <= 0) { // normaly, impossible, but who knows...
+	} else if( RFIFOW(fd,2) <= 52 ) { // normaly, impossible, but who knows...
 		ShowMessage("inter: Wis message doesn't exist.\n");
 		return 0;
 	}
-	sprintf (tmp_sql, "SELECT `name` FROM `%s` WHERE `name`='%s'",char_db, RFIFOP(fd,28));
+	sprintf (tmp_sql, "SELECT `name` FROM `%s` WHERE `name`='%s'",
+		char_db, jstrescapecpy(t_name, (char *)RFIFOP(fd,28)));
 	if(mysql_query(&mysql_handle, tmp_sql) ) {
 		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle) );
 	}
@@ -470,8 +472,8 @@ int mapif_parse_WisRequest(int fd) {
 			WBUFB(buf,26) = 1; // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
 			mapif_send(fd, buf, 27);
 		} else {
-
-	CREATE(wd, struct WisData, 1);
+			
+			CREATE(wd, struct WisData, 1);
 
 			// Whether the failure of previous wisp/page transmission (timeout)
 			check_ttl_wisdata();
@@ -546,12 +548,11 @@ int mapif_parse_AccRegRequest(int fd)
 //--------------------------------------------------------
 int inter_parse_frommap(int fd)
 {
-	int cmd=RFIFOW(fd,0);
+	unsigned short cmd = RFIFOW(fd,0);
 	int len=0;
 
 	// inter鯖管轄かを調べる
-	if(cmd<0x3000 || cmd>=0x3000+( sizeof(inter_recv_packet_length)/
-		sizeof(inter_recv_packet_length[0]) ) )
+	if(cmd<0x3000 || cmd>=0x3000+( sizeof(inter_recv_packet_length)/sizeof(inter_recv_packet_length[0]) ) )
 		return 0;
 
 	// パケット長を調べる

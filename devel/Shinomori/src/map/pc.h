@@ -33,7 +33,7 @@ int pc_getrefinebonus(int lv,int type);
 int pc_counttargeted(struct map_session_data *sd,struct block_list *src,int target_lv);
 int pc_setrestartvalue(struct map_session_data *sd,int type);
 int pc_makesavestatus(struct map_session_data *);
-int pc_setnewpc(struct map_session_data*,int,int,int,int,int,int);
+int pc_setnewpc(struct map_session_data *sd, int account_id, int char_id, int login_id1, unsigned long client_tick, int sex, int fd);
 int pc_authok(int, int, time_t, unsigned char *);
 int pc_authfail(int);
 
@@ -46,7 +46,7 @@ int pc_break_equip(struct map_session_data *, unsigned short);
 #define pc_breakshield(sd)	(pc_break_equip(sd, EQP_SHIELD))
 #define pc_breakhelm(sd)	(pc_break_equip(sd, EQP_HELM))
 
-int pc_checkskill(struct map_session_data *sd,int skill_id);
+int pc_checkskill(struct map_session_data *sd,short skill_id);
 int pc_checkallowskill(struct map_session_data *sd);
 int pc_checkequip(struct map_session_data *sd,int pos);
 
@@ -64,7 +64,7 @@ int pc_setpos(struct map_session_data*,char*,int,int,int);
 int pc_setsavepoint(struct map_session_data*,char*,int,int);
 int pc_randomwarp(struct map_session_data *sd,int type);
 int pc_memo(struct map_session_data *sd,int i);
-int pc_randomwalk(struct map_session_data*,int tick);
+int pc_randomwalk(struct map_session_data *sd,unsigned long tick);
 
 int pc_checkadditem(struct map_session_data*,int,int);
 int pc_inventoryblank(struct map_session_data*);
@@ -92,7 +92,7 @@ int pc_bonus3(struct map_session_data *sd,int,int,int,int);
 int pc_bonus4(struct map_session_data *sd,int,int,int,int,int);
 int pc_skill(struct map_session_data*,int,int,int);
 
-void pc_blockskill_start (struct map_session_data *sd, int skillid, unsigned long tick);	// [celest]
+void pc_blockskill_start (struct map_session_data *sd, short skillid, unsigned long tick);	// [celest]
 
 int pc_insert_card(struct map_session_data *sd,int idx_card,int idx_equip);
 
@@ -155,10 +155,10 @@ int pc_setaccountreg(struct map_session_data*,char*,int);
 int pc_readaccountreg2(struct map_session_data*,char*);
 int pc_setaccountreg2(struct map_session_data*,char*,int);
 
-int pc_addeventtimer(struct map_session_data *sd,int tick,const char *name);
+int pc_addeventtimer(struct map_session_data *sd,unsigned long tick,const char *name);
 int pc_deleventtimer(struct map_session_data *sd,const char *name);
 int pc_cleareventtimer(struct map_session_data *sd);
-int pc_addeventtimercount(struct map_session_data *sd,const char *name,int tick);
+int pc_addeventtimercount(struct map_session_data *sd,const char *name,unsigned long tick);
 
 int pc_calc_pvprank(struct map_session_data *sd);
 int pc_calc_pvprank_timer(int tid,unsigned long tick,int id,int data);
@@ -199,6 +199,9 @@ int pc_setinvincibletimer(struct map_session_data *sd,int);
 int pc_delinvincibletimer(struct map_session_data *sd);
 int pc_addspiritball(struct map_session_data *sd,int,int);
 int pc_delspiritball(struct map_session_data *sd,int,int);
+
+int pc_eventtimer(int tid,unsigned long tick,int id,int data);
+
 
 int do_init_pc(void);
 

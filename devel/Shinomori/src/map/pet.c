@@ -167,7 +167,7 @@ static int pet_calc_pos(struct pet_data *pd,int tx,int ty,int dir)
 	return 0;
 }
 
-static int pet_attack(struct pet_data *pd,unsigned int tick,int data)
+static int pet_attack(struct pet_data *pd,unsigned long tick,int data)
 {
 	struct mob_data *md;
 	int mode,race,range;
@@ -216,7 +216,7 @@ static int pet_attack(struct pet_data *pd,unsigned int tick,int data)
  *
  *------------------------------------------
  */
-static int pet_walk(struct pet_data *pd,unsigned int tick,int data)
+static int pet_walk(struct pet_data *pd,unsigned long tick,int data)
 {
 	int moveblock;
 	int i;
@@ -348,7 +348,7 @@ int pet_target_check(struct map_session_data *sd,struct block_list *bl,int type)
 
 int pet_changestate(struct pet_data *pd,int state,int type)
 {
-	unsigned int tick;
+	unsigned long tick;
 	int i;
 
 	nullpo_retr(0, pd);
@@ -1099,7 +1099,7 @@ int pet_food(struct map_session_data *sd)
 	return 0;
 }
 
-static int pet_randomwalk(struct pet_data *pd,int tick)
+static int pet_randomwalk(struct pet_data *pd,unsigned long tick)
 {
 	const int retrycount=20;
 	int speed;
@@ -1154,7 +1154,7 @@ static int pet_unlocktarget(struct pet_data *pd)
 	return 0;
 }
 
-static int pet_ai_sub_hard(struct pet_data *pd,unsigned int tick)
+static int pet_ai_sub_hard(struct pet_data *pd,unsigned long tick)
 {
 	struct map_session_data *sd = pd->msd;
 	struct mob_data *md = NULL;
@@ -1315,12 +1315,12 @@ static int pet_ai_sub_hard(struct pet_data *pd,unsigned int tick)
 
 static int pet_ai_sub_foreachclient(struct map_session_data *sd,va_list ap)
 {
-	unsigned int tick;
+	unsigned long tick;
 
 	nullpo_retr(0, sd);
 	nullpo_retr(0, ap);
 
-	tick=va_arg(ap,unsigned int);
+	tick=va_arg(ap,unsigned long);
 	if(sd->status.pet_id && sd->pd && sd->petDB)
 		pet_ai_sub_hard(sd->pd,tick);
 

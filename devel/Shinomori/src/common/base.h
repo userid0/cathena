@@ -122,6 +122,7 @@
 //////////////////////////////////////////////////////////////////////////
 // useful typedefs
 //////////////////////////////////////////////////////////////////////////
+
 typedef unsigned int    uint;
 typedef unsigned long   ulong;
 typedef unsigned short  ushort;
@@ -131,8 +132,6 @@ typedef char*           pchar;
 typedef const char*     cchar;
 typedef void*           ptr;
 typedef int*            pint;
-
-
 
 
 /////////////////////////////
@@ -221,6 +220,7 @@ typedef int bool;
 
 
 // abnormal function definitions
+// no inlining them because of varargs; those might not conlict in defines anyway
 #define vsnprintf			_vsnprintf
 #define snprintf			_snprintf
 
@@ -229,10 +229,18 @@ typedef int bool;
 //#define strncasecmp		in utils.h
 
 
-#define	sleep				Sleep
-
-#define read(fd,buf,sz)		recv(fd,buf,sz,0)
-#define write(fd,buf,sz)	send(fd,buf,sz,0)
+extern inline void sleep(unsigned long time)	
+{
+	Sleep(time);
+}
+extern inline int read(SOCKET fd, char*buf, int sz)		
+{
+	return recv(fd,buf,sz,0); 
+}
+extern inline int write(SOCKET fd, char*buf, int sz)	
+{
+	return send(fd,buf,sz,0); 
+}
 
 
 // missing functions and helpers
@@ -267,8 +275,16 @@ typedef int		SOCKET;
 
 // abnormal function definitions
 
-#define closesocket(fd) close(fd)
-#define ioctlsocket		ioctl
+extern inline int closesocket(SOCKET fd)		
+{
+	return close(fd); 
+}
+extern inline int ioctlsocket(SOCKET fd, long cmd, unsigned long *arg)		
+{
+	return ioctl(fd,cmd,arg); 
+}
+
+
 
 // missing functions and helpers
 

@@ -20,7 +20,7 @@
 #define MAX_STATUSCHANGE 210
 #define MAX_SKILLUNITGROUP 32
 #define MAX_MOBSKILLUNITGROUP 8
-#define MAX_SKILLUNITGROUPTICKSET 128
+#define MAX_SKILLUNITGROUPTICKSET 32
 #define MAX_SKILLTIMERSKILL 32
 #define MAX_MOBSKILLTIMERSKILL 10
 #define MAX_MOBSKILL 32
@@ -94,16 +94,17 @@ struct skill_unit_group {
 	int src_id;
 	int party_id;
 	int guild_id;
-	int map,range;
+	int map;
 	int target_flag;
-	unsigned int tick;
+	unsigned long tick;
 	int limit;
 	int interval;
 
-	int skill_id;
-	int skill_lv;
+	short skill_id;
+	short skill_lv;
 	int val1;
 	int val2;
+	int val3;
 	char *valstr;
 	int unit_id;
 	int group_id;
@@ -111,7 +112,7 @@ struct skill_unit_group {
 	struct skill_unit *unit;
 };
 struct skill_unit_group_tickset {
-	unsigned int tick;
+	unsigned long tick;
 	int id;
 };
 struct skill_timerskill {
@@ -203,8 +204,8 @@ struct map_session_data {
 	short opt3;
 	char dir;
 	char head_dir;
-	unsigned int client_tick;
-	unsigned int server_tick;
+	unsigned long client_tick;
+	unsigned long server_tick;
 	struct walkpath_data walkpath;
 	int walktimer;
 	int next_walktime;
@@ -232,9 +233,9 @@ struct map_session_data {
 	int attacktarget;
 	short attacktarget_lv;
 	unsigned int attackabletime;
-	
-	int followtimer; // [MouseJstr]
-	int followtarget;
+
+        int followtimer; // [MouseJstr]
+        int followtarget;
 
 	short attackrange;
 	short attackrange_;
@@ -263,18 +264,18 @@ struct map_session_data {
 	int potion_per_sp;
 
 	int invincible_timer;
-	unsigned int canact_tick;
-	unsigned int canmove_tick;
-	unsigned int canlog_tick;
-	unsigned int canregen_tick;
-	int hp_sub;
-	int sp_sub;
-	int inchealhptick;
-	int inchealsptick;
-	int inchealspirithptick;
-	int inchealspiritsptick;
+	unsigned long canact_tick;
+	unsigned long canmove_tick;
+	unsigned long canlog_tick;
+	unsigned long canregen_tick;
+	unsigned long hp_sub;
+	unsigned long sp_sub;
+	unsigned long inchealhptick;
+	unsigned long inchealsptick;
+	unsigned long inchealspirithptick;
+	unsigned long inchealspiritsptick;
 // -- moonsoul (new tick for berserk self-damage)
-//	int berserkdamagetick;
+//	unsigned long berserkdamagetick;
 	int fame;
 
 	short view_class;
@@ -355,11 +356,14 @@ struct map_session_data {
 	short sp_gain_value, hp_gain_value;
 	short sp_drain_type;
 	short ignore_def_mob, ignore_def_mob_;
-	int hp_loss_tick, hp_loss_rate;
+	unsigned long hp_loss_tick;
+	int hp_loss_rate;
 	short hp_loss_value, hp_loss_type;
 	int addrace2[6],addrace2_[6];
 	int subsize[3];
 	short unequip_damage;
+	int itemid;
+	int itemhealrate[6];
 
 	short spiritball;
 	short spiritball_old;
@@ -469,8 +473,8 @@ struct npc_data {
 	short to_x;
 	short to_y; // [Valaris]
 	struct walkpath_data walkpath;
-	unsigned int next_walktime;
-	unsigned int canmove_tick;
+	unsigned long next_walktime;
+	unsigned long canmove_tick;
 
 	struct { // [Valaris]
 		unsigned state : 8;
@@ -484,8 +488,12 @@ struct npc_data {
 			short xs;
 			short ys;
 			int guild_id;
-			int timer,timerid,timeramount,nexttimer,rid;
-			unsigned int timertick;
+			int timer;
+			int timerid;
+			int timeramount;
+			int nexttimer;
+			int rid;
+			unsigned long timertick;
 			struct npc_timerevent_list *timer_event;
 		} scr;
 		struct npc_item_list shop_item[1];
@@ -502,6 +510,8 @@ struct npc_data {
 	char eventqueue[MAX_EVENTQUEUE][50];
 	int eventtimer[MAX_EVENTTIMER];
 	short arenaflag;
+
+	void *chatdb;
 };
 
 struct mob_data {
@@ -544,12 +554,12 @@ struct mob_data {
 	int attacked_id;
 	short target_lv;
 	struct walkpath_data walkpath;
-	unsigned int next_walktime;
-	unsigned int attackabletime;
-	unsigned int last_deadtime;
-	unsigned int last_spawntime;
-	unsigned int last_thinktime;
-	unsigned int canmove_tick;
+	unsigned long next_walktime;
+	unsigned long attackabletime;
+	unsigned long last_deadtime;
+	unsigned long last_spawntime;
+	unsigned long last_thinktime;
+	unsigned long canmove_tick;
 	short move_fail_count;
 	struct {
 		int id;
@@ -648,19 +658,30 @@ enum {
 	EQP_HELM		= 0x0100,		// “ªã’i
 };
 
+
+
+
+struct mapgat
+{
+	unsigned char type : 3;		// 3bit for land,water,wall (values 0,1,3,5 used, could be encoded in 2 bits)
+	unsigned char basilica : 1;	// 1bit for basilica (is on/off for basilica enough, what about two casting priests?)
+	unsigned char npc : 4;		// 4bit counter for npc touchups, can hold 15 touchups;
+};
+
+
 struct map_data {
 	char name[24];
-	unsigned char *gat;	// NULL‚È‚ç‰º‚Ìmap_data_other_server‚Æ‚µ‚Äˆµ‚¤
+	struct mapgat *gat;	// NULL‚È‚ç‰º‚Ìmap_data_other_server‚Æ‚µ‚Äˆµ‚¤
 	char *alias; // [MouseJstr]
 	struct block_list **block;
 	struct block_list **block_mob;
 	int *block_count;
 	int *block_mob_count;
 	int m;
-	short xs;
-	short ys;
-	short bxs;
-	short bys;
+	unsigned short xs;
+	unsigned short ys;
+	unsigned short bxs;
+	unsigned short bys;
 	int npc_num;
 	int users;
 	struct {
@@ -704,9 +725,10 @@ struct map_data {
 };
 struct map_data_other_server {
 	char name[24];
-	unsigned char *gat;	// NULLŒÅ’è‚É‚µ‚Ä”»’f
+	struct mapgat *gat;	// NULLŒÅ’è‚É‚µ‚Ä”»’f
 	unsigned long ip;
 	unsigned short port;
+	struct map_data* map;
 };
 
 struct flooritem_data {
@@ -717,9 +739,9 @@ struct flooritem_data {
 	int first_get_id;
 	int second_get_id;
 	int third_get_id;
-	unsigned int first_get_tick;
-	unsigned int second_get_tick;
-	unsigned int third_get_tick;
+	unsigned long first_get_tick;
+	unsigned long second_get_tick;
+	unsigned long third_get_tick;
 	struct item item_data;
 };
 
@@ -761,7 +783,7 @@ enum {
 	SP_HP_DRAIN_VALUE,SP_SP_DRAIN_VALUE, // 1079-1080
 	SP_WEAPON_ATK,SP_WEAPON_ATK_RATE, // 1081-1082
 	SP_DELAYRATE,	// 1083
-
+	
 	SP_RESTART_FULL_RECORVER=2000,SP_NO_CASTCANCEL,SP_NO_SIZEFIX,SP_NO_MAGIC_DAMAGE,SP_NO_WEAPON_DAMAGE,SP_NO_GEMSTONE, // 2000-2005
 	SP_NO_CASTCANCEL2,SP_INFINITE_ENDURE,SP_UNBREAKABLE_WEAPON,SP_UNBREAKABLE_ARMOR, SP_UNBREAKABLE_HELM, // 2006-2010
 	SP_UNBREAKABLE_SHIELD, SP_LONG_ATK_RATE, // 2011-2012
@@ -769,27 +791,35 @@ enum {
 	SP_CRIT_ATK_RATE, SP_CRITICAL_ADDRACE, SP_NO_REGEN, SP_ADDEFF_WHENHIT, SP_AUTOSPELL_WHENHIT, // 2013-2017
 	SP_SKILL_ATK, SP_UNSTRIPABLE, SP_ADD_DAMAGE_BY_CLASS, // 2018-2020
 	SP_SP_GAIN_VALUE, SP_IGNORE_DEF_MOB, SP_HP_LOSS_RATE, SP_ADDRACE2, SP_HP_GAIN_VALUE, // 2021-2025
-	SP_SUBSIZE, SP_DAMAGE_WHEN_UNEQUIP	// 2026
+	SP_SUBSIZE, SP_DAMAGE_WHEN_UNEQUIP, SP_ADD_ITEM_HEAL_RATE	// 2026-2028
 };
 
 enum {
 	LOOK_BASE,LOOK_HAIR,LOOK_WEAPON,LOOK_HEAD_BOTTOM,LOOK_HEAD_TOP,LOOK_HEAD_MID,LOOK_HAIR_COLOR,LOOK_CLOTHES_COLOR,LOOK_SHIELD,LOOK_SHOES
 };
 
+// CELL
+#define CELL_MASK		0x07	// 3 bit for cell mask
+
 /*
- * map_getcell()ªÇŞÅéÄªµªìªë«Õ«é«°
- */
+ * map_getcell()/map_setcell()‚Åg—p‚³‚ê‚éƒtƒ‰ƒO
+  */
 typedef enum { 
-	CELL_CHKWALL=1,		// Ûú(«»«ë«¿«¤«×1)
-	CELL_CHKWATER=3,	// â©íŞ(«»«ë«¿«¤«×3)
-	CELL_CHKGROUND=5,	// ò¢Øüî¡úªÚª(«»«ë«¿«¤«×5)
-	CELL_CHKNPC=0x80,	// «¿«Ã«Á«¿«¤«×ªÎNPC(«»«ë«¿«¤«×0x80«Õ«é«°)
-	CELL_CHKPASS,		// ÷×Î¦Ê¦Òö(«»«ë«¿«¤«×1,5ì¤èâ)
-	CELL_CHKNOPASS,		// ÷×Î¦ÜôÊ¦(«»«ë«¿«¤«×1,5)
-	CELL_GETTYPE		// «»«ë«¿«¤«×ªòÚ÷ª¹
+	CELL_CHKWALL=0,		// •Ç(ƒZƒ‹ƒ^ƒCƒv1)
+	CELL_CHKWATER,		// …ê(ƒZƒ‹ƒ^ƒCƒv3)
+	CELL_CHKGROUND,		// ’n–ÊáŠQ•¨(ƒZƒ‹ƒ^ƒCƒv5)
+	CELL_CHKPASS,		// ’Ê‰ß‰Â”\(ƒZƒ‹ƒ^ƒCƒv1,5ˆÈŠO)
+	CELL_CHKNOPASS,		// ’Ê‰ß•s‰Â(ƒZƒ‹ƒ^ƒCƒv1,5)
+	CELL_GETTYPE,		// ƒZƒ‹ƒ^ƒCƒv‚ğ•Ô‚·
+	CELL_CHKNPC=0x10,	// ƒ^ƒbƒ`ƒ^ƒCƒv‚ÌNPC(ƒZƒ‹ƒ^ƒCƒv0x80ƒtƒ‰ƒO)
+	CELL_SETNPC,		// ƒ^ƒbƒ`ƒ^ƒCƒv‚ÌNPC‚ğƒZƒbƒg
+	CELL_CLRNPC,		// ƒ^ƒbƒ`ƒ^ƒCƒv‚ÌNPC‚ğclear suru
+	CELL_CHKBASILICA,	// ƒoƒWƒŠƒJ(ƒZƒ‹ƒ^ƒCƒv0x40ƒtƒ‰ƒO)
+	CELL_SETBASILICA,	// ƒoƒWƒŠƒJ‚ğƒZƒbƒg
+	CELL_CLRBASILICA,	// ƒoƒWƒŠƒJ‚ğƒNƒŠƒA
 } cell_t;
-// map_setcell()ªÇŞÅéÄªµªìªë«Õ«é«°
-#define CELL_SETNPC	0x80	// «¿«Ã«Á«¿«¤«×ªÎNPCªò«»«Ã«È
+
+
 
 struct chat_data {
 	struct block_list bl;
@@ -816,13 +846,14 @@ extern int night_flag; // 0=day, 1=night [Yor]
 int map_getcell(int,int,int,cell_t);
 int map_getcellp(struct map_data*,int,int,cell_t);
 void map_setcell(int,int,int,int);
-void map_resetcell(int,int,int,int);
+
 
 extern int map_read_flag; // 0: grf«Õ«¡«¤«ë 1: «­«ã«Ã«·«å 2: «­«ã«Ã«·«å(?õê)
 enum {
-	READ_FROM_GAT, READ_FROM_AFM,
-	READ_FROM_BITMAP, CREATE_BITMAP,
-	READ_FROM_BITMAP_COMPRESSED, CREATE_BITMAP_COMPRESSED
+	READ_FROM_GAT, 
+	READ_FROM_AFM,
+	READ_FROM_BITMAP, 
+	READ_FROM_BITMAP_COMPRESSED
 };
 
 extern char motd_txt[];
@@ -850,7 +881,7 @@ void map_foreachinpath(int (*func)(struct block_list*,va_list),int m,int x0,int 
 int map_countnearpc(int,int,int);
 //blockŠÖ˜A‚É’Ç‰Á
 int map_count_oncell(int m,int x,int y);
-struct skill_unit *map_find_skill_unit_oncell(int m,int x,int y,int skill_id);
+struct skill_unit *map_find_skill_unit_oncell(struct block_list *,int x,int y,short skill_id,struct skill_unit *);
 // ˆê“IobjectŠÖ˜A
 int map_addobject(struct block_list *);
 int map_delobject(int);
@@ -879,6 +910,7 @@ int map_mapname2mapid(char*);
 int map_mapname2ipport(char *name, unsigned long *ip,unsigned short *port);
 int map_setipport(char *name, unsigned long ip, unsigned short port);
 int map_eraseipport(char *name, unsigned long ip,unsigned short port);
+int map_eraseallipport(void);
 void map_addiddb(struct block_list *);
 void map_deliddb(struct block_list *bl);
 int map_foreachiddb(int (*)(void*,void*,va_list),...);

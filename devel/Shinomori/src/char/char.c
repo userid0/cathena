@@ -2626,7 +2626,6 @@ int parse_char(int fd) {
 					auth_fifo[auth_fifo_pos].char_pos = sd->found_char[ch];
 					auth_fifo[auth_fifo_pos].sex = sd->sex;
 					auth_fifo[auth_fifo_pos].connect_until_time = sd->connect_until_time;
-					//auth_fifo[auth_fifo_pos].ip = ntohl(session[fd]->client_addr.sin_addr.s_addr);
 					auth_fifo[auth_fifo_pos].ip = session[fd]->client_ip;
 					auth_fifo_pos++;
 				}

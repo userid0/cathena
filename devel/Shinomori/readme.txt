@@ -29,6 +29,7 @@ I'm still looking for a better implementation
 fixed a stupid error in windows socket list handling
 maybe I just take my other socket class in here 
 but would need to rewrite the interface then
+preparing move to my base classes
 ///////////////////////////////////////////////////////////
 npc duplication fix for multimap
 duplication is not working on ,ultiple map servers 

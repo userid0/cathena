@@ -10,6 +10,8 @@
 #endif
 
 
+//#define SOCKET_DEBUG_PRINT
+
 #ifdef __cplusplus
 
 #ifdef __GNUC__ 
@@ -94,6 +96,13 @@ int wfifo_size = 65536;
 #define TCP_FRAME_LEN 1053
 #endif
 
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Socket <-> Session Handling
+//
+///////////////////////////////////////////////////////////////////////////////
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -312,6 +321,11 @@ SOCKET SessionGetSocket(const size_t pos)
 ///////////////////////////////////////////////////////////////////////////////
 
 
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Parse Functions
+//
 ///////////////////////////////////////////////////////////////////////////////
 static int null_parse(int fd);
 static int (*default_func_parse)(int) = null_parse;
@@ -328,11 +342,34 @@ void set_defaultparse(int (*defaultparse)(int))
 	default_func_parse = defaultparse;
 }
 
-void set_nonblocking(int sock, int yes) {
-	setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&yes,sizeof yes);
+
+int null_parse(int fd)
+{
+	ShowMessage("null_parse : %d\n",fd);
+	RFIFOSKIP(fd,RFIFOREST(fd));
+	return 0;
 }
 
-void setsocketopts(SOCKET sock)
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Socket Control
+//
+///////////////////////////////////////////////////////////////////////////////
+
+void socket_nonblocking(SOCKET sock, unsigned long yes) {
+	// TCP_NODELAY BOOL Disables the Nagle algorithm for send coalescing. 
+	//setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&yes,sizeof yes);
+	
+	// FIONBIO Use with a nonzero argp parameter to enable the nonblocking mode of socket s. 
+	// The argp parameter is zero if nonblocking is to be disabled. 
+	ioctlsocket(sock, FIONBIO, &yes); 
+}
+
+void socket_setopts(SOCKET sock)
 {
 	int yes = 1; // reuse fix
 
@@ -340,18 +377,19 @@ void setsocketopts(SOCKET sock)
 #ifdef SO_REUSEPORT
 	setsockopt(sock,SOL_SOCKET,SO_REUSEPORT,(char *)&yes,sizeof yes);
 #endif
-	set_nonblocking(sock, yes);
 
 	setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &wfifo_size , sizeof(rfifo_size ));
 	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &rfifo_size , sizeof(rfifo_size ));
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/*======================================
- *	CORE : Socket Sub Function
- *--------------------------------------
- */
 
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// FIFO Reading/Sending Functions
+//
+///////////////////////////////////////////////////////////////////////////////
+#ifdef SOCKET_DEBUG_PRINT
 void dumpx(unsigned char *buf, int len)
 {	int i;
 	if(len>0)
@@ -361,6 +399,7 @@ void dumpx(unsigned char *buf, int len)
 	}
 	printf("\n");
 }
+#endif
 
 int recv_to_fifo(int fd)
 {
@@ -382,8 +421,9 @@ int recv_to_fifo(int fd)
 
 //		ShowMessage (":::RECEIVE:::\n");
 //		dump(session[fd]->rdata, len); ShowMessage ("\n");
-//		dumpx(session[fd]->rdata, len);
-
+#ifdef SOCKET_DEBUG_PRINT
+		dumpx(session[fd]->rdata, len);
+#endif
 		if(len>0){
 			session[fd]->rdata_size+=len;
 			session[fd]->rdata_tick = tick_;
@@ -420,8 +460,9 @@ int send_from_fifo(int fd)
 
 //	ShowMessage (":::SEND:::\n");
 //	dump(session[fd]->wdata, len); ShowMessage ("\n");
-//	dumpx(session[fd]->wdata, len);
-
+#ifdef SOCKET_DEBUG_PRINT
+	dumpx(session[fd]->wdata, len);
+#endif
 	//{ int i; ShowMessage("send %d : ",fd);  for(i=0;i<len;i++){ ShowMessage("%02x ",session[fd]->wdata[i]); } ShowMessage("\n");}
 	if(len>0){
 		if(len<session[fd]->wdata_size){
@@ -436,19 +477,136 @@ int send_from_fifo(int fd)
 	}
 	return 0;
 }
+///////////////////////////////////////////////////////////////////////////////
+//
+// Fifo Control
+//
+///////////////////////////////////////////////////////////////////////////////
 
-
-int null_parse(int fd)
+void flush_fifos() 
 {
-	ShowMessage("null_parse : %d\n",fd);
-	RFIFOSKIP(fd,RFIFOREST(fd));
+	// write fifos and be sure the data in on the run
+
+	// easy method but needs a socket mode switch
+	// and processes each write individually
+/*	int fd;
+	for(fd=0; fd<fd_max; fd++)
+	{
+		if( session_isActive(fd) && session[fd]->func_send == send_from_fifo && session[fd]->wdata_size > 0)
+		{
+
+			socket_nonblocking(SessionGetSocket(fd),0); // set blocking
+			send_from_fifo(fd); // send data
+			socket_nonblocking(SessionGetSocket(fd),1); // set non blocking
+		}
+	}
+*/
+
+	// more complex method which might be faster in the end
+	int fd, len, c;
+	fd_set wfd;
+	
+	while(1)
+	{
+		memset(&wfd,0,sizeof(fd_set));
+		c=0;
+		for(fd=0; fd<fd_max; fd++)
+		{
+			if( session_isActive(fd) && session[fd]->func_send == send_from_fifo && session[fd]->wdata_size > 0)
+			{
+				// try to write the data nonblocking
+				len=write(SessionGetSocket(fd),(char*)(session[fd]->wdata),session[fd]->wdata_size);
+
+				//ShowMessage (":::SEND:::\n");
+				//dump(session[fd]->wdata, len); ShowMessage ("\n");
+#ifdef SOCKET_DEBUG_PRINT
+				dumpx(session[fd]->wdata, len);
+#endif
+				if(len>0)
+				{
+					if(len < session[fd]->wdata_size)
+					{
+						memmove(session[fd]->wdata,session[fd]->wdata+len,session[fd]->wdata_size-len);
+						session[fd]->wdata_size-=len;
+
+						// we have a problem, not all data has been send
+						// so we mark that socket
+						FD_SET(SessionGetSocket(fd), &wfd);
+						c++;
+					}
+					else
+					{	// everything is ok and on the run
+						session[fd]->wdata_size=0;
+					}
+				} else if (errno != EAGAIN) 
+				{	// the socket is gone, just disconnect it, will be cleared later
+					session[fd]->flag.connected = false;	
+				}
+				else // EAGAIN
+				{	// try it again later; might lead to infinity loop when connections is generally blocked
+					FD_SET(SessionGetSocket(fd), &wfd);
+					c++;
+				}
+			}
+		}
+		// finish if all has been send and no need to wait longer
+		if(c==0) break; 
+		// otherwise wait until marked write sockets can exept more data 
+		select(fd_max,NULL,&wfd,NULL,NULL);
+	}//end while
+}
+int realloc_fifo(int fd,int rfifo_size,int wfifo_size)
+{
+	struct socket_data *s=session[fd];
+	if( s->max_rdata != rfifo_size && s->rdata_size < rfifo_size){
+		RECREATE(s->rdata, unsigned char, rfifo_size);
+		s->max_rdata  = rfifo_size;
+	}
+	if( s->max_wdata != wfifo_size && s->wdata_size < wfifo_size){
+		RECREATE(s->wdata, unsigned char, wfifo_size);
+		s->max_wdata  = wfifo_size;
+	}
 	return 0;
 }
 
-/*======================================
- *	CORE : Socket Function
- *--------------------------------------
- */
+int WFIFOSET(int fd,int len)
+{
+	struct socket_data *s=session[fd];
+	if (s == NULL  || s->wdata == NULL)
+		return 0;
+	if( s->wdata_size+len+16384 > s->max_wdata ){
+		//unsigned char *sin_addr = (unsigned char *)&s->client_addr.sin_addr;
+		unsigned long ip = s->client_ip;
+		realloc_fifo(fd,s->max_rdata, s->max_wdata <<1 );
+		//ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, sin_addr[0], sin_addr[1], sin_addr[2], sin_addr[3], s->max_wdata);
+		ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, s->max_wdata);
+	}
+	s->wdata_size=(s->wdata_size+(len)+2048 < s->max_wdata) ?
+		 s->wdata_size+len : (ShowMessage("socket: %d wdata lost !!\n",fd),s->wdata_size);
+	if (s->wdata_size > (TCP_FRAME_LEN)) 
+		send_from_fifo(fd);
+	return 0;
+}
+
+int RFIFOSKIP(int fd, int len)
+{
+	struct socket_data *s=session[fd];
+
+	if (s->rdata_size < s->rdata_pos + len) {
+		fprintf(stderr,"too many skip\n");
+		exit(1);
+	}
+	s->rdata_pos += len;
+	return 0;
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Creating Sockets and Sessions
+//
+///////////////////////////////////////////////////////////////////////////////
 static int connect_client(int listen_fd)
 {
 	SOCKET sock;
@@ -479,13 +637,8 @@ static int connect_client(int listen_fd)
 		return -1;
 	}
 #endif
-
-	setsocketopts(sock);
-	{
-		unsigned long arg = 1;
-		ioctlsocket(sock, FIONBIO, &arg);
-	}
-
+	socket_setopts(sock);
+	socket_nonblocking(sock,1);
 	// insert the socket to the fields and get the position
 	fd = SessionInsertSocket(sock);
 
@@ -514,7 +667,9 @@ static int connect_client(int listen_fd)
 	session[fd]->client_ip	 = ntohl(client_address.sin_addr.s_addr);
 	session[fd]->rdata_tick  = tick_;
 
-printf("get connection from %X:%i",session[fd]->client_ip,ntohs(client_address.sin_port) );
+	ShowStatus("Incoming connection from %d.%d.%d.%d:%i\n",
+		(session[fd]->client_ip>>24)&0xFF,(session[fd]->client_ip>>16)&0xFF,(session[fd]->client_ip>>8)&0xFF,(session[fd]->client_ip)&0xFF,
+		ntohs(client_address.sin_port),fd );
 	return fd;
 }
 
@@ -537,16 +692,12 @@ int make_listen(unsigned long ip, unsigned short port)
 		return -1;
 	}
 #endif
-	{
-		unsigned long arg = 1;
-		ioctlsocket(sock, FIONBIO, &arg);
-	}
-	setsocketopts(sock);
-
+	socket_setopts(sock);
+	socket_nonblocking(sock,1);
 	server_address.sin_family      = AF_INET;
 	server_address.sin_addr.s_addr = htonl( ip );
 	server_address.sin_port        = htons(port);
-printf("open listen on %X:%i",ip,port);
+
 	result = bind(sock, (struct sockaddr*)&server_address, sizeof(server_address));
 	if( result == -1 ) {
 		closesocket(sock);
@@ -566,7 +717,7 @@ printf("open listen on %X:%i",ip,port);
 	if(fd<0) 
 	{	
 		closesocket(sock);
-		ShowWarning("socket insert");
+		ShowWarning("Socket Insert failed");
 		return -1;
 	}
 
@@ -579,6 +730,7 @@ printf("open listen on %X:%i",ip,port);
 
 	session[fd]->func_recv   = connect_client;
 
+	ShowStatus("Open listen port on %d.%d.%d.%d:%i\n",(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF,port);
 	return fd;
 }
 int make_connection(unsigned long ip, unsigned short port)
@@ -600,14 +752,19 @@ int make_connection(unsigned long ip, unsigned short port)
 		return -1;
 	}
 #endif
-	setsocketopts(sock);
+	socket_setopts(sock);
 
 	server_address.sin_family		= AF_INET;
 	server_address.sin_addr.s_addr	= htonl( ip );
 	server_address.sin_port			= htons(port);
-printf("Connecting to %X:%i\n",ip,port );
+	
+	ShowStatus("Connecting to %d.%d.%d.%d:%i\n",(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF,port);
+
 	result = connect(sock, (struct sockaddr *)(&server_address),sizeof(struct sockaddr_in));
 
+	// set nonblocking after connecting so we can use the blocking timeout
+	// connecting nonblocking sockets would need to wait until connection is established
+	socket_nonblocking(sock,1);
 	if( result < 0 )
 	{
 		closesocket(sock);
@@ -617,18 +774,13 @@ printf("Connecting to %X:%i\n",ip,port );
 	else
 		ShowStatus("Connect ok\n");
 
-	{
-		unsigned long arg = 1;
-		ioctlsocket(sock, FIONBIO, &arg);
-	}
-
 	// insert the socket to the fields and get the position
 	fd = SessionInsertSocket(sock);
 
 	if(fd<0) 
 	{	
 		closesocket(sock);
-		ShowWarning("socket insert failed");
+		ShowWarning("Socket Insert failed");
 		return -1;
 	}
 
@@ -651,7 +803,11 @@ printf("Connecting to %X:%i\n",ip,port );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//
 // Console Reciever [Wizputer]
+//
+///////////////////////////////////////////////////////////////////////////////
+
 int console_recieve(int fd) {
 	int n;
 	char buf[64];
@@ -689,17 +845,11 @@ int start_console(void) {
 	fd = SessionInsertSocket(sock);
 
 	if(fd<0) 
-	{	ShowWarning("socket insert");
+	{	ShowWarning("Socket Insert failed");
 		return -1;
 	}
 
 	CREATE(session[fd], struct socket_data, 1);
-	if(session[fd]==NULL){
-		ShowMessage("out of memory : start_console\n");
-		exit(1);
-	}
-	
-	memset(session[fd],0,sizeof(*session[0]));
 	
 	session[fd]->flag.connected   = true;
 	session[fd]->flag.remove      = false;
@@ -711,6 +861,10 @@ int start_console(void) {
 	return 0;
 }   
 
+///////////////////////////////////////////////////////////////////////////////
+//
+// Incoming Data Processing
+//
 ///////////////////////////////////////////////////////////////////////////////
 void process_read(size_t fd)
 {
@@ -750,25 +904,30 @@ void process_write(size_t fd)
 ///////////////////////////////////////////////////////////////////////////////
 // the windows fd_set structures are simple
 // typedef struct fd_set {
-//        u_int fd_count;               /* how many are SET? */
-//        SOCKET  fd_array[FD_SETSIZE];   /* an array of SOCKETs */
+//        u_int fd_count;               // how many are SET?
+//        SOCKET  fd_array[FD_SETSIZE];   // an array of SOCKETs
 // } fd_set;
 // 
-// the select sets the correct fd_count and the array
-// so just access the signaled sockets one by one
-void process_fdset(fd_set* fds, void(*func)(size_t) )
+// the select the sets, the correct fd_count and the array
+// and access the signaled sockets one by one
+size_t process_fdset(fd_set* fds, void(*func)(size_t) )
 {
 	size_t i;
 	size_t fd;
 
 	if(func)
 	for(i=0;i<fds->fd_count;i++)
+	{
 		if( SessionFindSocket( fds->fd_array[i], &fd ) )
+		{
 			func(fd);
+		}
+	}
+	return fds->fd_count;
 }
 // just a dummy to keep win/unix structure consistent
-extern inline void process_fdset2(fd_set* fds, void(*func)(size_t) )
-{	process_fdset(fds, func);
+extern inline size_t process_fdset2(fd_set* fds, void(*func)(size_t) )
+{	return process_fdset(fds, func);
 }
 ///////////////////////////////////////////////////////////////////////////////
 #else//!WIN32
@@ -782,9 +941,9 @@ extern inline void process_fdset2(fd_set* fds, void(*func)(size_t) )
 // where a set bit was found. 
 // since we can skip 32 sockets all together when none is set
 // we can travel quite fast through the array
-void process_fdset(fd_set* fds, void(*func)(size_t) )
+size_t process_fdset(fd_set* fds, void(*func)(size_t) )
 {
-	size_t fd;
+	size_t fd,c=0;
 	SOCKET sock;
 	unsigned long	val;
 	unsigned long	bits;
@@ -811,15 +970,17 @@ void process_fdset(fd_set* fds, void(*func)(size_t) )
 			// call the user function
 			fd = sock; // should use SessionFindSocket for consitency but this is ok
 			func(fd);
+			c++;
 		}
 		// go to next field position
 		nfd++;
 	}
+	return c;
 }
 
-void process_fdset2(fd_set* fds, void(*func)(size_t) )
+size_t process_fdset2(fd_set* fds, void(*func)(size_t) )
 {
-	size_t fd;
+	size_t fd, c=0;
 	SOCKET sock;
 	unsigned long	val;
 	unsigned long	bits;
@@ -855,14 +1016,18 @@ void process_fdset2(fd_set* fds, void(*func)(size_t) )
 			// call the user function
 			fd = sock; // should use SessionFindSocket for consitency but this is ok
 			func(fd);
+			c++;
 		}
 		// go to next field position
 		nfd++;
 	}
+	return c; // number of processed sockets
 }
 ///////////////////////////////////////////////////////////////////////////////
 #endif//!WIN32
 ///////////////////////////////////////////////////////////////////////////////
+
+
 
 int do_sendrecv(int next)
 {
@@ -877,14 +1042,17 @@ int do_sendrecv(int next)
 
 	FD_ZERO(&wfd);
 	FD_ZERO(&rfd);
-
-//printf("\r[%ld]",tick_);
-	for(fd=0; fd<(size_t)fd_max; fd++){
-
+#ifdef SOCKET_DEBUG_PRINT
+	printf("\r[%ld]",tick_);
+#endif
+	for(fd=0; fd<(size_t)fd_max; fd++)
+	{
 		if( session[fd] )
 		{
-//printf("(%i,%i%i%i)",fd,session[fd]->flag.connected,session[fd]->flag.marked,session[fd]->flag.remove);
-//fflush(stdout);
+#ifdef SOCKET_DEBUG_PRINT
+			printf("(%i,%i%i%i)",fd,session[fd]->flag.connected,session[fd]->flag.marked,session[fd]->flag.remove);
+			fflush(stdout);
+#endif
 			if ((session[fd]->rdata_tick != 0) && ((tick_ - session[fd]->rdata_tick) > stall_time_)) 
 			{	// emulate a disconnection
 				session[fd]->flag.connected = false;
@@ -943,8 +1111,8 @@ int do_sendrecv(int next)
 	// did not loop until all incoming data has been processed
 	// but just processed the first packet and returned
 
-	// this could leed to serious lag because when clients send
-	// many packets at one but only get the first packet processed
+	// this could leed to serious lag when clients send many packets 
+	// at once but only get the first packet processed
 	// in a time between each call to select and timer
 
 	for(fd=0;fd<(size_t)fd_max;fd++)
@@ -971,66 +1139,8 @@ int do_sendrecv(int next)
 
 
 ///////////////////////////////////////////////////////////////////////////////
-
-int realloc_fifo(int fd,int rfifo_size,int wfifo_size)
-{
-	struct socket_data *s=session[fd];
-	if( s->max_rdata != rfifo_size && s->rdata_size < rfifo_size){
-		RECREATE(s->rdata, unsigned char, rfifo_size);
-		s->max_rdata  = rfifo_size;
-	}
-	if( s->max_wdata != wfifo_size && s->wdata_size < wfifo_size){
-		RECREATE(s->wdata, unsigned char, wfifo_size);
-		s->max_wdata  = wfifo_size;
-	}
-	return 0;
-}
-
-
-void flush_fifos() 
-{
-	size_t i;
-	for(i=0;i<(size_t)fd_max;i++)
-		if(session[i] != NULL && session[i]->func_send == send_from_fifo)
-			send_from_fifo(i);
-}
-
-int WFIFOSET(int fd,int len)
-{
-	struct socket_data *s=session[fd];
-	if (s == NULL  || s->wdata == NULL)
-		return 0;
-	if( s->wdata_size+len+16384 > s->max_wdata ){
-		//unsigned char *sin_addr = (unsigned char *)&s->client_addr.sin_addr;
-		unsigned long ip = s->client_ip;
-		realloc_fifo(fd,s->max_rdata, s->max_wdata <<1 );
-		//ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, sin_addr[0], sin_addr[1], sin_addr[2], sin_addr[3], s->max_wdata);
-		ShowMessage("socket: %d (%d.%d.%d.%d) wdata expanded to %d bytes.\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, s->max_wdata);
-	}
-	s->wdata_size=(s->wdata_size+(len)+2048 < s->max_wdata) ?
-		 s->wdata_size+len : (ShowMessage("socket: %d wdata lost !!\n",fd),s->wdata_size);
-	if (s->wdata_size > (TCP_FRAME_LEN)) 
-		send_from_fifo(fd);
-	return 0;
-}
-
-int RFIFOSKIP(int fd, int len)
-{
-	struct socket_data *s=session[fd];
-
-	if (s->rdata_size < s->rdata_pos + len) {
-		fprintf(stderr,"too many skip\n");
-		exit(1);
-	}
-	s->rdata_pos += len;
-	return 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
 // delayed session removal timer entry
-//
+///////////////////////////////////////////////////////////////////////////////
 static int session_WaitClose(int tid, unsigned long tick, int id, int data) 
 {
 	if( session_isValid(id) && session[id]->flag.marked )
@@ -1042,6 +1152,8 @@ static int session_WaitClose(int tid, unsigned long tick, int id, int data)
 	}
 	return 0;
 }
+///////////////////////////////////////////////////////////////////////////////
+// delayed session removal control
 ///////////////////////////////////////////////////////////////////////////////
 bool session_SetWaitClose(int fd, unsigned long timeoffset)
 {
@@ -1059,6 +1171,12 @@ bool session_SetWaitClose(int fd, unsigned long timeoffset)
 	}
 	return false;
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Session Control
+//
 ///////////////////////////////////////////////////////////////////////////////
 bool session_Delete(int fd)
 {
@@ -1077,6 +1195,7 @@ bool session_Delete(int fd)
 		if( session[fd]->func_term )
 			session[fd]->func_term(fd);
 
+		// and clean up
 		if(session[fd]->rdata)
 			aFree(session[fd]->rdata);
 		if(session[fd]->wdata)
@@ -1085,61 +1204,18 @@ bool session_Delete(int fd)
 			aFree(session[fd]->session_data);
 		aFree(session[fd]);
 		session[fd]=NULL;
+
 		SessionRemoveIndex( fd );
 		return true;
 	}
 	return false;
 }
-///////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////
-// ip address stuff
+
 ///////////////////////////////////////////////////////////////////////////////
 //
-// class that holds all IP addresses in the app
+// Initialisation and Cleanup
 //
-//
-class app_ipaddresses
-{
-	class ipset
-	{
-	public:
-		ipaddress	lan_ip;
-		ipaddress	lan_sub;
-		ushort		lan_port;
-
-		ipaddress	wan_ip;
-		ushort		wan_port;
-
-		ipset(const ipaddress lip = INADDR_LOOPBACK,	//127.0.0.1
-			  const ipaddress lsu = INADDR_BROADCAST,	//255.255.255.255
-			  const ushort lpt    = 0,
-			  const ipaddress wip = INADDR_LOOPBACK,	//127.0.0.1
-			  const ushort wpt    = 0)
-			: lan_ip(lip),lan_sub(lsu),lan_port(lpt),wan_ip(wip),wan_port(wpt)
-		{}
-		bool isLAN(ipaddress ip)
-		{
-			return ( (lan_ip&lan_sub) == (ip&lan_sub) );
-		}
-		bool isWAN(ipaddress ip)
-		{
-			return ( (lan_ip&lan_sub) != (ip&lan_sub) );
-		}
-	};
-	ipset iplogin;
-	ipset ipchar;
-	ipset ipmap;
-
-public:
-	bool load(const char *filename)
-	{
-		return false;
-	}
-};
-
-
-
 ///////////////////////////////////////////////////////////////////////////////
 
 unsigned long addr_[16];   // ip addresses of local host (host byte order)
@@ -1238,3 +1314,258 @@ void socket_final(void)
 		}
 	}
 }
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// new ip address stuff
+// just setting them up
+// 
+///////////////////////////////////////////////////////////////////////////////
+//
+// class that holds all IP addresses in the app
+// 
+// we need a lan_ip, subnetmask and lan port; further a wan ip and wan port
+// for any place currently ip/port is used
+// if not set explicitely, the initial network address will be used
+// wan ip and port will the same as lan values when not specified, 
+// and subnetmask is BROADCAST
+//
+///////////////////////////////////////////////////////////////////////////////
+
+class ipset
+{
+
+	class _ipset_helper
+	{
+	public:
+		unsigned long addr_[16];// ip addresses of local host (host byte order)
+		unsigned int naddr_;	// # of ip addresses
+
+		_ipset_helper() : naddr_(0)
+		{
+
+#ifdef WIN32
+			char** a;
+			unsigned int i;
+			char fullhost[255];
+			struct hostent* hent;
+			
+			/* Start up the windows networking */
+			WSADATA wsaData;
+			if ( WSAStartup(WINSOCK_VERSION, &wsaData) != 0 ) {
+				ShowError("SYSERR: WinSock not available!\n");
+				exit(1);
+			}
+			
+			if(gethostname(fullhost, sizeof(fullhost)) == SOCKET_ERROR) {
+				ShowWarning("Ugg.. no hostname defined!\n");
+				return;
+			} 
+			
+			// XXX This should look up the local IP addresses in the registry
+			// instead of calling gethostbyname. However, the way IP addresses
+			// are stored in the registry is annoyingly complex, so I'll leave
+			// this as T.B.D.
+			hent = gethostbyname(fullhost);
+			if (hent == NULL) {
+				ShowWarning("Cannot resolve our own hostname to a IP address");
+				return;
+			}
+			a = hent->h_addr_list;
+			for(i = 0; a[i] != NULL && i < 16; ++i) {
+				unsigned long addr1 = ntohl(RBUFL(a[i],0));
+				addr_[i] = addr1;
+			}
+			naddr_ = i;
+#else//not W32
+			int pos;
+			int fdes = socket(AF_INET, SOCK_STREAM, 0);
+			char buf[16 * sizeof(struct ifreq)];
+			struct ifconf ic;
+			
+			// The ioctl call will fail with Invalid Argument if there are more
+			// interfaces than will fit in the buffer
+			ic.ifc_len = sizeof(buf);
+			ic.ifc_buf = buf;
+			if(ioctl(fdes, SIOCGIFCONF, &ic) == -1) {
+				ShowWarning("SIOCGIFCONF failed!\n");
+				return;
+			}
+			for(pos = 0; pos < ic.ifc_len;   )
+			{
+				struct ifreq * ir = (struct ifreq *) (ic.ifc_buf + pos);
+				struct sockaddr_in * a = (struct sockaddr_in *) &(ir->ifr_addr);
+				
+				if(a->sin_family == AF_INET) {
+					u_long ad = ntohl(a->sin_addr.s_addr);
+					if(ad != INADDR_LOOPBACK) {
+						addr_[naddr_ ++] = ad;
+						if(naddr_ == 16)
+							break;
+					}
+				}
+#if defined(_AIX) || defined(__APPLE__)
+				pos += ir->ifr_addr.sa_len;  // For when we port athena to run on Mac's :)
+				pos += sizeof(ir->ifr_name);
+#else// not AIX or APPLE
+				pos += sizeof(struct ifreq);
+#endif//not AIX or APPLE
+			}
+#endif//not W32	
+		}
+
+
+
+	};
+
+	// read a system IP, we might use the first only; maybe play a bit more with that
+	static ipaddress GetSytemIP(size_t i=0)
+	{
+		static _ipset_helper iphelp;
+		if( i < iphelp.naddr_ )
+			return iphelp.addr_[i];
+		else if(iphelp.naddr_)
+			return iphelp.addr_[0];
+		return INADDR_LOOPBACK;
+	}
+
+
+public:
+	ipaddress	lan_ip;
+	ipaddress	lan_sub;
+	ushort		lan_port;
+
+	ipaddress	wan_ip;
+	ushort		wan_port;
+
+	ipset(const ipaddress lip = INADDR_ANY,			//0.0.0.0
+		  const ipaddress lsu = INADDR_BROADCAST,	//255.255.255.255
+		  const ushort lpt    = 0,
+		  const ipaddress wip = INADDR_LOOPBACK,	//127.0.0.1
+		  const ushort wpt    = 0)
+		: lan_ip(lip),lan_sub(lsu),lan_port(lpt),wan_ip(wip),wan_port(wpt)
+	{}
+	bool isLAN(ipaddress ip)
+	{
+		return ( (lan_ip&lan_sub) == (ip&lan_sub) );
+	}
+	bool isWAN(ipaddress ip)
+	{
+		return ( (lan_ip&lan_sub) != (ip&lan_sub) );
+	}
+
+	void check()
+	{	// check for unset wan address/port
+		if( wan_ip == INADDR_LOOPBACK )
+			wan_ip = lan_ip;
+		if( wan_port == 0 ) 
+			wan_port = lan_port;
+	}
+};
+
+
+class app_ipaddresses
+{
+
+	ipset iplogin;
+	ipset ipchar;
+	ipset ipmap;
+
+	ipaddress String2IP(const char *c)
+	{
+		struct hostent * h;
+		h = gethostbyname(c);
+		if (h != NULL) {
+			return ipaddress(h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
+		} else
+			return ntohl(inet_addr(c));
+	}
+
+
+public:
+	
+	app_ipaddresses():
+	    iplogin(INADDR_ANY,INADDR_BROADCAST),
+		ipchar(INADDR_ANY,INADDR_BROADCAST),
+		ipmap(INADDR_ANY,INADDR_BROADCAST)
+	{}
+
+
+	bool load(const char *filename)
+	{
+		char line[1024], w1[1024], w2[1024];
+		FILE *fp;
+
+		fp = savefopen(filename, "r");
+
+		if (fp == NULL) {
+			ShowError("Configuration file not found: %s\n", filename);
+			return false;
+		}
+
+		ShowStatus("Reading Configuration...\n");
+
+		while(fgets(line, sizeof(line)-1, fp)) {
+
+			if (line[0] == '/' && line[1] == '/')
+				continue;
+
+			line[sizeof(line)-1] = '\0';
+			if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) != 2)
+				continue;
+
+			remove_control_chars(w1);
+			remove_control_chars(w2);
+
+			if (strcasecmp(w1, "login_lan_ip") == 0)
+				ipmap.lan_ip = String2IP(w2);
+			if (strcasecmp(w1, "login_lan_port") == 0)
+				ipmap.lan_port = atoi(w2);
+			if (strcasecmp(w1, "login_subnetmask") == 0)
+				ipmap.lan_sub = String2IP(w2);
+			if (strcasecmp(w1, "login_wan_ip") == 0)
+				ipmap.wan_ip = String2IP(w2);
+			if (strcasecmp(w1, "login_wan_port") == 0)
+				ipmap.wan_port = atoi(w2);
+
+			if (strcasecmp(w1, "char_lan_ip") == 0)
+				ipmap.lan_ip = String2IP(w2);
+			if (strcasecmp(w1, "char_lan_port") == 0)
+				ipmap.lan_port = atoi(w2);
+			if (strcasecmp(w1, "char_subnetmask") == 0)
+				ipmap.lan_sub = String2IP(w2);
+			if (strcasecmp(w1, "char_wan_ip") == 0)
+				ipmap.wan_ip = String2IP(w2);
+			if (strcasecmp(w1, "char_wan_port") == 0)
+				ipmap.wan_port = atoi(w2);
+
+			if (strcasecmp(w1, "map_lan_ip") == 0)
+				ipmap.lan_ip = String2IP(w2);
+			if (strcasecmp(w1, "map_lan_port") == 0)
+				ipmap.lan_port = atoi(w2);
+			if (strcasecmp(w1, "map_subnetmask") == 0)
+				ipmap.lan_sub = String2IP(w2);
+			if (strcasecmp(w1, "map_wan_ip") == 0)
+				ipmap.wan_ip = String2IP(w2);
+			if (strcasecmp(w1, "map_wan_port") == 0)
+				ipmap.wan_port = atoi(w2);
+		}
+		fclose(fp);
+	
+
+
+
+
+
+
+		iplogin.check();
+		ipchar.check();
+		ipmap.check();
+
+		return 0;
+	}
+};

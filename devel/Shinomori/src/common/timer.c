@@ -333,7 +333,8 @@ void release_timer(size_t tid)
 	// clean the timer before putting it to the free timers
 	if( (timer_data[tid].type.pt) && (0 != timer_data[tid].data) )
 	{	// clear if pointer still exist
-		aFree((void*)timer_data[tid].data);
+		void *p = (void*)timer_data[tid].data;
+		aFree(p);
 		timer_data[tid].data	= 0;
 	}
 	timer_data[tid].type.pt  = false;

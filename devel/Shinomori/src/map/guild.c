@@ -479,8 +479,11 @@ int guild_recv_info(struct guild *sg)
 	// イベントの発生
 	if( (ev=(struct eventlist *)numdb_search(guild_infoevent_db,sg->guild_id))!=NULL ){
 		numdb_erase(guild_infoevent_db,sg->guild_id);
-		for(;ev;ev2=ev->next,aFree(ev),ev=ev2){
+		while(ev){
 			npc_event_do(ev->name);
+			ev2=ev->next;
+			aFree(ev);
+			ev=ev2;
 		}
 	}
 
@@ -584,10 +587,10 @@ int guild_member_added(int guild_id,int account_id,int char_id,int flag)
 		return 0;
 
 	if(sd==NULL || sd->guild_invite==0){ // キャラ側に登録できなかったため脱退要求を出す
-		if( flag == 0 ) {
+		if (flag == 0) {
 			if(battle_config.error_log)
 				ShowMessage("guild: member added error %d is not online\n",account_id);
-			intif_guild_leave(guild_id,account_id,char_id,0,"**登録失敗**");
+ 			intif_guild_leave(guild_id,account_id,char_id,0,"**登録失敗**");
 		}
 		return 0;
 	}
@@ -598,7 +601,7 @@ int guild_member_added(int guild_id,int account_id,int char_id,int flag)
 		return 0;
 	}
 
-	// 成功
+		// 成功
 	sd->guild_invite=0;
 	sd->guild_invite_account=0;
 	sd->guild_sended=0;
@@ -696,10 +699,10 @@ int guild_member_leaved(int guild_id,int account_id,int char_id,int flag,
 	}
 
 	if(sd!=NULL && sd->status.guild_id==guild_id){
-		sd->status.guild_id=0;
-		sd->guild_emblem_id=0;
-		sd->guild_sended=0;
-	}
+			sd->status.guild_id=0;
+			sd->guild_emblem_id=0;
+			sd->guild_sended=0;
+		}
 	// メンバーリストを全員に再通知
 	if(g!=NULL)
 	for(i=0;i<g->max_member;i++){

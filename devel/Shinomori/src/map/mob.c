@@ -47,11 +47,11 @@ struct mob_db mob_db[2001];
 static int distance(int,int,int,int);
 static int mob_makedummymobdb(int);
 static int mob_timer(int tid,unsigned long tick,int id,int data);
-int mobskill_use(struct mob_data *md,unsigned int tick,int event);
+int mobskill_use(struct mob_data *md,unsigned long tick,int event);
 int mobskill_deltimer(struct mob_data *md );
 int mob_skillid2skillidx(int class_,int skillid);
 int mobskill_use_id(struct mob_data *md,struct block_list *target,int skill_idx);
-static int mob_unlocktarget(struct mob_data *md,int tick);
+static int mob_unlocktarget(struct mob_data *md,unsigned long tick);
 
 /*==========================================
  * Mob is searched with a name.
@@ -153,6 +153,7 @@ int mob_once_spawn(struct map_session_data *sd,char *mapname,
 //		if(battle_config.etc_log)
 //			ShowMessage("mobclass=%d try=%d\n",class_,i);
 	}
+
 	if(sd){
 		if(x<=0) x=sd->bl.x;
 		if(y<=0) y=sd->bl.y;
@@ -454,7 +455,7 @@ static int mob_walktoxy_sub(struct mob_data *md);
  * Mob Walk processing
  *------------------------------------------
  */
-static int mob_walk(struct mob_data *md,unsigned int tick,int data)
+static int mob_walk(struct mob_data *md,unsigned long tick,int data)
 {
 	int moveblock;
 	int i;
@@ -490,12 +491,17 @@ static int mob_walk(struct mob_data *md,unsigned int tick,int data)
 		dx = dirx[md->dir];
 		dy = diry[md->dir];
 
-		if(map_getcell(md->bl.m,x+dx,y+dy,CELL_CHKNOPASS)) {
+		if (map_getcell(md->bl.m,x+dx,y+dy,CELL_CHKBASILICA) && !(status_get_mode(&md->bl)&0x20)) {
+			mob_stop_walking(md,1);
+			return 0;
+		}
+
+		if (map_getcell(md->bl.m,x+dx,y+dy,CELL_CHKNOPASS)) {
 			mob_walktoxy_sub(md);
 			return 0;
 		}
-		if (skill_check_basilica (&md->bl,x+dx,y+dy) ||
-			skill_check_moonlit (&md->bl,x+dx,y+dy)) {
+
+		if (skill_check_moonlit (&md->bl,x+dx,y+dy)) {
 			mob_walktoxy_sub(md);
 			return 0;
 		}
@@ -509,18 +515,18 @@ static int mob_walk(struct mob_data *md,unsigned int tick,int data)
 		if(md->min_chase>13)
 			md->min_chase--;
 
+		skill_unit_move(&md->bl,tick,0);
 		if(moveblock) map_delblock(&md->bl);
 		md->bl.x = x;
 		md->bl.y = y;
 		if(moveblock) map_addblock(&md->bl);
+		skill_unit_move(&md->bl,tick,1);
 
 		map_foreachinmovearea(clif_mobinsight,md->bl.m,x-AREA_SIZE,y-AREA_SIZE,x+AREA_SIZE,y+AREA_SIZE,-dx,-dy,BL_PC,md);
 		md->state.state=MS_IDLE;
 
 		if(md->option&4)
 			skill_check_cloaking(&md->bl);
-
-		skill_unit_move(&md->bl,tick,1);	// スキルユニットの検査
 	}
 	if((i=calc_next_walk_step(md))>0){
 		i = i>>1;
@@ -539,7 +545,7 @@ static int mob_walk(struct mob_data *md,unsigned int tick,int data)
  * Attack processing of mob
  *------------------------------------------
  */
-static int mob_attack(struct mob_data *md,unsigned int tick,int data)
+static int mob_attack(struct mob_data *md,unsigned long tick,int data)
 {
 	struct block_list *tbl=NULL;
 	struct map_session_data *tsd=NULL;
@@ -664,7 +670,7 @@ int mob_stopattacked(struct map_session_data *sd,va_list ap)
  */
 int mob_changestate(struct mob_data *md,int state,int type)
 {
-	unsigned int tick;
+	unsigned long tick;
 	int i;
 
 	nullpo_retr(0, md);
@@ -707,7 +713,7 @@ int mob_changestate(struct mob_data *md,int state,int type)
 		md->last_deadtime=gettick();
 		// Since it died, all aggressors' attack to this mob is stopped.
 		clif_foreachclient(mob_stopattacked,md->bl.id);
-		skill_unit_out_all(&md->bl,gettick(),1);
+		skill_unit_move(&md->bl,gettick(),0);
 		status_change_clear(&md->bl,2);	// ステータス異常を解除する
 		skill_clear_unitgroup(&md->bl);	// 全てのスキルユニットグループを削除する
 		skill_cleartimerskill(&md->bl);
@@ -784,11 +790,21 @@ static int mob_timer(int tid,unsigned long tick,int id,int data)
 static int mob_walktoxy_sub(struct mob_data *md)
 {
 	struct walkpath_data wpd;
+	int x,y;
+	static int dirx[8]={0,-1,-1,-1,0,1,1,1};
+	static int diry[8]={1,1,0,-1,-1,-1,0,1};
 
 	nullpo_retr(0, md);
 
 	if(path_search(&wpd,md->bl.m,md->bl.x,md->bl.y,md->to_x,md->to_y,md->state.walk_easy))
 		return 1;
+	x = md->bl.x+dirx[wpd.path[0]];
+	y = md->bl.y+diry[wpd.path[0]];
+	if (map_getcell(md->bl.m,x,y,CELL_CHKBASILICA) && !(status_get_mode(&md->bl)&0x20)) {
+		md->state.change_walk_target=0;
+		return 1;
+	}
+
 	memcpy(&md->walkpath,&wpd,sizeof(wpd));
 
 	md->state.change_walk_target=0;
@@ -887,7 +903,7 @@ int mob_setdelayspawn(int id)
 int mob_spawn(int id)
 {
 	int x=0,y=0,i=0,c;
-	unsigned int tick = gettick();
+	unsigned long tick = gettick();
 	struct mob_data *md;
 	struct block_list *bl;
 
@@ -904,13 +920,13 @@ int mob_spawn(int id)
 	md->last_spawntime=tick;
 	if( md->bl.prev!=NULL ){
 //		clif_clearchar_area(&md->bl,3);
-		skill_unit_out_all(&md->bl,gettick(),1);
+//		skill_unit_move(&md->bl,tick,0);
 		map_delblock(&md->bl);
 	}
 	else
 		md->class_ = md->base_class;
 
-	md->bl.m = md->m;
+	md->bl.m =md->m;
 	do {
 		if(md->x0==0 && md->y0==0){
 			x=rand()%(map[md->bl.m].xs-2)+1;
@@ -933,8 +949,6 @@ int mob_spawn(int id)
 	md->to_y=md->bl.y=y;
 	md->dir=0;
 	md->target_dir=0;
-
-	map_addblock(&md->bl);
 
 	memset(&md->state,0,sizeof(md->state));
 	md->attacked_id = 0;
@@ -999,6 +1013,9 @@ int mob_spawn(int id)
 		mob_makedummymobdb(md->class_);
 		md->hp = status_get_max_hp(&md->bl);
 	}
+
+	map_addblock(&md->bl);
+	skill_unit_move(&md->bl,tick,1);
 
 	clif_spawnmob(md);
 
@@ -1066,7 +1083,7 @@ int mob_stop_walking(struct mob_data *md,int type)
 		clif_fixmobpos(md);
 	if(type&0x02) {
 		int delay=status_get_dmotion(&md->bl);
-		unsigned int tick = gettick();
+		unsigned long tick = gettick();
 		if(md->canmove_tick < tick)
 			md->canmove_tick = tick + delay;
 	}
@@ -1359,7 +1376,7 @@ static int mob_ai_sub_hard_linksearch(struct block_list *bl,va_list ap)
  * Processing of slave monsters
  *------------------------------------------
  */
-static int mob_ai_sub_hard_slavemob(struct mob_data *md,unsigned int tick)
+static int mob_ai_sub_hard_slavemob(struct mob_data *md,unsigned long tick)
 {
 	struct mob_data *mmd=NULL;
 	struct block_list *bl;
@@ -1479,7 +1496,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md,unsigned int tick)
  * A lock of target is stopped and mob moves to a standby state.
  *------------------------------------------
  */
-static int mob_unlocktarget(struct mob_data *md,int tick)
+static int mob_unlocktarget(struct mob_data *md,unsigned long tick)
 {
 	nullpo_retr(0, md);
 
@@ -1493,7 +1510,7 @@ static int mob_unlocktarget(struct mob_data *md,int tick)
  * Random walk
  *------------------------------------------
  */
-static int mob_randomwalk(struct mob_data *md,int tick)
+static int mob_randomwalk(struct mob_data *md,unsigned long tick)
 {
 	const int retrycount=20;
 	int speed;
@@ -1556,7 +1573,7 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 	struct map_session_data *tsd=NULL;
 	struct block_list *tbl=NULL;
 	struct flooritem_data *fitem;
-	unsigned int tick;
+	unsigned long tick;
 	int i,dx,dy,ret,dist;
 	int attack_type=0;
 	int mode,race;
@@ -1834,7 +1851,7 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
  */
 static int mob_ai_sub_foreachclient(struct map_session_data *sd,va_list ap)
 {
-	unsigned int tick;
+	unsigned long tick;
 	nullpo_retr(0, sd);
 	nullpo_retr(0, ap);
 
@@ -1864,8 +1881,8 @@ static int mob_ai_hard(int tid,unsigned long tick,int id,int data)
  */
 static int mob_ai_sub_lazy(void * key,void * data,va_list app)
 {
-	struct mob_data *md = (struct mob_data *)data;
-	unsigned int tick;
+	struct mob_data *md=(struct mob_data *)data;
+	unsigned long tick;
 	va_list ap;
 
 	if(NULL==md)
@@ -2163,7 +2180,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 	} pt[DAMAGELOG_SIZE];
 	int pnum=0;
 	int mvp_damage,max_hp;
-	unsigned int tick = gettick();
+	unsigned long tick = gettick();
 	struct map_session_data *mvp_sd = NULL, *second_sd = NULL,*third_sd = NULL;
 	struct block_list *master = NULL;
 	double tdmg,temp;
@@ -2673,7 +2690,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 				drop_rate = 1;
 			if(drop_rate < battle_config.item_drop_mvp_min)
 				drop_rate = battle_config.item_drop_mvp_min;
-			if(drop_rate > battle_config.item_drop_mvp_max)
+			else if(drop_rate > battle_config.item_drop_mvp_max) //fixed
 				drop_rate = battle_config.item_drop_mvp_max;
 			if(drop_rate <= rand()%10000)
 				continue;
@@ -2717,7 +2734,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 				struct map_session_data *tmpsd;
 				int i;
 				for(i=0;i<fd_max;i++){
-					if(session[i] && (tmpsd=(struct map_session_data *)session[i]->session_data) && tmpsd->state.auth) {
+					if(session[i] && (tmpsd= (struct map_session_data *) session[i]->session_data) && tmpsd->state.auth) {
 						if(md->bl.m == tmpsd->bl.m) {
 							sd = tmpsd;
 							break;
@@ -2748,7 +2765,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
  */
 int mob_class_change(struct mob_data *md,int *value)
 {
-	unsigned int tick = gettick();
+	unsigned long tick = gettick();
 	int i,c,hp_rate,max_hp,class_,count = 0;
 
 	nullpo_retr(0, md);
@@ -2823,9 +2840,10 @@ int mob_class_change(struct mob_data *md,int *value)
  */
 int mob_heal(struct mob_data *md,int heal)
 {
-	int max_hp = status_get_max_hp(&md->bl);
+	int max_hp;
 
 	nullpo_retr(0, md);
+	max_hp = status_get_max_hp(&md->bl);
 
 	md->hp += heal;
 	if( max_hp < md->hp )
@@ -2887,6 +2905,7 @@ int mob_warpslave(struct mob_data *md,int x, int y)
 int mob_warp(struct mob_data *md,int m,int x,int y,int type)
 {
 	int i=0,xs=0,ys=0,bx=x,by=y;
+	unsigned long tick = gettick();
 
 	nullpo_retr(0, md);
 
@@ -2900,7 +2919,7 @@ int mob_warp(struct mob_data *md,int m,int x,int y,int type)
 			return 0;
 		clif_clearchar_area(&md->bl,type);
 	}
-	skill_unit_out_all(&md->bl,gettick(),1);
+	skill_unit_move(&md->bl,tick,0);
 	map_delblock(&md->bl);
 
 	if(bx>0 && by>0){	// 位置指定の場合周囲９セルを探索
@@ -2939,6 +2958,7 @@ int mob_warp(struct mob_data *md,int m,int x,int y,int type)
 	}
 
 	map_addblock(&md->bl);
+	skill_unit_move(&md->bl,tick,1);
 	if(type>0)
 	{
 		clif_spawnmob(md);
@@ -3253,61 +3273,16 @@ int mobskill_castend_pos( int tid, unsigned long tick, int id,int data )
 			return 0;
 	}
 
-	if(battle_config.monster_skill_reiteration == 0) {
-		range = -1;
-		switch(md->skillid) {
-			case MG_SAFETYWALL:
-			case WZ_FIREPILLAR:
-			case HT_SKIDTRAP:
-			case HT_LANDMINE:
-			case HT_ANKLESNARE:
-			case HT_SHOCKWAVE:
-			case HT_SANDMAN:
-			case HT_FLASHER:
-			case HT_FREEZINGTRAP:
-			case HT_BLASTMINE:
-			case HT_CLAYMORETRAP:
-			case PF_SPIDERWEB:		/* スパイダーウェッブ */
-				range = 0;
-				break;
-			case AL_PNEUMA:
-			case AL_WARP:
-				range = 1;
-				break;
-		}
-		if(range >= 0) {
-			if(skill_check_unit_range(md->bl.m,md->skillx,md->skilly,range,md->skillid) > 0)
-				return 0;
-		}
-	}
-	if(battle_config.monster_skill_nofootset) {
-		switch(md->skillid) {
-			case WZ_FIREPILLAR:
-			case HT_SKIDTRAP:
-			case HT_LANDMINE:
-			case HT_ANKLESNARE:
-			case HT_SHOCKWAVE:
-			case HT_SANDMAN:
-			case HT_FLASHER:
-			case HT_FREEZINGTRAP:
-			case HT_BLASTMINE:
-			case HT_CLAYMORETRAP:
-			case AM_DEMONSTRATION:
-			case PF_SPIDERWEB:		/* スパイダーウェッブ */
-				range = 1;
-				break;
-			case AL_WARP:
-				range = 0;
-				break;
-			default:
-				range = -1;
-				break;
-		}
-		if(range >= 0) {
-			if(skill_check_unit_range2(md->bl.m,md->skillx,md->skilly,range) > 0)
-				return 0;
-		}
-	}
+	if (!battle_config.monster_skill_reiteration &&
+			skill_get_unit_flag(md->skillid)&UF_NOREITERATION &&
+			skill_check_unit_range(md->bl.m,md->skillx,md->skilly,md->skillid,md->skilllv))
+		return 0;
+
+	if(battle_config.monster_skill_nofootset &&
+			skill_get_unit_flag(md->skillid)&UF_NOFOOTSET &&
+			skill_check_unit_range2(md->bl.m,md->skillx,md->skilly,md->skillid,md->skilllv))
+		return 0;
+
 
 	if(battle_config.monster_land_skill_limit) {
 		maxcount = skill_get_maxcount(md->skillid);
@@ -3347,7 +3322,8 @@ int mobskill_use_id(struct mob_data *md,struct block_list *target,int skill_idx)
 {
 	int casttime,range;
 	struct mob_skill *ms;
-	int skill_id, skill_lv, forcecast = 0;
+	short skill_id, skill_lv;
+	int forcecast = 0;
 
 	nullpo_retr(0, md);
 	nullpo_retr(0, ms=&mob_db[md->class_].skill[skill_idx]);
@@ -3450,7 +3426,7 @@ int mobskill_use_id(struct mob_data *md,struct block_list *target,int skill_idx)
 
 	if( casttime>0 ){
 		md->skilltimer =
-			add_timer( gettick()+casttime, mobskill_castend_id, md->bl.id, 0);
+			add_timer( gettick()+casttime, mobskill_castend_id, md->bl.id, 0 );
 	}else{
 		md->skilltimer = -1;
 		mobskill_castend_id(md->skilltimer,gettick(),md->bl.id, 0);
@@ -3468,7 +3444,7 @@ int mobskill_use_pos( struct mob_data *md,
 	int casttime=0,range;
 	struct mob_skill *ms;
 	struct block_list bl;
-	int skill_id, skill_lv;
+	short skill_id, skill_lv;
 
 	nullpo_retr(0, md);
 	nullpo_retr(0, ms=&mob_db[md->class_].skill[skill_idx]);
@@ -3538,7 +3514,7 @@ int mobskill_use_pos( struct mob_data *md,
 		status_change_end(&md->bl,SC_CLOAKING,-1);
 	if( casttime>0 ){
 		md->skilltimer =
-			add_timer( gettick()+casttime, mobskill_castend_pos, md->bl.id, 0);
+			add_timer( gettick()+casttime, mobskill_castend_pos, md->bl.id, 0 );
 	}else{
 		md->skilltimer = -1;
 		mobskill_castend_pos(md->skilltimer,gettick(),md->bl.id, 0);
@@ -3632,7 +3608,7 @@ struct mob_data *mob_getfriendstatus(struct mob_data *md,int cond1,int cond2)
  * Skill use judging
  *------------------------------------------
  */
-int mobskill_use(struct mob_data *md,unsigned int tick,int event)
+int mobskill_use(struct mob_data *md,unsigned long tick,int event)
 {
 	struct mob_skill *ms;
 //	struct block_list *target=NULL;
@@ -3930,22 +3906,28 @@ static int mob_readdb(void)
 			mob_db[class_].max_sp=atoi(str[5]);
 
 			mob_db[class_].base_exp=atoi(str[6]);
-			if(mob_db[class_].base_exp < 0)
+			if (mob_db[class_].base_exp <= 0)
 				mob_db[class_].base_exp = 0;
-			else if(mob_db[class_].base_exp > 0 && (mob_db[class_].base_exp*battle_config.base_exp_rate/100 > 1000000000 ||
-			    mob_db[class_].base_exp*battle_config.base_exp_rate/100 < 0))
+			else if (mob_db[class_].base_exp * battle_config.base_exp_rate / 100 > 1000000000 ||
+			         mob_db[class_].base_exp * battle_config.base_exp_rate / 100 < 0)
 				mob_db[class_].base_exp=1000000000;
-			else
-				mob_db[class_].base_exp*= battle_config.base_exp_rate/100;
+			else {
+				mob_db[class_].base_exp = mob_db[class_].base_exp * battle_config.base_exp_rate / 100;
+				if (mob_db[class_].base_exp < 1)
+					mob_db[class_].base_exp = 1;
+			}
 
 			mob_db[class_].job_exp=atoi(str[7]);
-			if(mob_db[class_].job_exp < 0)
+			if (mob_db[class_].job_exp <= 0)
 				mob_db[class_].job_exp = 0;
-			else if(mob_db[class_].job_exp > 0 && (mob_db[class_].job_exp*battle_config.job_exp_rate/100 > 1000000000 ||
-			    mob_db[class_].job_exp*battle_config.job_exp_rate/100 < 0))
+			else if (mob_db[class_].job_exp * battle_config.job_exp_rate / 100 > 1000000000 ||
+			         mob_db[class_].job_exp * battle_config.job_exp_rate / 100 < 0)
 				mob_db[class_].job_exp=1000000000;
-			else
-				mob_db[class_].job_exp*=battle_config.job_exp_rate/100;
+			else {
+				mob_db[class_].job_exp = mob_db[class_].job_exp * battle_config.job_exp_rate / 100;
+				if (mob_db[class_].job_exp < 1)
+					mob_db[class_].job_exp = 1;
+			}
 
 			mob_db[class_].range=atoi(str[8]);
 			mob_db[class_].atk1=atoi(str[9]);
@@ -3973,74 +3955,33 @@ static int mob_readdb(void)
 				int rate = 0,type,ratemin,ratemax;
 				mob_db[class_].dropitem[i].nameid=atoi(str[29+i*2]);
 				type = itemdb_type(mob_db[class_].dropitem[i].nameid);
-				if (type == 0) {							// Added [Valaris]
-					rate = battle_config.item_rate_heal;
+				if (type == 0) {
+					rate = battle_config.item_rate_heal * atoi(str[30+i*2]) / 100; //fix by Yor
 					ratemin = battle_config.item_drop_heal_min;
 					ratemax = battle_config.item_drop_heal_max;
 				}
 				else if (type == 2) {
-					rate = battle_config.item_rate_use;
+					rate = battle_config.item_rate_use * atoi(str[30+i*2]) / 100; //fix by Yor
 					ratemin = battle_config.item_drop_use_min;
 					ratemax = battle_config.item_drop_use_max;	// End
 				}
 				else if (type == 4 || type == 5 || type == 8) {		// Changed to include Pet Equip
-					rate = battle_config.item_rate_equip;
+					rate = battle_config.item_rate_equip * atoi(str[30+i*2]) / 100;
 					ratemin = battle_config.item_drop_equip_min;
 					ratemax = battle_config.item_drop_equip_max;
 				}
 				else if (type == 6) {
-					rate = battle_config.item_rate_card;
+					rate = battle_config.item_rate_card * atoi(str[30+i*2]) / 100;
 					ratemin = battle_config.item_drop_card_min;
 					ratemax = battle_config.item_drop_card_max;
 				}
 				else {
-					rate = battle_config.item_rate_common;
+					rate = battle_config.item_rate_common * atoi(str[30+i*2]) / 100;
 					ratemin = battle_config.item_drop_common_min;
 					ratemax = battle_config.item_drop_common_max;
 				}
-				if (battle_config.item_rate_details == 1) {	//ドロップレート詳細項目が1の時 レート=x/100倍
-					if (rate < 10)
-						rate = rate * battle_config.item_rate_1/100;
-					else if (rate >= 10 && rate < 100)
-						rate = rate * battle_config.item_rate_10/100;
-					else if (rate >= 100 && rate < 1000)
-						rate = rate * battle_config.item_rate_100/100;
-					else rate = rate * battle_config.item_rate_1000/100;
+				mob_db[class_].dropitem[i].p = (rate < ratemin) ? ratemin : (rate > ratemax) ? ratemax: rate;
 				}
-				else if (battle_config.item_rate_details == 2) {	//ドロップレート詳細項目が2の時　レート=x/100倍 min max 指定
-					if (rate >= 1 && rate < 10) {
-						if (rate * battle_config.item_rate_1/100 < battle_config.item_rate_1_min)
-							rate = battle_config.item_rate_1_min;
-						else if (rate * battle_config.item_rate_1/100 > battle_config.item_rate_1_max)
-							rate = battle_config.item_rate_1_max;
-						else rate = rate * battle_config.item_rate_1/100;
-					}
-					else if (rate >= 10 && rate < 100) {
-						if (rate * battle_config.item_rate_10/100 < battle_config.item_rate_10_min)
-							rate = battle_config.item_rate_10_min;
-						else if (rate * battle_config.item_rate_10/100 > battle_config.item_rate_10_max)
-							rate = battle_config.item_rate_10_max;
-						else rate = rate * battle_config.item_rate_10/100;
-					}
-					else if (rate >= 100 && rate < 1000) {
-						if (rate * battle_config.item_rate_100/100 < battle_config.item_rate_100_min)
-							rate = battle_config.item_rate_100_min;
-						else if (rate * battle_config.item_rate_100/100 > battle_config.item_rate_100_max)
-							rate = battle_config.item_rate_100_max;
-						else rate = rate * battle_config.item_rate_100/100;
-					}
-					else if (rate >= 1000) {
-						if (rate * battle_config.item_rate_1000/100 < battle_config.item_rate_1000_min)
-							rate = battle_config.item_rate_1000_min;
-						else if (rate * battle_config.item_rate_1000/100 > battle_config.item_rate_1000_max)
-							rate = battle_config.item_rate_1000_max;
-						else rate = rate * battle_config.item_rate_1000/100;
-					}
-				}
-				rate = rate * atoi(str[30+i*2])/100;
-				rate = (rate < ratemin)? ratemin: (rate > ratemax)? ratemax: rate;
-				mob_db[class_].dropitem[i].p = rate;
-			}
 			// MVP EXP Bonus, Chance: MEXP,ExpPer
 			mob_db[class_].mexp=atoi(str[49])*battle_config.mvp_exp_rate/100;
 			mob_db[class_].mexpper=atoi(str[50]);
@@ -4421,7 +4362,7 @@ static int mob_read_sqldb(void)
 	sql_res = mysql_store_result(&mmysql_handle);
 	if (sql_res) {
 		while((sql_row = mysql_fetch_row(sql_res))){
-            sprintf(line,"%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+            sprintf(line,"%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
                         sql_row[0],sql_row[1],sql_row[2],sql_row[3],sql_row[4],
                         sql_row[5],sql_row[6],sql_row[7],sql_row[8],sql_row[9],
                         sql_row[10],sql_row[11],sql_row[12],sql_row[13],sql_row[14],
@@ -4433,9 +4374,9 @@ static int mob_read_sqldb(void)
                         sql_row[40],sql_row[41],sql_row[42],sql_row[43],sql_row[44],
                         sql_row[45],sql_row[46],sql_row[47],sql_row[48],sql_row[49],
                         sql_row[50],sql_row[51],sql_row[52],sql_row[53],sql_row[54],
-			sql_row[55],sql_row[56],sql_row[57],sql_row[58],sql_row[59]);
+			sql_row[55],sql_row[56]);
 
-			for(i=0,p=line;i<60;i++){
+			for(i=0,p=line;i<57;i++){
 				if((np=strchr(p,','))!=NULL){
 					str[i]=p;
 					*np=0;
@@ -4456,14 +4397,30 @@ static int mob_read_sqldb(void)
 			mob_db[class_].lv=atoi(str[3]);
 			mob_db[class_].max_hp=atoi(str[4]);
 			mob_db[class_].max_sp=atoi(str[5]);
-			mob_db[class_].base_exp=atoi(str[6])*
-					battle_config.base_exp_rate/100;
+
+			mob_db[class_].base_exp = atoi(str[6]);
 			if(mob_db[class_].base_exp <= 0)
+				mob_db[class_].base_exp = 0;
+			else if (mob_db[class_].base_exp * battle_config.base_exp_rate / 100 > 1000000000 ||
+			         mob_db[class_].base_exp * battle_config.base_exp_rate / 100 < 0)
+				mob_db[class_].base_exp = 1000000000;
+			else {
+				mob_db[class_].base_exp = mob_db[class_].base_exp * battle_config.base_exp_rate / 100;
+				if (mob_db[class_].base_exp < 1)
 				mob_db[class_].base_exp = 1;
-			mob_db[class_].job_exp=atoi(str[7])*
-					battle_config.job_exp_rate/100;
+			}
+			mob_db[class_].job_exp = atoi(str[7]);
 			if(mob_db[class_].job_exp <= 0)
+				mob_db[class_].job_exp = 0;
+			else if (mob_db[class_].job_exp * battle_config.job_exp_rate / 100 > 1000000000 ||
+			         mob_db[class_].job_exp * battle_config.job_exp_rate / 100 < 0)
+				mob_db[class_].job_exp = 1000000000;
+			else {
+				mob_db[class_].job_exp = mob_db[class_].job_exp * battle_config.job_exp_rate / 100;
+				if (mob_db[class_].job_exp < 1)
 				mob_db[class_].job_exp = 1;
+			}
+
 			mob_db[class_].range=atoi(str[8]);
 			mob_db[class_].atk1=atoi(str[9]);
 			mob_db[class_].atk2=atoi(str[10]);
@@ -4491,33 +4448,32 @@ static int mob_read_sqldb(void)
 				mob_db[class_].dropitem[i].nameid=atoi(str[29+i*2]);
 				type = itemdb_type(mob_db[class_].dropitem[i].nameid);
 				if (type == 0) {							// Added by Valaris
-					rate = battle_config.item_rate_heal;
+					rate = battle_config.item_rate_heal * atoi(str[30+i*2]) / 100;
 					ratemin = battle_config.item_drop_heal_min;
 					ratemax = battle_config.item_drop_heal_max;
 				}
 				else if (type == 2) {
-					rate = battle_config.item_rate_use;
+					rate = battle_config.item_rate_use * atoi(str[30+i*2]) / 100;
 					ratemin = battle_config.item_drop_use_min;
 					ratemax = battle_config.item_drop_use_max;	// End
 				}
 				else if (type == 4 || type == 5 || type == 8) {		// Changed to include Pet Equip
-					rate = battle_config.item_rate_equip;
+					rate = battle_config.item_rate_equip * atoi(str[30+i*2]) / 100;
 					ratemin = battle_config.item_drop_equip_min;
 					ratemax = battle_config.item_drop_equip_max;
 				}
 				else if (type == 6) {
-					rate = battle_config.item_rate_card;
+					rate = battle_config.item_rate_card * atoi(str[30+i*2]) / 100;
 					ratemin = battle_config.item_drop_card_min;
 					ratemax = battle_config.item_drop_card_max;
 				}
 				else {
-					rate = battle_config.item_rate_common;
+					rate = battle_config.item_rate_common * atoi(str[30+i*2]) / 100;
 					ratemin = battle_config.item_drop_common_min;
 					ratemax = battle_config.item_drop_common_max;
 				}
-				rate = (rate / 100) * atoi(str[30+i*2]);
-				rate = (rate < ratemin)? ratemin: (rate > ratemax)? ratemax: rate;
-				mob_db[class_].dropitem[i].p = rate;
+
+				mob_db[class_].dropitem[i].p = (rate < ratemin) ? ratemin : (rate > ratemax) ? ratemax: rate;
 			}
 			// MVP EXP Bonus, Chance: MEXP,ExpPer
 			mob_db[class_].mexp=atoi(str[49])*battle_config.mvp_exp_rate/100;

@@ -138,7 +138,7 @@ int itemdb_searchrandomid(int flags)
  */
 struct item_data* itemdb_exists(int nameid)
 {
-	return (struct item_data*)numdb_search(item_db,nameid);
+	return (struct item_data *) numdb_search(item_db,nameid);
 }
 /*==========================================
  * DB‚ÌŒŸõ
@@ -148,7 +148,7 @@ struct item_data* itemdb_search(int nameid)
 {
 	struct item_data *id;
 
-	id = (struct item_data *)numdb_search(item_db,nameid);
+	id=(struct item_data *) numdb_search(item_db,nameid);
 	if(id) return id;
 
 	id=(struct item_data *)aCalloc(1,sizeof(struct item_data));
@@ -254,14 +254,14 @@ int itemdb_isdropable(int nameid)
 static void itemdb_read(void)
 {
 	#ifndef TXT_ONLY
-	if (db_use_sqldbs)
-	{
-		itemdb_read_sqldb();
-    }
-    else
-    {
-		itemdb_readdb();
-    }
+		if (db_use_sqldbs)
+		{
+			itemdb_read_sqldb();
+		}
+		else
+		{
+			itemdb_readdb();
+		}
 	/* not TXT_ONLY */
 	#else
 		itemdb_readdb();
@@ -382,8 +382,9 @@ static int itemdb_readdb(void)
 			id->equip_script = (char*)parse_script((unsigned char*)p,lines);
 		}
 		fclose(fp);
-		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,filename[i]);
-
+		if (ln > 0) {
+			ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,filename[i]);
+		}
 		ln=0;	// reset to 0
 	}
 	return 0;
@@ -420,7 +421,7 @@ static int itemdb_read_randomitem()
 		struct random_item_data *pd=data[i].pdata;
 		int *pc=data[i].pcount;
 		int *pdefault=data[i].pdefault;
-		char *fn=(char*)data[i].filename;
+		char *fn=(char *) data[i].filename;
 
 		*pdefault = 0;
 		if( (fp=savefopen(fn,"r"))==NULL ){
@@ -460,8 +461,9 @@ static int itemdb_read_randomitem()
 			ln++;
 		}
 		fclose(fp);
-		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",*pc,fn);
-
+		if (*pc > 0) {
+			ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",*pc,fn);
+		}
 	}
 
 	return 0;
@@ -524,7 +526,7 @@ static int itemdb_read_itemnametable(void)
 	char *buf,*p;
 	int s;
 
-	buf=(char*)grfio_reads("data\\idnum2itemdisplaynametable.txt",&s);
+	buf=(char *) grfio_reads("data\\idnum2itemdisplaynametable.txt",&s);
 
 	if(buf==NULL)
 		return -1;
@@ -566,7 +568,7 @@ static int itemdb_read_cardillustnametable(void)
 	char *buf,*p;
 	int s;
 
-	buf=(char*)grfio_reads("data\\num2cardillustnametable.txt",&s);
+	buf=(char *) grfio_reads("data\\num2cardillustnametable.txt",&s);
 
 	if(buf==NULL)
 		return -1;
@@ -604,7 +606,7 @@ static int itemdb_read_itemslottable(void)
 	char *buf,*p;
 	int s;
 
-	buf = (char *)grfio_read("data\\itemslottable.txt");
+	buf=(char *) grfio_read("data\\itemslottable.txt");
 	if(buf==NULL)
 		return -1;
 	s=grfio_size("data\\itemslottable.txt");
@@ -614,7 +616,7 @@ static int itemdb_read_itemslottable(void)
 		struct item_data* item;
 		sscanf(p,"%d#%d#",&nameid,&equip);
 		item = itemdb_search(nameid);
-		if (item && itemdb_isequip2(item))
+		if (item && itemdb_isequip2(item))			
 			item->equip=equip;
 		p=strchr(p,10);
 		if(!p) break;
@@ -633,7 +635,7 @@ static int itemdb_read_itemslotcounttable(void)
 	char *buf,*p;
 	int s;
 
-	buf = (char *)grfio_read("data\\itemslotcounttable.txt");
+	buf=(char *) grfio_read("data\\itemslotcounttable.txt");
 	if(buf==NULL)
 		return -1;
 	s=grfio_size("data\\itemslotcounttable.txt");
@@ -693,8 +695,9 @@ static int itemdb_read_noequip(void)
 
 	}
 	fclose(fp);
-	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"db/item_noequip.txt");
-
+	if (ln > 0) {
+		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"db/item_noequip.txt");
+	}	
 	return 0;
 }
 
@@ -830,12 +833,12 @@ static int itemdb_read_sqldb(void)
 
 				if (sql_row[17] != NULL)
 				{
-					if (sql_row[17][0] == '{')
+                                        if (sql_row[17][0] == '{')
 						id->use_script = parse_script((unsigned char*)sql_row[17], 0);
-					else {
-						sprintf(script, "{%s}", sql_row[17]);
+                                        else {
+					  sprintf(script, "{%s}", sql_row[17]);
 						id->use_script = parse_script((unsigned char*)script, 0);
-					}
+                                        }
 				}
 				else
 				{

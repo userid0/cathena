@@ -1,16 +1,17 @@
-txt sql all: core.o socket.o timer.o grfio.o db.o lock.o nullpo.o malloc.o showmsg.o strlib.o md5calc.o
+txt sql all: core.o db.o grfio.o lock.o malloc.o md5calc.o nullpo.o showmsg.o socket.o strlib.o timer.o utils.o
 
-core.o: core.c core.h showmsg.h
-socket.o: socket.c socket.h mmo.h showmsg.h
-timer.o: timer.c timer.h showmsg.h
-grfio.o: grfio.c grfio.h showmsg.h
-db.o: db.c db.h showmsg.h
+core.o: core.c core.h mmo.h showmsg.h socket.h timer.h utils.h version.h
+db.o: db.c db.h mmo.h showmsg.h utils.h
+grfio.o: grfio.c grfio.h mmo.h showmsg.h malloc.h utils.h
 lock.o: lock.h showmsg.h
-nullpo.o: nullpo.c nullpo.h showmsg.h
 malloc.o: malloc.c malloc.h showmsg.h
-showmsg.o: showmsg.c showmsg.h
-strlib.o: strlib.c strlib.h utils.h
 md5calc.o: md5calc.c md5calc.h
+nullpo.o: nullpo.c nullpo.h showmsg.h
+showmsg.o: showmsg.c showmsg.h
+socket.o: socket.c socket.h mmo.h showmsg.h
+strlib.o: strlib.c strlib.h utils.h
+timer.o: timer.c timer.h showmsg.h
+utils.o: utils.c utils.h showmsg.h malloc.h mmo.h
 
 clean:
-	rm -f *.o
+	rm -rf *.o

@@ -250,9 +250,9 @@ int buildin_failedremovecards(struct script_state *st);
 int buildin_marriage(struct script_state *st);
 int buildin_wedding_effect(struct script_state *st);
 int buildin_divorce(struct script_state *st);
-int buildin_ispartneron(struct script_state *st);
-int buildin_getpartnerid(struct script_state *st);
-int buildin_warppartner(struct script_state *st);
+int buildin_ispartneron(struct script_state *st); // MouseJstr
+int buildin_getpartnerid(struct script_state *st); // MouseJstr
+int buildin_warppartner(struct script_state *st); // MouseJstr
 int buildin_getitemname(struct script_state *st);
 int buildin_makepet(struct script_state *st);
 int buildin_getexp(struct script_state *st);
@@ -317,6 +317,13 @@ int run_func(struct script_state *st);
 
 int mapreg_setreg(int num,int val);
 int mapreg_setregstr(int num,const char *str);
+
+#ifdef PCRE_SUPPORT
+int buildin_defpattern(struct script_state *st); // MouseJstr
+int buildin_activatepset(struct script_state *st); // MouseJstr
+int buildin_deactivatepset(struct script_state *st); // MouseJstr
+int buildin_deletepset(struct script_state *st); // MouseJstr
+#endif
 
 struct {
 	int (*func)(struct script_state *);
@@ -540,10 +547,14 @@ struct {
 	{buildin_isday,"isday",""}, // check whether it is day time [Celest]
 	{buildin_isequipped,"isequipped","i*"}, // check whether another item/card has been equipped [Celest]
 	{buildin_isequippedcnt,"isequippedcnt","i*"}, // check how many items/cards are being equipped [Celest]
+#ifdef PCRE_SUPPORT
+        {buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
+        {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
+        {buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
+        {buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
+#endif
 	{NULL,NULL,NULL},
 };
-int buildin_message(struct script_state *st); // [MouseJstr]
-
 
 enum {
 	C_NOP,C_POS,C_INT,C_PARAM,C_FUNC,C_STR,C_CONSTSTR,C_ARG,
@@ -1424,6 +1435,11 @@ static int set_reg(struct map_session_data *sd,int num,char *name,void *v)
 		}
 	}
 	return 0;
+}
+
+int set_var(struct map_session_data *sd, char *name, void *val)
+{
+    return set_reg(sd, add_str(name), name, val);
 }
 
 /*==========================================
@@ -3293,14 +3309,14 @@ int buildin_getskilllv(struct script_state *st)
 int buildin_getgdskilllv(struct script_state *st)
 {
         int guild_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
-        int skill_id=conv_num(st,& (st->stack->stack_data[st->start+3]));
+        short skill_id=conv_num(st,& (st->stack->stack_data[st->start+3]));
         struct guild *g=guild_search(guild_id);
 	push_val(st->stack,C_INT, (g==NULL)?-1:guild_checkskill(g,skill_id) );
 	return 0;
 /*
 	struct map_session_data *sd=NULL;
 	struct guild *g=NULL;
-	int skill_id;
+	short skill_id;
 
 	skill_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	sd=script_rid2sd(st);
@@ -3889,7 +3905,7 @@ int buildin_donpcevent(struct script_state *st)
 int buildin_addtimer(struct script_state *st)
 {
 	char *event;
-	int tick;
+	unsigned long tick;
 	tick=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	event=conv_str(st,& (st->stack->stack_data[st->start+3]));
 	pc_addeventtimer(script_rid2sd(st),tick,event);
@@ -3913,7 +3929,7 @@ int buildin_deltimer(struct script_state *st)
 int buildin_addtimercount(struct script_state *st)
 {
 	char *event;
-	int tick;
+	unsigned long tick;
 	event=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	tick=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	pc_addeventtimercount(script_rid2sd(st),event,tick);
@@ -3994,7 +4010,7 @@ int buildin_getnpctimer(struct script_state *st)
  */
 int buildin_setnpctimer(struct script_state *st)
 {
-	int tick;
+	unsigned long tick;
 	struct npc_data *nd;
 	tick=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	if( st->end > st->start+3 )
@@ -4307,7 +4323,9 @@ int buildin_hideonnpc(struct script_state *st)
 int buildin_sc_start(struct script_state *st)
 {
 	struct block_list *bl;
-	int type,tick,val1;
+	int type;
+	unsigned long tick;
+	int val1;
 	type=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	tick=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	val1=conv_num(st,& (st->stack->stack_data[st->start+4]));
@@ -4331,7 +4349,9 @@ int buildin_sc_start(struct script_state *st)
 int buildin_sc_start2(struct script_state *st)
 {
 	struct block_list *bl;
-	int type,tick,val1,per;
+	int type;
+	unsigned long tick;
+	int val1,per;
 	type=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	tick=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	val1=conv_num(st,& (st->stack->stack_data[st->start+4]));
@@ -6528,7 +6548,7 @@ int buildin_summon(struct script_state *st)
 
 	sd=script_rid2sd(st);
 	if (sd) {
-		int tick = gettick();
+		unsigned long tick = gettick();
 		str	=conv_str(st,& (st->stack->stack_data[st->start+2]));
 		class_=conv_num(st,& (st->stack->stack_data[st->start+3]));
 		if( st->end>st->start+4 )

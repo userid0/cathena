@@ -61,15 +61,17 @@ int battle_counttargeted(struct block_list *bl,struct block_list *src,int target
 
 // ダメージの遅延
 struct battle_delay_damage_ {
-	struct block_list *src,*target;
+	struct block_list *src;
+	int target;
 	int damage;
 	int flag;
 };
 int battle_delay_damage_sub(int tid,unsigned long tick,int id,int data)
 {
 	struct battle_delay_damage_ *dat=(struct battle_delay_damage_ *)data;
-	if( dat && map_id2bl(id)==dat->src && dat->target->prev!=NULL)
-		battle_damage(dat->src,dat->target,dat->damage,dat->flag);
+	struct block_list *target=map_id2bl(dat->target);
+	if( dat && map_id2bl(id)==dat->src && target && target->prev!=NULL)
+		battle_damage(dat->src,target,dat->damage,dat->flag);
 	aFree(dat);
 	return 0;
 }
@@ -82,7 +84,7 @@ int battle_delay_damage(unsigned int tick,struct block_list *src,struct block_li
 
 
 	dat->src=src;
-	dat->target=target;
+	dat->target=target->id;
 	dat->damage=damage;
 	dat->flag=flag;
 	add_timer(tick,battle_delay_damage_sub,src->id,(int)dat);//!!todo!!
@@ -236,7 +238,7 @@ int battle_attr_fix(int damage,int atk_elem,int def_elem)
  * ダメージ最終計算
  *------------------------------------------
  */
-int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,int div_,int skill_num,int skill_lv,int flag)
+int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,int div_,int skill_num,short skill_lv,int flag)
 {
 	struct map_session_data *sd=NULL;
 	struct mob_data *md=NULL;
@@ -258,7 +260,7 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 			flag&BF_SHORT && skill_num != NPC_GUIDEDATTACK) {
 			// セーフティウォール
 			struct skill_unit *unit;
-			unit = map_find_skill_unit_oncell(bl->m,bl->x,bl->y,MG_SAFETYWALL);
+			unit = (struct skill_unit *)sc_data[SC_SAFETYWALL].val2;
 			if (unit) {
 				if (unit->group && (--unit->group->val2)<=0)
 					skill_delunit(unit);
@@ -2644,13 +2646,13 @@ static struct Damage battle_calc_pc_weapon_attack(
 		}
 		if(t_sc_data[SC_ASSUMPTIO].timer != -1){ //アスムプティオ
 			if(!map[target->m].flag.pvp){
-			damage=damage/3;
-			damage2=damage2/3;
-		}else{
-			damage=damage/2;
-			damage2=damage2/2;
+				damage=damage/3;
+				damage2=damage2/3;
+			}else{
+				damage=damage/2;
+				damage2=damage2/2;
+			}
 		}
-	}
 	}
 //対象にステータス異常がある場合のダメージ減算処理ここまで
 
@@ -3506,7 +3508,7 @@ int battle_weapon_attack( struct block_list *src,struct block_list *target,
 		if(sd && sd->splash_range > 0 && (wd.damage > 0 || wd.damage2 > 0) )
 			skill_castend_damage_id(src,target,0,-1,tick,0);
 		map_freeblock_lock();
-		battle_damage(src,target,(wd.damage+wd.damage2),0);
+		battle_delay_damage(tick+wd.amotion,src,target,(wd.damage+wd.damage2),0);
 		if(target->prev != NULL &&
 			(target->type != BL_PC || (target->type == BL_PC && !pc_isdead((struct map_session_data *)target) ) ) ) {
 			if(wd.damage > 0 || wd.damage2 > 0) {
@@ -3657,7 +3659,7 @@ int battle_weapon_attack( struct block_list *src,struct block_list *target,
 		}
 
 		if(rdamage > 0)
-			battle_damage(target,src,rdamage,0);
+			battle_delay_damage(tick+wd.amotion,src,target,rdamage,0);
 		if(t_sc_data && t_sc_data[SC_AUTOCOUNTER].timer != -1 && t_sc_data[SC_AUTOCOUNTER].val4 > 0) {
 			if(t_sc_data[SC_AUTOCOUNTER].val3 == src->id)
 				battle_weapon_attack(target,src,tick,0x8000|t_sc_data[SC_AUTOCOUNTER].val1);
@@ -4034,9 +4036,9 @@ static const struct {
 	{ "combo_delay_rate",                  &battle_config.combo_delay_rate			},
 	{ "item_check",                        &battle_config.item_check				},
 	{ "wedding_modifydisplay",             &battle_config.wedding_modifydisplay	},
-	{ "natural_healhp_interval",           &battle_config.natural_healhp_interval	},
-	{ "natural_healsp_interval",           &battle_config.natural_healsp_interval	},
-	{ "natural_heal_skill_interval",       &battle_config.natural_heal_skill_interval},
+	{ "natural_healhp_interval",     (int*)&battle_config.natural_healhp_interval	},
+	{ "natural_healsp_interval",     (int*)&battle_config.natural_healsp_interval	},
+	{ "natural_heal_skill_interval", (int*)&battle_config.natural_heal_skill_interval},
 	{ "natural_heal_weight_rate",          &battle_config.natural_heal_weight_rate	},
 	{ "item_name_override_grffile",        &battle_config.item_name_override_grffile},
 	{ "item_equip_override_grffile",       &battle_config.item_equip_override_grffile},	// [Celest]
@@ -4125,19 +4127,6 @@ static const struct {
 	{ "gm_can_drop_lv",				       &battle_config.gm_can_drop_lv			},
 	{ "disp_hpmeter",				       &battle_config.disp_hpmeter				},
 	{ "bone_drop",				           &battle_config.bone_drop				},
-	{ "item_rate_details",				   &battle_config.item_rate_details			},
-	{ "item_rate_1",				       &battle_config.item_rate_1				},
-	{ "item_rate_10",				       &battle_config.item_rate_10				},
-	{ "item_rate_100",				       &battle_config.item_rate_100				},
-	{ "item_rate_1000",				       &battle_config.item_rate_1000			},
-	{ "item_rate_1_min",				   &battle_config.item_rate_1_min			},
-	{ "item_rate_1_max",				   &battle_config.item_rate_1_max			},
-	{ "item_rate_10_min",				   &battle_config.item_rate_10_min			},
-	{ "item_rate_10_max",				   &battle_config.item_rate_10_max			},
-	{ "item_rate_100_min",				   &battle_config.item_rate_100_min			},
-	{ "item_rate_100_max",				   &battle_config.item_rate_100_max			},
-	{ "item_rate_1000_min",				   &battle_config.item_rate_1000_min		},
-	{ "item_rate_1000_max",				   &battle_config.item_rate_1000_max		},
 	{ "item_rate_common",                  &battle_config.item_rate_common	},	// Added by RoVeRT
 	{ "item_rate_equip",                   &battle_config.item_rate_equip	},
 	{ "item_rate_card",                    &battle_config.item_rate_card	},	// End Addition
@@ -4385,19 +4374,6 @@ void battle_set_defaults() {
 	battle_config.gm_can_drop_lv = 0;
 	battle_config.disp_hpmeter = 0;
 	battle_config.bone_drop = 0;
-	battle_config.item_rate_details = 0;
-	battle_config.item_rate_1 = 100;
-	battle_config.item_rate_10 = 100;
-	battle_config.item_rate_100 = 100;
-	battle_config.item_rate_1000 = 100;
-	battle_config.item_rate_1_min = 1;
-	battle_config.item_rate_1_max = 9;
-	battle_config.item_rate_10_min = 10;
-	battle_config.item_rate_10_max = 99;
-	battle_config.item_rate_100_min = 100;
-	battle_config.item_rate_100_max = 999;
-	battle_config.item_rate_1000_min = 1000;
-	battle_config.item_rate_1000_max = 10000;
 	battle_config.item_rate_common = 100;
 	battle_config.item_rate_equip = 100;
 	battle_config.item_rate_card = 100;

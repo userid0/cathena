@@ -179,13 +179,28 @@ int npc_event_dequeue(struct map_session_data *sd)
 
 	sd->npc_id=0;
 	if (sd->eventqueue[0][0]) {	// キューのイベント処理
-		char *name=(char *)aMalloc(50*sizeof(char));
-		int i;
+		size_t ev;
 
-		memcpy(name,sd->eventqueue[0],50);
-		for(i=MAX_EVENTQUEUE-2;i>=0;i--)
-			memcpy(sd->eventqueue[i],sd->eventqueue[i+1],50);
-		add_timer(gettick()+100,npc_event_timer,sd->bl.id,(int)name);//!!todo!!
+		// find an empty place in eventtimer list
+		for(ev=0;ev<MAX_EVENTTIMER;ev++)
+			if( sd->eventtimer[ev]==-1 )
+				break;
+		if(ev<MAX_EVENTTIMER)
+		{	// generate and insert the timer
+			int i;
+			// copy the first event
+			char *name=(char *)aMalloc(50*sizeof(char));
+			memcpy(name,sd->eventqueue[0],50);
+			// shift queued events down by one
+			for(i=1;i<MAX_EVENTQUEUE;i++)
+				memcpy(sd->eventqueue[i-1],sd->eventqueue[i],50);
+			// clear the last event
+			sd->eventqueue[MAX_EVENTQUEUE-1][0]=0; 
+			// add the timer
+			sd->eventtimer[ev]=add_timer(gettick()+100,pc_eventtimer,sd->bl.id,(int)name);//!!todo!!
+
+		}else
+			ShowMessage("npc_event_dequeue: event timer is full !\n");
 	}
 	return 0;
 }
@@ -196,6 +211,10 @@ int npc_delete(struct npc_data *nd)
 
     if(nd->bl.prev == NULL)
         return 1;
+
+#ifdef PCRE_SUPPORT
+    npc_chat_finalize(nd);
+#endif
 
     clif_clearchar_area(&nd->bl,1);
     map_delblock(&nd->bl);
@@ -256,7 +275,7 @@ int npc_timer_sub_sub(void *key,void *data,va_list ap)	// Added by RoVeRT
 	char *p=(char *)key;
 	struct event_data *ev=(struct event_data *)data;
 	int *c=va_arg(ap,int *);
-	int tick=0,ctick=gettick();
+	unsigned long tick=0,ctick=gettick();
 	char temp[10];
 	char event[100];
 
@@ -456,7 +475,7 @@ int npc_event_do_oninit(void)
  * OnTimer NPC event - by RoVeRT
  *------------------------------------------
  */
-int npc_addeventtimer(struct npc_data *nd,int tick,const char *name)
+int npc_addeventtimer(struct npc_data *nd,unsigned long tick,const char *name)
 {
 	int i;
 	for(i=0;i<MAX_EVENTTIMER;i++)
@@ -482,9 +501,9 @@ int npc_deleventtimer(struct npc_data *nd,const char *name)
 		if( nd->eventtimer[i]!=-1 && strcmp(evname, name)==0 ){
 			aFree(evname);
 			get_timer(nd->eventtimer[i])->data = 0;
-				delete_timer(nd->eventtimer[i],npc_event_timer);
-				nd->eventtimer[i]=-1;
-				break;
+			delete_timer(nd->eventtimer[i],npc_event_timer);
+			nd->eventtimer[i]=-1;
+			break;
 		}
 	}
 	return 0;
@@ -514,7 +533,7 @@ int npc_do_ontimer_sub(void *key,void *data,va_list ap)
 	int *c=va_arg(ap,int *);
 //	struct map_session_data *sd=va_arg(ap,struct map_session_data *);
 	int option=va_arg(ap,int);
-	int tick=0;
+	unsigned long tick=0;
 	char temp[10];
 	char event[50];
 
@@ -652,14 +671,14 @@ int npc_timerevent_stop(struct npc_data *nd)
  */
 int npc_gettimerevent_tick(struct npc_data *nd)
 {
-	int tick;
+	unsigned long tick;
 
 	nullpo_retr(0, nd);
 
 	tick=nd->u.scr.timer;
 
 	if( nd->u.scr.nexttimer>=0 )
-		tick += (int)(gettick() - nd->u.scr.timertick);
+		tick += gettick() - nd->u.scr.timertick;
 	return tick;
 }
 /*==========================================
@@ -699,14 +718,14 @@ int npc_event(struct map_session_data *sd,const char *eventname,int mob_kill)
 	}
 
 	if(ev==NULL && eventname && strcmp(((eventname)+strlen(eventname)-9),"::OnTouch") == 0)
-	return 1;
+		return 1;
 
 	if(ev==NULL || (nd=ev->nd)==NULL){
 		if(mob_kill && (ev==NULL || (nd=ev->nd)==NULL)){
 			strcpy( mobevent, eventname);
 			strcat( mobevent, "::OnMyMobDead");
 			ev= (struct event_data *) strdb_search(ev_db,mobevent);
-	if (ev==NULL || (nd=ev->nd)==NULL) {
+		if (ev==NULL || (nd=ev->nd)==NULL) {
 				if (strncasecmp(eventname,"GM_MONSTER",10)!=0)
 					ShowMessage("npc_event: event not found [%s]\n",mobevent);
 				return 0;
@@ -1228,7 +1247,7 @@ static int npc_walk(struct npc_data *nd,unsigned long tick,int data)
 					continue;
 
 				// remove npc ontouch area from map_cells
-				map_resetcell(nd->bl.m,nd->bl.x-nd->u.scr.xs/2+j,nd->bl.y-nd->u.scr.ys/2+i,CELL_SETNPC);
+				map_setcell(nd->bl.m,nd->bl.x-nd->u.scr.xs/2+j,nd->bl.y-nd->u.scr.ys/2+i,CELL_CLRNPC);
 			}
 		}
 
@@ -1404,7 +1423,7 @@ int npc_stop_walking(struct npc_data *nd,int type)
 
 	if(type&0x02) {
 		int delay=status_get_dmotion(&nd->bl);
-		unsigned int tick = gettick();
+		unsigned long tick = gettick();
 		if(nd->canmove_tick < tick)
 			nd->canmove_tick = tick + delay;
 	}

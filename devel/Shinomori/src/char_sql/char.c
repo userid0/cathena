@@ -1464,7 +1464,7 @@ void mmo_char_sync(void){
 // to do
 ///////////////////////////
 
-int mmo_char_sync_timer(int tid, unsigned int tick, int id, int data) {
+int mmo_char_sync_timer(int tid, unsigned long tick, int id, int data) {
 	ShowMessage("mmo_char_sync_timer() tic - no works to do\n");
 	return 0;
 }
@@ -1846,7 +1846,7 @@ int parse_tologin(int fd) {
 
 		default:
 			ShowMessage("set eof.\n");
-			session_Remove(i);
+			session_Remove(fd);
 			return 0;
 		}
 	}
@@ -1877,7 +1877,7 @@ int map_anti_freeze_system(int tid, unsigned long tick, int id, int data) {
 }
 
 int parse_frommap(int fd) {
-	int i = 0, j = 0;
+	int i, j;
 	int id;
 
 	// Sometimes fd=0, and it will cause server crash. Don't know why. :(
@@ -1890,7 +1890,7 @@ int parse_frommap(int fd) {
 		if (server_fd[id] == fd)
 			break;
 	if(id == MAX_MAP_SERVERS)
-		session_Remove(i);
+		session_Remove(fd);
 	// else it is the map server id
 	if( !session_isActive(fd) ) {
 		
@@ -2013,7 +2013,7 @@ int parse_frommap(int fd) {
 		case 0x2aff:
 			if (RFIFOREST(fd) < 6 || RFIFOREST(fd) < RFIFOW(fd,2))
 				return 0;
-			if (RFIFOW(fd,4) != server[id].users)
+			if ( server[id].users != (unsigned short)RFIFOW(fd,4) )
 				ShowMessage("[UserCount]: %d (Server: %d)\n", RFIFOW(fd,4), id);
 			server[id].users = RFIFOW(fd,4);
 			if(anti_freeze_enable)
@@ -2023,15 +2023,15 @@ int parse_frommap(int fd) {
 
 		// char saving
 		case 0x2b01:
-			i = 0;
 			if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2))
 				return 0;
 			//check account
-			sprintf(tmp_sql, "SELECT count(*) FROM `%s` WHERE `account_id` = '%d' AND `char_id`='%d'",char_db, RFIFOL(fd,4),RFIFOL(fd,8)); // TBR
+			sprintf(tmp_sql, "SELECT count(*) FROM `%s` WHERE `account_id` = '%ld' AND `char_id`='%ld'",char_db, (unsigned long)RFIFOL(fd,4),(unsigned long)RFIFOL(fd,8)); // TBR
 			if (mysql_query(&mysql_handle, tmp_sql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
 			sql_res = mysql_store_result(&mysql_handle);
+			i = 0;
 			if (sql_res) {
 				sql_row = mysql_fetch_row(sql_res);
 				if (sql_row)
@@ -2095,11 +2095,12 @@ int parse_frommap(int fd) {
 			auth_fifo[auth_fifo_pos].sex = RFIFOB(fd,44);
 			auth_fifo[auth_fifo_pos].ip = RFIFOLIP(fd,45);
 
-			sprintf(tmp_sql, "SELECT `char_id`, `name` FROM `%s` WHERE `account_id` = '%d' AND `char_id`='%d'", char_db, RFIFOL(fd,2), RFIFOL(fd,14));
+			sprintf(tmp_sql, "SELECT `char_id`, `name` FROM `%s` WHERE `account_id` = '%ld' AND `char_id`='%ld'", char_db, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,14));
 			if (mysql_query(&mysql_handle, tmp_sql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
 			sql_res = mysql_store_result(&mysql_handle);
+			i = 0;
 			if(sql_res){
 				i = atoi(sql_row[0]);
 				ShowMessage("aid: %d, cid: %d, name: %s", RFIFOL(fd,2), atoi(sql_row[0]), sql_row[1]);
@@ -2111,7 +2112,6 @@ int parse_frommap(int fd) {
 				ShowMessage("Error, aborted\n");
 				return 0;
 			}
-			
 			if(i == 0){
 				WFIFOW(fd, 6) = 0;
 			}
@@ -2120,6 +2120,7 @@ int parse_frommap(int fd) {
 			RFIFOSKIP(fd, 49);
 			ShowMessage(" done.\n");			
 			/*
+			i = 0;
 			if (( sql_row = mysql_fetch_row(sql_res))) {
 				i = atoi(sql_row[0]);
 				mysql_free_result(sql_res);
@@ -2145,7 +2146,7 @@ int parse_frommap(int fd) {
 			if (RFIFOREST(fd) < 6)
 				return 0;
 
-			sprintf(tmp_sql, "SELECT `name` FROM `%s` WHERE `char_id`='%d'", char_db, RFIFOL(fd,2));
+			sprintf(tmp_sql, "SELECT `name` FROM `%s` WHERE `char_id`='%ld'", char_db, (unsigned long)RFIFOL(fd,2));
 			if (mysql_query(&mysql_handle, tmp_sql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
@@ -2336,7 +2337,7 @@ int parse_frommap(int fd) {
 			if (RFIFOREST(fd) < 6 || RFIFOREST(fd) < RFIFOW(fd,8))
 				return 0;
 			sprintf(tmp_sql, "INSERT INTO `ragsrvinfo` SET `index`='%d',`name`='%s',`exp`='%d',`jexp`='%d',`drop`='%d',`motd`='%s'",
-			        fd, server_name, RFIFOW(fd,2), RFIFOW(fd,4), RFIFOW(fd,6), RFIFOP(fd,10));
+			        fd, server_name, (unsigned short)RFIFOW(fd,2), (unsigned short)RFIFOW(fd,4), (unsigned short)RFIFOW(fd,6), (char*)RFIFOP(fd,10));
 			if (mysql_query(&mysql_handle, tmp_sql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
@@ -2782,7 +2783,7 @@ int parse_char(int fd) {
 				mysql_free_result(sql_res);
 				break;
 			}
-			sprintf(tmp_sql, "SELECT `name`,`partner_id` FROM `%s` WHERE `char_id`='%d'",char_db, RFIFOL(fd,2));
+			sprintf(tmp_sql, "SELECT `name`,`partner_id` FROM `%s` WHERE `char_id`='%ld'",char_db, (unsigned long)RFIFOL(fd,2));
 			if (mysql_query(&mysql_handle, tmp_sql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
@@ -2792,31 +2793,31 @@ int parse_char(int fd) {
 
 			if (sql_res && sql_row[0]) {
 				//delete char from SQL
-				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%d'",pet_db, RFIFOL(fd, 2));
+				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%ld'",pet_db, (unsigned long)RFIFOL(fd, 2));
 				if(mysql_query(&mysql_handle, tmp_sql)) {
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
-				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%d'",inventory_db, RFIFOL(fd, 2));
-				if(mysql_query(&mysql_handle, tmp_sql)) {
-						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
-				}
-
-				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%d'",cart_db, RFIFOL(fd, 2));
+				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%ld'",inventory_db, (unsigned long)RFIFOL(fd, 2));
 				if(mysql_query(&mysql_handle, tmp_sql)) {
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
 
-				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%d'",memo_db, RFIFOL(fd, 2));
+				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%ld'",cart_db, (unsigned long)RFIFOL(fd, 2));
 				if(mysql_query(&mysql_handle, tmp_sql)) {
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
 
-				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%d'",skill_db, RFIFOL(fd, 2));
+				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%ld'",memo_db, (unsigned long)RFIFOL(fd, 2));
 				if(mysql_query(&mysql_handle, tmp_sql)) {
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
 
-				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%d'",char_db, RFIFOL(fd, 2));
+				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%ld'",skill_db, (unsigned long)RFIFOL(fd, 2));
+				if(mysql_query(&mysql_handle, tmp_sql)) {
+						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+				}
+
+				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%ld'",char_db, (unsigned long)RFIFOL(fd, 2));
 				if(mysql_query(&mysql_handle, tmp_sql)) {
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
@@ -2838,7 +2839,7 @@ int parse_char(int fd) {
 					mapif_sendall(buf,10);
 				}
 				// Also delete info from guildtables.
-				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%d'",guild_member_db, RFIFOL(fd,2));
+				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%ld'",guild_member_db, (unsigned long)RFIFOL(fd,2));
 				if (mysql_query(&mysql_handle, tmp_sql)) {
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
@@ -2905,7 +2906,7 @@ int parse_char(int fd) {
 			}
 
 			for(i = 0; i < 9; i++) {
-				ShowMessage("char comp: %d - %d (%d)\n", sd->found_char[i], RFIFOL(fd, 2), sd->account_id);
+				ShowMessage("char comp: %d - %ld (%d)\n", sd->found_char[i], (unsigned long)RFIFOL(fd, 2), sd->account_id);
 				if (sd->found_char[i] == (int)RFIFOL(fd, 2)) {
 					for(ch = i; ch < 9-1; ch++)
 						sd->found_char[ch] = sd->found_char[ch+1];
