@@ -1,4 +1,5 @@
 // $Id: vending.c,v 1.2 2004/09/25 05:32:19 MouseJstr Exp $
+#include "base.h"
 #include "socket.h"
 #include "clif.h"
 #include "itemdb.h"

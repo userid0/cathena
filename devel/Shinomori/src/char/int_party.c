@@ -1,17 +1,16 @@
 // $Id: int_party.c,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
-#include "inter.h"
-#include "int_party.h"
-#include "mmo.h"
-#include "char.h"
-#include "socket.h"
-#include "db.h"
-#include "lock.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "showmsg.h"
+#include "base.h"
 #include "utils.h"
 #include "malloc.h"
+#include "socket.h"
+#include "db.h"
+#include "showmsg.h"
+#include "lock.h"
+#include "mmo.h"
+
+#include "inter.h"
+#include "int_party.h"
+#include "char.h"
 
 char party_txt[1024] = "save/party.txt";
 

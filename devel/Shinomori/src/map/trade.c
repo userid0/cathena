@@ -1,3 +1,4 @@
+#include "base.h"
 #include "clif.h"
 #include "itemdb.h"
 #include "map.h"

@@ -1,4 +1,5 @@
 // $Id: int_guild.c,v 1.2 2004/09/25 19:36:53 Akitasha Exp $
+#include "base.h"
 #include "inter.h"
 #include "int_guild.h"
 #include "int_storage.h"
@@ -10,9 +11,6 @@
 #include "showmsg.h"
 #include "utils.h"
 #include "malloc.h"
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 char guild_txt[1024] = "save/guild.txt";
 char castle_txt[1024] = "save/castle.txt";
@@ -1231,20 +1229,20 @@ int mapif_parse_GuildPosition(int fd, int guild_id, int idx, unsigned char *buf)
 }
 
 // ギルドスキルアップ要求
-int mapif_parse_GuildSkillUp(int fd, int guild_id, int skill_num, int account_id) {
+int mapif_parse_GuildSkillUp(int fd, int guild_id, int skillid, int account_id) {
 	struct guild *g = (struct guild *)numdb_search(guild_db, guild_id);
-	int idx = skill_num - GD_SKILLBASE;
+	int skillidx = skillid - GD_SKILLBASE;
 
-	if (g == NULL || idx < 0 || idx >= MAX_GUILDSKILL)
+	if (g == NULL || skillidx < 0 || skillidx >= MAX_GUILDSKILL)
 		return 0;
 
-	if (g->skill_point > 0 && g->skill[idx].id > 0 && g->skill[idx].lv < 10) {
-		g->skill[idx].lv++;
+	if (g->skill_point > 0 && g->skill[skillidx].id > 0 && g->skill[skillidx].lv < 10) {
+		g->skill[skillidx].lv++;
 		g->skill_point--;
 		if (guild_calcinfo(g) == 0)
 			mapif_guild_info(-1, g);
-		mapif_guild_skillupack(guild_id, skill_num, account_id);
-		ShowMessage("int_guild: skill %d up\n", skill_num);
+		mapif_guild_skillupack(guild_id, skillid, account_id);
+		ShowMessage("int_guild: skill %d up\n", skillid);
 	}
 
 	return 0;

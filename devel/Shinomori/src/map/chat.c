@@ -1,4 +1,5 @@
 // $Id: chat.c,v 1.2 2004/09/22 02:59:47 Akitasha Exp $
+#include "base.h"
 #include "db.h"
 #include "nullpo.h"
 #include "malloc.h"

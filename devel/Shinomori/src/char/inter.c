@@ -1,4 +1,5 @@
 // $Id: inter.c,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
+#include "base.h"
 #include "mmo.h"
 #include "char.h"
 #include "socket.h"

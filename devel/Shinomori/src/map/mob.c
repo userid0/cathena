@@ -1,4 +1,5 @@
 // $Id: mob.c,v 1.7 2004/09/25 05:32:18 MouseJstr Exp $
+#include "base.h"
 #include "timer.h"
 #include "socket.h"
 #include "db.h"
@@ -44,8 +45,8 @@ static int mob_makedummymobdb(int);
 static int mob_timer(int tid,unsigned long tick,int id,int data);
 int mobskill_use(struct mob_data *md,unsigned long tick,int event);
 int mobskill_deltimer(struct mob_data *md );
-int mob_skillid2skillidx(int class_,int skillid);
-int mobskill_use_id(struct mob_data *md,struct block_list *target,int skill_idx);
+int mob_skillid2skillidx(int class_,unsigned short skillid);
+int mobskill_use_id(struct mob_data *md,struct block_list *target,unsigned short skill_idx);
 static int mob_unlocktarget(struct mob_data *md,unsigned long tick);
 
 /*==========================================
@@ -1577,7 +1578,7 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 	nullpo_retr(0, ap);
 	nullpo_retr(0, md=(struct mob_data*)bl);
 
-	tick=va_arg(ap,unsigned int);
+	tick=va_arg(ap,unsigned long);
 
 
 	if(DIFF_TICK(tick,md->last_thinktime)<MIN_MOBTHINKTIME)
@@ -1850,7 +1851,7 @@ static int mob_ai_sub_foreachclient(struct map_session_data *sd,va_list ap)
 	nullpo_retr(0, sd);
 	nullpo_retr(0, ap);
 
-	tick=va_arg(ap,unsigned int);
+	tick=va_arg(ap,unsigned long);
 	map_foreachinarea(mob_ai_sub_hard,sd->bl.m,
 					  sd->bl.x-AREA_SIZE*2,sd->bl.y-AREA_SIZE*2,
 					  sd->bl.x+AREA_SIZE*2,sd->bl.y+AREA_SIZE*2,
@@ -1897,7 +1898,7 @@ static int mob_ai_sub_lazy(void * key,void * data,va_list app)
 	if(!md->bl.type || md->bl.type!=BL_MOB)
 		return 0;
 
-	tick=va_arg(ap,unsigned int);
+	tick=va_arg(ap,unsigned long);
 
 	if(DIFF_TICK(tick,md->last_thinktime)<MIN_MOBTHINKTIME*10)
 		return 0;
@@ -2369,12 +2370,12 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 		status_change_end(&md->bl, SC_CLOAKING, -1);
 
 	if(md->state.special_mob_ai == 2){//スフィアーマイン
-		int skillidx=0;
+		int skillidx_=0;
 
-		if((skillidx=mob_skillid2skillidx(md->class_,NPC_SELFDESTRUCTION2))>=0){
+		if((skillidx_ = mob_skillid2skillidx(md->class_,NPC_SELFDESTRUCTION2))>=0){
 			md->mode |= 0x1;
 			md->next_walktime=tick;
-			mobskill_use_id(md,&md->bl,skillidx);//自爆詠唱開始
+			mobskill_use_id(md,&md->bl,skillidx_);//自爆詠唱開始
 			md->state.special_mob_ai++;
 		}
 		if (src && md->master_id==src->id)
@@ -3084,6 +3085,7 @@ static int mob_counttargeted_sub(struct block_list *bl,va_list ap)
 
 	src=va_arg(ap,struct block_list *);
 	target_lv=va_arg(ap,int);
+
 	if(id == bl->id || (src && id == src->id)) return 0;
 	if(bl->type == BL_PC) {
 		struct map_session_data *sd = (struct map_session_data *)bl;
@@ -3122,7 +3124,7 @@ int mob_counttargeted(struct mob_data *md,struct block_list *src,int target_lv)
  *MOBskillから該当skillidのskillidxを返す
  *------------------------------------------
  */
-int mob_skillid2skillidx(int class_,int skillid)
+int mob_skillid2skillidx(int class_,unsigned short skillid)
 {
 	int i;
 	struct mob_skill *ms=mob_db[class_].skill;
@@ -3135,7 +3137,6 @@ int mob_skillid2skillidx(int class_,int skillid)
 			return i;
 	}
 	return -1;
-
 }
 
 //
@@ -3313,7 +3314,7 @@ int mobskill_castend_pos( int tid, unsigned long tick, int id,int data )
  * Skill use (an aria start, ID specification)
  *------------------------------------------
  */
-int mobskill_use_id(struct mob_data *md,struct block_list *target,int skill_idx)
+int mobskill_use_id(struct mob_data *md,struct block_list *target,unsigned short skill_idx)
 {
 	int casttime,range;
 	struct mob_skill *ms;
@@ -3433,13 +3434,12 @@ int mobskill_use_id(struct mob_data *md,struct block_list *target,int skill_idx)
  * スキル使用（場所指定）
  *------------------------------------------
  */
-int mobskill_use_pos( struct mob_data *md,
-	int skill_x, int skill_y, int skill_idx)
+int mobskill_use_pos( struct mob_data *md, int skill_x, int skill_y, unsigned short skill_idx)
 {
 	int casttime=0,range;
 	struct mob_skill *ms;
 	struct block_list bl;
-	short skill_id, skill_lv;
+	unsigned short skill_id, skill_lv;
 
 	nullpo_retr(0, md);
 	nullpo_retr(0, ms=&mob_db[md->class_].skill[skill_idx]);

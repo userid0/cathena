@@ -1,4 +1,5 @@
 // $Id: path.c,v 1.1.1.1 2004/09/10 17:27:00 MagicalTux Exp $
+
 #include "base.h"
 #include "map.h"
 #include "battle.h"
@@ -296,6 +297,190 @@ int path_search_long(int m,int x0,int y0,int x1,int y1)
 		} else if (wy < 0) {
 			wy += weight;
 			y0 --;
+		}
+	}
+
+	return 1;
+}
+///////////////////////////////////////////////////////////////////////////////
+// a bit rearranged and spliting to two loops = 12% faster
+///////////////////////////////////////////////////////////////////////////////
+int path_search_long2(int m,int x0,int y0,int x1,int y1)
+{
+	int dx, dy,x,y;
+	int w = 0;
+
+	struct map_data *md;
+
+	if (!map[m].gat)
+		return 0;
+	md = &map[m];
+
+
+	dx = (x1 - x0);
+	dy = (y1 - y0);
+
+	if (abs(dx) > abs(dy))
+	{
+		if(dx<0)
+		{
+			swap(x0,x1);
+			swap(y0,y1);
+			dx=-dx;
+			dy=-dy;
+		}
+
+		for(x=x0,y=y0; x<=x1; x++)
+		{
+			if (map_getcellp(md,x,y,CELL_CHKWALL))
+				return 0;
+
+			// next point on smaller axis
+			w += dy;
+			if(w >= dx)
+			{
+				w -= dx;
+				y++;
+			}
+			else if(w <= -dx)
+			{
+				w += dx;
+				y--;
+			}
+		}
+	}
+	else
+	{
+		if(dy<0)
+		{
+			swap(x0,x1);
+			swap(y0,y1);
+			dx=-dx;
+			dy=-dy;
+		}
+
+		for(x=x0,y=y0; y<=y1; y++)
+		{
+			if (map_getcellp(md,x,y,CELL_CHKWALL))
+				return 0;
+
+			// next point on smaller axis
+			w += dx;
+			if(w >= dy)
+			{
+				w -= dy;
+				x++;
+			}
+			if(w <= -dy)
+			{
+				w += dy;
+				x--;
+			}
+		}
+	}
+
+	return 1;
+}
+///////////////////////////////////////////////////////////////////////////////
+// splitting to 4 loops = 20% faster
+///////////////////////////////////////////////////////////////////////////////
+int path_search_long3(int m,int x0,int y0,int x1,int y1)
+{
+	int dx, dy,x,y;
+	int w = 0;
+
+	struct map_data *md;
+
+	if (!map[m].gat)
+		return 0;
+	md = &map[m];
+
+
+	dx = (x1 - x0);
+	dy = (y1 - y0);
+
+	if (abs(dx) > abs(dy))
+	{
+		if(dx<0)
+		{
+			swap(x0,x1);
+			swap(y0,y1);
+			dx=-dx;
+			dy=-dy;
+		}
+
+		if(dy>0)
+		{
+			for(x=x0,y=y0; x<=x1; x++)
+			{
+				if (map_getcellp(md,x,y,CELL_CHKWALL))
+					return 0;
+				// next point on smaller axis
+				w += dy;
+				if(w >= dx)
+				{
+					w -= dx;
+					y++;
+				}
+			}
+		}
+		else
+		{
+			for(x=x0,y=y0; x<=x1; x++)
+			{
+				if (map_getcellp(md,x,y,CELL_CHKWALL))
+					return 0;
+				// next point on smaller axis
+				w += dy;
+				if(w <= dx)
+				{
+					w += dx;
+					y--;
+				}
+			}
+		}
+
+	}
+	else
+	{
+		if(dy<0)
+		{
+			swap(x0,x1);
+			swap(y0,y1);
+			dx=-dx;
+			dy=-dy;
+		}
+		if(dx>0)
+		{
+			for(x=x0,y=y0; y<=y1; y++)
+			{
+				if (map_getcellp(md,x,y,CELL_CHKWALL))
+					return 0;
+
+				// next point on smaller axis
+				w += dx;
+				if(w >= dy)
+				{
+					w -= dy;
+					x++;
+				}
+			}
+		}
+		else
+		{
+			for(x=x0,y=y0; y<=y1; y++)
+			{
+				if (map_getcellp(md,x,y,CELL_CHKWALL))
+					return 0;
+
+				// next point on smaller axis
+				w += dx;
+				if(w <= -dy)
+				{
+					w += dy;
+					x--;
+				}
+			}		
 		}
 	}
 

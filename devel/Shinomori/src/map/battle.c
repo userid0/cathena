@@ -1,6 +1,6 @@
 // $Id: battle.c,v 1.10 2004/09/29 21:08:17 Akitasha Exp $
+#include "base.h"
 #include "battle.h"
-
 #include "timer.h"
 #include "nullpo.h"
 #include "malloc.h"
@@ -2158,7 +2158,6 @@ static struct Damage battle_calc_pc_weapon_attack(
 			case CR_GRANDCROSS:
 				hitrate= 1000000;
 				if(!battle_config.gx_cardfix)
-
 					no_cardfix = 1;
 				break;
 			case AM_DEMONSTRATION:	// デモンストレーション
@@ -2900,9 +2899,8 @@ struct Damage battle_calc_weapon_attack(
  * 魔法ダメージ計算
  *------------------------------------------
  */
-struct Damage battle_calc_magic_attack(
-	struct block_list *bl,struct block_list *target,int skill_num,int skill_lv,int flag)
-	{
+struct Damage battle_calc_magic_attack(struct block_list *bl,struct block_list *target,int skill_num,int skill_lv,int flag)
+{
 	int mdef1=status_get_mdef(target);
 	int mdef2=status_get_mdef2(target);
 	int matk1,matk2,damage=0,div_=1,blewcount=skill_get_blewcount(skill_num,skill_lv),rdamage = 0;
@@ -3501,7 +3499,7 @@ int battle_weapon_attack( struct block_list *src,struct block_list *target,
 				clif_damage(src,target,tick+10, wd.amotion, wd.dmotion,0, 1, 0, 0);
 		}
 		if(sd && sd->splash_range > 0 && (wd.damage > 0 || wd.damage2 > 0) )
-			skill_castend_damage_id(src,target,0,-1,tick,0);
+			skill_castend_damage_id(src,target,0,0,tick,0);
 		map_freeblock_lock();
 		battle_delay_damage(tick+wd.amotion,src,target,(wd.damage+wd.damage2),0);
 		if(target->prev != NULL &&
@@ -3768,7 +3766,8 @@ int battle_check_target( struct block_list *src, struct block_list *target,int f
 				// スキルユニットの場合、親を求める
 	if( src->type==BL_SKILL) {
 		struct skill_unit *su = (struct skill_unit *)src;
-		int skillid, inf2;
+		unsigned short skillid;
+		int inf2;
 
 		nullpo_retr (-1, su);
 		nullpo_retr (-1, su->group);
@@ -4175,6 +4174,7 @@ static const struct {
 	{ "finding_ore_rate",       &battle_config.finding_ore_rate}, // [celest]
 	{ "exp_calc_type",          &battle_config.exp_calc_type}, // [celest]
 	{ "min_skill_delay_limit",    &battle_config.min_skill_delay_limit}, // [celest]
+	{ "rainy_waterball",    &battle_config.rainy_waterball}, // [Shinomori]
 
 //SQL-only options start
 #ifndef TXT_ONLY
@@ -4295,7 +4295,7 @@ void battle_set_defaults() {
 	battle_config.max_lv = 99; // [MouseJstr]
 	battle_config.max_parameter = 99;
 	battle_config.max_cart_weight = 8000;
-	battle_config.pc_skill_log = 0;
+	battle_config.pc_skill_log = 1;
 	battle_config.mob_skill_log = 0;
 	battle_config.battle_log = 0;
 	battle_config.save_log = 0;
@@ -4423,6 +4423,7 @@ void battle_set_defaults() {
 	battle_config.area_size = 14;
 	battle_config.exp_calc_type = 1;
 	battle_config.min_skill_delay_limit = 100;
+	battle_config.rainy_waterball = 0;
 
 //SQL-only options start
 #ifndef TXT_ONLY

@@ -1,4 +1,5 @@
 // $Id: int_pet.c,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
+#include "base.h"
 #include "inter.h"
 #include "int_pet.h"
 #include "mmo.h"
@@ -6,9 +7,6 @@
 #include "socket.h"
 #include "db.h"
 #include "lock.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "malloc.h"
 #include "showmsg.h"
 #include "utils.h"

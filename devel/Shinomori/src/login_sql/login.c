@@ -2,6 +2,7 @@
 // original : login2.c 2003/01/28 02:29:17 Rev.1.1.1.1
 // txt version 1.100
 
+#include "base.h"
 #include "core.h"
 #include "socket.h"
 #include "timer.h"

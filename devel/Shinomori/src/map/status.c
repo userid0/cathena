@@ -1,5 +1,6 @@
 
 // ステータス計算、状態異常処理
+#include "base.h"
 #include "pc.h"
 #include "map.h"
 #include "pet.h"
@@ -4839,13 +4840,13 @@ int status_change_timer_sub(struct block_list *bl, va_list ap )
 {
 	struct block_list *src;
 	int type;
-	unsigned int tick;
+	unsigned long tick;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, src=va_arg(ap,struct block_list*));
 	type=va_arg(ap,int);
-	tick=va_arg(ap,unsigned int);
+	tick=va_arg(ap,unsigned long);
 
 	if(bl->type!=BL_PC && bl->type!=BL_MOB)
 		return 0;

@@ -312,6 +312,7 @@ extern struct Battle_Config {
 	int finding_ore_rate; // orn
 	int exp_calc_type;
 	int min_skill_delay_limit;
+	int rainy_waterball; // [Shinomori]
 
 #ifndef TXT_ONLY /* SQL-only options */
 	int mail_system; // [Valaris]

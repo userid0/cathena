@@ -1,4 +1,5 @@
 // $Id: int_storage.c,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
+#include "base.h"
 #include "inter.h"
 #include "int_storage.h"
 #include "int_pet.h"
@@ -11,8 +12,6 @@
 #include "showmsg.h"
 #include "utils.h"
 #include "malloc.h"
-#include <string.h>
-#include <stdlib.h>
 
 // ファイル名のデフォルト
 // inter_config_read()で再設定される

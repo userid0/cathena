@@ -1,3 +1,4 @@
+#include "base.h"
 #include "nullpo.h"
 #include "showmsg.h"
 // #include "logs.h" // •zÎ‚µ‚Ä‚İ‚é

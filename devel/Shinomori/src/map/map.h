@@ -100,8 +100,8 @@ struct skill_unit_group {
 	int limit;
 	int interval;
 
-	short skill_id;
-	short skill_lv;
+	unsigned short skill_id;
+	unsigned short skill_lv;
 	int val1;
 	int val2;
 	int val3;
@@ -122,8 +122,8 @@ struct skill_timerskill {
 	int map;
 	short x;
 	short y;
-	short skill_id;
-	short skill_lv;
+	unsigned short skill_id;
+	unsigned short skill_lv;
 	int type;
 	int flag;
 };
@@ -233,9 +233,9 @@ struct map_session_data {
 	int attacktarget;
 	short attacktarget_lv;
 	unsigned int attackabletime;
-
-        int followtimer; // [MouseJstr]
-        int followtarget;
+	
+	int followtimer; // [MouseJstr]
+	int followtarget;
 
 	short attackrange;
 	short attackrange_;
@@ -255,9 +255,8 @@ struct map_session_data {
 	struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
 	struct skill_timerskill skilltimerskill[MAX_SKILLTIMERSKILL];
 	char blockskill[MAX_SKILL];	// [celest]	
-	unsigned short timerskill_count; // [celest]
-	int cloneskill_id;
-	int cloneskill_lv;
+	unsigned short cloneskill_id;
+	unsigned short cloneskill_lv;
 	int potion_hp;
 	int potion_sp;
 	int potion_per_hp;
@@ -824,8 +823,8 @@ typedef enum {
 struct chat_data {
 	struct block_list bl;
 
-	unsigned char pass[8];   /* password */
-	unsigned char title[61]; /* room title MAX 60 */
+	char pass[8];   /* password */
+	char title[61]; /* room title MAX 60 */
 	unsigned char limit;     /* join limit */
 	unsigned char trigger;
 	unsigned char users;     /* current users */
@@ -881,7 +880,7 @@ void map_foreachinpath(int (*func)(struct block_list*,va_list),int m,int x0,int 
 int map_countnearpc(int,int,int);
 //blockŠÖ˜A‚É’Ç‰Á
 int map_count_oncell(int m,int x,int y);
-struct skill_unit *map_find_skill_unit_oncell(struct block_list *,int x,int y,short skill_id,struct skill_unit *);
+struct skill_unit *map_find_skill_unit_oncell(struct block_list *,int x,int y,unsigned short skill_id,struct skill_unit *);
 // ˆêŽž“IobjectŠÖ˜A
 int map_addobject(struct block_list *);
 int map_delobject(int);

@@ -1,4 +1,5 @@
 // Logging functions by Azndragon & Codemaster
+#include "base.h"
 #include "map.h"
 #include "nullpo.h"
 #include "showmsg.h"

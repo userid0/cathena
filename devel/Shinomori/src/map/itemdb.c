@@ -1,4 +1,5 @@
 // $Id: itemdb.c,v 1.3 2004/09/25 05:32:18 MouseJstr Exp $
+#include "base.h"
 #include "db.h"
 #include "grfio.h"
 #include "nullpo.h"

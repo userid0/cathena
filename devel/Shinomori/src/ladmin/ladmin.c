@@ -5,6 +5,7 @@
 // if you modify this software, modify ladmin in tool too.
 ///////////////////////////////////////////////////////////////////////////
 
+#include "base.h"
 #include "core.h"
 #include "socket.h"
 #include "ladmin.h"
@@ -3867,7 +3868,7 @@ int parse_fromlogin(int fd) {
 		case 0x794f:	// answer of a broadcast
 			if (RFIFOREST(fd) < 4)
 				return 0;
-			if ( RFIFOW(fd,2) == ~0) {
+			if ( RFIFOW(fd,2) == 0xFFFF) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec de l'envoi du message. Aucun server de char en ligne.\n");
 					ladmin_log("Echec de l'envoi du message. Aucun server de char en ligne." RETCODE);

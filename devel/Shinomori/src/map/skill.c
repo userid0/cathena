@@ -1,6 +1,7 @@
 // $Id: skill.c,v 1.8 2004/02/24 10:28:24 PM Celestia $
 /* スキル?係 */
 
+#include "base.h"
 #include "timer.h"
 #include "nullpo.h"
 #include "malloc.h"
@@ -565,7 +566,7 @@ int skill_tree_get_max(int id, int b_class){
 /* プロトタイプ */
 //struct skill_unit_group *skill_unitsetting( struct block_list *src, int skillid,int skilllv,int x,int y,int flag);
 int skill_check_condition( struct map_session_data *sd,int type);
-int skill_castend_damage_id( struct block_list* src, struct block_list *bl,short skillid,short skilllv,unsigned long tick,int flag );
+int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag );
 int skill_frostjoke_scream(struct block_list *bl,va_list ap);
 int status_change_timer_sub(struct block_list *bl, va_list ap );
 int skill_attack_area(struct block_list *bl,va_list ap);
@@ -686,7 +687,7 @@ struct skill_unit_layout *skill_get_unit_layout(int skillid,int skilllv,struct b
  * スキル追加?果
  *------------------------------------------
  */
-int skill_additional_effect( struct block_list* src, struct block_list *bl,short skillid,short skilllv,int attack_type,unsigned long tick)
+int skill_additional_effect( struct block_list* src, struct block_list *bl,unsigned short skillid,unsigned short skilllv,int attack_type,unsigned long tick)
 {
 	/* MOB追加?果スキル用 */
 // dangerous reverse access
@@ -717,12 +718,6 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,short
 	nullpo_retr(0, src);
 	nullpo_retr(0, bl);
 
-	if(skillid < 0) 
-	{	// remove the debug print when this case is finished
-		ShowDebug("skill_additional_effect: skillid=%i\ncall: %p %p %i %i %i %i",skillid,
-						src, bl,skillid,skilllv,attack_type,tick);
-		return 0;
-	}
 	if(skillid > 0 && skilllv <= 0) return 0;	// don't forget auto attacks! - celest
 
 	if (src->type == BL_PC){
@@ -1240,11 +1235,12 @@ int skill_blown( struct block_list *src, struct block_list *target,int count)
  */
 
 int skill_attack( int attack_type, struct block_list* src, struct block_list *dsrc,
-	 struct block_list *bl,short skillid,short skilllv,unsigned long tick,int flag )
+	 struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag )
 {
 	struct Damage dmg;
 	struct status_change *sc_data;
 	int type,lv,damage;
+
 
 	if(skillid > 0 && skilllv <= 0) return 0;
 
@@ -1447,7 +1443,7 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 
 	switch(skillid){
 	case AS_SPLASHER:
-		clif_skill_damage(dsrc,bl,tick,dmg.amotion,dmg.dmotion, damage, dmg.div_, skillid, -1, 5);
+		clif_skill_damage(dsrc,bl,tick,dmg.amotion,dmg.dmotion, damage, dmg.div_, skillid, ~0, 5);
 		break;
 	case NPC_SELFDESTRUCTION:
 	case NPC_SELFDESTRUCTION2:
@@ -1587,11 +1583,13 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
  *------------------------------------------
  */
 static int skill_area_temp[8];	/* 一時??。必要なら使う。 */
-typedef int (*SkillFunc)(struct block_list *,struct block_list *,int,int,unsigned int,int);
+
+typedef int (*SkillFunc)(struct block_list *,struct block_list *,unsigned short,unsigned short,unsigned long,int);
+
 int skill_area_sub( struct block_list *bl,va_list ap )
 {
 	struct block_list *src;
-	short skill_id,skill_lv;
+	unsigned short skillid,skilllv;
 	int flag;
 	unsigned long tick;
 	SkillFunc func;
@@ -1603,14 +1601,18 @@ int skill_area_sub( struct block_list *bl,va_list ap )
 		return 0;
 
 	src=va_arg(ap,struct block_list *); //ここではsrcの値を?照していないのでNULLチェックはしない
-	skill_id=va_arg(ap,int);
-	skill_lv=va_arg(ap,int);
+
+	skillid = (unsigned short)va_arg(ap,unsigned long);
+	skilllv = (unsigned short)va_arg(ap,unsigned long);
+
+if(skillid==0 && skilllv==0)
+	ShowWarning("skill_area_sub params\n");
 	tick=va_arg(ap,unsigned long);
 	flag=va_arg(ap,int);
 	func=va_arg(ap,SkillFunc);
 
 	if(battle_check_target(src,bl,flag) > 0)
-		func(src,bl,skill_id,skill_lv,tick,flag);
+		func(src,bl,skillid,skilllv,tick,flag);
 	return 0;
 }
 
@@ -1618,7 +1620,8 @@ static int skill_check_unit_range_sub( struct block_list *bl,va_list ap )
 {
 	struct skill_unit *unit;
 	int *c;
-	int skillid,unit_id;
+	unsigned short skillid;
+	int unit_id;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
@@ -1631,7 +1634,11 @@ static int skill_check_unit_range_sub( struct block_list *bl,va_list ap )
 	if(!unit->alive)
 		return 0;
 
-	skillid = va_arg(ap,int);
+	skillid = (unsigned short)va_arg(ap,unsigned long);
+if(skillid==0)
+	ShowWarning("skill_check_unit_range_sub params\n");
+
+
 	unit_id = unit->group->unit_id;
 
 	if (skillid==MG_SAFETYWALL || skillid==AL_PNEUMA) {
@@ -1657,7 +1664,7 @@ static int skill_check_unit_range_sub( struct block_list *bl,va_list ap )
 	return 0;
 }
 
-int skill_check_unit_range(int m,int x,int y,int skillid,int skilllv)
+int skill_check_unit_range(int m,int x,int y,unsigned short skillid,unsigned short skilllv)
 {
 	int c = 0;
 	int range = skill_get_unit_range(skillid);
@@ -1678,7 +1685,7 @@ int skill_check_unit_range(int m,int x,int y,int skillid,int skilllv)
 static int skill_check_unit_range2_sub( struct block_list *bl,va_list ap )
 {
 	int *c;
-	int skillid;
+	unsigned short skillid;
 
 
 	nullpo_retr(0, bl);
@@ -1691,7 +1698,10 @@ static int skill_check_unit_range2_sub( struct block_list *bl,va_list ap )
 	if(bl->type == BL_PC && pc_isdead((struct map_session_data *)bl))
 		return 0;
 
-	skillid = va_arg(ap,int);
+	skillid = (unsigned short)va_arg(ap,unsigned long);
+if(skillid==0)
+	ShowWarning("skill_check_unit_range2_sub params\n");
+
 	if (skillid==HP_BASILICA && bl->type==BL_PC)
 		return 0;
 
@@ -1700,7 +1710,7 @@ static int skill_check_unit_range2_sub( struct block_list *bl,va_list ap )
 	return 0;
 }
 
-int skill_check_unit_range2(int m,int x,int y,int skillid, int skilllv)
+int skill_check_unit_range2(int m,int x,int y,unsigned short skillid, unsigned short skilllv)
 {
 	int c = 0;
 	int range = skill_get_unit_range(skillid);
@@ -1722,7 +1732,7 @@ int skill_check_unit_range2(int m,int x,int y,int skillid, int skilllv)
  * 範?スキル使用?理小分けここから
  */
 /* ?象の?をカウントする。（skill_area_temp[0]を初期化しておくこと） */
-int skill_area_sub_count(struct block_list *src,struct block_list *target,short skillid,short skilllv,unsigned long tick,int flag)
+int skill_area_sub_count(struct block_list *src,struct block_list *target,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag)
 {
 	//if(skilllv <= 0) return 0;
 	if(skillid > 0 && skilllv <= 0) return 0;	// celest
@@ -1736,10 +1746,11 @@ int skill_count_water(struct block_list *src,int range)
 	int i,x,y,cnt = 0,size = range*2+1;
 	struct skill_unit *unit;
 
+	if(src)
 	for (i=0;i<size*size;i++) {
 		x = src->x+(i%size-range);
 		y = src->y+(i/size-range);
-		if (map_getcell(src->m,x,y,CELL_CHKWATER)) {
+		if( map_getcell(src->m,x,y,CELL_CHKWATER) ) {
 			cnt++;
 			continue;
 		}
@@ -1766,8 +1777,10 @@ static int skill_timerskill(int tid,unsigned long tick,int id,int data)
 	int range;
 
 	nullpo_retr(0, src);
-
 	if(src->prev == NULL)
+		return 0;
+
+	if(data<0 || data >=MAX_SKILLTIMERSKILL)
 		return 0;
 
 	if(src->type == BL_PC) {
@@ -1782,16 +1795,15 @@ static int skill_timerskill(int tid,unsigned long tick,int id,int data)
 		nullpo_retr(0, pd = (struct pet_data *)src);
 		skl = &pd->skilltimerskill[data];
 	}
-
 	else
 		return 0;
 
-	nullpo_retr(0, skl);
+	//nullpo_retr(0, skl); // funny isn't it
+
+	if(tid != skl->timer)
+		return 0;
 
 	skl->timer = -1;
-	if (sd) {
-		sd->timerskill_count--;
-	}
 
 	if(skl->target_id) {
 		struct block_list tbl;
@@ -1890,7 +1902,7 @@ static int skill_timerskill(int tid,unsigned long tick,int id,int data)
 		switch(skl->skill_id) {
 			case WZ_METEOR:
 				if(skl->type >= 0) {
-					skill_unitsetting(src,skl->skill_id,skl->skill_lv,skl->type>>16,skl->type&0xFFFF,0);
+					skill_unitsetting(src,skl->skill_id,skl->skill_lv,(skl->type>>16)&0xFFFF,skl->type&0xFFFF,0);
 					clif_skill_poseffect(src,skl->skill_id,skl->skill_lv,skl->x,skl->y,tick);
 				}
 				else
@@ -1906,7 +1918,7 @@ static int skill_timerskill(int tid,unsigned long tick,int id,int data)
  *
  *------------------------------------------
  */
-int skill_addtimerskill(struct block_list *src,unsigned long tick,int target,int x,int y,short skill_id,short skill_lv,int type,int flag)
+int skill_addtimerskill(struct block_list *src,unsigned long tick,int target,int x,int y,unsigned short skill_id,unsigned short skill_lv,int type,int flag)
 {
 	int i;
 
@@ -1917,6 +1929,7 @@ int skill_addtimerskill(struct block_list *src,unsigned long tick,int target,int
 		nullpo_retr(1, sd);
 		for(i=0;i<MAX_SKILLTIMERSKILL;i++) {
 			if(sd->skilltimerskill[i].timer == -1) {
+
 				sd->skilltimerskill[i].timer = add_timer(tick, skill_timerskill, src->id, i);
 				sd->skilltimerskill[i].src_id = src->id;
 				sd->skilltimerskill[i].target_id = target;
@@ -1927,7 +1940,6 @@ int skill_addtimerskill(struct block_list *src,unsigned long tick,int target,int
 				sd->skilltimerskill[i].y = y;
 				sd->skilltimerskill[i].type = type;
 				sd->skilltimerskill[i].flag = flag;
-				sd->timerskill_count++;
 
 				return 0;
 			}
@@ -1993,14 +2005,10 @@ int skill_cleartimerskill(struct block_list *src)
 		struct map_session_data *sd = (struct map_session_data *)src;
 		nullpo_retr(0, sd);
 
-		if (sd->timerskill_count <= 0)
-			return 0;
-
 		for(i=0;i<MAX_SKILLTIMERSKILL;i++) {
 			if(sd->skilltimerskill[i].timer != -1) {
 				delete_timer(sd->skilltimerskill[i].timer, skill_timerskill);
 				sd->skilltimerskill[i].timer = -1;
-				sd->timerskill_count--;
 			}
 		}
 	}
@@ -2027,20 +2035,13 @@ int skill_cleartimerskill(struct block_list *src)
  * （スパゲッティに向けて１?前進！(ダメポ)）
  *------------------------------------------
  */
-int skill_castend_damage_id( struct block_list* src, struct block_list *bl,short skillid,short skilllv,unsigned long tick,int flag )
+int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag )
 {
 	struct map_session_data *sd = NULL;
 	struct status_change *sc_data = status_get_sc_data(src);
 	int i;
 
-	if(skillid < 0)	
-	{	// remove the debug print when this case is finished
-		ShowDebug("skill_castend_damage_id: skillid=%i\ncall: %p %p %i %i %i %i",skillid,
-						src, bl,skillid,skilllv,tick,flag);
-		return 0;
-	}
 	if(skillid > 0 && skilllv <= 0) return 0;
-
 
 	nullpo_retr(1, src);
 	nullpo_retr(1, bl);
@@ -2331,8 +2332,8 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,short
 			skill_attack(BF_WEAPON,src,src,bl,skillid,skilllv,tick,0);
 			/* その後タ?ゲット以外の範??の敵全?に?理を行う */
 			map_foreachinarea(skill_area_sub,
-				bl->m,x-ar,y-ar,x+ar,y+ar,0,
-				src,skillid,skilllv,tick, flag|BCT_ENEMY|1,
+				bl->m, x-ar, y-ar, x+ar, y+ar, 0,
+				src ,skillid,skilllv,tick, flag|BCT_ENEMY|1,
 				skill_castend_damage_id);
 		}
 		break;
@@ -2450,14 +2451,13 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,short
 		skill_attack(BF_MAGIC,src,src,bl,skillid,skilllv,tick,flag);
 		if (skilllv>1) {
 			int cnt,range;
-			range = skilllv>5?2:skilllv/2;
+			range = (skilllv>5) ? 2 : skilllv/2;
 			if (sd)
 				cnt = skill_count_water(src,range)-1;
 			else
 				cnt = skill_get_num(skillid,skilllv)-1;
 			if (cnt>0)
-				skill_addtimerskill(src,tick+150,bl->id,0,0,
-					skillid,skilllv,cnt,flag);
+				skill_addtimerskill(src,tick+150,bl->id,0,0,skillid,skilllv,cnt,flag);
 		}
 		break;
 
@@ -2555,11 +2555,14 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,short
 		break;
 
 	case WZ_FROSTNOVA:			/* フロストノヴァ */
+		{
 		//skill_castend_pos2(src,bl->x,bl->y,skillid,skilllv,tick,0);
 		//skill_attack(BF_MAGIC,src,src,bl,skillid,skilllv,tick,flag);
-		map_foreachinarea(skill_attack_area,src->m,src->x-5,bl->y-5,bl->x+5,bl->y+5,0,BF_MAGIC,src,src,skillid,skilllv,tick,flag,BCT_ENEMY);
+		map_foreachinarea(skill_attack_area,src->m,
+				src->x-5,bl->y-5,bl->x+5,bl->y+5,0,
+				BF_MAGIC,src,src,skillid,skilllv,tick,flag,BCT_ENEMY);
 		break;
-
+		}
 	/* その他 */
 	case HT_BLITZBEAT:			/* ブリッツビ?ト */
 		if(flag&1){
@@ -2642,7 +2645,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,short
 			if((md=(struct mob_data *)src)){
 			skill_area_temp[1]=bl->id;
 				skill_area_temp[2]=status_get_hp(src);
-				clif_skill_nodamage(src,src,NPC_SELFDESTRUCTION,-1,1);
+				clif_skill_nodamage(src,src,NPC_SELFDESTRUCTION,~0,1);
 			map_foreachinarea(skill_area_sub,
 				bl->m,bl->x-5,bl->y-5,bl->x+5,bl->y+5,0,
 					src,skillid,skilllv,tick, flag|BCT_ENEMY|1,
@@ -2712,7 +2715,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,short
  * スキル使用（詠唱完了、ID指定支援系）
  *------------------------------------------
  */
-int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,short skillid,short skilllv,unsigned long tick,int flag )
+int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag )
 {
 	struct map_session_data *sd=NULL;
 	struct map_session_data *dstsd=NULL;
@@ -2726,12 +2729,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,sho
 				,1157,1159,1190,1272,1312,1373,1492};
 	int poringclass[]={1002};
 
-	if(skillid < 0) 
-	{	// remove the debug print when this case is finished
-		ShowDebug("skill_castend_nodamage_id: skillid=%i\ncall: %p %p %i %i %i %i",skillid,
-						src, bl,skillid,skilllv,tick,flag);
-		return 0;
-	}
+
 	if(skillid > 0 && skilllv <= 0) return 0;	// celest
 
 	nullpo_retr(1, src);
@@ -3448,7 +3446,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,sho
 		{
 			struct status_change *tsc_data = status_get_sc_data(bl);
 			int sc=SkillStatusChangeTable[skillid];
-			clif_skill_nodamage(src,bl,skillid,-1,1);
+			clif_skill_nodamage(src,bl,skillid,~0,1);
 			if(tsc_data && tsc_data[sc].timer!=-1 )
 				/* 解除する */
 				status_change_end(bl, sc, -1);
@@ -3462,7 +3460,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,sho
 		{
 			struct status_change *tsc_data = status_get_sc_data(bl);
 			int sc=SkillStatusChangeTable[skillid];
-			clif_skill_nodamage(src,bl,skillid,-1,1);
+			clif_skill_nodamage(src,bl,skillid,~0,1);
 			if(tsc_data && tsc_data[sc].timer!=-1 )
 				/* 解除する */
 				status_change_end(bl, sc, -1);
@@ -3477,7 +3475,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,sho
 		{
 			struct status_change *tsc_data = status_get_sc_data(bl);
 			int sc=SkillStatusChangeTable[skillid];
-			clif_skill_nodamage(src,bl,skillid,-1,1);
+			clif_skill_nodamage(src,bl,skillid,~0,1);
 			if(tsc_data && tsc_data[sc].timer!=-1 )
 				/* 解除する */
 				status_change_end(bl, sc, -1);
@@ -4692,12 +4690,12 @@ int skill_castend_id(int tid,unsigned long tick,int id,int data)
  * スキル使用（詠唱完了、場所指定の?際の?理）
  *------------------------------------------
  */
-int skill_castend_pos2( struct block_list *src, int x,int y,short skillid,short skilllv,unsigned long tick,int flag)
+int skill_castend_pos2(struct block_list *src, int x,int y,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag)
 {
 	struct map_session_data *sd=NULL;
 	int i,tmpx = 0,tmpy = 0, x1 = 0, y1 = 0;
 
-	if(skillid < 0) return 0;
+
 	if(skillid > 0 && skilllv <= 0) return 0;	// celest
 
 	nullpo_retr(0, src);
@@ -5023,7 +5021,7 @@ int skill_castend_map( struct map_session_data *sd,int skill_num, const char *ma
  * スキルユニット設定?理
  *------------------------------------------
  */
-struct skill_unit_group *skill_unitsetting( struct block_list *src, short skillid,short skilllv,int x,int y,int flag)
+struct skill_unit_group *skill_unitsetting( struct block_list *src, unsigned short skillid,unsigned short skilllv,int x,int y,int flag)
 {
 	struct skill_unit_group *group;
 	int i,limit,val1=0,val2=0,val3=0;
@@ -5164,11 +5162,10 @@ struct skill_unit_group *skill_unitsetting( struct block_list *src, short skilli
 		target=BCT_ALL;
 		limit=300000;
 		break;
-
-	default:
-		if(battle_config.error_log)
-			ShowMessage ("skill_unitsetting: Unknown skill id = %d\n",skillid);
-		return 0;
+//	default:
+//		//if(battle_config.error_log)
+//			ShowMessage ("skill_unitsetting: Unknown skill id = %d\n",skillid);
+//		return 0;
 	}
 
 	nullpo_retr(NULL, group=skill_initunitgroup(src,(count > 0 ? count : layout->count),
@@ -6637,7 +6634,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		}
 		break;
 	case ST_WATER:
-		if((!map_getcell(sd->bl.m,sd->bl.x,sd->bl.y,CELL_CHKWATER))&& (sd->sc_data[SC_DELUGE].timer==-1)){	//水場判定
+		if((!map_getcell(sd->bl.m,sd->bl.x,sd->bl.y,CELL_CHKWATER)) && (sd->sc_data[SC_DELUGE].timer==-1)){	//水場判定
 			clif_skill_fail(sd,skill,0,0);
 			return 0;
 		}
@@ -6816,7 +6813,7 @@ int skill_delayfix( struct block_list *bl, int time )
  * スキル使用（ID指定）
  *------------------------------------------
  */
-int skill_use_id( struct map_session_data *sd, int target_id,int skill_num, int skill_lv)
+int skill_use_id( struct map_session_data *sd, int target_id,unsigned short skill_num, unsigned short skill_lv)
 {
 	unsigned long tick;
 	int casttime=0,delay=0,skill,range;
@@ -7175,8 +7172,7 @@ int skill_use_id( struct map_session_data *sd, int target_id,int skill_num, int 
  * スキル使用（場所指定）
  *------------------------------------------
  */
-int skill_use_pos( struct map_session_data *sd,
-	int skill_x, int skill_y, int skill_num, int skill_lv)
+int skill_use_pos( struct map_session_data *sd, int skill_x, int skill_y, unsigned short skill_num, unsigned short skill_lv)
 {
 	struct block_list bl;
 	struct status_change *sc_data;
@@ -7708,15 +7704,18 @@ int skill_gangsterparadise(struct map_session_data *sd ,int type)
 int skill_frostjoke_scream(struct block_list *bl,va_list ap)
 {
 	struct block_list *src;
-	int skillnum,skilllv;
+	unsigned short skillid;
+	unsigned short skilllv;
 	unsigned long tick;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, src=va_arg(ap,struct block_list*));
 
-	skillnum=va_arg(ap,int);
-	skilllv=va_arg(ap,int);
+	skillid=(unsigned short)va_arg(ap,unsigned long);
+	skilllv=(unsigned short)va_arg(ap,unsigned long);
+if(skillid==0 && skilllv==0)
+	ShowWarning("skill_frostjoke_scream params\n");
 	if(skilllv <= 0) return 0;
 	tick=va_arg(ap,unsigned long);
 
@@ -7724,10 +7723,10 @@ int skill_frostjoke_scream(struct block_list *bl,va_list ap)
 		return 0;
 
 	if(battle_check_target(src,bl,BCT_ENEMY) > 0)
-		skill_additional_effect(src,bl,skillnum,skilllv,BF_MISC,tick);
+		skill_additional_effect(src,bl,skillid,skilllv,BF_MISC,tick);
 	else if(battle_check_target(src,bl,BCT_PARTY) > 0) {
 		if(rand()%100 < 10)//PTメンバにも低確率でかかる(とりあえず10%)
-			skill_additional_effect(src,bl,skillnum,skilllv,BF_MISC,tick);
+			skill_additional_effect(src,bl,skillid,skilllv,BF_MISC,tick);
 	}
 
 	return 0;
@@ -7806,22 +7805,27 @@ void skill_basilica_cell(struct skill_unit *unit,int flag)
 int skill_attack_area(struct block_list *bl,va_list ap)
 {
 	struct block_list *src,*dsrc;
-	int atk_type,skillid,skilllv,flag,type;
+	int atk_type;
+	unsigned short skillid,skilllv;
+	int flag,type;
 	unsigned long tick;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
 	atk_type = va_arg(ap,int);
-	if((src=va_arg(ap,struct block_list*)) == NULL)
+	src      = va_arg(ap,struct block_list*);
+	dsrc     = va_arg(ap,struct block_list*);
+	if( (src == NULL) || (dsrc == NULL) )
 		return 0;
-	if((dsrc=va_arg(ap,struct block_list*)) == NULL)
-		return 0;
-	skillid=va_arg(ap,int);
-	skilllv=va_arg(ap,int);
-	//if(skilllv <= 0) return 0;
+	skillid  = (unsigned short)va_arg(ap,unsigned long);
+	skilllv  = (unsigned short)va_arg(ap,unsigned long);
+if(skillid==0 && skilllv==0)
+	ShowWarning("skill_attack_area params\n");
+
 	if(skillid > 0 && skilllv <= 0) return 0;	// celest
-	tick=va_arg(ap,unsigned int);
+
+	tick=va_arg(ap,unsigned long);
 	flag=va_arg(ap,int);
 	type=va_arg(ap,int);
 
@@ -7870,14 +7874,16 @@ int skill_clear_element_field(struct block_list *bl)
  */
 int skill_landprotector(struct block_list *bl, va_list ap )
 {
-	int skillid;
+	unsigned short skillid;
 	int *alive;
 	struct skill_unit *unit;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
-	skillid=va_arg(ap,int);
+	skillid=(unsigned short)va_arg(ap,unsigned long);
+if(skillid==0)
+	ShowWarning("skill_landprotector params\n");
 	alive=va_arg(ap,int *);
 	if((unit=(struct skill_unit *)bl) == NULL)
 		return 0;
@@ -7944,7 +7950,7 @@ int skill_count_target(struct block_list *bl, va_list ap)
 int skill_trap_splash(struct block_list *bl, va_list ap )
 {
 	struct block_list *src;
-	int tick;
+	unsigned long tick;
 	int splash_count;
 	struct skill_unit *unit;
 	struct skill_unit_group *sg;
@@ -7958,7 +7964,7 @@ int skill_trap_splash(struct block_list *bl, va_list ap )
 	nullpo_retr(0, sg = unit->group);
 	nullpo_retr(0, ss = map_id2bl(sg->src_id));
 
-	tick = va_arg(ap,int);
+	tick = va_arg(ap,unsigned long);
 	splash_count = va_arg(ap,int);
 
 	if(battle_check_target(src,bl,BCT_ENEMY) > 0){
@@ -8190,7 +8196,7 @@ int skill_delunit(struct skill_unit *unit)
  */
 static int skill_unit_group_newid = MAX_SKILL_DB;
 
-struct skill_unit_group *skill_initunitgroup(struct block_list *src,int count,short skillid,short skilllv,int unit_id)
+struct skill_unit_group *skill_initunitgroup(struct block_list *src,int count,unsigned short skillid,unsigned short skilllv,int unit_id)
 {
 	int i;
 	struct skill_unit_group *group=NULL, *list=NULL;
@@ -8393,12 +8399,12 @@ int skill_unit_timer_sub_onplace( struct block_list *bl, va_list ap )
 {
 	struct skill_unit *unit;
 	struct skill_unit_group *group;
-	unsigned int tick;
+	unsigned long tick;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	unit = va_arg(ap,struct skill_unit *);
-	tick = va_arg(ap,unsigned int);
+	tick = va_arg(ap,unsigned long);
 
 	if (bl->type!=BL_PC && bl->type!=BL_MOB)
 		return 0;
@@ -8424,12 +8430,12 @@ int skill_unit_timer_sub( struct block_list *bl, va_list ap )
 	struct skill_unit *unit;
 	struct skill_unit_group *group;
 	int range;
-	unsigned int tick;
+	unsigned long tick;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, unit=(struct skill_unit *)bl);
-	tick=va_arg(ap,unsigned int);
+	tick=va_arg(ap,unsigned long);
 
 	if(!unit->alive)
 		return 0;
@@ -8540,12 +8546,13 @@ int skill_unit_move_sub( struct block_list *bl, va_list ap )
 	struct skill_unit *unit = (struct skill_unit *)bl;
 	struct skill_unit_group *group;
 	struct block_list *target;
-	unsigned int tick,flag;
+	unsigned long tick;
+	int flag;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, target=va_arg(ap,struct block_list*));
-	tick = va_arg(ap,unsigned int);
+	tick = va_arg(ap,unsigned long);
 	flag = va_arg(ap,int);
 
 	if (target->type!=BL_PC && target->type!=BL_MOB)
@@ -8570,7 +8577,7 @@ int skill_unit_move_sub( struct block_list *bl, va_list ap )
  * スキルユニット移動時?理
  *------------------------------------------
  */
-int skill_unit_move(struct block_list *bl,unsigned int tick,int flag)
+int skill_unit_move(struct block_list *bl,unsigned long tick,int flag)
 {
 	nullpo_retr(0, bl);
 

@@ -1,4 +1,5 @@
 // $Id: pet.c,v 1.4 2004/09/25 05:32:18 MouseJstr Exp $
+#include "base.h"
 #include "db.h"
 #include "timer.h"
 #include "socket.h"
@@ -501,7 +502,9 @@ static int pet_hungry(int tid,unsigned long tick,int id,int data)
 			ShowMessage("pet_hungry_timer %d != %d\n",sd->pet_hungry_timer,tid);
 		return 0;
 	}
+	
 	sd->pet_hungry_timer = -1;
+
 	if(!sd->status.pet_id || !sd->pd || !sd->petDB)
 		return 1;
 

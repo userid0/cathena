@@ -46,7 +46,7 @@ int pc_break_equip(struct map_session_data *, unsigned short);
 #define pc_breakshield(sd)	(pc_break_equip(sd, EQP_SHIELD))
 #define pc_breakhelm(sd)	(pc_break_equip(sd, EQP_HELM))
 
-int pc_checkskill(struct map_session_data *sd,short skill_id);
+int pc_checkskill(struct map_session_data *sd,unsigned short skill_id);
 int pc_checkallowskill(struct map_session_data *sd);
 int pc_checkequip(struct map_session_data *sd,int pos);
 
@@ -90,9 +90,9 @@ int pc_bonus(struct map_session_data*,int,int);
 int pc_bonus2(struct map_session_data *sd,int,int,int);
 int pc_bonus3(struct map_session_data *sd,int,int,int,int);
 int pc_bonus4(struct map_session_data *sd,int,int,int,int,int);
-int pc_skill(struct map_session_data*,int,int,int);
 
-void pc_blockskill_start (struct map_session_data *sd, short skillid, unsigned long tick);	// [celest]
+int pc_skill(struct map_session_data *sd,unsigned short skillid,unsigned short skilllvl,int flag);
+void pc_blockskill_start (struct map_session_data *sd, unsigned short skillid, unsigned long tick);	// [celest]
 
 int pc_insert_card(struct map_session_data *sd,int idx_card,int idx_equip);
 
@@ -120,7 +120,7 @@ int pc_nextjobafter(struct map_session_data *); // [Valaris]
 int pc_need_status_point(struct map_session_data *,int);
 int pc_statusup(struct map_session_data*,int);
 int pc_statusup2(struct map_session_data*,int,int);
-int pc_skillup(struct map_session_data*,int);
+int pc_skillup(struct map_session_data *sd, unsigned short skillid);
 int pc_allskillup(struct map_session_data*);
 int pc_resetlvl(struct map_session_data*,int type);
 int pc_resetstate(struct map_session_data*);

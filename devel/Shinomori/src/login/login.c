@@ -1,6 +1,7 @@
 // $Id: login.c,v 1.1.1.1 2004/09/10 17:26:53 MagicalTux Exp $
 // new version of the login-server by [Yor]
 
+#include "base.h"
 #include "core.h"
 #include "socket.h"
 #include "timer.h"

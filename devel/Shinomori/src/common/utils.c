@@ -192,7 +192,7 @@ int remove_control_chars(char *str) {
 	int change = 0;
 	if(str)
 	while( *str ) {
-		if ( ((*str)&0x7f) < 32) {
+		 if ( (*str<32) && (*str>0) ) {
 			*str = '_';
 			change = 1;
 		}

@@ -1,5 +1,6 @@
 // $Id: atcommand.c 148 2004-09-30 14:05:37Z MouseJstr $
 
+#include "base.h"
 #include "socket.h"
 #include "timer.h"
 #include "nullpo.h"
@@ -7240,21 +7241,21 @@ int
 atcommand_skillid(const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-        int skillen = 0, idx = 0;
+	int skillen = 0, idx = 0;
 	nullpo_retr(-1, sd);
 	if (!message || !*message)
 		return -1;
-        skillen = strlen(message);
-        while (skill_names[idx].id != 0) {
-            if ((strncasecmp(skill_names[idx].name, message, skillen) == 0) ||
-            (strncasecmp(skill_names[idx].desc, message, skillen) == 0)) {
-               char output[255];
-               sprintf(output, "skill %d: %s", skill_names[idx].id, skill_names[idx].desc);
-	       clif_displaymessage(fd, output);
-            }
-            idx++;
-        }
-        return 0;
+	skillen = strlen(message);
+	while (skill_names[idx].id != 0) {
+		if ((strncasecmp(skill_names[idx].name, message, skillen) == 0) ||
+			(strncasecmp(skill_names[idx].desc, message, skillen) == 0)) {
+			char output[255];
+			sprintf(output, "skill %d: %s", skill_names[idx].id, skill_names[idx].desc);
+			clif_displaymessage(fd, output);
+		}
+		idx++;
+	}
+	return 0;
 }
 
 /*==========================================

@@ -33,10 +33,10 @@ public:
     ipaddress(const ipaddress& a):ldata(a.ldata){}
     ipaddress(int a, int b, int c, int d)
 	{
-		ldata =	 uchar(a) << 0x18
-				|uchar(b) << 0x10
-				|uchar(c) << 0x08
-				|uchar(d)        ;
+		ldata =	 (a&0xFF) << 0x18
+				|(b&0xFF) << 0x10
+				|(c&0xFF) << 0x08
+				|(d&0xFF)        ;
 	}
     ipaddress& operator= (ulong a)              { ldata = a; return *this; }
     ipaddress& operator= (const ipaddress& a)   { ldata = a.ldata; return *this; }
@@ -59,7 +59,7 @@ public:
 		else
 			return bdata[3-i];
 	}
-    const uchar& operator [] (int i) const
+    const uchar operator [] (int i) const
 	{ 
 #ifdef CHECK_BOUNDS
 		if( (i>=4) || (i<0) )
@@ -67,8 +67,7 @@ public:
 #ifdef CHECK_EXCEPTIONS
 			throw exception_bound("ipaddress: out of bound access");
 #else//!CHECK_EXCEPTIONS
-			static uchar dummy;
-			return dummy=0;
+			return 0;
 #endif//!CHECK_EXCEPTIONS
 		}
 #endif//CHECK_BOUNDS
@@ -78,6 +77,30 @@ public:
 		else
 			return bdata[3-i];
 	}
+
+	void toBuffer(uchar *buf) const
+	{	// implement little endian buffer format
+		// IPs are placed in network byte order to the buffer
+		if(buf)
+		{
+			buf[0] = (uchar)((ldata >> 0x18)&0xFF);
+			buf[1] = (uchar)((ldata >> 0x10)&0xFF);
+			buf[2] = (uchar)((ldata >> 0x08)&0xFF);
+			buf[3] = (uchar)((ldata        )&0xFF);
+		}
+	}
+	void fromBuffer(const uchar *buf)
+	{	// implement little endian buffer format
+		// IPs are placed in network byte order to the buffer
+		if(buf)
+		{
+			ldata =	 buf[0] << 0x18
+					|buf[1] << 0x10
+					|buf[2] << 0x08
+					|buf[3]        ;
+		}
+	}
+
     operator ulong() const                      { return ldata; }
 };
 
@@ -524,7 +547,7 @@ public:
 	}
 	///////////////////////////////////////////////////////////////////////////
 	unsigned char operator = (const unsigned char ch)
-	{	// no check pust will throw anyway
+	{	// no check push will throw anyway
 		push(ch);
 		return ch;
 	}

@@ -1,4 +1,5 @@
 // $Id: chrif.c,v 1.6 2004/09/25 11:39:17 MouseJstr Exp $
+#include "base.h"
 #include "socket.h"
 #include "timer.h"
 #include "map.h"

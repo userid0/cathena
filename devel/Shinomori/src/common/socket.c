@@ -435,7 +435,6 @@ int recv_to_fifo(int fd)
 		// the socket has been terminated
 		session[fd]->flag.connected = false;
 	}
-
 	return 0;
 }
 
@@ -558,7 +557,13 @@ void flush_fifos()
 }
 int realloc_fifo(int fd,int rfifo_size,int wfifo_size)
 {
-	struct socket_data *s=session[fd];
+	struct socket_data *s;
+	
+	if( !session_isActive(fd) )
+		return 0;
+
+	s =session[fd];
+
 	if( s->max_rdata != rfifo_size && s->rdata_size < rfifo_size){
 		RECREATE(s->rdata, unsigned char, rfifo_size);
 		s->max_rdata  = rfifo_size;
@@ -572,7 +577,12 @@ int realloc_fifo(int fd,int rfifo_size,int wfifo_size)
 
 int WFIFOSET(int fd,int len)
 {
-	struct socket_data *s=session[fd];
+	struct socket_data *s;
+	
+	if( !session_isActive(fd) )
+		return 0;
+
+	s =session[fd];
 	if (s == NULL  || s->wdata == NULL)
 		return 0;
 	if( s->wdata_size+len+16384 > s->max_wdata ){
@@ -867,7 +877,7 @@ int start_console(void) {
 ///////////////////////////////////////////////////////////////////////////////
 void process_read(size_t fd)
 {
-	if( session[fd] )
+	if( session_isValid(fd) )
 	{
 		if( session[fd]->func_recv )
 			session[fd]->func_recv((int)fd);
@@ -891,7 +901,7 @@ void process_read(size_t fd)
 ///////////////////////////////////////////////////////////////////////////////
 void process_write(size_t fd)
 {
-	if( session[fd] )
+	if( session_isValid(fd) )
 	{
 		if( session[fd]->func_send )
 			session[fd]->func_send((int)fd);
@@ -1316,7 +1326,15 @@ void socket_final(void)
 
 
 
+class streamable
+{
+public:
+	streamable()			{}
+	virtual ~streamable()	{}
 
+	virtual void toBuffer(uchar *buf) const   = 0;
+	virtual void fromBuffer(const uchar *buf) = 0;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -1325,43 +1343,43 @@ void socket_final(void)
 // 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// class that holds all IP addresses in the app
+// class that holds the IP addresses of app
 // 
 // we need a lan_ip, subnetmask and lan port; further a wan ip and wan port
-// for any place currently ip/port is used
-// if not set explicitely, the initial network address will be used
+// if not set explicitely, the initial network addresses will be used
 // wan ip and port will the same as lan values when not specified, 
 // and subnetmask is BROADCAST
+// also used to check if a bind address is valid or not
 //
 ///////////////////////////////////////////////////////////////////////////////
-
-class ipset
+class ipset : public streamable
 {
+	template <uint C> class _ipset_helper
+	{	
+		ulong	cAddr[C];	// ip addresses of local host (host byte order)
+		uint	cCnt;		// # of ip addresses
 
-	class _ipset_helper
-	{
 	public:
-		unsigned long addr_[16];// ip addresses of local host (host byte order)
-		unsigned int naddr_;	// # of ip addresses
-
-		_ipset_helper() : naddr_(0)
+		_ipset_helper() : cCnt(0)
 		{
 
 #ifdef WIN32
-			char** a;
+			uchar** a;
 			unsigned int i;
 			char fullhost[255];
 			struct hostent* hent;
 			
 			/* Start up the windows networking */
 			WSADATA wsaData;
-			if ( WSAStartup(WINSOCK_VERSION, &wsaData) != 0 ) {
-				ShowError("SYSERR: WinSock not available!\n");
+			if ( WSAStartup(WINSOCK_VERSION, &wsaData) != 0 )
+			{
+				printf("SYSERR: WinSock not available!\n");
 				exit(1);
 			}
 			
-			if(gethostname(fullhost, sizeof(fullhost)) == SOCKET_ERROR) {
-				ShowWarning("Ugg.. no hostname defined!\n");
+			if(gethostname(fullhost, sizeof(fullhost)) == SOCKET_ERROR)
+			{
+				printf("No hostname defined!\n");
 				return;
 			} 
 			
@@ -1369,17 +1387,20 @@ class ipset
 			// instead of calling gethostbyname. However, the way IP addresses
 			// are stored in the registry is annoyingly complex, so I'll leave
 			// this as T.B.D.
+
 			hent = gethostbyname(fullhost);
 			if (hent == NULL) {
-				ShowWarning("Cannot resolve our own hostname to a IP address");
+				printf("Cannot resolve our own hostname to a IP address");
 				return;
 			}
-			a = hent->h_addr_list;
-			for(i = 0; a[i] != NULL && i < 16; ++i) {
-				unsigned long addr1 = ntohl(RBUFL(a[i],0));
-				addr_[i] = addr1;
+			a = (uchar**)hent->h_addr_list;
+			for(i = 0; a[i] != NULL && i < C; ++i) {
+				cAddr[i] =	  (a[i][0]<<0x18)
+							| (a[i][1]<<0x10)
+							| (a[i][2]<<0x08)
+							| (a[i][3]);
 			}
-			naddr_ = i;
+			cCnt = i;
 #else//not W32
 			int pos;
 			int fdes = socket(AF_INET, SOCK_STREAM, 0);
@@ -1391,7 +1412,7 @@ class ipset
 			ic.ifc_len = sizeof(buf);
 			ic.ifc_buf = buf;
 			if(ioctl(fdes, SIOCGIFCONF, &ic) == -1) {
-				ShowWarning("SIOCGIFCONF failed!\n");
+				printf("SIOCGIFCONF failed!\n");
 				return;
 			}
 			for(pos = 0; pos < ic.ifc_len;   )
@@ -1402,8 +1423,8 @@ class ipset
 				if(a->sin_family == AF_INET) {
 					u_long ad = ntohl(a->sin_addr.s_addr);
 					if(ad != INADDR_LOOPBACK) {
-						addr_[naddr_ ++] = ad;
-						if(naddr_ == 16)
+						cAddr[cCnt++] = ad;
+						if(cCnt == C)
 							break;
 					}
 				}
@@ -1417,55 +1438,93 @@ class ipset
 #endif//not W32	
 		}
 
-
-
+		uint GetSytemCount()	
+		{
+			return cCnt;
+		}
+		ipaddress GetSytemIP(uint i=0)
+		{
+			if( i < cCnt )
+				return cAddr[i];
+			else if(cCnt>0)
+				return cAddr[0];
+			return INADDR_LOOPBACK;
+		}
 	};
 
-	// read a system IP, we might use the first only; maybe play a bit more with that
-	static ipaddress GetSytemIP(size_t i=0)
-	{
-		static _ipset_helper iphelp;
-		if( i < iphelp.naddr_ )
-			return iphelp.addr_[i];
-		else if(iphelp.naddr_)
-			return iphelp.addr_[0];
-		return INADDR_LOOPBACK;
-	}
+	static _ipset_helper<16> iphelp;
 
+
+	// read a system IP, might use the first only; maybe play a bit more with that
+
+	ipaddress	lan_ip;		// LAN ip			(aka computer ip)
+	ipaddress	lan_sub;	// LAN subnetmask	(255.255.255.0 for class-C subnet)
+	ushort		lan_port;	// LAN port			(aka computer port)
+
+	ipaddress	wan_ip;		// WAN ip			(aka router ip)
+	ushort		wan_port;	// WAN port			(aka router port that is forwarded to ip/port on computer)
 
 public:
-	ipaddress	lan_ip;
-	ipaddress	lan_sub;
-	ushort		lan_port;
-
-	ipaddress	wan_ip;
-	ushort		wan_port;
-
-	ipset(const ipaddress lip = INADDR_ANY,			//0.0.0.0
-		  const ipaddress lsu = INADDR_BROADCAST,	//255.255.255.255
+	// construction with defaults
+	ipset(const ipaddress bip = INADDR_ANY,			// 0.0.0.0 (bind on all addresses)
+		  const ipaddress lip = iphelp.GetSytemIP(0),// 127.0.0.1
+		  const ipaddress lsu = INADDR_BROADCAST,	// 255.255.255.255
 		  const ushort lpt    = 0,
-		  const ipaddress wip = INADDR_LOOPBACK,	//127.0.0.1
+		  const ipaddress wip = iphelp.GetSytemIP(0),// identify with the first System IP by default
 		  const ushort wpt    = 0)
 		: lan_ip(lip),lan_sub(lsu),lan_port(lpt),wan_ip(wip),wan_port(wpt)
 	{}
-	bool isLAN(ipaddress ip)
+	virtual ~ipset()	{}
+
+	// check if an given ip is LAN
+	bool isLAN(const ipaddress ip) const
 	{
 		return ( (lan_ip&lan_sub) == (ip&lan_sub) );
 	}
-	bool isWAN(ipaddress ip)
+	// check if an given ip is WAN
+	bool isWAN(const ipaddress ip) const
 	{
 		return ( (lan_ip&lan_sub) != (ip&lan_sub) );
 	}
 
+	static bool isBindable(ipaddress ip)
+	{	// check if an IP is part of the system IP can can be bound to
+		for(uint i=0; i<iphelp.GetSytemCount(); i++)
+			if( ip==iphelp.GetSytemIP(i) )
+				return true;
+		return false;
+	}
 	void check()
 	{	// check for unset wan address/port
-		if( wan_ip == INADDR_LOOPBACK )
-			wan_ip = lan_ip;
 		if( wan_port == 0 ) 
 			wan_port = lan_port;
 	}
-};
 
+	ipaddress LANIP() const	{return lan_ip;}
+	bool SetLANIP(const ipaddress ip)
+	{	// a valid lan address should be bindable
+		if( isBindable(ip) ) 
+		{
+			lan_ip = ip;
+			return true;
+		}
+		return false;
+	}
+	ipaddress& WANIP()		{return wan_ip;}
+	ipaddress& SubnetMask()	{return lan_sub;}
+	ushort& LANPort()		{return lan_port;}
+	ushort& WANPort()		{return wan_port;}
+
+
+	virtual void toBuffer(uchar *buf) const
+	{
+	}
+	virtual void fromBuffer(const uchar *buf)
+	{
+	}
+
+};
+ipset::_ipset_helper<16> ipset::iphelp;
 
 class app_ipaddresses
 {
@@ -1521,44 +1580,39 @@ public:
 			remove_control_chars(w2);
 
 			if (strcasecmp(w1, "login_lan_ip") == 0)
-				ipmap.lan_ip = String2IP(w2);
+				ipmap.SetLANIP( String2IP(w2) );
 			if (strcasecmp(w1, "login_lan_port") == 0)
-				ipmap.lan_port = atoi(w2);
+				ipmap.LANPort() = atoi(w2);
 			if (strcasecmp(w1, "login_subnetmask") == 0)
-				ipmap.lan_sub = String2IP(w2);
+				ipmap.SubnetMask() = String2IP(w2);
 			if (strcasecmp(w1, "login_wan_ip") == 0)
-				ipmap.wan_ip = String2IP(w2);
+				ipmap.WANIP() = String2IP(w2);
 			if (strcasecmp(w1, "login_wan_port") == 0)
-				ipmap.wan_port = atoi(w2);
+				ipmap.WANPort() = atoi(w2);
 
 			if (strcasecmp(w1, "char_lan_ip") == 0)
-				ipmap.lan_ip = String2IP(w2);
+				ipmap.SetLANIP( String2IP(w2) );
 			if (strcasecmp(w1, "char_lan_port") == 0)
-				ipmap.lan_port = atoi(w2);
+				ipmap.LANPort() = atoi(w2);
 			if (strcasecmp(w1, "char_subnetmask") == 0)
-				ipmap.lan_sub = String2IP(w2);
+				ipmap.SubnetMask() = String2IP(w2);
 			if (strcasecmp(w1, "char_wan_ip") == 0)
-				ipmap.wan_ip = String2IP(w2);
+				ipmap.WANIP() = String2IP(w2);
 			if (strcasecmp(w1, "char_wan_port") == 0)
-				ipmap.wan_port = atoi(w2);
+				ipmap.WANPort() = atoi(w2);
 
 			if (strcasecmp(w1, "map_lan_ip") == 0)
-				ipmap.lan_ip = String2IP(w2);
+				ipmap.SetLANIP( String2IP(w2) );
 			if (strcasecmp(w1, "map_lan_port") == 0)
-				ipmap.lan_port = atoi(w2);
+				ipmap.LANPort() = atoi(w2);
 			if (strcasecmp(w1, "map_subnetmask") == 0)
-				ipmap.lan_sub = String2IP(w2);
+				ipmap.SubnetMask() = String2IP(w2);
 			if (strcasecmp(w1, "map_wan_ip") == 0)
-				ipmap.wan_ip = String2IP(w2);
+				ipmap.WANIP() = String2IP(w2);
 			if (strcasecmp(w1, "map_wan_port") == 0)
-				ipmap.wan_port = atoi(w2);
+				ipmap.WANPort() = atoi(w2);
 		}
 		fclose(fp);
-	
-
-
-
-
 
 
 		iplogin.check();

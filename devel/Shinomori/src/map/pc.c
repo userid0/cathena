@@ -1,4 +1,5 @@
 // $Id: pc.c 101 2004-12-13 7:23:07 PM Celestia $
+#include "base.h"
 #include "socket.h" // [Valaris]
 #include "timer.h"
 #include "db.h"
@@ -710,7 +711,6 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 		sd->spirit_timer[i] = -1;
 	for(i = 0; i < MAX_SKILLTIMERSKILL; i++)
 		sd->skilltimerskill[i].timer = -1;
-	sd->timerskill_count=0;
 
 	for (i=0; i<MAX_SKILL; i++)
 		sd->blockskill[i]=0;
@@ -1967,33 +1967,33 @@ int pc_bonus4(struct map_session_data *sd,int type,int type2,int type3,int type4
  * スクリプトによるスキル所得
  *------------------------------------------
  */
-int pc_skill(struct map_session_data *sd,int id,int level,int flag)
+int pc_skill(struct map_session_data *sd,unsigned short skillid,unsigned short skilllvl,int flag)
 {
 	nullpo_retr(0, sd);
 
-	if(level>MAX_SKILL_LEVEL){
+	if(skilllvl > MAX_SKILL_LEVEL){
 		if(battle_config.error_log)
 			ShowMessage("support card skill only!\n");
 		return 0;
 	}
-	if(!flag && (sd->status.skill[id].id == id || level == 0)){	// クエスト所得ならここで?件を確認して送信する
-		sd->status.skill[id].lv=level;
+	if(!flag && (sd->status.skill[skillid].id == skillid || skilllvl == 0)){	// クエスト所得ならここで?件を確認して送信する
+		sd->status.skill[skillid].lv=skilllvl;
 		status_calc_pc(sd,0);
 		clif_skillinfoblock(sd);
 	}
-	else if(flag==2 && (sd->status.skill[id].id == id || level == 0)){	// クエスト所得ならここで?件を確認して送信する
-		sd->status.skill[id].lv+=level;
+	else if(flag==2 && (sd->status.skill[skillid].id == skillid || skilllvl == 0)){	// クエスト所得ならここで?件を確認して送信する
+		sd->status.skill[skillid].lv+=skilllvl;
 		status_calc_pc(sd,0);
 		clif_skillinfoblock(sd);
 	}
-	else if(sd->status.skill[id].lv < level){	// ?えられるがlvが小さいなら
-		if(sd->status.skill[id].id==id)
-			sd->status.skill[id].flag=sd->status.skill[id].lv+2;	// lvを記憶
+	else if(sd->status.skill[skillid].lv < skilllvl){	// ?えられるがlvが小さいなら
+		if(sd->status.skill[skillid].id==skillid)
+			sd->status.skill[skillid].flag=sd->status.skill[skillid].lv+2;	// lvを記憶
 		else {
-			sd->status.skill[id].id=id;
-			sd->status.skill[id].flag=1;	// cardスキルとする
+			sd->status.skill[skillid].id=skillid;
+			sd->status.skill[skillid].flag=1;	// cardスキルとする
 		}
-		sd->status.skill[id].lv=level;
+		sd->status.skill[skillid].lv=skilllvl;
 	}
 
 	return 0;
@@ -2012,7 +2012,7 @@ int pc_blockskill_end(int tid,unsigned long tick,int id,int data)
 	
 	return 1;
 }
-void pc_blockskill_start (struct map_session_data *sd, short skillid, unsigned long tick)
+void pc_blockskill_start (struct map_session_data *sd, unsigned short skillid, unsigned long tick)
 {
 	nullpo_retv(sd);
 
@@ -3499,7 +3499,7 @@ int pc_movepos(struct map_session_data *sd,int dst_x,int dst_y)
  * スキルの?索 所有していた場合Lvが返る
  *------------------------------------------
  */
-int pc_checkskill(struct map_session_data *sd,short skill_id)
+int pc_checkskill(struct map_session_data *sd,unsigned short skill_id)
 {
 	if(sd == NULL) return 0;
 	if( skill_id>=10000 ){
@@ -3673,7 +3673,6 @@ int pc_attack_timer(int tid,unsigned long tick,int id,int data)
 		return 0;
 
 	sd->idletime = tick_;
-
 	if(sd->attacktimer != tid){
 		if(battle_config.error_log)
 			ShowMessage("pc_attack_timer %d != %d\n",sd->attacktimer,tid);
@@ -3700,8 +3699,8 @@ int pc_attack_timer(int tid,unsigned long tick,int id,int data)
 	if(sd->bl.m != bl->m || pc_isdead(sd))
 		return 0;
 
-	//if( sd->opt1>0 || sd->status.option&2 || sd->status.option&16388)	// 異常などで攻?できない
-	if( sd->opt1>0 || sd->status.option&2 || sd->status.option&16384)	// 異常などで攻?できない
+	//if( sd->opt1>0 || sd->status.option&2 || sd->status.option&0x4004)	// 異常などで攻?できない
+	if( sd->opt1>0 || sd->status.option&2 || sd->status.option&0x4000)	// 異常などで攻?できない
 		return 0;
 
 	if (sd->sc_count) {
@@ -3746,7 +3745,7 @@ int pc_attack_timer(int tid,unsigned long tick,int id,int data)
 	}
 	else {
 		if(battle_config.pc_attack_direction_change)
-			sd->dir=sd->head_dir=map_calc_dir(&sd->bl, bl->x,bl->y );	// 向き設定
+			sd->dir=sd->head_dir = map_calc_dir(&sd->bl, bl->x,bl->y );	// 向き設定
 
 		if(sd->walktimer != -1)
 			pc_stop_walking(sd,1);
@@ -4296,24 +4295,24 @@ int pc_statusup2(struct map_session_data *sd,int type,int val)
  * スキルポイント割り振り
  *------------------------------------------
  */
-int pc_skillup(struct map_session_data *sd,int skill_num)
+int pc_skillup(struct map_session_data *sd, unsigned short skillid)
 {
 	nullpo_retr(0, sd);
 
-	if( skill_num>=10000 ){
-		guild_skillup(sd,skill_num,0);
+	if( skillid>=10000 ){
+		guild_skillup(sd,skillid,0);
 		return 0;
 	}
 
 	if( sd->status.skill_point>0 &&
-		sd->status.skill[skill_num].id!=0 &&
-		//sd->status.skill[skill_num].lv < skill_get_max(skill_num) ) - celest
-		sd->status.skill[skill_num].lv < skill_tree_get_max(skill_num, sd->status.class_) )
+		sd->status.skill[skillid].id!=0 &&
+		//sd->status.skill[skillid].lv < skill_get_max(skillid) ) - celest
+		sd->status.skill[skillid].lv < skill_tree_get_max(skillid, sd->status.class_) )
 	{
-		sd->status.skill[skill_num].lv++;
+		sd->status.skill[skillid].lv++;
 		sd->status.skill_point--;
 		status_calc_pc(sd,0);
-		clif_skillup(sd,skill_num);
+		clif_skillup(sd,skillid);
 		clif_updatestatus(sd,SP_SKILLPOINT);
 		clif_skillinfoblock(sd);
 	}

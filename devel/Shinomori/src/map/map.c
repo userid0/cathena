@@ -1,4 +1,5 @@
 // $Id: map.c,v 1.6 2004/09/25 17:37:01 MouseJstr Exp $
+
 #include "base.h"
 #include "core.h"
 #include "timer.h"
@@ -125,7 +126,7 @@ static char afm_dir[1024] = ""; // [Valaris]
 struct map_data map[MAX_MAP_PER_SERVER];
 int map_num = 0;
 
-int map_port=0;
+//int map_port=0;
 
 int autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
 int agit_flag = 0;
@@ -389,7 +390,7 @@ int map_count_oncell(int m, int x, int y) {
 /*
  * «»«E¾ªÎõÌôøªËÌ¸ªÄª±ª¿«¹«­«Eæ«Ë«Ã«ÈªòÚ÷ª¹
  */
-struct skill_unit *map_find_skill_unit_oncell(struct block_list *target,int x,int y,short skill_id,struct skill_unit *out_unit)
+struct skill_unit *map_find_skill_unit_oncell(struct block_list *target,int x,int y,unsigned short skill_id,struct skill_unit *out_unit)
 {
 	int m,bx,by;
 	struct block_list *bl;
@@ -424,14 +425,17 @@ struct skill_unit *map_find_skill_unit_oncell(struct block_list *target,int x,in
  *------------------------------------------
  */
 void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int type,...) {
-	va_list ap;
+	va_list ap;	
 	int bx,by;
 	struct block_list *bl=NULL;
 	int blockcount=bl_list_count,i,c;
 
 	if(m < 0)
 		return;
-	va_start(ap,type);
+	
+	if(x0>x1) swap(x0,x1);
+	if(y0>y1) swap(y0,y1);
+
 	if (x0 < 0) x0 = 0;
 	if (y0 < 0) y0 = 0;
 	if (x1 >= map[m].xs) x1 = map[m].xs-1;
@@ -466,6 +470,8 @@ void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int 
 			ShowMessage("map_foreachinarea: *WARNING* block count too many!\n");
 	}
 
+
+	va_start(ap,type);
 	map_freeblock_lock();	// ƒƒ‚ƒŠ‚©‚ç‚Ì‰ğ•ú‚ğ‹Ö~‚·‚é
 
 	for(i=blockcount;i<bl_list_count;i++)
@@ -473,8 +479,8 @@ void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int 
 			func(bl_list[i],ap);
 
 	map_freeblock_unlock();	// ‰ğ•ú‚ğ‹–‰Â‚·‚é
-
 	va_end(ap);
+
 	bl_list_count = blockcount;
 }
 
@@ -1290,7 +1296,7 @@ int map_addflooritem(struct item *item_data,int amount,int m,int x,int y,struct 
 	fitem->bl.type=BL_ITEM;
 	fitem->bl.prev = fitem->bl.next = NULL;
 	fitem->bl.m=m;
-	fitem->bl.x=xy&0xffff;
+	fitem->bl.x= xy     &0xffff;
 	fitem->bl.y=(xy>>16)&0xffff;
 	fitem->first_get_id = 0;
 	fitem->first_get_tick = 0;
@@ -1854,7 +1860,8 @@ int map_getcellp(struct map_data* m,int x,int y,cell_t cellchk)
 		case CELL_CHKWALL:
 			return (mg->type == 1);
 		case CELL_CHKWATER:
-			return (mg->type == 3);
+			// also when raining
+			return (mg->type == 3) || (m->flag.rain && battle_config.rainy_waterball);
 		case CELL_CHKGROUND:
 			return (mg->type == 5);
 		case CELL_GETTYPE:
@@ -1878,7 +1885,6 @@ int map_getcellp(struct map_data* m,int x,int y,cell_t cellchk)
 // 1 - wall
 // 3 - water
 // 5 - ground
-//
 // change the gat to a bitfield instead of using an unsinged char
 /////////////////////////////////////////////////////////////////////
 void map_setcell(int m,int x,int y,int cellck)
@@ -1898,7 +1904,7 @@ void map_setcell(int m,int x,int y,int cellck)
 			ShowWarning("usage of more then 15 stacked npc touchup areas\n");
 		break;
 	case CELL_CLRNPC:
-		if(mg->npc > 0) // max for a 4bit counter
+		if(mg->npc > 0) // 4bit counter
 			mg->npc--;
 		//else no warning, has been warned at setting up the touchups already
 		break;
@@ -2288,8 +2294,6 @@ int map_cache_write(struct map_data *m)
 			// update file header
 			map_cache.map[i].pos = map_cache.head.filesize;
 			map_cache.head.filesize += len_new;
-						
-
 		}
 		else // update an existing map
 		{
@@ -2328,10 +2332,6 @@ int map_cache_write(struct map_data *m)
 	}
 	// ‘‚«‚ß‚È‚©‚Á‚½
 	return 1;
-
-
-
-
 
 
 
@@ -2873,7 +2873,6 @@ int map_config_read(const char *cfgName) {
 				clif_setip( ntohl(inet_addr(w2)) );
 			} else if (strcasecmp(w1, "map_port") == 0) {
 				clif_setport(atoi(w2));
-				map_port = (atoi(w2));
 			} else if (strcasecmp(w1, "water_height") == 0) {
 				map_readwater(w2);
 			} else if (strcasecmp(w1, "map") == 0) {
@@ -3477,7 +3476,7 @@ int do_init(int argc, char *argv[]) {
 	if (imalive_on)
 		add_timer_interval(gettick()+10,imalive_time*1000, imalive_timer,0,0);
 
-	ShowStatus("Server is '"CL_GREEN"ready"CL_RESET"' and listening on port '"CL_WHITE"%d"CL_RESET"'.\n\n", map_port);
+	ShowStatus("Server is '"CL_GREEN"ready"CL_RESET"' and listening on port '"CL_WHITE"%d"CL_RESET"'.\n\n", clif_getport());
 
 	ticks = gettick();
 

@@ -1,5 +1,5 @@
 // $Id: intif.c,v 1.2 2004/09/25 05:32:18 MouseJstr Exp $
-
+#include "base.h"
 #include "socket.h"
 #include "timer.h"
 #include "map.h"
@@ -560,13 +560,13 @@ int intif_guild_position(int guild_id,int idx,struct guild_position *pos)
 	return 0;
 }
 // ギルドスキルアップ要求
-int intif_guild_skillup(int guild_id,int skill_num,int account_id,int flag)
+int intif_guild_skillup(int guild_id,unsigned short skillid,int account_id,int flag)
 {
 	if (CheckForCharServer())
 		return 0;
 	WFIFOW(inter_fd, 0)=0x303c;
 	WFIFOL(inter_fd, 2)=guild_id;
-	WFIFOL(inter_fd, 6)=skill_num;
+	WFIFOL(inter_fd, 6)=skillid;
 	WFIFOL(inter_fd,10)=account_id;
 	//WFIFOL(inter_fd,14)=flag;
 	WFIFOSET(inter_fd,14);

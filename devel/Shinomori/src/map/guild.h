@@ -9,12 +9,12 @@ struct guild_member;
 struct guild_position;
 struct guild_castle;
 
-int guild_skill_get_inf(int id);
-int guild_skill_get_sp(int id,int lv);
-int guild_skill_get_range(int id);
-int guild_skill_get_max(int id);
+int guild_skill_get_inf(unsigned short id);
+int guild_skill_get_sp(unsigned short id,unsigned short lv);
+int guild_skill_get_range(unsigned short id);
+int guild_skill_get_max(unsigned short id);
 
-int guild_checkskill(struct guild *g,int id);
+int guild_checkskill(struct guild *g,unsigned short id);
 int guild_checkcastles(struct guild *g); // [MouseJstr]
 int guild_isallied(struct guild *g, struct guild_castle *gc);
 
@@ -68,7 +68,7 @@ int guild_change_emblem(struct map_session_data *sd,int len,const char *data);
 int guild_emblem_changed(int len,int guild_id,int emblem_id,const char *data);
 int guild_send_message(struct map_session_data *sd,char *mes,int len);
 int guild_recv_message(int guild_id,int account_id,char *mes,int len);
-int guild_skillupack(int guild_id,int skill_num,int account_id);
+int guild_skillupack(int guild_id,int skillid,int account_id);
 int guild_break(struct map_session_data *sd,char *name);
 int guild_broken(int guild_id,int flag);
 

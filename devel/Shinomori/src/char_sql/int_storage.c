@@ -2,6 +2,7 @@
 // original code from athena
 // SQL conversion by Jioh L. Jung
 //
+#include "base.h"
 #include "showmsg.h"
 
 #include "char.h"

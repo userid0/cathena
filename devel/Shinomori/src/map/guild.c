@@ -1,4 +1,5 @@
 // $Id: guild.c,v 1.5 2004/09/25 05:32:18 MouseJstr Exp $
+#include "base.h"
 #include "guild.h"
 #include "storage.h"
 #include "db.h"
@@ -43,16 +44,16 @@ struct guild_expcache {
 };
 
 // ギルドスキルdbのアクセサ（今は直打ちで代用）
-int guild_skill_get_inf(int id) { // Modified for new skills [Sara]
+int guild_skill_get_inf(unsigned short id) { // Modified for new skills [Sara]
 	if (id==GD_BATTLEORDER) return 4;
 	else if (id==GD_REGENERATION) return 4;
 	else if (id==GD_RESTORE) return 4;
 	else if (id==GD_EMERGENCYCALL) return 4;
 	else return 0;
 }
-int guild_skill_get_sp(int id,int lv){ return 0; }
-int guild_skill_get_range(int id){ return 0; }
-int guild_skill_get_max(int id) { // Modified for new skills [Sara]
+int guild_skill_get_sp(unsigned short id,unsigned short lv){ return 0; }
+int guild_skill_get_range(unsigned short id){ return 0; }
+int guild_skill_get_max(unsigned short id) { // Modified for new skills [Sara]
 	switch (id) {
 	case GD_GUARDUP:
 		return 3;
@@ -71,9 +72,9 @@ int guild_skill_get_max(int id) { // Modified for new skills [Sara]
 }
 
 // ギルドスキルがあるか確認
-int guild_checkskill(struct guild *g,int id)
+int guild_checkskill(struct guild *g,unsigned short skillid)
 {
-	int idx = id-GD_SKILLBASE;
+	int idx = skillid-GD_SKILLBASE;
 	if (idx < 0 || idx >= MAX_GUILDSKILL)
 		return 0;
 	return g->skill[idx].lv;
@@ -976,10 +977,10 @@ int guild_getexp(struct map_session_data *sd,int exp)
 }
 
 // スキルポイント割り振り
-int guild_skillup(struct map_session_data *sd,int skill_num,int flag)
+int guild_skillup(struct map_session_data *sd, int skillid,int flag)
 {
 	struct guild *g;
-	int idx = skill_num - GD_SKILLBASE;
+	int idx = skillid - GD_SKILLBASE;
 
 	nullpo_retr(0, sd);
 
@@ -993,15 +994,15 @@ int guild_skillup(struct map_session_data *sd,int skill_num,int flag)
 
 	if( (g->skill_point>0 || flag&1) &&
 		g->skill[idx].id!=0 &&
-		g->skill[idx].lv < guild_skill_get_max(skill_num) ){
-		intif_guild_skillup(g->guild_id,skill_num,sd->status.account_id,flag);
+		g->skill[idx].lv < guild_skill_get_max(skillid) ){
+		intif_guild_skillup(g->guild_id, skillid, sd->status.account_id, flag);
 	}
 	status_calc_pc (sd, 0); // Celest
 
 	return 0;
 }
 // スキルポイント割り振り通知
-int guild_skillupack(int guild_id,int skill_num,int account_id)
+int guild_skillupack(int guild_id,int skillid,int account_id)
 {
 	struct map_session_data *sd=map_id2sd(account_id);
 	struct guild *g=guild_search(guild_id);
@@ -1009,7 +1010,7 @@ int guild_skillupack(int guild_id,int skill_num,int account_id)
 	if(g==NULL)
 		return 0;
 	if(sd!=NULL)
-		clif_guild_skillup(sd,skill_num,g->skill[skill_num-GD_SKILLBASE].lv);
+		clif_guild_skillup(sd,skillid,g->skill[skillid-GD_SKILLBASE].lv);
 	// 全員に通知
 	for(i=0;i<g->max_member;i++)
 		if((sd=g->member[i].sd)!=NULL)
