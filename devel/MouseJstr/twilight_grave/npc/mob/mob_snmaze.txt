@@ -1,0 +1,33 @@
+//snow_maze(snow_maze)
+snow_maze.gat,139,100,21,21	monster	Elf	1246,3,120000,40000,1
+snow_maze.gat,139,140,21,21	monster	Antonio	1247,5,120000,40000,1
+snow_maze.gat,139,180,21,21	monster	Santa Marin	1424,5,120000,40000,1
+snow_maze.gat,139,20,21,21	monster	Mastering	1090,4,120000,40000,1
+snow_maze.gat,139,60,21,21	monster	Mystcase	1249,5,120000,40000,1
+snow_maze.gat,179,100,21,21	monster	Polar Bear	1243,3,120000,40000,1
+snow_maze.gat,179,140,21,21	monster	Grinch	1239,3,120000,40000,1
+snow_maze.gat,179,180,21,21	monster	Naughty Elf	1245,5,120000,40000,1
+snow_maze.gat,179,20,21,21	monster	Santa Poring	1062,5,120000,40000,1
+snow_maze.gat,179,60,21,21	monster	Old Man X-mas	1244,5,120000,40000,1
+snow_maze.gat,19,100,21,21	monster	Ghost of Chistmas Past	1509,3,120000,40000,1
+snow_maze.gat,19,140,21,21	monster	Chirstmas Future	1291,5,120000,40000,1
+snow_maze.gat,19,180,21,21	monster	X-mas Ham	1166,3,120000,40000,1
+snow_maze.gat,19,180,21,21	monster	Teddy Bear Gone Wong	1417,5,120000,40000,1
+snow_maze.gat,19,20,21,21	monster	Santa Poporing	1422,5,120000,40000,1
+snow_maze.gat,19,60,21,21	monster	Chepet	1250,3,120000,40000,1
+snow_maze.gat,59,100,21,21	monster	Wild Rose	1261,5,120000,40000,1
+snow_maze.gat,59,140,21,21	monster	Helper Elf	1265,4,120000,40000,1
+snow_maze.gat,59,140,21,21	monster	Angeling	1096,2,120000,40000,1
+snow_maze.gat,59,180,21,21	monster	Archangeling	1388,2,120000,40000,1
+snow_maze.gat,59,20,21,21	monster	Santa Drops	1423,5,120000,40000,1
+snow_maze.gat,59,60,21,21	monster	Marin	1242,5,120000,40000,1
+snow_maze.gat,99,100,21,21	monster	Brat	1409,5,120000,40000,1
+snow_maze.gat,99,140,21,21	monster	Nutcracker	1248,3,120000,40000,1
+snow_maze.gat,99,180,21,21	monster	Christmas Turkey	1369,5,120000,40000,1
+snow_maze.gat,99,180,21,21	monster	Baby Garm	1515,5,120000,40000,1
+snow_maze.gat,99,20,21,21	monster	Christmas Angel	1371,5,120000,40000,1
+snow_maze.gat,99,20,21,21	monster	Creamy	1018,1,120000,40000,1
+snow_maze.gat,99,60,21,21	monster	Wrapping Paper	1375,5,120000,40000,1
+//snow_maze.gat,139,140,21,21	monster	Guardian Angeling	1426,1,3600000,7200000,0
+snow_maze.gat,139,140,21,21	monster	Knight of Windstorm	1251,1,3600000,7200000,0
+snow_maze.gat,179,180,21,21	monster	Chistmas Present	1428,1,3600000,7200000,0

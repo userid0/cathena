@@ -1,0 +1,81 @@
+//===== tRo Script ========================================
+//= Snow Maze Warp Script
+//===== By: ==================================================
+//= Azazel 
+//===== Current Version: =====================================
+//= 1.0
+//===== Compatible With: =====================================
+//= Any Athena Version
+//===== Description: =========================================
+//= Warp Points for Snow Maze
+//===== Additional Comments: =================================
+//= Lutie field warp included
+//============================================================
+
+//= Snow Maze ============================================
+snow_maze.gat,100,35,0	warp	snm101	5,2,snow_maze.gat,139,47	
+snow_maze.gat,102,165,0	warp	snm102	5,2,snow_maze.gat,98,151	
+snow_maze.gat,105,115,0	warp	snm103	5,2,snow_maze.gat,175,168	
+snow_maze.gat,105,75,0	warp	snm104	5,2,snow_maze.gat,54,8	
+snow_maze.gat,115,145,0	warp	snm105	2,5,snow_maze.gat,8,186	
+snow_maze.gat,115,21,0	warp	snm106	2,5,snow_maze.gat,167,22	
+snow_maze.gat,115,56,0	warp	snm107	2,5,snow_maze.gat,7,57	
+snow_maze.gat,115,96,0	warp	snm108	2,5,snow_maze.gat,128,105	
+snow_maze.gat,124,105,0	warp	snm108-1	2,5,snow_maze.gat,111,96	
+snow_maze.gat,124,169,0	warp	snm109	2,5,snow_maze.gat,191,139	
+snow_maze.gat,138,124,0	warp	snm110	5,2,snow_maze.gat,142,111	
+snow_maze.gat,139,44,0	warp	snm101-1	5,2,snow_maze.gat,100,32	
+snow_maze.gat,14,75,0	warp	snm111	5,2,snow_maze.gat,63,128	
+snow_maze.gat,140,75,0	warp	snm112	5,2,snow_maze.gat,96,47	
+snow_maze.gat,142,115,0	warp	snm110-1	5,2,snow_maze.gat,138,128	
+snow_maze.gat,155,133,0	warp	snm113	2,5,snow_maze.gat,8,140	
+snow_maze.gat,155,181,0	warp	snm114	2,5,snow_maze.gat,88,145	
+snow_maze.gat,155,21,0	warp	snm115	2,12,snow_maze.gat,87,13	
+snow_maze.gat,164,140,0	warp	snm116	2,5,snow_maze.gat,70,68	
+snow_maze.gat,164,22,0	warp	snm106-1	2,5,snow_maze.gat,112,21	
+snow_maze.gat,164,93,0	warp	snm117	2,5,snow_maze.gat,72,11	
+snow_maze.gat,17,115,0	warp	snm118	5,2,snow_maze.gat,50,48	
+snow_maze.gat,17,34,0	warp	snm119	5,3,snow_maze.gat,23,128	
+snow_maze.gat,175,164,0	warp	snm103-1	5,2,snow_maze.gat,105,111	
+snow_maze.gat,176,35,0	warp	snm120	5,3,snow_maze.gat,182,88	
+snow_maze.gat,176,4,0	warp	snm0001	8,2,xmas_fild01.gat,85,51	
+snow_maze.gat,176,44,0	warp	snm121	5,2,snow_maze.gat,18,152	
+snow_maze.gat,18,155,0	warp	snm121-1	5,2,snow_maze.gat,176,47	
+snow_maze.gat,182,84,0	warp	snm120-1	5,2,snow_maze.gat,177,31	
+snow_maze.gat,19,195,0	warp	snm2001	10,2,aldebaran.gat,140,241	
+snow_maze.gat,195,139,0	warp	snm109-1	2,5,snow_maze.gat,129,174	
+snow_maze.gat,195,15,0	warp	snm122	2,5,snow_maze.gat,47,105	
+snow_maze.gat,195,174,0	warp	snm113	2,5,snow_maze.gat,47,23	
+snow_maze.gat,195,55,0	warp	snm114	2,5,snow_maze.gat,87,97	
+snow_maze.gat,195,93,0	warp	snm115	2,5,snow_maze.gat,88,55	
+snow_maze.gat,22,84,0	warp	snm116	5,2,snow_maze.gat,55,151	
+snow_maze.gat,23,124,0	warp	snm119-1	5,2,snow_maze.gat,17,30	
+snow_maze.gat,25,5,0	warp	snm117		5,3,snow_maze.gat,65,113
+snow_maze.gat,4,140,0	warp	snm113-1	2,5,snow_maze.gat,151,133	
+snow_maze.gat,4,186,0	warp	snm105-1	2,5,snow_maze.gat,111,145	
+snow_maze.gat,4,57,0	warp	snm107-1	2,5,snow_maze.gat,112,56	
+snow_maze.gat,44,105,0	warp	snm122-1	2,5,snow_maze.gat,192,15	
+snow_maze.gat,44,23,0	warp	snm113-1	2,5,snow_maze.gat,192,174	
+snow_maze.gat,50,44,0	warp	snm118-1	4,2,snow_maze.gat,17,111	
+snow_maze.gat,51,195,0	warp	snm118	7,2,snow_maze.gat,63,88	
+snow_maze.gat,54,4,0	warp	snm104-1	5,2,snow_maze.gat,105,71	
+snow_maze.gat,55,155,0	warp	snm116-1	5,2,snow_maze.gat,22,88	
+snow_maze.gat,63,124,0	warp	snm111-1	5,2,snow_maze.gat,14,71	
+snow_maze.gat,63,195,0	warp	snm118-1	7,2,snow_maze.gat,63,88	
+snow_maze.gat,63,84,0	warp	snm118-2	6,2,snow_maze.gat,58,192	
+snow_maze.gat,65,116,0	warp	snm117-1	5,2,snow_maze.gat,23,9	
+snow_maze.gat,70,75,0	warp	w624	7,3,snow_maze.gat,169,140	
+snow_maze.gat,75,11,0	warp	snm117-1	2,5,snow_maze.gat,167,93	
+snow_maze.gat,75,66,0	warp	snm116-1	3,10,snow_maze.gat,169,140	
+snow_maze.gat,75,95,0	warp	snm119	2,5,snow_maze.gat,88,173	
+snow_maze.gat,84,10,0	warp	snm115-1	2,5,snow_maze.gat,152,25	
+snow_maze.gat,84,145,0	warp	snm114-1	2,5,snow_maze.gat,151,181	
+snow_maze.gat,84,173,0	warp	snm119-2	2,5,snow_maze.gat,71,95	
+snow_maze.gat,84,55,0	warp	snm115-1	2,5,snow_maze.gat,191,93	
+snow_maze.gat,84,97,0	warp	snm114-1	2,5,snow_maze.gat,192,55	
+snow_maze.gat,96,44,0	warp	snm112-1	5,2,snow_maze.gat,140,72	
+snow_maze.gat,98,155,0	warp	snm102-1	5,2,snow_maze.gat,102,169
+
+//= Lutie Field ==============================================
+xmas_fild01.gat,80,251,0	warp	xmas2	3,3,xmas.gat,150,43
+xmas_fild01.gat,85,49,0	warp	xmas001	10,3,snow_maze.gat,176,8

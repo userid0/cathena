@@ -1,0 +1,1 @@
+prontera.gat,117,207,1	shop	Lotto Ticket Merchant	704,11017:-1

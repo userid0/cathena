@@ -1,0 +1,333 @@
+//Advanced Job Changer for eAthena by dontBR.
+
+prontera.gat,181,216,5	script	Advanced Job Changer	811,{
+	if(Sex==1) goto m_hello;
+
+	mes "[Advanced Job Changer]";
+	mes "Woah!Costumers!";
+	mes "Welcome,little girl.";
+	mes "Do yah want to change into a cool advanced class!?";
+	next;
+	menu "Sure!",yesop,"Nah,I think I'm not prepared yet",noopf;
+
+m_hello:
+	mes "[Advanced Job Changer]";
+	mes "Woah!Costumers!";
+	mes "Hey,you look strong eh?";
+	mes "Do you want to change into an even-more-stronger class!?!";
+	next;
+	menu "OF COURSE!",yesop,"Wait!Not now -_-",noopm;
+
+yesop:
+		mes "[Advanced Job Changer]";
+		mes "Okay!Chose which from the list:";
+		next;
+		menu "High Novice",hnov,"High first class",hfirst,"Advanced 2-1",advsecone,"Advanced 2-2",advsectwo;
+
+hnov:
+			if(@first_job > 0)goto already_first_job;
+			if(Baselevel<99) goto notbaselvl;
+			if(is_highnovice == 1) goto alreadyhnov;
+			mes "[Advanced Job Changer]";
+			mes "Okay,this is the first step of being an advanced class!";
+			mes "Let's start...";
+			next;
+			resetlvl(1);
+			jobchange 24;
+			set SkillPoint,0;
+			set baseexp,0;
+			set StatusPoint,100;
+			if(Sex==0)goto after_hnov_f;
+			mes "[Advanced Job Changer]";
+			mes "Yeah!Now you are a tough...novice?:D";
+			next;
+			mes "[Advanced Job Changer]";
+			mes "To change to High first job,come back here on job level 10.";
+			set is_highnovice,1;
+			close;
+
+after_hnov_f:
+			mes "[Advanced Job Changer]";
+			mes "Yeah!O'good times those...back to novice ^^";
+			next;
+			mes "[Advanced Job Changer]";
+			mes "To change to High first job,come back here on job level 10.";
+			set is_highnovice,1;
+			close;
+
+hfirst:
+			if(joblevel < 10) goto Lnotjoblevel;
+			if(is_highnovice == 0)goto nothighnovice;
+			if(@first_job > 0)goto already_first_job;
+			if(SkillPoint>0)goto skillpointleft;
+			mes "[Advanced Job Changer]";
+			mes "Okay!Chose an option from the menu:";
+			next;
+			menu "High Swordsman",hswords,"High Acolyte",haco,"High Mage",hmage,"High Archer",harc,"High Merchant",hmerc,"High Thief",hthief;
+
+hswords:
+				mes "[Advanced Job Changer]";
+				mes "Soo,you're going to be a high swordsman eh?Good...";
+				next;
+				jobchange 4002;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				set @first_job,4002;
+				close;
+
+haco:
+				mes "[Advanced Job Changer]";
+				mes "Soo,you're going to be a high acolyte eh?Good...";
+				next;
+				jobchange 4005;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				set @first_job,4005;
+				close;
+
+hmage:
+				mes "[Advanced Job Changer]";
+				mes "Soo,you're going to be a high mage eh?Good...";
+				next;
+				jobchange 4003;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				set @first_job,4003;
+				close;
+
+harc:
+				mes "[Advanced Job Changer]";
+				mes "Soo,you're going to be a high archer eh?Good...";
+				next;
+				jobchange 4004;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				set @first_job,4004;
+				close;
+
+hmerc:
+				mes "[Advanced Job Changer]";
+				mes "Soo,you're going to be a high merchant eh?Good...";
+				next;
+				jobchange 4006;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				set @first_job,4006;
+				close;
+
+hthief:
+				mes "[Advanced Job Changer]";
+				mes "Soo,you're going to be a high thief eh?Good...";
+				next;
+				jobchange 4007;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				set @first_job,4007;
+				close;
+
+advsecone:
+			if(joblevel<50) goto Lnotjoblevel;
+			if(SkillPoint > 0)goto skillpointleft;
+			mes "[Advanced Job Changer]";
+			mes "Wow,you're ready to go to the 1337 advanced classes eh??";
+			mes "Okay!Chose one of the list.";
+			set is_highnovice,0;
+			next;
+			menu "Assassin Cross",acros,"High Priest",hpriest,"High Wizard",hwiz,"Sniper",sniper,"Lord Knight",knight2,"WhiteSmith",wsmith;
+
+				acros:
+				if(@first_job != 4007) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "Assassin Cross!?You don't look that evil for me :D";
+				next;
+				jobchange 36;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+hpriest:
+				if(@first_job != 4005) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "High Priest..hmm...good thing.";
+				next;
+				jobchange 32;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+hwiz:
+				if(@first_job != 4003) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "High Wizard...flipendo!Ops...my bad.";
+				next;
+				jobchange 33;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+sniper:
+				if(@first_job != 4004) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "Sniper..soo you are going to be the 'Mastah Camper' ??J/k!";
+				next;
+				jobchange 35;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+				knight2:
+				if(@first_job != 4002) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "Lord Knight...you have my sword!Ops,wrong game...";
+				next;
+				jobchange 31;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+				wsmith:
+				if(@first_job != 4006) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "WhiteSmith...do you know what that means?Golden land!";
+				next;
+				jobchange 34;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+			advsectwo:
+			if(joblevel<50) goto Lnotjoblevel;
+			if(SkillPoint > 0)goto skillpointleft;
+			mes "[Advanced Job Changer]";
+			mes "Wow,you're ready to go to the 1337 advanced classes eh??";
+			mes "Okay!Chose one of the list:";
+			set is_highnovice,0;
+			next;
+			menu "Champion",champ,"Clown",clown,"Gypsy",gypsy,"Paladin",paladin,"Professor",prof,"Creator",creator,"Stalker",stalker;
+
+				champ:
+				if(@first_job != 4005) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "Champion!Go fight some monstah!Win battles!Woohoo!";
+				next;
+				jobchange 39;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+				clown:
+				if(@first_job != 4004) goto wrongclass;
+				if(Sex==0)goto gypsy;
+				mes "[Advanced Job Changer]";
+				mes "Woah,there is a clown in the city!Let's start the show!!";
+				next;
+				jobchange 43;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+				gypsy:
+				if(@first_job != 4004) goto wrongclass;
+				if(Sex==1)goto clown;
+				mes "[Advanced Job Changer]";
+				mes "Gypsy,gypsy...your eyes...ah...";
+				next;
+				jobchange 43;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+				paladin:
+				if(@first_job != 4002) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "Wow!Paladin!That's an amazing job!";
+				next;
+				jobchange 38;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+				prof:
+				if(@first_job != 4006) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "Professor!Arg,how are my grades?Good?Eh?";
+				next;
+				jobchange 40;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+				creator:
+				if(@first_job != 4003) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "A CREATOR!Woohoo!You can now create things!(I think you already knew that...)";
+				next;
+				jobchange 42;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+				stalker:
+				if(@first_job != 4007) goto wrongclass;
+				mes "[Advanced Job Changer]";
+				mes "OMG a stalker!*hides wallet*Go away before I call the police!";
+				next;
+				jobchange 41;
+				mes "[Advanced Job Changer]";
+				mes "There you go!";
+				close;
+
+		noopm:
+		mes "[Advanced Job Changer]";
+		mes "What!?!What do you mean by 'Not now' ??...";
+		next;
+		mes "[Advanced Job Changer]";
+		mes "I tought you were stronger -_-";
+		close;
+
+		noopf:
+		mes "[Advanced Job Changer]";
+		mes "Wow,you think you aren't prepared yet?Yeah yeah,maybe you really aren't -_-'...";
+		mes "When you fell that you are prepared come back!";
+		close;
+
+			wrongclass:
+				mes "[Advanced Job Changer]";
+				mes "Sorry but you aren't the right class to change to this job.";
+				close;
+
+			skillpointleft:
+				mes "[Advanced Job Changer]";
+				mes "Sorry but you still have some skill points left.Go spend them first.";
+				close;
+
+			Lnotjoblevel:
+				mes "[Advanced Job Changer]";
+				mes "Sorry but you aren't on the needed job level.";
+				close;
+
+			notsecclass:
+				mes "[Advanced Job Changer]";
+				mes "Sorry but you need to be on second job to be a High Novice.";
+				close;
+
+			nothighnovice:
+				mes "[Advanced Job Changer]";
+				mes "Sorry but to change to high first class you need to be a high novice.";
+				close;
+
+			alreadyhnov:
+				mes "[Advanced Job Changer]";
+				mes "Hey hey hey...you ARE a High Novice!-_-";
+				close;
+
+			notbaselvl:
+				mes "[Advanced Job Changer]";
+				mes "Sorry but you need to be on level 99 or more to change to high novice";
+				close;
+
+			already_first_job:
+				mes "[Advanced Job Changer]";
+				mes "So you're changing into...wait a second,you ARE a high class!-_-";
+				close;
+}

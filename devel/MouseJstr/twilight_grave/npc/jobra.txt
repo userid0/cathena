@@ -1,0 +1,1231 @@
+//¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯\\
+//||----------------------------------------------||\\
+//|| Jobra                                        ||\\
+//||----------------------------------------------||\\
+//|| Written By: Izkuru                           ||\\
+//||             teh_face_x_o@yahoo.com           ||\\
+//|| Test With: OmniAthena 962                    ||\\
+//|| Version: 1.1                                 ||\\
+//||----------------------------------------------||\\
+//|| Everyone's favorite [j/k] Jobra. Except,     ||\\
+//|| unlike most which will show all of the 2-1   ||\\
+//|| and 2-2 jobs that you can't change to since  ||\\
+//|| you aren't their root class aren't shown.    ||\\
+//|| Ex. You change from Novice to Swordsman, and ||\\
+//||     when you come back to go to Second Job,  ||\\
+//||     your only choices are Knight and         ||\\
+//||     Crusader.                                ||\\
+//|| Advanced classes are handled as well, and it ||\\
+//|| makes sure that the player follows the job   ||\\
+//|| path of their first job.                     ||\\
+//|| Uses one global var. One that specifies if   ||\\
+//|| the player needs to use all his Skill Points ||\\
+//|| or not.                                      ||\\
+//||----------------------------------------------||\\
+//|| To install: Place this TXT file anywhere in  ||\\
+//|| your Athena scripts folder, and include it   ||\\
+//|| in scripts.conf. Then add the following to   ||\\
+//|| save/mapreg.txt.                             ||\\
+//||----------------------------------------------||\\
+//|| $JobraNoSkillPoints	0                   ||\\
+//||----------------------------------------------||\\
+//|| [Those are tabs, btw]                        ||\\
+//|| If $JobraNoSkillPoints is 0, the player can  ||\\
+//|| change jobs without spending his Skill       ||\\
+//|| points, and if it is 1, he will need to use  ||\\
+//|| them to change jobs.                         ||\\
+//||----------------------------------------------||\\
+//|| Started on: Jun 23 2004                      ||\\
+//|| Last Modified: Aug 06 2004                   ||\\
+//||----------------------------------------------||\\
+//__________________________________________________\\
+
+// Additions (without the fancy framing bs)
+//   -Replaced (Upper == 1) requirement with a variable 
+//   set at rebirth since Upper wasn't working right
+//   -Removed 1-1, 2-1 and 2-2 job changing function
+//   since the way this one worked relied on every char
+//   using it to use it from the very beginning, which
+//   isn't the case unless following a wipe.  Also
+//   made it so 1-1's and wedding chars can't use it.
+//   -Added missing labels L_No and L_GM, also added
+//   an explanation to prevent bitching.
+//   -Added possibility of changing job path with a
+//   penalty of 52 status points and 9 skill points
+//   (normal novices start out with 48 status points,
+//   high novices start out with 100, this penalty
+//   removes that boost) and 1,000,000z.
+
+prontera.gat,181,216,5	script	Advanced Job Changer	811,{
+if(cong == 1) goto L_Congr;
+if(firstJob == 1) set @strFirstJob$,"Swordsman";
+if(firstJob == 2) set @strFirstJob$,"Mage";
+if(firstJob == 3) set @strFirstJob$,"Archer";
+if(firstJob == 4) set @strFirstJob$,"Acolyte";
+if(firstJob == 5) set @strFirstJob$,"Merchant";
+if(firstJob == 6) set @strFirstJob$,"Thief";
+if(secondJob == 7) set @strSecondJob$,"Knight";
+if(secondJob == 8) set @strSecondJob$,"Priest";
+if(secondJob == 9) set @strSecondJob$,"Wizard";
+if(secondJob == 10) set @strSecondJob$,"Blacksmith";
+if(secondJob == 11) set @strSecondJob$,"Hunter";
+if(secondJob == 12) set @strSecondJob$,"Assassin";
+if(secondJob == 14) set @strSecondJob$,"Crusader";
+if(secondJob == 15) set @strSecondJob$,"Monk";
+if(secondJob == 16) set @strSecondJob$,"Sage";
+if(secondJob == 17) set @strSecondJob$,"Rogue";
+if(secondJob == 18) set @strSecondJob$,"Alchemist";
+if(secondJob == 19) set @strSecondJob$,"Bard";
+if(secondJob == 20) set @strSecondJob$,"Dancer";
+
+  mes "[Advanced Job Changer]";
+  mes "Sup? I'm the insanely cool and supra-l337 jobchanger thingy for Athena!";
+  next;
+  if(isSupernovice == 1) goto L_checkjobs; //high novice
+  if((Class >= 7) && (Class <= 20)) goto L_set;
+  if((Class < 7) || (Class > 20)) goto L_noset;
+close;
+
+L_noset:
+  if(((Class >= 25) && (Class <= 30)) || ((Class >= 4002) && (Class <= 4007))) goto L_checkjobs; //high first class
+  mes "[Advanced Job Changer]";
+  mes "You have to be a 2-1 or 2-2 class to reset!";
+close;
+
+//Sets firstJob and secondJob, since chars didn't use this
+
+L_set: 
+  if(Class == 7) goto L_set12Knight;
+  if(Class == 8) goto L_set12Priest;
+  if(Class == 9) goto L_set12Wizard;
+  if(Class == 10) goto L_set12Blacksmith;
+  if(Class == 11) goto L_set12Hunter;
+  if(Class == 12) goto L_set12Assassin;
+  if(Class == 13) goto L_set12Knight2;
+  if(Class == 14) goto L_set12Crusader;
+  if(Class == 15) goto L_set12Monk;
+  if(Class == 16) goto L_set12Sage;
+  if(Class == 17) goto L_set12Rogue;
+  if(Class == 18) goto L_set12Alchemist;
+  if(Class == 19) goto L_set12Bard;
+  if(Class == 20) goto L_set12Dancer;
+close;
+
+L_set12Knight:
+  set firstJob,1;
+  set secondJob,7;
+  goto L_checkjobs;
+close;
+
+L_set12Crusader:
+  set firstJob,1;
+  set secondJob,14;
+  goto L_checkjobs;
+close;
+
+L_set12Wizard:
+  set firstJob,2;
+  set secondJob,9;
+  goto L_checkjobs;
+close;
+
+L_set12Sage:
+  set firstJob,2;
+  set secondJob,16;
+  goto L_checkjobs;
+close;
+
+L_set12Hunter:
+  set firstJob,3;
+  set secondJob,11;
+  goto L_checkjobs;
+close;
+
+L_set12Bard:
+  set firstJob,3;
+  set secondJob,19;
+  goto L_checkjobs;
+close;
+
+L_set12Dancer:
+  set firstJob,3;
+  set secondJob,20;
+  goto L_checkjobs;
+close;
+
+L_set12Priest:
+  set firstJob,4;
+  set secondJob,8;
+  goto L_checkjobs;
+close;
+
+L_set12Monk:
+  set firstJob,4;
+  set secondJob,15;
+  goto L_checkjobs;
+close;
+
+L_set12Blacksmith:
+  set firstJob,5;
+  set secondJob,10;
+  goto L_checkjobs;
+close;
+
+L_set12Alchemist:
+  set firstJob,5;
+  set secondJob,18;
+  goto L_checkjobs;
+close;
+
+L_set12Assassin:
+  set firstJob,6;
+  set secondJob,12;
+  goto L_checkjobs;
+close;
+
+L_set12Rogue:
+  set firstJob,6;
+  set secondJob,17;
+  goto L_checkjobs;
+close;
+
+L_set12Knight2:
+  mes "wtf is a knight2";
+close;
+
+L_checkjobs:
+  if(nextHigh == 1) goto L_high1menu;
+  if((thirdJob == 25) || (thirdJob == 4002)) goto L_SwordMenu;
+  if((thirdJob == 26) || (thirdJob == 4003)) goto L_MageMenu;
+  if((thirdJob == 27) || (thirdJob == 4004)) goto L_ArcherMenu;
+  if((thirdJob == 28) || (thirdJob == 4005)) goto L_AcolyteMenu;
+  if((thirdJob == 29) || (thirdJob == 4006)) goto L_MerchantMenu;
+  if((thirdJob == 30) || (thirdJob == 4007)) goto L_ThiefMenu;
+  if(secondJob == 7) goto L_Swordsman2;
+  if(secondJob == 8) goto L_Acolyte2;
+  if(secondJob == 9) goto L_Mage2;
+  if(secondJob == 10) goto L_Merchant2;
+  if(secondJob == 11) goto L_Archer2;
+  if(secondJob == 12) goto L_Thief2;
+  if(secondJob == 14) goto L_Swordsman2;
+  if(secondJob == 15) goto L_Acolyte2;
+  if(secondJob == 16) goto L_Mage2;
+  if(secondJob == 17) goto L_Thief2;
+  if(secondJob == 18) goto L_Merchant2;
+  if(secondJob == 19) goto L_Archer2;
+  if(secondJob == 20) goto L_Archer2;
+close;
+
+L_NovH:
+  mes "[Advanced Job Changer]";
+  mes "Ready to be reborn for the advanced classes? [Once you say yes, there is no going back]";
+  mes "You must be at least base level 99 and job level 50 to be reborn.";
+  mes "Note: READ ALL OF THE EXPLANATION AT LEAST ONCE.";
+next;
+menu "Yes",-,"No",L_No,"Explain, please.",L_explain;
+if((BaseLevel < 99) || (JobLevel < 50)) goto L_lvErr2;
+  mes "[Advanced Job Changer]";
+  mes "I guess we all need to be reborn sometime.";
+  setoption 0;
+next;
+resetlvl(1);
+jobchange 24;
+set SkillPoint,0;
+set baseexp,0;
+set StatusPoint,100;
+  mes "[Advanced Job Changer]";
+  mes "Congratulations!";
+  mes "You are now a Novice High!";
+set isSupernovice,1;
+set nextHigh,1;
+close;
+
+L_explain:
+  mes "[Advanced Job Changer]";
+  mes "A 2-1 or 2-2 character at least at base level 99 and job level 50 can be reborn as a level 1/1 High Novice.";
+  mes "All your stats will go back to 1, you lose all your skills (no, you don't get them back once you change again) and your job bonus stats will go as well.";
+  mes "However, you have 100 status points to distribute to start out with, while your first novice started out with only 48 status points.";
+  mes "You don't need to follow the same job path you did the first time around, you can make a lv99/50 Knight into a High Acolyte, but there is a penalty.";
+  mes "The penalty is that you get charged 1,000,000z, get a stat and skill reset, lose 52 status points and 9 skill points.";
+  mes "Leveling will go slower your second time around, it takes twice as much exp per level, so if you're not up for it, don't get reborn.";
+  mes "Think it over then come back here.";
+close;
+
+L_high1menu:
+if(Joblevel < 10) goto L_stillhigh;
+if(SkillPoint != 0) goto L_SkpErr;
+  mes "[Advanced Job Changer]";
+  mes "There, wasn't that fun?  Now pick your high 1-1 job.";
+  mes "Remember, if you choose a different job than you were originally, you'll be penalized.";
+next;
+menu "Penalized? Explain.",L_Explain2,"High Swordsman",L_Swordsman2,"High Acolyte",L_Acolyte2,"High Mage",L_Mage2,"High Merchant",L_Merchant2,"High Archer",L_Archer2,"High Thief",L_Thief2,"Ah, not right now.",L_No;
+close;
+
+L_stillhigh:
+  mes "[Advanced Job Changer]";
+  mes "Come back when you're job level 10.";
+close;
+
+L_Explain2:
+  mes "[Advanced Job Changer]";
+  mes "You don't need to follow the same job path you did the first time around, you can make a lv99/50 Knight into a High Priest, but there is a penalty.";
+  mes "The penalty is that you get charged 1,000,000z, get a stat and skill reset, lose 52 status points and 9 skill points.";
+  mes "Think it over then come back here.";
+close;
+
+L_Swordsman2:
+//if(Class != 0) goto L_NovH;
+if((firstJob != 1) && (@accept != 1)) goto L_swordsmantree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Swordsman High already?";
+next;
+menu "Yes",-,"No",L_No;
+if(JobLevel < 10) goto L_JlvErr;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+if(firstJob != 1) goto L_swordsmanpenalty;
+goto L_Swordsman2change;
+close;
+
+L_Swordsman2change:
+  mes "[Advanced Job Changer]";
+  mes "Alright, here you go. Swordsman High.";
+jobchange 4002;
+set thirdJob,4002;
+set nextHigh,0;
+close;
+
+L_swordsmantree:
+  mes "[Advanced Job Changer]";
+  mes "Your first job was " + @strFirstJob$ + ".  If you change to high swordsman, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept,1;
+goto L_Swordsman2;
+close;
+
+L_swordsmanpenalty:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+set wasPenalized,1;
+goto L_Swordsman2change;  
+close;
+
+L_Acolyte2:
+//if(Class != 0) goto L_NovH;
+if((firstJob != 4) && (@accept != 1)) goto L_acolytetree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Acolyte High already?";
+next;
+menu "Yes",-,"No",L_No;
+if(JobLevel < 10) goto L_JlvErr;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+if(firstJob != 4) goto L_acolytepenalty;
+goto L_Acolyte2change;
+close;
+
+L_Acolyte2change:
+  mes "[Advanced Job Changer]";
+  mes "Alright, here you go. Acolyte High.";
+jobchange 4005;
+set thirdJob,4005;
+set nextHigh,0;
+close;
+
+L_acolytetree:
+  mes "[Advanced Job Changer]";
+  mes "Your first job was " + @strFirstJob$ + ".  If you change to High Acolyte, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept,1;
+goto L_Acolyte2;
+close;
+
+L_acolytepenalty:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+set wasPenalized,1;
+goto L_Acolyte2change;  
+close;
+
+L_Mage2:
+//if(Class != 0) goto L_NovH;
+if((firstJob != 2) && (@accept != 1)) goto L_magetree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Mage High already?";
+next;
+menu "Yes",-,"No",L_No;
+if(JobLevel < 10) goto L_JlvErr;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+if(firstJob != 2) goto L_magepenalty;
+goto L_Mage2change;
+close;
+
+L_Mage2change:
+  mes "[Advanced Job Changer]";
+  mes "Alright, here you go. Mage High.";
+jobchange 4003;
+set thirdJob,4003;
+set nextHigh,0;
+close;
+
+L_magetree:
+  mes "[Advanced Job Changer]";
+  mes "Your first job was " + @strFirstJob$ + ".  If you change to High Mage, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept,1;
+goto L_Mage2;
+close;
+
+L_magepenalty:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+set wasPenalized,1;
+goto L_Mage2change;  
+close;
+
+L_Merchant2:
+//if(Class != 0) goto L_NovH;
+if((firstJob != 5) && (@accept != 1)) goto L_merchanttree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Merchant High already?";
+next;
+menu "Yes",-,"No",L_No;
+if(JobLevel < 10) goto L_JlvErr;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+if(firstJob != 5) goto L_merchantpenalty;
+goto L_Merchant2change;
+close;
+
+L_Merchant2change:
+  mes "[Advanced Job Changer]";
+  mes "Alright, here you go. Merchant High.";
+jobchange 4006;
+set thirdJob,4006;
+set nextHigh,0;
+close;
+
+L_merchanttree:
+  mes "[Advanced Job Changer]";
+  mes "Your first job was " + @strFirstJob$ + ".  If you change to High Merchant, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept,1;
+goto L_Merchant2;
+close;
+
+L_merchantpenalty:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+set wasPenalized,1;
+goto L_Merchant2change;  
+close;
+
+L_Archer2:
+//if(Class != 0) goto L_NovH;
+if((firstJob != 3) && (@accept != 1)) goto L_archertree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Archer High already?";
+next;
+menu "Yes",-,"No",L_No;
+if(JobLevel < 10) goto L_JlvErr;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+if(firstJob != 3) goto L_archerpenalty;
+goto L_Archer2change;
+close;
+
+L_Archer2change:
+  mes "[Advanced Job Changer]";
+  mes "Alright, here you go. Archer High.";
+jobchange 4004;
+set thirdJob,4004;
+set nextHigh,0;
+close;
+
+L_archertree:
+  mes "[Advanced Job Changer]";
+  mes "Your first job was " + @strFirstJob$ + ".  If you change to High Archer, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept,1;
+goto L_Archer2;
+close;
+
+L_archerpenalty:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+set wasPenalized,1;
+goto L_Archer2change;  
+close;
+
+L_Thief2:
+//if(Class != 0) goto L_NovH;
+if((firstJob != 6) && (@accept != 1)) goto L_thieftree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Thief High already?";
+next;
+menu "Yes",-,"No",L_No;
+if(JobLevel < 10) goto L_JlvErr;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+if(firstJob != 6) goto L_thiefpenalty;
+goto L_Thief2change;
+close;
+
+L_Thief2change:
+  mes "[Advanced Job Changer]";
+  mes "Alright, here you go. Thief High.";
+jobchange 4007;
+set thirdJob,4007;
+set nextHigh,0;
+close;
+
+L_thieftree:
+  mes "[Advanced Job Changer]";
+  mes "Your first job was " + @strFirstJob$ + ".  If you change to High Thief, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept,1;
+goto L_Thief2;
+close;
+
+L_thiefpenalty:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+set wasPenalized,1;
+goto L_Thief2change;  
+close;
+
+L_SwordMenu:
+if(JobLevel < 50) goto L_CannotAdvance;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+mes "[Advanced Job Changer]";
+mes "Congratulations on reaching job level 50.";
+mes "Which advanced 2nd job do you want to change to?";
+if(wasPenalized == 1) goto L_SwordMenu2;
+mes "Remember, if you change path from what you went down the first time, you get penalized.";
+next;
+menu "Lord Knight",L_Knight2,"Paladin",L_Crusader2,"Penalty?",L_Explain2;
+
+L_SwordMenu2:
+next;
+menu "Lord Knight",L_Knight2,"Paladin",L_Paladin2;
+
+L_Knight2:
+if((secondJob != 7) && (@accept2 != 1)) goto L_knighttree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Lord Knight?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 7) && (wasPenalized != 1)) goto L_knightpenalize;
+goto L_knightchange;
+close;
+
+L_knightchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Lord Knight!";
+jobchange 4008;
+set cong,1;
+close;
+
+L_knighttree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Knight2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Lord Knight, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Knight2;
+close;
+
+L_knightpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_knightchange;  
+close;
+
+L_Crusader2:
+if((secondJob != 14) && (@accept2 != 1)) goto L_paltree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Paladin?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 14) && (wasPenalized != 1)) goto L_palpenalize;
+goto L_palchange;
+close;
+
+L_palchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Paladin!";
+jobchange 4015;
+set cong,1;
+close;
+
+L_paltree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Crusader2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Paladin, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Crusader2;
+close;
+
+L_palpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_palchange;  
+close;
+
+L_MageMenu:
+if(JobLevel < 50) goto L_CannotAdvance;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+mes "[Advanced Job Changer]";
+mes "Congratulations on reaching job level 50.";
+mes "Which advanced 2nd job do you want to change to?";
+if(wasPenalized == 1) goto L_MageMenu2;
+mes "Remember, if you change path from what you went down the first time, you get penalized.";
+next;
+menu "High Wizard",L_Wizard2,"Professor",L_Sage2,"Penalty?",L_Explain2;
+
+L_MageMenu2:
+next;
+menu "High Wizard",L_Wizard2,"Professor",L_Sage2,"Penalty?",L_Explain2;
+
+L_Wizard2:
+if((secondJob != 9) && (@accept2 != 1)) goto L_wizardtree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become High Wizard?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 9) && (wasPenalized != 1)) goto L_wizardpenalize;
+goto L_wizardchange;
+close;
+
+L_wizardchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the High Wizard!";
+jobchange 4010;
+set cong,1;
+close;
+
+L_wizardtree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Wizard2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to High Wizard, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Wizard2;
+close;
+
+L_wizardpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_wizardchange;  
+close;
+
+L_Sage2:
+if((secondJob != 16) && (@accept2 != 1)) goto L_sagetree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Professor?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 16) && (wasPenalized != 1)) goto L_sagepenalize;
+goto L_sagechange;
+close;
+
+L_sagechange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Professor!";
+jobchange 4017;
+set cong,1;
+close;
+
+L_sagetree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Sage2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Professor, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Sage2;
+close;
+
+L_sagepenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_sagechange;  
+close;
+
+L_ArcherMenu:
+if(JobLevel < 50) goto L_CannotAdvance;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+mes "[Advanced Job Changer]";
+mes "Congratulations on reaching job level 50.";
+mes "Which advanced 2nd job do you want to change to?";
+if(wasPenalized == 1) goto L_ArcherMenu2;
+mes "Remember, if you change path from what you went down the first time, you get penalized.";
+next;
+if(Sex == 0) menu "Sniper",L_Hunter2,"Gypsy",L_Dancer2,"Penalty?",L_Explain2;
+if(Sex == 1) menu "Sniper",L_Hunter2,"Clown",L_Bard2,"Penalty?",L_Explain2;
+
+L_ArcherMenu2:
+next;
+if(Sex == 0) menu "Sniper",L_Hunter2,"Gypsy",L_Dancer2,"Penalty?",L_Explain2;
+if(Sex == 1) menu "Sniper",L_Hunter2,"Clown",L_Bard2,"Penalty?",L_Explain2;
+
+L_Hunter2:
+if((secondJob != 11) && (@accept2 != 1)) goto L_huntertree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Sniper?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 11) && (wasPenalized != 1)) goto L_hunterpenalize;
+goto L_hunterchange;
+close;
+
+L_hunterchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Sniper!";
+jobchange 4012;
+set cong,1;
+close;
+
+L_huntertree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Hunter2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Sniper, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Hunter2;
+close;
+
+L_hunterpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_hunterchange;  
+close;
+
+L_Bard2:
+if((secondJob != 19) && (@accept2 != 1)) goto L_bardtree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Clown?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 19) && (wasPenalized != 1)) goto L_bardpenalize;
+goto L_bardchange;
+close;
+
+L_bardchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Clown!";
+jobchange 4020;
+set cong,1;
+close;
+
+L_bardtree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Bard2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Clown, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Bard2;
+close;
+
+L_bardpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_bardchange;  
+close;
+
+L_Dancer2:
+if((secondJob != 20) && (@accept2 != 1)) goto L_dancertree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Gypsy?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 20) && (wasPenalized != 1)) goto L_dancerpenalize;
+goto L_dancerchange;
+close;
+
+L_dancerchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Gypsy!";
+jobchange 4021;
+set cong,1;
+close;
+
+L_dancertree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Dancer2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Gypsy, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Dancer2;
+close;
+
+L_dancerpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_dancerchange;  
+close;
+
+L_AcolyteMenu:
+if(JobLevel < 50) goto L_CannotAdvance;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+mes "[Advanced Job Changer]";
+mes "Congratulations on reaching job level 50.";
+mes "Which advanced 2nd job do you want to change to?";
+if(wasPenalized == 1) goto L_AcolyteMenu2;
+mes "Remember, if you change path from what you went down the first time, you get penalized.";
+next;
+menu "High Priest",L_Priest2,"Champion",L_Monk2,"Penalty?",L_Explain2;
+
+L_AcolyteMenu2:
+next;
+menu "High Priest",L_Priest2,"Champion",L_Monk2,"Penalty?",L_Explain2;
+
+L_Priest2:
+if((secondJob != 8) && (@accept2 != 1)) goto L_priesttree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become High Priest?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 8) && (wasPenalized != 1)) goto L_priestpenalize;
+goto L_priestchange;
+close;
+
+L_priestchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the High Priest!";
+jobchange 4009;
+set cong,1;
+close;
+
+L_priesttree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Priest2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to High Priest, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Priest2;
+close;
+
+L_priestpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_priestchange;  
+close;
+
+L_Monk2:
+if((secondJob != 15) && (@accept2 != 1)) goto L_monktree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Champion?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 15) && (wasPenalized != 1)) goto L_monkpenalize;
+goto L_monkchange;
+close;
+
+L_monkchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Champion!";
+jobchange 4016;
+set cong,1;
+close;
+
+L_monktree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Monk2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Champion, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Monk2;
+close;
+
+L_monkpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_monkchange;  
+close;
+
+L_MerchantMenu:
+if(JobLevel < 50) goto L_CannotAdvance;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+mes "[Advanced Job Changer]";
+mes "Congratulations on reaching job level 50.";
+mes "Which advanced 2nd job do you want to change to?";
+if(wasPenalized == 1) goto L_MerchantMenu2;
+mes "Remember, if you change path from what you went down the first time, you get penalized.";
+next;
+menu "Whitesmith",L_Blacksmith2,"Creator",L_Alchemist2,"Penalty?",L_Explain2;
+
+L_MerchantMenu2:
+next;
+menu "Whitesmith",L_Blacksmith2,"Creator",L_Alchemist2,"Penalty?",L_Explain2;
+
+L_Blacksmith2:
+if((secondJob != 10) && (@accept2 != 1)) goto L_blacksmithtree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Whitesmith?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 10) && (wasPenalized != 1)) goto L_blacksmithpenalize;
+goto L_blacksmithchange;
+close;
+
+L_blacksmithchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Whitesmith!";
+jobchange 4011;
+set cong,1;
+close;
+
+L_blacksmithtree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Blacksmith2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Whitesmith, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Blacksmith2;
+close;
+
+L_blacksmithpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_blacksmithchange;  
+close;
+
+L_Alchemist2:
+if((secondJob != 18) && (@accept2 != 1)) goto L_alchemisttree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Creator?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 18) && (wasPenalized != 1)) goto L_alchemistpenalize;
+goto L_alchemistchange;
+close;
+
+L_alchemistchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Creator!";
+jobchange 4019;
+set cong,1;
+close;
+
+L_alchemisttree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Alchemist2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Creator, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Alchemist2;
+close;
+
+L_alchemistpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_alchemistchange;  
+close;
+
+L_ThiefMenu:
+if(JobLevel < 50) goto L_CannotAdvance;
+if(($JobraNoSkillPoints == 1) && (SkillPoint != 0)) goto L_SkpErr;
+mes "[Advanced Job Changer]";
+mes "Congratulations on reaching job level 50.";
+mes "Which advanced 2nd job do you want to change to?";
+if(wasPenalized == 1) goto L_ThiefMenu2;
+mes "Remember, if you change path from what you went down the first time, you get penalized.";
+next;
+menu "Assassin Cross",L_Assassin2,"Stalker",L_Rogue2,"Penalty?",L_Explain2;
+
+L_ThiefMenu2:
+next;
+menu "Assassin Cross",L_Assassin2,"Stalker",L_Rogue2,"Penalty?",L_Explain2;
+
+L_Assassin2:
+if((secondJob != 12) && (@accept2 != 1)) goto L_assassintree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Assassin Cross?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 12) && (wasPenalized != 1)) goto L_assassinpenalize;
+goto L_assassinchange;
+close;
+
+L_assassinchange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Assassin Cross!";
+jobchange 4013;
+set cong,1;
+close;
+
+L_assassintree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Assassin2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Assassin Cross, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Assassin2;
+close;
+
+L_assassinpenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_assassinchange;  
+close;
+
+L_Rogue2:
+if((secondJob != 17) && (@accept2 != 1)) goto L_roguetree;
+  mes "[Advanced Job Changer]";
+  mes "Ready to become Stalker?";
+next;
+menu "Yes",-,"No",L_No;
+if((secondJob != 17) && (wasPenalized != 1)) goto L_roguepenalize;
+goto L_roguechange;
+close;
+
+L_roguechange:
+  mes "[Advanced Job Changer]";
+  mes "There you are, " + Strcharinfo(0) + " the Stalker!";
+jobchange 4018;
+set cong,1;
+close;
+
+L_roguetree:
+if(wasPenalized == 1) set @accept2,1;
+if(@accept2 == 1) goto L_Rogue2;
+  mes "[Advanced Job Changer]";
+  mes "Your second job was " + @strSecondJob$ + ".  If you change to Stalker, you will be charged 1,000,000z, given a stat/skill reset, and charged 52 stat points and 9 skill points.";
+  mes "Is this ok? (NOTE: this is your final warning; the money/stat/skill points are irretrievable.)";
+next;
+menu "No",L_No,"Um, explain?",L_Explain2,"Yes",-;
+  mes "[Advanced Job Changer]";
+  mes "You still have one last chance to back out.  Here it is.";
+next;
+set @accept2,1;
+goto L_Rogue2;
+close;
+
+L_roguepenalize:
+if(Zeny < 1000000) goto L_cannotAffordPenalty;
+set Zeny,zeny-1000000;
+ResetStatus;
+ResetSkill;
+set StatusPoint,StatusPoint-52;
+set SkillPoint,SkillPoint-9;
+goto L_roguechange;  
+close;
+
+L_Congr:
+  mes "[Advanced Job Changer]";
+  mes "I'm happy to have served you, " + Strcharinfo(0) + ".";
+close;
+
+L_JlvErr:
+  mes "[Advanced Job Changer]";
+  mes "Your job level isn't high enough.";
+close;
+
+L_BlvErr:
+  mes "[Advanced Job Changer]";
+  mes "Your base level isn't high enough.";
+close;
+
+L_GM:
+  mes "[Advanced Job Changer]";
+  mes "You're a GM, why do you need me?";
+close;
+
+L_No:
+set @accept,0;
+  mes "[Advanced Job Changer]";
+  mes "No?  Fine.";
+close;
+
+L_lvErr2:
+  mes "[Advanced Job Changer]";
+  mes "You need to be base level 99 and job level 50 to become the advanced classes.";
+close;
+
+L_SkpErr:
+  mes "[Advanced Job Changer]";
+  mes "You need to spend all of your skill points.";
+close;
+
+L_cannotAffordPenalty:
+  mes "[Advanced Job Changer]";
+  mes "The penalty for straying from your original skill tree is 1,000,000 zeny.  Come back when you have enough.";
+set @accept,0;
+set @accept2,0;
+close;
+
+L_CannotAdvance:
+  mes "[Advanced Job Changer]";
+  mes "You must be job level 50 to change jobs from high first class.";
+close;
+}

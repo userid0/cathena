@@ -1,0 +1,60 @@
+//noro's louyang!
+//lou_dun01
+lou_dun01.gat,0,0,0,0	monster	Black Mushroom	1084,15,300000,150000,0
+lou_dun01.gat,0,0,0,0	monster	Civil Servent	1513,25,0,0,0
+lou_dun01.gat,0,0,0,0	monster	Boiled Rice	1520,25,0,0,0
+lou_dun01.gat,0,0,0,0	monster	Bigfoot	1060,2,0,0,0
+lou_dun01.gat,0,0,0,0	monster	Zipper Bear	1417,4,0,0,0
+lou_dun01.gat,0,0,0,0	monster	Chung E	1519,25,0,0,0
+lou_dun01.gat,0,0,0,0	monster	Nine-Tail	1180,15,0,0,0
+lou_dun01.gat,0,0,0,0	monster	Li Me Mang Ryang Li	1517,20,0,0,0
+lou_dun01.gat,0,0,0,0	monster	Increase Soil	1516,20,0,0,0
+
+
+//lou_dun02
+lou_dun02.gat,0,0,0,0	monster	Bongun	1188,15,0,0,0
+lou_dun02.gat,0,0,0,0	monster	Munak	1026,15,0,0,0
+lou_dun02.gat,0,0,0,0	monster	Hyegun	1512,15,0,0,0
+lou_dun02.gat,0,0,0,0	monster	Civil Servent	1513,6,0,0,0
+lou_dun02.gat,0,0,0,0	monster	Dancing Dragon	1514,10,0,0,0
+lou_dun02.gat,0,0,0,0	monster	Chung E	1519,45,0,0,0
+lou_dun02.gat,0,0,0,0	monster	Drainliar	1111,50,0,0,0
+lou_dun02.gat,0,0,0,0	monster	Increase Soil	1516,40,0,0,0
+lou_dun02.gat,0,0,0,0	monster	Cat O' Nine Tail	1307,2,1200000,0,0
+
+//lou_dun03
+lou_dun03.gat,0,0,0,0	monster	Wanderman	1208,25,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Archer Skeleton	1016,2,180000,90000,1
+lou_dun03.gat,0,0,0,0	monster	Munak	1026,5,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Soldier Skeleton	1028,5,180000,90000,1
+lou_dun03.gat,0,0,0,0	monster	Magnolia	1138,15,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Bon Gun	1188,5,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Hyegun	1512,15,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Martin	1145,15,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Cat O' Nine Tail	1307,12,1200000,0,0
+lou_dun03.gat,0,0,0,0	monster	Moonlight	1150,1,3600000,7200000,1
+lou_dun03.gat,0,0,0,0	monster	Bacsojin	1518,1,3600000,1800000,1
+lou_dun03.gat,0,0,0,0	monster	Nine-Tail	1180,25,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Civil Servent	1513,6,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Dancing Dragon	1514,10,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Chung E	1519,45,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Li Me Mang Ryang Li	1517,50,0,0,0
+lou_dun03.gat,0,0,0,0	monster	Increase Soil	1516,40,0,0,0
+
+//lou_fild01
+//lou_fild01.gat,0,0,0,0	monster	Civil Servent	1513,15,300000,300000,1
+//lou_fild01.gat,0,0,0,0	monster	Boiled Rice	1520,20,0,0,0
+//lou_fild01.gat,0,0,0,0	monster	Dancing Dragon	1514,10,300000,300000,1
+//lou_fild01.gat,0,0,0,0	monster	Hyegun	1512,5,300000,300000,1
+//lou_fild01.gat,0,0,0,0	monster	Increase Soil	1516,7,300000,300000,1
+// Remapped to exclude the inaccessible pillar in the middle
+lou_fild01.gat,0,0,345,157	monster	Civil Servent	1513,7,600000,300000,1
+lou_fild01.gat,0,0,345,157	monster	Boiled Rice	1520,10,0,0,0
+lou_fild01.gat,0,0,345,157	monster	Dancing Dragon	1514,5,600000,300000,1
+lou_fild01.gat,0,0,345,157	monster	Hyegun	1512,2,600000,300000,1
+lou_fild01.gat,0,0,345,157	monster	Increase Soil	1516,3,600000,300000,1
+lou_fild01.gat,0,189,345,361	monster	Civil Servent	1513,7,600000,300000,1
+lou_fild01.gat,0,189,345,361	monster	Boiled Rice	1520,10,0,0,0
+lou_fild01.gat,0,189,345,361	monster	Dancing Dragon	1514,5,600000,300000,1
+lou_fild01.gat,0,189,345,361	monster	Hyegun	1512,3,600000,300000,1
+lou_fild01.gat,0,189,345,361	monster	Increase Soil	1516,4,600000,300000,1

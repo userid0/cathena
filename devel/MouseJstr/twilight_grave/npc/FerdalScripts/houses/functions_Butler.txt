@@ -1,0 +1,341 @@
+function	script	F_Butler_Start	{
+	set @warpra$, "warpra" + @npcnum;
+	set @butler$, "butler" + @npcnum;
+	set @warpracost, $houseprice[@npcnum] * 5 / 1000;
+	if ( $houseowner$[@npcnum] == strcharinfo(0) ) callfunc "F_Butler_Menu";
+	mes "[ ^0000FFButler ^000000]";
+	mes "How did you get in here!?";
+	mes "Hmph...";
+	menu "Go back to Prontera",L_WARP_PRONT,"Look around",-;
+	close;
+
+	L_WARP_PRONT:
+		callfunc "F_Warp_Pront";
+}
+
+function	script	F_Butler_Menu	{
+	set @title$,"Master ";
+	if ( sex == 1 ) goto L_MENU_BEGIN;
+	set @title$,"Miss ";
+	L_MENU_BEGIN:
+		mes "[ ^0000FFButler ^000000]";
+		mes "How are you today " + @title$ + strcharinfo(0) + "?";
+		mes "What shall I do for you?";
+		next;
+		menu "Manage Employees",L_EMPLOY,"Bill Info (" + $daysleft + " Days Left)",L_BILLS,"Bank",L_BANK,"Rename House",L_RENAME,"Save",L_SAVE,"Heal",L_HEAL,"Lock/Unlock Door",L_DOOR_MENU,"Warp to Prontera",L_WARP_PRONT,"Sell the house",L_SELL,"Nothing Yet",-;
+		close;
+
+	L_EMPLOY:
+		callfunc "F_Employ";
+		goto L_MENU_BEGIN;
+	L_BILLS:
+		callfunc "F_Bills";
+		goto L_MENU_BEGIN;
+	L_BANK:
+		callfunc "F_Bank";
+		goto L_MENU_BEGIN;
+	L_RENAME:
+		callfunc "F_Rename";
+		goto L_MENU_BEGIN;
+	L_SAVE:
+		savepoint $map$[@npcnum],$svx[@npcnum],$svy[@npcnum];
+		next;
+		mes "[ ^0000FFButler ^000000]";
+		mes "There you go " + @title$ + ". Now you will respawn here.";
+		next;
+		goto L_MENU_BEGIN;
+	L_HEAL:
+		heal 999999,999999;
+		mes "[ ^0000FFButler ^000000]";
+		mes "Here you go... You look better already " + @title$ + strcharinfo(0) + "!";
+		next;
+		goto L_MENU_BEGIN;
+	L_DOOR_MENU:
+		callfunc "F_Door_Menu";
+		goto L_MENU_BEGIN;
+	L_WARP_PRONT:
+		callfunc "F_Warp_Pront";
+	L_SELL:
+		callfunc "F_Sell";
+		goto L_MENU_BEGIN;
+}
+
+function	script	F_Employ	{
+	mes "[ ^0000FFButler ^000000]";
+	mes "Who would you like to Hire / Dismiss?";
+	next;
+	menu "Personal Warpra",L_WARPRA,"No One",-;
+	mes "[ ^0000FFButler ^000000]";
+	mes "If you ever need someones service just ask me.";
+	next;
+	return;
+
+	L_WARPRA:
+		callfunc "F_Warpra";
+		return;
+}
+
+function	script	F_Bills	{
+	mes "[ ^0000FFButler ^000000]";
+	mes "The bank has sent over our monthly billing statement, as well as a breakdown of the zeny we owe.";
+	next;
+	mes "[ ^0000FFButler ^000000]";
+	mes "To pay the bills all you have to do is leave enough zeny in your bank account.";
+	next;
+	mes "[ ^0000FFButler ^000000]";
+	mes "If there isn't enough money for all the hired employees the least expensive will be paid first.";
+	next;
+	mes "[ ^0000FFButler ^000000]";
+	mes "Bills will be collected in " + $daysleft + " days.";
+	mes "Housing Tax:";
+	mes "   Balance: " + ( $houseprice[@npcnum] * $tax / 1000 ) + "z owed.";
+	if ( $warpra[@npcnum] == 0 ) goto L_NO_WARPRA;
+	mes "Warpra Bill:";
+	mes "   Balance: " + @warpracost / 2 + "z owed.";
+	L_NO_WARPRA:
+	next;
+	menu "Tax Info",L_INFO,"That's It",-;
+	mes "[ ^0000FFButler ^000000]";
+	mes "Very well " + @title$ + strcharinfo(0);
+	next;
+	return;
+
+	L_INFO:
+		mes "[ ^0000FFButler ^000000]";
+		mes "The current tax rate is " + ( $tax / 10 ) + "%.";
+		mes "Housing tax must be paid monthly in full amount, otherwise the bank will repossess the house.";
+		next;
+		return;
+}
+
+function	script	F_Bank	{
+	L_BANK:
+		mes "[ ^0000FFButler ^000000]";
+		mes "What shall I do sir?";
+		next;
+		menu "Deposit Zeny",L_DEP,"Withdraw Zeny",L_WITHD,"Account Info",L_BANK_INFO,"Show me my Balance",L_BALANCE,"Nothing",-;
+		mes "[ ^0000FFButler ^000000]";
+		mes "Alright then " + @title$ + "!  Talk to me if you need anything else.";
+		next;
+		return;
+
+	L_DEP:
+		mes "[ ^0000FFButler ^000000]";
+		mes "Your current balance is " + $bank[@npcnum] + "z.";
+		mes "How much would you like to deposit?";
+		next;
+		input @dep;
+		if ( @dep < 0 ) || ( @dep > 1000000000 ) goto L_ERR1;
+		if ( Zeny < @dep ) goto L_NEED_ZENY;
+		set $bank[@npcnum], $bank[@npcnum] + @dep;
+		set Zeny, Zeny - @dep;
+		mes "I've deposited " + @dep + "z into your bank account " + @title$ + strcharinfo(0) + ".";
+		mes "Your balance is now " + $bank[@npcnum] + "z.";
+		next;
+		goto L_BANK;
+
+	L_WITHD:
+		mes "[ ^0000FFButler ^000000]";
+		mes "Your current balance is " + $bank[@npcnum] + "z.";
+		mes "How much would you like to withdraw?";
+		next;
+		input @withd;
+		if ( @withd < 0 ) || ( @withd > 1000000000 ) goto L_ERR1;
+		if ( @withd > $bank[@npcnum] ) goto L_NEED_ZENY;
+		if ( 1000000000 < @withd + Zeny ) goto L_ERR2;
+		set $bank[@npcnum], $bank[@npcnum] - @withd;
+		set Zeny, Zeny + @withd;
+		mes "I've withdrawn " + @withd + "z from your bank account " + @title$ + strcharinfo(0) + ".";
+		mes "Your balance is now " + $bank[@npcnum] + "z.";
+		next;
+		goto L_BANK;
+
+	L_BALANCE:
+		mes "[ ^0000FFButler ^000000]";
+		mes "Your current balance is " + $bank[@npcnum] + "z.";
+		next;
+		menu "Make a Transaction",L_BANK,"Do Nothing",-;
+		mes "[ ^0000FFButler ^000000]";
+		if ( $daysleft == 0 ) goto L_TODAY;
+		mes "Very well " + @title$ + "keep in mind, bills will be collected in " + $daysleft + " days.";
+		next;
+		goto L_BANK;
+		L_TODAY:
+		mes "Very well " + @title$ + "keep in mind, bills will be collected at midnight.";
+		next;
+		goto L_BANK;
+
+	L_BANK_INFO:	
+		mes "[ ^0000FFButler ^000000]";
+		mes "Because you purchased the house, the bank has given you a free bank account!";
+		next;
+		mes "[ ^0000FFButler ^000000]";
+		mes "Bills will automatically be deducted from your bank account to pay for your monthly expenses, such as Housing Tax, so make sure you have enough in it.";
+		next;
+		mes "[ ^0000FFButler ^000000]";
+		mes "The best part of the deal " + @title$ + strcharinfo(0) + " is the " + ( $interest / 10 ) + "% interest the account gets bi-daily!";
+		next;
+		goto L_BANK;
+
+	L_ERR1:
+		mes "[ ^0000FFButler ^000000]";
+		mes "You can withdraw or deposit any amount between 1 and 1 Billion zeny.";
+		next;
+		goto L_BANK;
+
+	L_ERR2:
+		mes "[ ^0000FFButler ^000000]";
+		mes "You can carry a max of 1 Billion zeny, sorry " + @title$ + ", but I can't give you more than that.";
+		next;
+		goto L_BANK;
+
+	L_NEED_ZENY:
+		mes "[ ^0000FFButler ^000000]";
+		mes "I'm sorry " + @title$ + " but you don't have enough zeny to do that.";
+		goto L_BANK;
+}
+
+function	script	F_Rename	{
+	L_RENAME:
+		mes "[ ^0000FFButler ^000000]";
+		mes "Would you like to rename the house " + @title$;
+		next;
+		menu "Of course",L_GET_NAME,"Nah, Forget It",-;
+		mes "[ ^0000FFButler ^000000]";
+		mes "I think you should reconsider this " + @title$;
+		next;
+		return;
+
+	L_GET_NAME:
+		mes "[ ^0000FFButler ^000000]";
+		mes "Great choice! What should I change the new title to?";
+		next;
+		input $housename$[@npcnum];
+		mes "[ ^0000FFButler ^000000]";
+		mes "What a wonderful name!";
+		mes "The title of the house has been changed to " + $housename$[@npcnum];
+		next;
+		return;
+}
+
+function	script	F_Door_Menu	{
+	if ( $houselock[@npcnum] == 0 ) goto L_LOCK;
+	mes "[ ^0000FFButler ^000000]";
+	mes "The door is locked, shall I remove the password?";
+	next;
+	menu "Yes",L_UNLOCK,"No",-;
+	mes "[ ^0000FFButler ^000000]";
+	mes "Very well I'll leave the password lock on...";
+	next;
+	return;
+
+	L_UNLOCK:
+		mes "[ ^0000FFButler ^000000]";
+		mes "I've removed the password lock, now anyone can enter the house.";
+		set $houselock[@npcnum],0;
+		next;
+		return;
+
+	L_LOCK:
+		mes "[ ^0000FFButler ^000000]";
+		mes "The door is unlocked shall I put a password lock on it?";
+		next;
+		menu "Yes",L_PASS_INPUT,"No",-;
+		mes "[ ^0000FFButler ^000000]";
+		mes "The door is unlocked, anyone may enter the house";
+		next;
+		return;
+
+	L_PASS_INPUT:
+		mes "[ ^0000FFButler ^000000]";
+		mes "What shall I set the password as?";
+		next;
+		input $housepass$[@npcnum];
+		set $houselock[@npcnum],1;
+		mes "[ ^0000FFButler ^000000]";
+		mes "The door has been locked with the password " + $housepass$[@npcnum] + "!";
+		next;
+		return;
+}
+
+function	script	F_Warpra	{
+	if ( $warpra[@npcnum] == 1 ) goto L_WARPRA_DISMISS;
+	mes "[ ^0000FFButler ^000000]";
+	mes "A Personal Warpra will cost " + @warpracost + "z plus an additional " + (@warpracost / 2) + "z each month.  Would you like to hire a Personal Warpra?";
+	next;
+	menu "Yes",L_WARPRA_HIRE,"No",-;
+	mes "[ ^0000FFButler ^000000]";
+	mes "Fair enough " + @title$ + ".";
+	next;
+	return;
+	
+	L_WARPRA_HIRE:
+		if ( Zeny < @warpracost ) goto NEED_ZENY;
+		set Zeny, Zeny - @warpracost;
+		enablenpc @warpra$;
+		set $warpra[@npcnum], 1;
+		mes "[ ^0000FFButler ^000000]";
+		mes "The Warpra Corporation has sent over an employee to work for you.";
+		next;
+		return;
+
+	L_WARPRA_DISMISS:
+		disablenpc @warpra$;
+		set $warpra[@npcnum], 0;
+		mes "[ ^0000FFButler ^000000]";
+		mes "I've informed the Warpra that her services will no longer be needed.";
+		next;
+		return;
+		
+	NEED_ZENY:
+		mes "[ ^0000FFButler ^000000]";
+		mes "I'm sorry " + @title$ + " but you don't have enough zeny to do that.";
+		close;
+}
+
+function	script	F_Sell	{
+	mes "[ ^0000FFButler ^000000]";
+	mes "You can sell the house back to the real estate agency for half the price you bought it from them, if you'd like to.";
+	next;
+	menu "Sell to Real Estate Agency",L_SELL_AGENCY,"Nevermind",-;
+	mes "[ ^0000FFButler ^000000]";
+	mes "Thank goodness " + @title$ + "! Who knows what horrible person might have bought the house!";
+	next;
+	return;
+
+	L_SELL_AGENCY:
+		mes "[ ^0000FFButler ^000000]";
+		mes "The Real Estate Agency will pay you " + ( $houseprice[@npcnum] / 2 ) + " zeny for the house.";
+		mes "Are you sure you want to do this " + @title$ + "?";
+		next;
+		menu "I'm Sure",L_AGENCY_CONFIRM,"No, Nevermind",-;
+		mes "[ ^0000FFButler ^000000]";
+		mes "Thank goodness! I enjoy working for you, and who knows who might have bought the house next!";
+		next;
+		return;
+
+  	L_AGENCY_CONFIRM:
+  	  mes "[ ^0000FFButler ^000000]";
+      mes "Very well, the deed has been signed over to the Real Estate Agency."; 
+      mes "It's been a pleasure working for you " + @title$ + strcharinfo(0);
+      next;
+      set @sellamt,$houseprice[@npcnum] / 2;
+      set Zeny, Zeny + @sellamt + $bank[@npcnum];
+      set $housestatus[@npcnum],0;
+      set $houseowner$[@npcnum],"";
+      set $warpra[@npcnum],0;
+      set $housepass$[@npcnum],"";
+      set $houselock[@npcnum],0;
+      set $housename$[@npcnum],"";
+      set $bank[@npcnum],0;
+      set ownhouse, 0;
+      disablenpc @warpra$;
+      warp "prontera.gat",154,154;
+      savepoint "prontera.gat",154,154;
+      close;
+}
+
+function	script	F_Warp_Pront	{
+	warp "prontera.gat",154,154;
+	close;
+}

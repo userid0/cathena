@@ -1,0 +1,42 @@
+//WoE Castle Knight NPC Script by holyAngelX
+
+pay_gld.gat,118,235,4	script	Mingting Knight	733,{
+
+	set @GIDf1,GetCastleData("payg_cas01.gat",1);
+	if (@GIDf1 == 0) goto Lclear;
+	if (getcharid(2) == @GIDf1) goto LStartg;
+	mes "[Mingting Knight]";
+	mes "You're not allies of my King! Halt your Pursuit now or face death beyond your worst fear.";
+	goto L_EXIT;
+
+Lclear:
+	mes "[Mingting Knight]";
+	mes "When the time is ripe, the Uncrowned shall be Crowned once again... and the broken blade shall be one again...";
+	close;
+
+L_EXIT:
+	close;
+
+LStartg:
+	mes "[Mingting Knight]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDf1) + "^000000 members";
+	mes "May the light be with you...";
+	next;
+	menu "Save",Lsave,"Protect Emperium",protect_emp,"Leave Here",leave,"Cancel",Lcancel;
+
+	Lsave:
+		savepoint "pay_gld.gat",121,233;
+		mes "[Mingting Knight]";
+		mes "Your respawn point has saved. Thank you.";
+		close;
+
+	protect_emp:
+		warp "payg_cas01.gat",	138,	138;	close;
+
+	leave:
+		warp "prontera.gat",	154,	194;	close;
+
+	Lcancel:
+		close;
+
+}

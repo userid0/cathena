@@ -1,0 +1,33 @@
+//Missing, and added mobs
+
+//xmas_fild01
+xmas_fild01.gat,0,0,0,0	monster	Santa Marin	1424,3,6000,120000,0
+//xmas_fild01.gat,0,0,0,0	monster	Sasquatch	1243,20,0,0,0
+xmas_fild01.gat,0,0,0,0	monster	Baby Garm	1515,5,760000,920000,0
+xmas_fild01.gat,0,0,0,0	monster	Galapago	1391,7,7600,9200,0
+xmas_fild01.gat,0,0,0,0	monster	Santa Marin	1424,1,7600,9200,0
+
+//xmas_dun01
+xmas_dun01.gat,0,0,0,0	monster	Christmas Jakk	1244,16,0,0,0
+xmas_dun01.gat,0,0,0,0	monster	Christmas Orc	1239,5,600,3000,0
+xmas_dun01.gat,0,0,0,0	monster	Antonio	1247,1,60000,90000,0
+xmas_dun01.gat,0,0,0,0	monster	Christmas Goblin	1245,12,0,0,0
+xmas_dun01.gat,0,0,0,0	monster	Santa Marin	1424,3,0,0,0
+xmas_dun01.gat,0,0,0,0	monster	Santa Poporing	1422,5,0,0,0
+xmas_dun01.gat,0,0,0,0	monster	Santa Drops	1423,5,0,0,0
+xmas_dun01.gat,0,0,0,0	monster	Santa Poring	1062,6,0,0,0
+
+//xmas_dun01.gat,0,0,0,0	monster	Christmas Cookie	1245,12,0,0,0
+
+//xmas_dun02
+xmas_dun02.gat,0,0,0,0	monster	Antonio	1247,6,60000,90000,0
+xmas_dun02.gat,0,0,0,0	monster	Baby Garm	1515,3,760000,920000,0
+
+//iz_dun04
+iz_dun04.gat,0,0,0,0	monster	Strouf	1065,1,360000,620000,0
+
+//in_sphinx5
+in_sphinx5.gat,0,0,0,0	monster	Pharaoh	1157,1,1800000,200000,0
+
+//pay_fild04
+pay_fild04.gat,0,0,0,0	monster	Deviling	1240,1,360000,620000,0

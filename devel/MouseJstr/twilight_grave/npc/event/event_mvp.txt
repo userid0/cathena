@@ -1,0 +1,34 @@
+//MVP arena npc's
+
+prontera.gat,164,172,3	script	MVP arena warper	733,{
+	mes "[MVP arena warper]";
+	mes "I will send you to the MVP arena.";
+	mes "Are you ready?";
+	menu "I am prepared.",DUNGEON,
+	     "No...",NO;
+
+DUNGEON:
+	warp "mvp_arena.gat",	125,	146;
+	close;
+
+NO:
+	mes "[MVP arena warper]";
+	mes "Return when you are ready.";
+	close;
+}
+
+mvp_arena.gat,118,123,6	script	Sanctuary	738,{
+	mes "[Sanctuary]";
+	mes "I can bring you home.";
+	menu "Please do so.",SAFETY,
+	     "No thanks.",NOTHX;
+
+SAFETY:
+	warp "prontera.gat",	152,	180;
+	close;
+
+NOTHX:
+	mes "[Sanctuary]";
+	mes "Fine.";
+	close;
+}

@@ -1,0 +1,42 @@
+//WoE Castle Knight NPC Script by holyAngelX
+
+alde_gld.gat,100,250,4	script	Hohensyubangawoo Knight	733,{
+
+	set @GIDa2,GetCastleData("aldeg_cas02.gat",1);
+	if (@GIDa2 == 0) goto Lclear;
+	if (getcharid(2) == @GIDa2) goto LStartg;
+	mes "[Hohensyubangawoo Knight]";
+	mes "You're not allies of my King! Halt your Pursuit now or face death beyond your worst fear.";
+	goto L_EXIT;
+
+Lclear:
+	mes "[Hohensyubangawoo Knight]";
+	mes "When the time is ripe, the Uncrowned shall be Crowned once again... and the broken blade shall be one again...";
+	close;
+
+L_EXIT:
+	close;
+
+LStartg:
+	mes "[Hohensyubangawoo Knight]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDa2) + "^000000 members";
+	mes "May the light be with you...";
+	next;
+	menu "Save",Lsave,"Protect Emperium",protect_emp,"Leave Here",leave,"Cancel",Lcancel;
+
+	Lsave:
+		savepoint "alde_gld.gat",97,247;
+		mes "[Hohensyubangawoo Knight]";
+		mes "Your respawn point has saved. Thank you.";
+		close;
+
+	protect_emp:
+		warp "aldeg_cas02.gat",	213,	23;	close;
+
+	leave:
+		warp "prontera.gat",	154,	194;	close;
+
+	Lcancel:
+		close;
+
+}

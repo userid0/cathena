@@ -1,0 +1,8 @@
+L2:
+	if(getskilllv(1) < 6) goto Lerror2_1;
+		openstorage;
+		goto L_EXIT;
+	Lerror2_1:
+		mes "[Kafra Service]";
+		mes "You must have lvl 6 or higher novice skill.";
+		goto L_EXIT;

@@ -1,0 +1,50 @@
+//= War of Emperium - prtg_cas04_treasure script
+//===== By: ==================================================
+//= ho|yAnge|X (Beta 1.0)
+//===== Current Version: =====================================
+//= Epsilon 4.0
+//===== Compatible With: =====================================
+//= eAthena 0.1+; RO Episode 4+
+//===== Description: =========================================
+//= Treasure Chest Spawn Control Center & Exit Switch in prtg_cas04
+//===== Additional Comments: =================================
+//= Epsilon 4.0 by ho|yAnge|X
+//============================================================
+
+prtg_cas04.gat,275,160,0	script	Switch	111,{
+mes " ";
+mes "There is a little switch here. Would you like to pull the switch down?";
+next;
+menu "Yes",L1,"No",L2;
+L1:
+	warp "prtg_cas04",259,265;
+L2:
+  close;
+}
+
+prtg_cas04.gat,271,162,0	script	Treasure_D04	-1,{
+OnClock1200:
+	SetCastleData "prtg_cas04.gat",4,0;
+	SetCastleData "prtg_cas04.gat",5,0;
+	KillMonster "prtg_cas04.gat","Treasure_D04::TreasureDied";
+	set $Economy18,GetCastleData("prtg_cas04.gat",2);
+	if ($Economy18 > 100) break;
+	if (GetCastleData("prtg_cas04.gat",1) == 0) break;
+	set $boxnum18,GetCastleData("prtg_cas04.gat",2)/5+4;
+	goto TreasureCheck;
+
+TreasureCheck:
+	if ($boxnum18 <= 0) break;
+	set $boxid18,rand(1360,1360,1360,1361);
+	goto TreasureSpawn;
+
+TreasureSpawn:
+	areamonster "prtg_cas04.gat",266,158,275,167,"Treasure Chest",$boxid18,1,"Treasure_D04::TreasureDied";
+	set $boxnum18,$boxnum18-1;
+	if ($boxnum18 <= 0) break;
+	goto TreasureCheck;
+
+TreasureDied:
+	MapAnnounce "prtg_cas04.gat","Treasure Chest Broken Open",17;
+	break;	
+}

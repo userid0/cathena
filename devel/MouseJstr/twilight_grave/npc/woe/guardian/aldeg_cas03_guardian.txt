@@ -1,0 +1,68 @@
+//===== eAthena Script =======================================
+//= War of Emperium - aldeg_cas03_guardian script
+//===== By: ==================================================
+//= ho|yAnge|X (Beta 1.0)
+//===== Current Version: =====================================
+//= Epsilon 4.0
+//===== Compatible With: =====================================
+//= eAthena 0.1+; RO Episode 4+
+//===== Description: =========================================
+//= Guardian Spawn Control Center in aldeg_cas03
+//===== Additional Comments: =================================
+//= Modified by joedukk
+//= Epsilon 4.0 by ho|yAnge|X
+//============================================================
+
+aldeg_cas03.gat,206,32,0	script	Guardian_A03	-1,{
+OnAgitStart:
+	if (GetCastleData("aldeg_cas03.gat",10) <= 0) goto Guardian2;
+	monster "aldeg_cas03.gat",57,216,"--en--",1287,1,"Guardian_A03::GuardianDied"; 
+	goto Guardian2;
+Guardian2:
+	if (GetCastleData("aldeg_cas03.gat",11) <= 0) goto Guardian3;
+	monster "aldeg_cas03.gat",80,108,"--en--",1287,1,"Guardian_A03::GuardianDied"; 
+	goto Guardian3;
+Guardian3:
+	if (GetCastleData("aldeg_cas03.gat",12) <= 0) goto Guardian4;
+	monster "aldeg_cas03.gat",199,183,"--en--",1287,1,"Guardian_A03::GuardianDied"; 
+	goto Guardian4;
+Guardian4:
+	if (GetCastleData("aldeg_cas03.gat",13) <= 0) goto Guardian5;
+	monster "aldeg_cas03.gat",98,267,"--en--",1285,1,"Guardian_A03::GuardianDied"; 
+	goto Guardian5;
+Guardian5:
+	if (GetCastleData("aldeg_cas03.gat",14) <= 0) goto Guardian6;
+	monster "aldeg_cas03.gat",91,88,"--en--",1285,1,"Guardian_A03::GuardianDied"; 
+	goto Guardian6;
+Guardian6:
+	if (GetCastleData("aldeg_cas03.gat",15) <= 0) goto Guardian7;
+	monster "aldeg_cas03.gat",78,121,"--en--",1286,1,"Guardian_A03::GuardianDied"; 
+	goto Guardian7;
+Guardian7:
+	if (GetCastleData("aldeg_cas03.gat",16) <= 0) goto Guardian8;
+	monster "aldeg_cas03.gat",200,164,"--en--",1286,1,"Guardian_A03::GuardianDied"; 
+	goto Guardian8;
+Guardian8:
+	if (GetCastleData("aldeg_cas03.gat",17) <= 0) goto NoSpawn;
+	monster "aldeg_cas03.gat",200,164,"--en--",1286,1,"Guardian_A03::GuardianDied"; 
+	break;
+
+GuardianDied:
+	// event when Guardian died
+	MapAnnounce "aldeg_cas03.gat","A Guardian Has Fallen",17;
+	break;	
+
+OnAgitEliminate:
+	// kill all monsters label by Guardian_A03::GuardianDied
+	KillMonster "aldeg_cas03.gat","Guardian_A03::GuardianDied";
+	break;
+
+OnAgitEnd:
+	// kill all monsters label by Guardian_A03::GuardianDied
+	KillMonster "aldeg_cas03.gat","Guardian_A03::GuardianDied";
+	break;
+
+NoSpawn:
+	break;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,146 @@
+// Platnium Skills------------------------------------------------------------------------
+prontera.gat,181,314,8	script	Platnium Skills NPC	117,
+{mes "[Platnium Skills NPC]";
+mes "Would you like to learn the special moves of your class?";
+next;
+menu "Yes",Lgetskills,"No",Lnotgetskills;
+Lgetskills:
+if (Class==0) || (Class==23) || (Class==24) || (Class==4001) goto Lskillsnovice;
+if (Class==1) || (Class==7) || (Class==13) || (Class==14) || (Class==21) || (Class==25) || (Class==35) ||(Class==41) || (Class==42) || (Class==49) || (Class==4002) || (Class==4008) || (Class==4014) || (Class==4015) || (Class==4022) goto Lskillsswordie;
+
+if (Class==2) || (Class==9) || (Class==16) || (Class==26) || (Class==37) || (Class==44) || (Class==4003) || (Class==4010) || (Class==4017) goto Lskillsmage;
+if (Class==3) || (Class==11) || (Class==19) || (Class==20) || (Class==28) || (Class==39) || (Class==47) || (Class==48) || (Class==4004) || (Class==4012) || (Class==4020) || (Class==4021) goto Lskillsarcher;
+if (Class==4) || (Class==8) || (Class==15) || (Class==29) || (Class==36) || (Class==43) || (Class==4005) || (Class==4009) || (ClasS==4016) goto Lskillsaco;
+if (Class==5) || (Class==10) || (Class==18) || (Class==30) || (Class==38) || (Class==46) || (Class==4006) || (Class==4011) || (Class==4019) goto Lskillsmerchie;
+if (Class==6) || (Class==12) || (Class==17) || (Class==31) || (Class==40) || (Class==45) || (Class==4007) || (Class==4013) || (Class==14018) goto Lskillsthief;
+// Swordie
+Lskillsswordie:
+	mes "[Platnium Skills NPC]";
+	mes "A swordsman class, I see. You can learn the skills Moving HP Recovery, Attack Weak Point, Auto Berserk, and First Aid."
+	next;
+	mes "[Platnium Skills NPC]";
+	mes "Care to learn one?";
+	menu "Moving HP recovery",Lskillmhpr,"Attack Weak Point",Lskillawp,"Auto Berserk",Lskillautozerk,"First Aid",Lskillfirstaid,"No thanks",LskillsEND;
+	close;
+	Lskillmhpr:
+		skill 144,1,0;
+		mes "You now can recover HP while moving.";
+		close;
+		goto LskillsEND;
+	Lskillawp:
+		skill 145,1,0;
+		mes "You now attack weak points with Bash.";
+		close;
+		goto LskillsEND;
+	Lskillautozerk:
+		skill 146,1,0;
+		mes "You now go berserk near death.";
+		close;
+		goto LskillsEND;
+// Mage
+Lskillsmage:
+	mes "[Platnium Skills NPC]";
+	mes "As a Mage Class you can only learn Energy Coat or First Aid.  Want to learn one?";
+	menu "Energy Coat",Lskillenergyc,"First Aid",Lskillfirstaid,"No",LskillsEND;
+	close;
+	Lskillenergyc:
+		skill 157,1,0;
+		mes "You know can protect yourself with a coat of energy.";
+		close;
+		goto LskillsEND;
+// Archer
+Lskillsarcher:
+	mes "[Platnium Skills NPC]";
+	mes "An archer class, eh? Arrow creation, Charge Arrow, and First Aid are the skills you can learn.  Care to learn one?";
+	menu "Arrow Creation",LskillArrowcreate,"Charge Arrow"Lskillcarrow,"First Aid",Lskillfirstaid,"No thanks",LskillsEND;
+	close;
+	LskillArrowcreate:
+		skill 147,1,0;
+		mes "You can now create arrows from raw materials.";
+		close;
+		goto LskillsEND;
+	Lskillcarrow:
+		skill 148,1,0;
+		mes "You can now knock back enemies with a charged Arrow."
+		close;
+		goto LskillsEND;
+// Aco
+Lskillsaco:
+	mes "[Platnium Skills NPC]";
+	mes "As a character of the Acolyte class, you can learn Holy Light and First Aid.  Want to learn one?";
+	menu "Holy Light",Lskillhl,"First Aid",Lskillfirstaid,"No",LskillsEND;
+	close;
+	Lskillhl:
+		skill 156,1,0;
+		mes "You now can use Holy Light.";
+		close;
+		goto LskillsEND;
+// Merchant
+Lskillsmerchie:
+	mes "[Platnium Skills NPC]";
+	mes "Merchant classes can learn many skills.  Change Cart, Cart Revolution, Crazy Uproar, and First Aid.  Take your pick if you wish.";
+	menu "Change Cart",Lskillchange,"Cart Revolution",Lskillccr,"Crazy Uproar",Lskilluproar,"First Aid",Lskillfirstaid,"Not today",LskillsEND;
+	close;
+	Lskillchange:
+		skill 154,1,0;
+		mes "You can now Change the look of your cart at some levels.";
+		close;
+		goto LskillsEND;
+	Lskillccr:
+		skill 153,1,0;
+		mes "You now can use your cart as a dealy weapon (for SP of course).";
+		close;
+		goto LskillsEND;
+	Lskilluproar:
+		skill 155,1,0;
+		mes "You have the ability to raise your STR now.";
+		close;
+		goto LskillsEND;
+// Thief
+Lskillsthief:
+	mes "[Platnium Skills NPC]";
+	mes "As a theif type class, you can learn Throw Sand, Back Sliding, Take Stone, Throw Stone, and First Aid.  Interested?";
+	menu "Throw Sand",Lskillsand,"Back Sliding",Lskillbackslide,"Take Stone",Lskilltake,"Throw Stone",Lskillthrow,"First Aid",Lskillfirstaid,"Not interested",LskillsEND;
+	close;
+	Lskillsand:
+		skill 149,1,0;
+		mes "You can now throw sand.  Go nuts.";
+		close;
+		goto LskillsEND;
+	Lskillbackslide:
+		skill 150,1,0;
+		mes "You can now slide backwords with good speed.";
+		close;
+		goto LskillsEND;
+	Lskilltake:
+		skill 151,1,0;
+		mes "You can now pick up stones.  Hope you learn to throw them.";
+		close;
+		goto LskillsEND;
+	Lskillthrow:
+		skill 152,1,0;
+		mes "You can now throw stones.  But can you pick them up?";
+		close;
+		goto LskillsEND;
+// Novice
+Lskillsnovice:
+	mes "[Platnium Skills NPC]";
+	mes "So you're a novice of some sorts.  You can learn First Aid and Act Dead.  Would you care to learn either of these?";
+	menu "First Aid",Lskillfirstaid,"Act Dead",Lskillactdead,"No Thanks"LskillsEND;
+	close;
+	Lskillfirstaid:
+		skill 142,1,0;
+		mes "You know can use First Aid.";
+		close;
+		goto LskillsEND;
+	Lskillactdead:
+		skill 143,1,0;
+		mes "You know can Act Dead";
+		close;
+		goto LskillsEND;
+// LskillsEND
+		LskillsEND:
+			mes "[Platnium Skills NPC]";
+			mes "Thank you.  Have a nice day.";
+			close;
+}

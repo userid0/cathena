@@ -1,0 +1,132 @@
+//Geffenia acces by Raf.
+//Flags
+gefenia01.gat	mapflag	nomemo	dummy
+gefenia02.gat	mapflag	nomemo	dummy
+gefenia03.gat	mapflag	nomemo	dummy
+gefenia04.gat	mapflag	nomemo	dummy
+
+//NPC
+gef_dun02.gat,212,212,3	script	Lost Wizard	792,{
+	if(geffenia_quest>0) goto gef_01;
+	mes "[Lost Wizard]";
+	mes "There is nothing left. We are lost.";
+	set geffenia_quest,1;
+	close;
+gef_01:
+	if(geffenia_quest>1) goto gef_02;
+	mes "[Lost Wizard]";
+	mes "Dead bodies tell no tales.";
+	set geffenia_quest,2;
+	close;
+gef_02:
+	if(geffenia_quest>2) goto gef_03;
+	mes "[Lost Wizard]";
+	mes "We died for our pride. Do you believe in yourself so much you want to die too?";
+	next;
+	menu "I don't fear death.",yes,"I don't want to die.",no;
+yes:
+	mes "[Lost Wizard]";
+	mes "Fool.";
+	set geffenia_quest,3;
+	close;
+no:
+	mes "[Lost Wizard]";
+	mes "You are wise.";
+	set geffenia_quest,4;
+	close;
+gef_03:
+	mes "[Lost Wizard]";
+	mes "Why are you stll here?";
+	next;	
+	if(geffenia_quest==3) goto hard_quest;
+	if(geffenia_quest==4) goto easy_quest;
+	if(geffenia_quest>4) goto gef_04;
+	break;
+hard_quest:
+	mes "[Lost Wizard]";
+	mes "So, you really want to access our lost city?";
+	next;
+	mes "[Lost Wizard]";
+	mes "Very well. I will need you to bring me a few items to prove you are worthy of entering.";
+	next;
+	mes "[Lost Wizard]";
+	mes "Bring me a ^FF0000Lucifer's Lament^000000, an ^FFFF00Emperium^000000, and a ^00FF00Necklace of Wisdom^000000.";
+	set geffenia_quest,5;
+	close;
+easy_quest:
+	mes "[Lost Wizard]";
+	mes "You showed wisdom. I will grant you temporary access if you can show determination.";
+	next;
+	mes "[Lost Wizard]";
+	mes "Bring me the following: 10 ^7C60B0Poison Spores^000000, 10 ^6090FF Blue hair^000000 and 5 ^804000Yoyo tails^000000.";
+	set geffenia_quest,6;
+	close;
+gef_04:
+	if(geffenia_quest>6) goto gef_05;
+	mes "[Lost Wizard]";
+	mes "It seems you decided to earn your way to Gefenia.";
+	next;
+	menu "I have your items.",item_check,"I don't remember what I need to do.",go_quest;
+go_quest:
+	if(geffenia_quest==5) goto hard_quest;
+	if(geffenia_quest==6) goto easy_quest;
+	//break;
+	close;
+item_check:
+	mes "[Lost Wizard]";
+	mes "If you are sure you want to enter, then I will check your worthyness. If you try to deceive me, I will banish you.";
+	next;
+	if(geffenia_quest==5) goto hard_check;
+	if(geffenia_quest==6) goto easy_check;
+	//break;
+	close;
+hard_check:
+	menu "I am stil not afraid to die!",hard_check1,"I don't want to die.",hard_check2,"I'll leave you alone.",gef_leave;
+hard_check1:
+	if(countitem(7025)<1 || countitem(714)<1 || countitem(1007)<1) goto fool;
+	mes "[Lost Wizard]";
+	mes "You are truly a brave warrior. Go now, and play with Death!";
+	next;
+	delitem 7025,1;
+	delitem 714,1;
+	delitem 1007,1;
+	set geffenia_quest,7;
+	warp "gefenia01.gat",275,187;
+	break;
+hard_check2:
+	set geffenia_quest,6;
+	close;
+easy_check:
+	menu "I will go.",easy_check1,"I am not afraid of death anymore!",easy_check2,"I'll leave you alone.",gef_leave;
+easy_check1:
+	if(countitem(7033)<10 || countitem(1034)<10 || countitem(942)<5) goto fool;
+	mes "[Lost Wizard]";
+	mes "Go now, and see if you are still afraid to die!";
+	next;
+	delitem 7033,10;
+	delitem 1034,10;
+	delitem 942,5;
+	warp "gefenia01.gat",275,187;
+	break;
+easy_check2:
+	set geffenia_quest,5;
+	close;
+gef_05:
+	mes "[Lost Wizard]";
+	mes "Want to go back there?";
+	next;
+	menu "Yes.",go_yes,"No.",gef_leave;
+go_yes:
+	warp "gefenia01.gat", 275,187;
+	break;
+fool:
+	mes "[Lost Wizard]";
+	mes "So you tried to lie to me? Very well.";
+	next;
+	warp "alberta.gat", 241,90;
+	break;
+gef_leave:
+	mes "[Lost Wizard]";
+	mes "I see that you are in fact a coward...";
+	close;
+}

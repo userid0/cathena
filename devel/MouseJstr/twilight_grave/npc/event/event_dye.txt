@@ -1,0 +1,46 @@
+// Dyer with 77 palettes 
+// 77 palettes support by hyunkell aka angel
+// you need 77 palettes patch in order to use this 
+//Apple Remake
+
+prontera.gat,128,193,1	script	Stylist	122,{
+mes "[Stylist]";
+mes "I'm your personal stylist,";
+mes "I can change the color of your hair and clothes";
+mes "Not that i cant color pecoriding crusaders";
+mes "What do you wish to change?";
+next;
+menu "Hair",Lhair,"Clothes",Lclothe,"Nothing",LCancel;
+
+Lhair:
+mes "[Stylist]";
+mes "Lets see...hmmm";
+mes "What color do shall we change to?";
+next;
+input @hpal;
+if (@hpal>52) close;
+if (@hpal<1) close;
+
+setlook 6,@hpal;
+
+close;
+
+Lclothe:
+mes "[Stylist]";
+mes "Ahh your clothes..hmm";
+mes "I will have em for you in a few seconds";
+mes "Now choose a pallete.";
+mes "Input a number between 0 an 89";
+next;
+input @pal;
+if (@pal>89) close;
+if (@pal==78) close;
+if (@pal<0) close;
+
+setlook 7,@pal;
+close;
+
+LCancel:
+close;
+
+}

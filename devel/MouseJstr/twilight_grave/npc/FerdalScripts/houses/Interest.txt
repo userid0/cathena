@@ -1,0 +1,22 @@
+-	script	Interest_Script	-1,{
+
+OnClock0000:
+	set $@count,0;
+	if ( $intcount == 0 ) goto L_ADD_INTEREST;
+	set $intcount, $intcount - 1;
+	end;
+
+L_ADD_INTEREST:
+	set $@count, $@count + 1;
+	if ( $@count > 65 ) goto L_END;
+	if ( $housestatus[$@count] == 0 ) goto L_ADD_INTEREST;
+	set $bank[$@count], $bank[$@count] + ( $bank[$@count] * $interest / 1000 );
+	goto L_ADD_INTEREST;
+
+L_END:
+	set $intcount,6;
+	end;
+
+OnInit:
+	set $interest, 50;		//Divided by 1000 in script, 10 = 1%
+}

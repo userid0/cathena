@@ -1,0 +1,91 @@
+// Ayothaya Guide NPC
+// Created by Kahn Ferdal (Ferdal-GM: HeRO)
+// Don't take credit for others' hard work!
+// Enjoy. :D
+
+//=====================================================================
+
+// Center ---------------------------------------------------------
+ayothaya.gat,71,144,4	script	Guide#1::Guide	780,{
+	mes "[Ayothaya Soldier]";
+	mes "Welcome to Ayothaya, the historic city and resort of Rune-Midgard Kingdom!";
+	next;
+	mes "[Ayothaya Soldier]";
+	mes "We are here to help you find your way.  Please feel free to speak to us anytime you need help.";
+M_Menu:
+	next;
+	menu "View Buildings",M_1, "Notice",M_2, "Cancel",M_End;
+
+	M_1:
+		mes "[Ayothaya Soldier]";
+		mes "Do you want me to leave indications on the Mini-Map?";
+		next;
+		menu "No Thanks",sM_1a,"Yes Please",sM_1b;
+		
+		sM_1a:
+			set @COMPASS_CHECK,0;
+			goto L_Cont;
+
+		sM_1b:
+			set @COMPASS_CHECK,1;
+
+		L_Cont:
+		mes "[Ayothaya Soldier]";
+		mes "Please choose a building to view.";
+		next;
+	sM_Menu:
+		menu 	"Ayothaya Palace",M_1_1, "^9999F5Inn of the Buddhist^000000",M_1_2, "^ff0000Weapon and Armor Utilities^000000",M_1_3,
+			"Docks",M_1_4, "Wipe all indications from mini-map.",M_1_14, "Cancel",M_End;
+
+		M_1_1:
+			mes "[Ayothaya Soldier]";
+			mes "The 'Ayothaya Palace'. This is where the neighboring city leaders meet to agree on national decisions.";
+			viewpoint 1,207,282,1,0x2222AA;
+			goto sL_Wipe;
+		M_1_2:
+			mes "[Ayothaya Soldier]";
+			mes "The 'Inn of the Buddhist'. This is the house that the monks stayed in, and now many tourist stay in.";
+			viewpoint 1,202,139,2,0xAAAAF5;
+			goto sL_Wipe;
+		M_1_3:
+			mes "[Ayothaya Soldier]";
+			mes "The 'Weapon and Armor Utilities' shop is where you can buy some weapons and armor, and refine them!";
+			viewpoint 1,172,76,3,0xFF0000;
+			goto sL_Wipe;
+		M_1_4:
+			mes "[Ayothaya Soldier]";
+			mes "These are the 'Docks'. You can find a ship to whatever other port you want to go to, or check in on what the ship brings in!";
+			viewpoint 1,130,85,4,0xFF00FF;
+			goto sL_Wipe;
+		M_1_14:
+			set @COMPASS_CHECK, 2;
+
+		sL_Wipe:
+			if(@COMPASS_CHECK != 2) next;	// avoids a double 'next' when 'wipe indications' is chosen
+			if(@COMPASS_CHECK == 1) goto sM_Menu;
+			viewpoint 2,207,282,1,0x2222AA;
+			viewpoint 2,202,139,2,0xAAAAF5;
+			viewpoint 2,172,76,3,0xFF0000;
+			viewpoint 2,130,85,4,0xFF00FF;
+			if (@COMPASS_CHECK == 0) goto sM_Menu;
+			mes "[Ayothaya Soldier]";
+			mes "All indications have been removed";
+			close;
+
+	M_2:
+		mes "[Ayothaya Soldier]";
+		mes "We upgraded the Location Guide to the Newest Digital Style.  We hope you like this gorgeous new system.";
+		next;
+		mes "[Ayothaya Soldier]";
+		mes "Don't forget to refer to the Mini-Map on the Upper-Right corner of your screen.";
+		next;
+		mes "[Ayothaya Soldier]";
+		mes "If you can't see the Mini-Map, just hit ^0000ff'ctrl+tab'^000000 or Click the ^0000ff'map'^000000 button in the Basic Information Window";
+		mes "Remeber to use the ^ff0000+,-^000000 buttons to adjust the map to your liking.";
+		goto M_Menu;
+
+	M_End:
+		mes "[Ayothaya Soldier]";
+		mes "Have a nice day.";
+		close;
+}

@@ -1,0 +1,68 @@
+//===== eAthena Script =======================================
+//= War of Emperium - ev_agit_event script
+//===== By: ==================================================
+//= jAthena - kalen (Beta 1.0)
+//= eAthena - AppleGirl (Beta 1.0)
+//===== Current Version: =====================================
+//= Epsilon 4.0
+//===== Compatible With: =====================================
+//= eAthena 0.1+; RO Episode 4+
+//===== Description: =========================================
+//= WoE Auto Start & End Event Control
+//===== Additional Comments: =================================
+//= Epsilon 4.0 by ho|yAnge|X
+//============================================================
+// Auto Start Agit NPC
+prontera.gat,116,72,0	script	Agit_Event	-1,{
+OnInit:
+	if ($AgitStarted == 1) goto AgitReboot;
+	Break;
+
+OnSat1800:
+	Announce "The 'War Of Emperium' Has Begun!!",8;
+	AgitStart;
+	set $AgitStarted,1;
+	Break;
+
+OnSat2100:
+	Announce "The 'War Of Emperium' Is Over!!",8;
+	AgitEnd;
+	set $AgitStarted,0;
+	Break;
+
+OnSun1800:
+	Announce "The 'War Of Emperium' Has Begun!!",8;
+	AgitStart;
+	set $AgitStarted,1;
+	Break;
+
+OnSun2100:
+	Announce "The 'War Of Emperium' Is Over!!",8;
+	AgitEnd;
+	set $AgitStarted,0;
+	Break;
+
+AgitReboot:
+	AgitStart;
+	set $AgitStarted,1;
+	Break;
+}
+
+sec_in01,93,36,4	script	WoE Switch	105,{
+	mes "[WoE Switch]";
+	mes "What now?";
+	next;
+	menu "Turn on WoE", t_on, "Turn off WoE", t_off;
+t_on:
+	AgitStart;
+	set $AgitStarted,1;
+	mes "[WoE Switch]";
+	mes "Done.";
+	close;
+t_on:
+	AgitEnd;
+	set $AgitStarted,0;
+	mes "[WoE Switch]";
+	mes "Done.";
+	close;
+}

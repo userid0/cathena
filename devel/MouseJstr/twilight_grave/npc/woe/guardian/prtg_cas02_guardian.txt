@@ -1,0 +1,69 @@
+//===== eAthena Script =======================================
+//= War of Emperium - prtg_cas02_guardian script
+//===== By: ==================================================
+//= ho|yAnge|X (Beta 1.0)
+//===== Current Version: =====================================
+//= Epsilon 4.0
+//===== Compatible With: =====================================
+//= eAthena 0.1+; RO Episode 4+
+//===== Description: =========================================
+//= Guardian Spawn Control Center in prtg_cas02
+//===== Additional Comments: =================================
+//= Modified by joedukk
+//= Epsilon 4.0 by ho|yAnge|X
+//============================================================
+
+prtg_cas02.gat,158,174,0	script	Guardian_D02	-1,{
+OnAgitStart:
+	if (GetCastleData("prtg_cas02.gat",10) <= 0) goto Guardian2;
+	monster "prtg_cas02.gat",75,71,"--en--",1287,1,"Guardian_D02::GuardianDied"; 
+	goto Guardian2;
+Guardian2:
+	if (GetCastleData("prtg_cas02.gat",11) <= 0) goto Guardian3;
+	monster "prtg_cas02.gat",56,31,"--en--",1287,1,"Guardian_D02::GuardianDied"; 
+	goto Guardian3;
+Guardian3:
+	if (GetCastleData("prtg_cas02.gat",12) <= 0) goto Guardian4;
+	monster "prtg_cas02.gat",42,223,"--en--",1287,1,"Guardian_D02::GuardianDied"; 
+	goto Guardian4;
+Guardian4:
+	if (GetCastleData("prtg_cas02.gat",13) <= 0) goto Guardian5;
+	monster "prtg_cas02.gat",44,195,"--en--",1285,1,"Guardian_D02::GuardianDied"; 
+	goto Guardian5;
+Guardian5:
+	if (GetCastleData("prtg_cas02.gat",14) <= 0) goto Guardian6;
+	monster "prtg_cas02.gat",197,22,"--en--",1285,1,"Guardian_D02::GuardianDied"; 
+	goto Guardian6;
+Guardian6:
+	if (GetCastleData("prtg_cas02.gat",15) <= 0) goto Guardian7;
+	monster "prtg_cas02.gat",68,71,"--en--",1286,1,"Guardian_D02::GuardianDied"; 
+	goto Guardian7;
+Guardian7:
+	if (GetCastleData("prtg_cas02.gat",16) <= 0) goto Guardian8;
+	monster "prtg_cas02.gat",202,27,"--en--",1286,1,"Guardian_D02::GuardianDied"; 
+	goto Guardian8;
+Guardian8:
+	if (GetCastleData("prtg_cas02.gat",17) <= 0) goto NoSpawn;
+	monster "prtg_cas02.gat",59,24,"--en--",1286,1,"Guardian_D02::GuardianDied"; 
+	break;
+
+GuardianDied:
+	// event when Guardian died
+	MapAnnounce "prtg_cas02.gat","A Guardian Has Fallen",17;
+	break;	
+
+OnAgitEliminate:
+	// kill all monsters label by Guardian_D02::GuardianDied
+	KillMonster "prtg_cas02.gat","Guardian_D02::GuardianDied";
+	break;
+
+OnAgitEnd:
+	// kill all monsters label by Guardian_D02::GuardianDied
+	KillMonster "prtg_cas02.gat","Guardian_D02::GuardianDied";
+	break;
+
+NoSpawn:
+	break;
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

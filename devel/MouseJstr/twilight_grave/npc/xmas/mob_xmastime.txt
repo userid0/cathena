@@ -1,0 +1,121 @@
+//アマツフィールド(ama_fild01)
+ama_fild01.gat,0,0,0,0	monster	Santa Poporing	1422,13,0,0,0
+
+//cmd_fild01
+cmd_fild01.gat,0,0,0,0	monster	Santa Poporing	1422,20,0,0,0
+
+//cmd_fild03
+cmd_fild03.gat,0,0,0,0	monster	Santa Poporing	1422,10,0,0,0
+
+//cmd_fild06
+cmd_fild06.gat,0,0,0,0	monster	Santa Drops	1423,20,0,0,0
+
+//cmd_fild07
+cmd_fild07.gat,0,0,0,0	monster	Santa Drops	1423,30,0,0,0
+
+gef_fild00.gat,0,0,0,0	monster	Santa Poring	1062,70,0,0,0
+
+//ゲフェンフィールド ０１(gef_fild01)
+gef_fild01.gat,0,0,0,0	monster	Santa Poring	1062,20,0,0,0
+
+//ゲフェンフィールド ０２(gef_fild02)
+gef_fild02.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0
+
+//ゲフェンフィールド ０３(gef_fild03)
+gef_fild03.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0
+
+//ゲフェンフィールド ０４(gef_fild04)
+gef_fild04.gat,0,0,0,0	monster	Santa Poring	1062,55,0,0,0
+
+//ゲフェンフィールド ０５(gef_fild05)
+gef_fild05.gat,0,0,0,0	monster	Santa Poring	1062,30,0,0,0
+
+//ゲフェンフィールド ０６(gef_fild06)
+gef_fild06.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0
+
+//ゲフェンフィールド ０７(gef_fild07)
+gef_fild07.gat,0,0,0,0	monster	Santa Poring	1422,60,0,0,0
+
+//ゲフェンフィールド ０８(gef_fild08)
+gef_fild08.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0
+
+//ゲフェンフィールド ０９(gef_fild09)
+gef_fild09.gat,0,0,0,0	monster	Santa Poring	1062,15,0,0,0
+
+//ゲフェンフィールド １０(gef_fild10)
+gef_fild10.gat,0,0,0,0	monster	Grinch	1239,50,0,0,0
+gef_fild10.gat,0,0,0,0	monster	Santa Poporing	1422,5,0,0,0
+
+//ゲフェンフィールド １１(gef_fild11)
+gef_fild11.gat,0,0,0,0	monster	Santa Poporing	1422,10,0,0,0
+
+//コードの森(gef_fild12)
+gef_fild12.gat,0,0,0,0	monster	Santa Poporing	1422,20,0,0,0
+
+//ブリトニア(gef_fild13)
+gef_fild13.gat,0,0,0,0	monster	Santa Poporing	1422,20,0,0,0
+
+//オーク西の村(gef_fild14)
+gef_fild14.gat,0,0,0,0	monster	Grinch	1239,20,0,0,0
+
+//グラストヘイム古城(glast_01)
+glast_01.gat,0,0,0,0	monster	X-Mas Jakk	1244,5,180000,90000,1
+glast_01.gat,0,0,0,0	monster	Mystcase
+
+//沈没船1層(treasure01)
+treasure01.gat,0,0,0,0	monster	Santa Poporing	1422,5,0,0,1
+
+//yuno_fild01
+yuno_fild01.gat,0,0,0,0	monster	Santa Poring	1062,40,0,0,0
+yuno_fild01.gat,0,0,0,0	monster	Santa Poporing	1422,30,0,0,0
+
+//yuno_fild02
+yuno_fild02.gat,0,0,0,0	monster	Santa Poring	1062,40,0,0,0
+
+//yuno_fild04
+yuno_fild04.gat,0,0,0,0	monster	Santa Poring	1062,40,0,0,0
+
+mjolnir_07.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0
+mjolnir_08.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0
+mjolnir_10.gat,0,0,0,0	monster	Santa Poring	1062,50,0,0,0
+mjolnir_12.gat,0,0,0,0	monster	Santa Poporing	1062,15,0,0,0
+moc_fild01.gat,0,0,0,0	monster	Santa Drops	1423,30,0,0,0
+moc_fild03.gat,0,0,0,0	monster	Santa Poring	1062,70,0,0,0
+moc_fild07.gat,0,0,0,0	monster	Santa Drops	1423,60,0,0,0
+moc_fild12.gat,0,0,0,0	monster	Santa Drops	1423,40,0,0,0
+moc_fild17.gat,0,0,0,0	monster	Santa Drops	1423,25,0,0,0
+moc_pryd01.gat,0,0,0,0	monster	Santa Poporing	1422,20,0,0,0
+moc_pryd01.gat,0,0,0,0	monster	Naughty Santa	1247,10,0,0,0
+moc_pryd02.gat,0,0,0,0	monster	Santa Poporing	1423,20,0,0,0
+pay_fild01.gat,0,0,0,0	monster	Santa Poring	1062,75,0,0,0
+pay_fild01.gat,0,0,0,0	monster	Santa Marin	1424,75,0,0,0
+pay_fild01.gat,0,0,0,0	monster	Santa Poporing	1422,75,0,0,0
+pay_fild02.gat,0,0,0,0	monster	Santa Poring	1062,40,0,0,0
+pay_fild02.gat,0,0,0,0	monster	Santa Poporing	1422,40,0,0,0
+pay_fild02.gat,0,0,0,0	monster	Santa Drops	1423,40,0,0,0
+pay_fild03.gat,0,0,0,0	monster	Santa Poring	1062,70,0,0,0
+pay_fild03.gat,0,0,0,0	monster	Santa Poporing	1422,40,0,0,0
+pay_fild03.gat,0,0,0,0	monster	Santa Marin	1424,50,0,0,0
+pay_fild03.gat,0,0,0,0	monster	Naughty Santa	1247,15,0,0,0
+pay_fild04.gat,0,0,0,0	monster	Santa Poring	1062,35,0,0,0
+pay_fild04.gat,0,0,0,0	monster	Santa Poporing	1422,35,0,0,0
+pay_fild04.gat,0,0,0,0	monster	Santa Drops	1423,35,0,0,0
+pay_fild04.gat,0,0,0,0	monster	Santa Marin	1424,35,0,0,0
+pay_fild04.gat,0,0,0,0	monster	Naughty Santa	1247,5,0,0,0
+pay_fild06.gat,0,0,0,0	monster	Santa Poring	1062,30,0,0,0
+pay_fild07.gat,0,0,0,0	monster	Santa Poporing	1422,10,0,0,0
+pay_fild08.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0
+pay_fild09.gat,0,0,0,0	monster	Santa Poporing	1422,10,0,0,0
+prt_fild00.gat,0,0,0,0	monster	Santa Poring	1062,55,0,0,0
+prt_fild01.gat,0,0,0,0	monster	Santa Poring	1062,50,0,0,0
+prt_fild02.gat,0,0,0,0	monster	Santa Poring	1062,50,0,0,0
+prt_fild03.gat,0,0,0,0	monster	Santa Poporing	1422,35,0,0,0
+prt_fild04.gat,0,0,0,0	monster	Santa Poring	1062,35,0,0,0
+prt_fild05.gat,0,0,0,0	monster	Santa Poring	1062,55,0,0,0
+prt_fild06.gat,0,0,0,0	monster	Santa Poring	1062,60,0,0,0
+prt_fild07.gat,0,0,0,0	monster	Santa Poring	1062,45,0,0,0
+prt_fild08.gat,0,0,0,0	monster	Santa Poring	1062,80,0,0,0
+prt_fild09.gat,0,0,0,0	monster	Santa Drops	1423,65,0,0,0
+prt_fild10.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0
+prt_fild11.gat,0,0,0,0	monster	Santa Poporing	1422,10,0,0,0
+prt_sewb3.gat,0,0,0,0	monster	Santa Poporing	1422,15,0,0,0

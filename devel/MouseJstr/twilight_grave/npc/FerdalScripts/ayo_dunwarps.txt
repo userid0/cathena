@@ -1,0 +1,7 @@
+//Dungeon 1 <-> Dungeon 2 (Left Side)
+ayo_dun02.gat,23,21,0	warp	ayo043	1,1,ayo_dun01.gat,24,279
+ayo_dun01.gat,24,283,0	warp	ayo044	1,1,ayo_dun02.gat,23,24
+
+//Dungeon 1 <-> Dungeon 2 (Right Side)
+ayo_dun02.gat,276,21,0	warp	ayo045	1,1,ayo_dun01.gat,274,19
+ayo_dun01.gat,275,14,0	warp	ayo046	1,1,ayo_dun02.gat,276,24

@@ -1,0 +1,42 @@
+//WoE Castle Knight NPC Script by holyAngelX
+
+gef_fild13.gat,253,61,7	script	Melsesdetsu Knight	733,{
+
+	set @GIDg5,GetCastleData("gefg_cas05.gat",1);
+	if (@GIDg5 == 0) goto Lclear;
+	if (getcharid(2) == @GIDg5) goto LStartg;
+	mes "[Melsesdetsu Knight]";
+	mes "You're not allies of my King! Halt your Pursuit now or face death beyond your worst fear.";
+	goto L_EXIT;
+
+Lclear:
+	mes "[Melsesdetsu Knight]";
+	mes "When the time is ripe, the Uncrowned shall be Crowned once again... and the broken blade shall be one again...";
+	close;
+
+L_EXIT:
+	close;
+
+LStartg:
+	mes "[Melsesdetsu Knight]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDg5) + "^000000 members";
+	mes "May the light be with you...";
+	next;
+	menu "Save",Lsave,"Protect Emperium",protect_emp,"Leave Here",leave,"Cancel",Lcancel;
+
+	Lsave:
+		savepoint "gef_fild13.gat",250,57;
+		mes "[Melsesdetsu Knight]";
+		mes "Your respawn point has saved. Thank you.";
+		close;
+
+	protect_emp:
+		warp "gefg_cas05.gat",	193,	183;	close;
+
+	leave:
+		warp "prontera.gat",	154,	194;	close;
+
+	Lcancel:
+		close;
+
+}

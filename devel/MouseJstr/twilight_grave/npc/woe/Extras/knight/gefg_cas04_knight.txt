@@ -1,0 +1,42 @@
+//WoE Castle Knight NPC Script by holyAngelX
+
+gef_fild13.gat,192,275,3	script	Berikel Knight	733,{
+
+	set @GIDg4,GetCastleData("gefg_cas04.gat",1);
+	if (@GIDg4 == 0) goto Lclear;
+	if (getcharid(2) == @GIDg4) goto LStartg;
+	mes "[Berikel Knight]";
+	mes "You're not allies of my King! Halt your Pursuit now or face death beyond your worst fear.";
+	goto L_EXIT;
+
+Lclear:
+	mes "[Berikel Knight]";
+	mes "When the time is ripe, the Uncrowned shall be Crowned once again... and the broken blade shall be one again...";
+	close;
+
+L_EXIT:
+	close;
+
+LStartg:
+	mes "[Berikel Knight]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDg4) + "^000000 members";
+	mes "May the light be with you...";
+	next;
+	menu "Save",Lsave,"Protect Emperium",protect_emp,"Leave Here",leave,"Cancel",Lcancel;
+
+	Lsave:
+		savepoint "gef_fild13.gat",190,274;
+		mes "[Berikel Knight]";
+		mes "Your respawn point has saved. Thank you.";
+		close;
+
+	protect_emp:
+		warp "gefg_cas04.gat",	173,	177;	close;
+
+	leave:
+		warp "prontera.gat",	154,	194;	close;
+
+	Lcancel:
+		close;
+
+}

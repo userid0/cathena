@@ -1,0 +1,75 @@
+prontera.gat,115,72,0	script	Time	-1,{
+	end;
+OnClock0100:
+	Announce "Ding Dong : Time now is 01:00 CDT",16;
+	end;
+OnClock0200:
+	Announce "Ding Dong : Time now is 02:00 CDT",16;
+	end;
+OnClock0300:
+	Announce "Ding Dong : Time now is 03:00 CDT",16;
+	end;
+OnClock0400:
+	Announce "Ding Dong : Time now is 04:00 CDT",16;
+	end;
+OnClock0500:
+	Announce "Ding Dong : Time now is 05:00 CDT",16;
+	end;
+OnClock0600:
+	Announce "Ding Dong : Time now is 06:00 CDT",16;
+	end;
+OnClock0700:
+	Announce "Ding Dong : Time now is 07:00 CDT",16;
+	end;
+OnClock0800:
+	Announce "Ding Dong : Time now is 08:00 CDT",16;
+	end;
+OnClock0900:
+	Announce "Ding Dong : Time now is 09:00 CDT",16;
+	end;
+OnClock1000:
+	Announce "Ding Dong : Time now is 10:00 CDT",16;
+	end;
+OnClock1100:
+	Announce "Ding Dong : Time now is 11:00 CDT",16;
+	end;
+OnClock1200:
+	Announce "Ding Dong : Time now is 12:00 CDT",16;
+	end;
+OnClock1300:
+	Announce "Ding Dong : Time now is 13:00 CDT",16;
+	end;
+OnClock1400:
+	Announce "Ding Dong : Time now is 14:00 CDT",16;
+	end;
+OnClock1500:
+	Announce "Ding Dong : Time now is 15:00 CDT",16;
+	end;
+OnClock1600:
+	Announce "Ding Dong : Time now is 16:00 CDT",16;
+	end;
+OnClock1700:
+	Announce "Ding Dong : Time now is 17:00 CDT",16;
+	end;
+OnClock1800:
+	Announce "Ding Dong : Time now is 18:00 CDT",16;
+	end;
+OnClock1900:
+	Announce "Ding Dong : Time now is 19:00 CDT",16;
+	end;
+OnClock2000:
+	Announce "Ding Dong : Time now is 20:00 CDT",16;
+	end;
+OnClock2100:
+	Announce "Ding Dong : Time now is 21:00 CDT",16;
+	end;
+OnClock2200:
+	Announce "Ding Dong : Time now is 22:00 CDT",16;
+	end;
+OnClock2300:
+	Announce "Ding Dong : Time now is 23:00 CDT",16;
+	end;
+OnClock0000:
+	Announce "Ding Dong : Time now is 00:00 CDT",16;
+	end;
+}

@@ -1,0 +1,30 @@
+// Rude's Gefenia Mobs.  Hard difficulty
+// I couldn't find the ID# for Devilring, so
+// please fill that in yourself.
+
+gefenia01.gat,0,0,0,0	monster	Mini-Demon	1292,35,0,0,0
+gefenia01.gat,0,0,0,0	monster	Dark Illusion	1302,30,0,0,0
+gefenia01.gat,0,0,0,0	monster	Nightmare Terror	1379,35,0,0,0
+gefenia01.gat,0,0,0,0	monster	Giant Whisper	1186,35,0,0,0
+gefenia01.gat,0,0,0,0	monster	Ghostring	1120,2,1800000,900000,0 
+gefenia01.gat,0,0,0,0	monster	Bascojin	1518,1,3600000,1800000,1
+
+gefenia02.gat,0,0,0,0	monster	Incubus	1374,40,0,0,0
+gefenia02.gat,0,0,0,0	monster	Succubus	1370,45,0,0,0
+gefenia02.gat,0,0,0,0	monster	Nightmare Terror	1379,25,0,0,0
+gefenia02.gat,0,0,0,0	monster	Giant Whisper	1186,25,10,0,0,0
+gefenia02.gat,0,0,0,0	monster	Dracula	1389,1,3600000,1800000,1
+
+gefenia03.gat,0,0,0,0	monster	Raydric	1163,50,0,0,0
+gefenia03.gat,0,0,0,0	monster	Raydric Archer	1276,30,0,0,0
+gefenia03.gat,0,0,0,0	monster	Khalitzburg	1132,25,0,0,0
+gefenia03.gat,0,0,0,0	monster	Knight Of Abyss	1219,5,0,0,0
+gefenia03.gat,0,0,0,0	monster	Bloody Knight	1268,4,600000,300000,0
+gefenia03.gat,0,0,0,0	monster	Doppelganger	1046,3,1800000,900000,0
+gefenia03.gat,0,0,0,0	monster	Lord Of Death	1373,1,3600000,1800000,1
+
+gefenia04.gat,0,0,0,0	monster	Dark Illusion	1302,35,0,0,0
+gefenia04.gat,0,0,0,0	monster	Devilring	1240,25,0,0,0
+gefenia04.gat,0,0,0,0	monster	Ghostring	1120,3,600000,300000,0
+gefenia04.gat,0,0,0,0	monster	Dark Lord	1272,4,1200000,600000,0
+gefenia04.gat,0,0,0,0	monster	Baphomet	1039,2,1200000,600000,0

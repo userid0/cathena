@@ -1,0 +1,42 @@
+//WoE Castle Knight NPC Script by holyAngelX
+
+alde_gld.gat,264,92,5	script	Rotenburk Knight	733,{
+
+	set @GIDa5,GetCastleData("aldeg_cas05.gat",1);
+	if (@GIDa5 == 0) goto Lclear;
+	if (getcharid(2) == @GIDa5) goto LStartg;
+	mes "[Rotenburk Knight]";
+	mes "You're not allies of my King! Halt your Pursuit now or face death beyond your worst fear.";
+	goto L_EXIT;
+
+Lclear:
+	mes "[Rotenburk Knight]";
+	mes "When the time is ripe, the Uncrowned shall be Crowned once again... and the broken blade shall be one again...";
+	close;
+
+L_EXIT:
+	close;
+
+LStartg:
+	mes "[Rotenburk Knight]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDa5) + "^000000 members";
+	mes "May the light be with you...";
+	next;
+	menu "Save",Lsave,"Protect Emperium",protect_emp,"Leave Here",leave,"Cancel",Lcancel;
+
+	Lsave:
+		savepoint "alde_gld.gat",266,91;
+		mes "[Rotenburk Knight]";
+		mes "Your respawn point has saved. Thank you.";
+		close;
+
+	protect_emp:
+		warp "aldeg_cas05.gat",	27,	101;	close;
+
+	leave:
+		warp "prontera.gat",	154,	194;	close;
+
+	Lcancel:
+		close;
+
+}

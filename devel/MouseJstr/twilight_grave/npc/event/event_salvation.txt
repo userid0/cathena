@@ -1,0 +1,15 @@
+prontera.gat,163,267,5	script	Salvation Navy	790,{
+	mes "^0000FF[Salvation Navy]^000000";
+	mes "Hello. Right now I'm broked. Soon We will be accepting donations for the poor. Thank you!";
+	close;
+}
+
+//prontera.gat,155,180,5	script	Imporant READ ME NOW!	736,{
+//	mes "[Imporant READ ME NOW!]";
+//	mes "Currently we are testing a new server host for NonameRO. This server is only up to let people know to move to the other server.";
+//	mes "^2F18F5http://emuz.kafuka.org/data.rar^000000";
+//	mes "Please download that and extract to the folder newRO/data";
+//	mes "Anything on this server will be LOST!!";
+//	mes "Thank you. -Emuz";
+//	close;
+//}

@@ -1,0 +1,834 @@
+//===== eAthena Script =======================================
+//= War of Emperium - gefg_cas01 script
+//===== By: ==================================================
+//= jAthena - kalen (Beta 1.0)
+//= eAthena - AppleGirl (Beta 1.0)
+//===== Current Version: =====================================
+//= Epsilon 4.0
+//===== Compatible With: =====================================
+//= eAthena 0.1+; RO Episode 4+
+//===== Description: =========================================
+//= Guild Flags, Kafra and Guild Manager scripts in gefg_cas01
+//===== Additional Comments: =================================
+//= Epsilon 4.0 by Akaru and ho|yAnge|X
+//============================================================
+gef_fild13.gat,148,51,5	script	Reprion#g1-1	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		if (getcharid(2) == @GIDg1) goto LStartg2;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+LStartg2:
+		mes "[ Ringing Voice ]";
+		mes "Brave man...";
+		mes "Would you return to your honourable be?";
+		next;
+		menu "Go back to your agitating point",Lenter,"Cancel",-;
+		close;
+Lenter:
+		warp "gefg_cas01.gat",83,47;
+		break;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gef_fild13.gat,155,54,5	script	Reprion#g1-2	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		if (getcharid(2) == @GIDg1) goto LStartg2;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+LStartg2:
+		mes "[ Ringing Voice ]";
+		mes "Brave man...";
+		mes "Would you return to your honourable be?";
+		next;
+		menu "Go back to your agitating point",Lenter,"Cancel",-;
+		close;
+Lenter:
+		warp "gefg_cas01.gat",83,47;
+		break;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gef_fild13.gat,212,79,6	script	Reprion#g1-3	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		if (getcharid(2) == @GIDg1) goto LStartg2;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+LStartg2:
+		mes "[ Ringing Voice ]";
+		mes "Brave man...";
+		mes "Would you return to your honourable be?";
+		next;
+		menu "Go back to your agitating point",Lenter,"Cancel",-;
+		close;
+Lenter:
+		warp "gefg_cas01.gat",83,47;
+		break;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gef_fild13.gat,211,71,6	script	Reprion#g1-4	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		if (getcharid(2) == @GIDg1) goto LStartg2;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+LStartg2:
+		mes "[ Ringing Voice ]";
+		mes "Brave man...";
+		mes "Would you return to your honourable be?";
+		next;
+		menu "Go back to your agitating point",Lenter,"Cancel",-;
+		close;
+Lenter:
+		warp "gefg_cas01.gat",83,47;
+		break;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gefg_cas01.gat,28,157,4	script	Reprion#g1-5	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gefg_cas01.gat,22,156,5	script	Reprion#g1-6	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gefg_cas01.gat,68,185,3	script	Reprion#g1-7	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gefg_cas01.gat,17,171,5	script	Reprion#g1-8	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gefg_cas01.gat,59,16,4	script	Reprion#g1-9	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+gefg_cas01.gat,64,16,4	script	Reprion#g1-10	722,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto LStartg;
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    this guild base has not been taken by any guild yet";
+		mes " ";
+		mes "2. In order to take this guild base, you must defeat all the guardians";
+		mes "    that are protecting the guild base and eliminate the Emperium";
+		close;
+LStartg:
+		mes "[ Edict of the Divine Rune Midgard Kingdom of Geffen ]";
+		mes " ";
+		mes "1. Honouring the ordinance of the Divine Rune Midgard Kingdom of Geffen,";
+		mes "    we approve that this base is in the private possession of ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild";
+		mes " ";
+		mes "2. The guild master of ^ff0000" + GetGuildName(@GIDg1) + "^000000 is";
+		mes "    ^ff0000" + GetGuildMaster(@GIDg1) + "^000000. If anyone who objects to that,";
+		mes "    raise your sword to honour yourself.";
+		close;
+OnRecvCastleG01:
+	FlagEmblem GetCastleData("gefg_cas01.gat",1);
+	break;
+}
+//------------------------------カプラ--------------------------------
+gefg_cas01.gat,83,47,3	script	Kafra Service#gefg1	117,{
+	cutin "kafra_01",2;
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (getcharid(2) == @GIDg1) goto LStartg;
+	mes "[Kafra Service]";
+	mes "I am contracted to service only ^ff0000" + GetGuildName(@GIDg1) + "^000000 guild members. Please use a different Kafra Service. Sorry for the inconvenience.";
+	goto L_EXIT;
+LStartg:
+	mes "[Kafra Service]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDg1) + "^000000 members";
+	mes "Kafra Service is always with you guys";
+	next;
+	menu "Open Storage",L2,"Teleport Service",L3,"Use Cart Service",L4,"Cancel",L7;
+L2:
+	if(getskilllv(1) < 6) goto Lerror2_1;
+		openstorage;
+		goto L_EXIT;
+	Lerror2_1:
+		mes "[Kafra Service]";
+		mes "You must have lvl 6 or higher novice skill.";
+		goto L_EXIT;
+L3:
+	mes "[Kafra Service]";
+	mes "Please choose a city.";
+	next;
+	menu "Geffen -> 200 z",L3_1,"Cancel",L3_2;
+		L3_1:
+			if (Zeny < 200) goto Lerror3;
+			set Zeny,Zeny-200;
+			set KF_PIT,KF_PIT+20;
+			warp "geffen.gat",120,39;
+			break;
+		L3_2:
+				mes "[Kafra Service]";
+				mes "Kafra Service always trying to offer best service for you.";
+				mes "Thank you for using our service.";
+				goto L_EXIT;
+		Lerror3:
+				mes "[Kafra Service]";
+  				mes "Sorry, you don't have enough Zeny to use the teleport service.";
+				goto L_EXIT;
+L4:
+	if (!((Class == 5) || (Class == 10) || (Class == 18))) goto Lerror4_1;
+	mes "[Kafra Service]";
+	mes "Cart Rental is  800 Zeny and the [Pushcart] skill is neccessary.";
+	mes "Would you like to rental?";
+	next;
+	menu "Rent Cart",L4_1,"Cancel",-;
+		mes "[Kafra Service]";
+		mes "Kafra Service always trying to offer best service for you.";
+		mes "Thank you for using our service.";
+		goto L_EXIT;
+	L4_1:
+		if (Zeny < 800) goto Lerror4_2;
+		set Zeny,Zeny-800;
+		setcart;
+		goto L_EXIT;
+	Lerror4_1:
+		mes "[Kafra Service]";
+		mes "Sorry, Cart Renting Service is only for Merchant/Blacksmith/Alchemist.";
+		goto L_EXIT;
+	Lerror4_2:
+		mes "[Kafra Service]";
+		mes "Sorry, you must have at least 800 zeny.";
+		goto L_EXIT;
+//Cart already have
+//Lerror4_3:
+//mes "[Kafra Service]";
+//mes "お客様は現在カートを";
+//mes "利用されています。";
+//goto L_EXIT;
+L7:
+	mes "[Kafra Service]";
+	mes "Kafra Service always trying to offer best service for you.";
+	mes "Thank you for using our service.";
+L_EXIT:
+	cutin "kafra_01",255;
+	close;
+OnInit:
+	if (GetCastleData("gefg_cas01.gat",9) == 1) break;
+	disablenpc "Kafra Service#gefg1";
+	break;
+}
+//-----------------------------Switch-------------------------------
+//gefg_cas01.gat,151,109,0	script	Switch	111,{
+//	mes " ";
+//	mes "There is little switch over here would you like to pull the switch down?";
+//	next;
+//	menu "Yes",-,"No",L2;
+//	warp "gefg_cas01.gat",40,49;
+//	break;
+//L2:
+//	close;
+//}
+//-----------------------------Switch 2------------------------------
+//gefg_cas01.gat,78,84,0	script	Switch 2	111,{
+//	mes "[ Ringing Voice ]";
+//	mes "Only brave men can take the test.. '";
+//	next;
+//	mes " ";
+//	mes "There is a small lever here";
+//	mes "Would you like to pull it down?";
+//	next;
+//	menu "Yes",-,"No",L2;
+//	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+//	if (getcharid(2) != @GIDg1) goto L1n;
+//	warp "gld_dun04.gat",39,258;
+//	break;
+//L1n:
+//	mes " ";
+//	mes "Nothing happened";
+//	close;
+//L2:
+//	close;
+//}
+//================================================
+//gefg_cas01 Gnahucher Kafra test script Created and Translated By AppleGirl
+//================================================
+//とり・えず、TEST作成('A`)
+//gefg_cas01.txtのアブライはコメントアウトですよ～
+gefg_cas01.gat,40,48,5	script	Gnahucher	55,{
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 == 0) goto LStart;
+	if (getcharid(2) != @GIDg1) goto LStart2;
+	if (strcharinfo(0) == getguildmaster(@GIDg1)) goto LStart3;
+	goto LStart1;
+
+// ------- Guild Members -----------------------------
+LStart1:
+	mes "[ Gnahucher ]";
+	mes "You're not ^ff0000" + getguildmaster(@GIDg1) + "^000000 ! I am here to follow ^ff0000" + getguildmaster(@GIDg1) + "^000000 's command only";
+	close;
+// ------- アジト未占領 ----------------------------------
+LStart:
+	mes "[ Gnahucher ]";
+	mes "I am waiting for my master.";
+	mes "Brave Player! follow your destiny!...";
+	close;
+// -------- マスターじゃない ------------------------------
+LStart2:
+	mes "[ Gnahucher ]";
+	mes "I am here to follow ^ff0000" + getguildmaster(@GIDg1) + "^000000 's command! where are you guardians! destroy these bastards!";
+	close;
+// -------- 以下マスター時 ---------------------------------
+LStart3:
+	mes "[ Gnahucher ]";
+	mes "Welcome Master ^ff0000" + getguildmaster(@GIDg1) + "^000000 !";
+	mes "I'll do anything you tell me to do sir!.";
+	next;
+	menu "Guild Base Property",L1,"Commerce Investment",L2,"Defence Investment",L3,"Guardian Installation",L4,"Kafra Service Employement / Dismissal",L5,"Enter Master's Room",L6,"Empty Guild Base",L7;
+//-----------------------------------------------------------
+//================================================
+//Phase 1:ギルドのプロパティ(未調整)
+//================================================
+L1:
+	mes "[ Gnahucher ]";
+	mes "Guild Base Investment Improvement Chart.";
+	mes " ";
+	mes "^0000ffCurrent Commerce Investment is : " + GetCastleData("gefg_cas01.gat",2) + " points.";
+	mes "- You have invested " +  GetCastleData("gefg_cas01.gat",4)  + " times today.";
+	mes " ";
+	mes " Current Defence Investment is : " +  GetCastleData("gefg_cas01.gat",3)  + " points.^000000";
+	mes "^0000ff- You have invested " +  GetCastleData("gefg_cas01.gat",5)  + " times today.^000000";
+	mes " ";
+	mes "That is about it.";
+	close;
+//================================================
+//Phase 2:商業への投資(未調整)
+//================================================
+L2:
+	mes "[ Gnahucher ]";
+	mes "If you improve your Commerce Investments, Guild's Productive power increases to produce goods.";
+	mes " ";
+	mes "You must Invest once a day, but you can also invest two times a day.";
+	next;
+	set @TriggerE,GetCastleData("gefg_cas01.gat",4);
+	set @Economy,GetCastleData("gefg_cas01.gat",2);
+	if(@Economy >= 100) goto L2_2;
+	if(@TriggerE < 2) goto L2_1;
+		mes "[ Gnahucher ]";
+		mes " ";
+		mes "^ff0000Guild's Commerce Investment is currently at 100% for today, you don't have to invest anymore.^000000";
+	 	close;
+L2_1:
+	if(@Economy < 100) set $eco_invest,5120000;
+	if(@Economy < 88) set $eco_invest,2560000;
+	if(@Economy < 76) set $eco_invest,1280000;
+	if(@Economy < 65) set $eco_invest,640000;
+	if(@Economy < 54) set $eco_invest,320000;
+	if(@Economy < 44) set $eco_invest,160000;
+	if(@Economy < 34) set $eco_invest,80000;
+	if(@Economy < 25) set $eco_invest,40000;
+	if(@Economy < 16) set $eco_invest,20000;
+	if(@Economy < 8) set $eco_invest,10000;
+	if(@TriggerE == 1) goto L2_1_2;
+	mes "[ Gnahucher ]";
+	mes " ";
+	mes "You have to invest ^ff0000" + $eco_invest + "^000000 Zeny to upgrade your investment in economy.";
+	next;
+	menu "Invest Commerce.",L2_1_1,"Cancel.",-;
+		mes "[ Gnahucher ]";
+		mes "I'll follow your order Master!... you don't have to be hurry anywayz.";
+		close;
+	L2_1_1:
+		if(Zeny < $eco_invest) goto L2_error;
+		set Zeny,Zeny-$eco_invest;
+		SetCastleData "gefg_cas01.gat",4,@TriggerE+1;
+		SetCastleData "gefg_cas01.gat",2,@Economy+1;
+		mes "[ Gnahucher ]";
+		mes "You have invested successfully.";
+		close;
+
+L2_1_2:
+	set $eco_invest,$eco_invest*4;
+	mes "[ Gnahucher ]";
+	mes " ";
+	mes "You've already invested once today, but you can invest again at ^ff0000" + $eco_invest + "^000000 Zeny to upgrade your investment in economy";
+	next;
+	menu "Invest Commerce.",L2_1_3,"Cancel.",-;
+		mes "[ Gnahucher ]";
+		mes "I'll follow your order Master!... you don't have to be hurry anywayz.";
+		close;
+	L2_1_3:
+		if(Zeny < $eco_invest) goto L2_error;
+		set Zeny,Zeny-$eco_invest;
+		SetCastleData "gefg_cas01.gat",4,@TriggerE+1;
+		SetCastleData "gefg_cas01.gat",2,@Economy+1;
+		mes "[ Gnahucher ]";
+		mes "Your have invested successfully.";
+		close;
+
+L2_2:
+		mes "[ Gnahucher ]";
+		mes " ";
+		mes "^ff0000Guild's Commerce Investment is already Maxed at 100 points. You can't invest any further.^000000";
+	 	close;
+
+L2_error:
+	mes "[ Gnahucher ]";
+	mes "Master, you do not have enough money to invest, investment has been cancelled.";
+	close;
+//================================================
+//Phase 3:ディフェンスへの投資(現状実装無理か？)
+//================================================
+L3:
+//var defenseOK = AgitGet AGIT_D_FUNDING_OK  
+	mes "[ Gnahucher ]";
+	mes "If you improve investment of defence, HP of guardian/emperium increase, it helps when enemy try to attack you guild.";
+	mes " ";
+	mes "You must Invest once a day, but you can also invest two times a day.";
+	next;
+	set @TriggerD,GetCastleData("gefg_cas01.gat",5);
+	set @Defence,GetCastleData("gefg_cas01.gat",3);
+	if(@Defence >= 100) goto L3_2;
+	if(@TriggerD < 2) goto L3_1;
+		mes "[ Gnahucher ]";
+		mes " ";
+		mes "^ff0000Guild's Defense Investment is currently at 100% for today, you don't have to invest anymore.^000000";
+	 	close;
+L3_1:
+	if(@Defence < 100) set $def_invest,10240000;
+	if(@Defence < 88) set $def_invest,5120000;
+	if(@Defence < 76) set $def_invest,2560000;
+	if(@Defence < 65) set $def_invest,1280000;
+	if(@Defence < 54) set $def_invest,640000;
+	if(@Defence < 44) set $def_invest,320000;
+	if(@Defence < 34) set $def_invest,160000;
+	if(@Defence < 25) set $def_invest,80000;
+	if(@Defence < 16) set $def_invest,40000;
+	if(@Defence < 8) set $def_invest,20000;
+	if(@TriggerD == 1) goto L3_1_2;
+	mes "[ Gnahucher ]";
+	mes " ";
+	mes "You have to invest ^ff0000" + $def_invest + "^000000 Zeny to upgrade your investment in Defense.";
+	next;
+	menu "Invest Defence.",L3_1_1,"Cancel",-;
+		mes "[ Gnahucher ]";
+		mes "I'll follow your order Master!... you don't have to be hurry anywayz.";
+		close;
+	L3_1_1:
+		if(Zeny < $def_invest) goto L3_error;
+		set Zeny,Zeny-$def_invest;
+		SetCastleData "gefg_cas01.gat",5,@TriggerD+1;
+		SetCastleData "gefg_cas01.gat",3,@Defence+1;
+		mes "[ Gnahucher ]";
+		mes "You invested successfully.";
+		close;
+
+L3_1_2:
+	set $def_invest,$def_invest*4;
+	mes "[ Gnahucher ]";
+	mes " ";
+	mes "You've already invested once today, but you can invest again at ^ff0000" + $def_invest + "^000000 Zeny to upgrade your investment in Defense.";
+	next;
+	menu "Invest Defence.",L3_1_3,"Cancel",-;
+		mes "[ Gnahucher ]";
+		mes "I'll follow your order Master!... you don't have to be hurry anywayz.";
+		close;
+	L3_1_3:
+		if(Zeny < $def_invest) goto L3_error;
+		set Zeny,Zeny-$def_invest;
+		SetCastleData "gefg_cas01.gat",5,@TriggerD+1;
+		SetCastleData "gefg_cas01.gat",3,@Defence+1;
+		mes "[ Gnahucher ]";
+		mes "You invested successfully.";
+		close;
+
+
+L3_2:
+		mes "[ Gnahucher ]";
+		mes " ";
+		mes "^ff0000Guild's Defense Investment is already Maxed at 100 points. You can't invest any further.^000000";
+	 	close;
+
+L3_error:
+	mes "[ Gnahucher ]";
+	mes "Master, you do not have enough money to invest, investment has been cancelled.";
+	close;
+//================================================
+//Phase 4:ガーディアン設置
+//================================================
+L4:
+	If(getskilllv(10001)== 0) goto L4Error;
+	mes "[ Gnahucher ]";
+	mes "Would you like to install a guardian? Guardian will protect guild base from enemies.";
+	mes "Please choose guardian.";
+	next;
+	menu "Soldier 1",L4_1,"Soldier 2",L4_2,"Soldier 3",L4_3,"Archer 1",L4_4,"Archer 2",L4_5,"Knight 1",L4_6,"Knight 2",L4_7,"Knight 3",L4_8;
+		L4_1:
+			if (GetCastleData("gefg_cas01.gat",10) == 1) goto L4Error2;
+			set @GDnum,10;goto L4_9;
+		L4_2:
+			if (GetCastleData("gefg_cas01.gat",11) == 1) goto L4Error2;
+			set @GDnum,11;goto L4_9;
+		L4_3:
+			if (GetCastleData("gefg_cas01.gat",12) == 1) goto L4Error2;
+			set @GDnum,12;goto L4_9;
+		L4_4:
+			if (GetCastleData("gefg_cas01.gat",13) == 1) goto L4Error2;
+			set @GDnum,13;goto L4_9;
+		L4_5:
+			if (GetCastleData("gefg_cas01.gat",14) == 1) goto L4Error2;
+			set @GDnum,14;goto L4_9;
+		L4_6:
+			if (GetCastleData("gefg_cas01.gat",15) == 1) goto L4Error2;
+			set @GDnum,15;goto L4_9;
+		L4_7:
+			if (GetCastleData("gefg_cas01.gat",16) == 1) goto L4Error2;
+			set @GDnum,16;goto L4_9;
+		L4_8:
+			if (GetCastleData("gefg_cas01.gat",17) == 1) goto L4Error2;
+			set @GDnum,17;goto L4_9;
+	L4_9:
+		mes "[ Gnahucher ]";
+		mes "Would you really like to install guardian? You need 10,000 zeny to install.";
+		next;
+		menu "Install",L4_9_1,"Cancel",-;
+			mes "[ Gnahucher ]";
+			mes "I'll follow your order sir, but it is worth to have a guardian soon or later.";
+			close;
+		L4_9_1:
+//ギルドスキルの判定→ダメならL4Error
+		if (Zeny < 10000) goto L4Error3;
+		set Zeny,Zeny-10000;
+		SetCastleData "gefg_cas01.gat",@GDnum,1;
+		mes "[ Gnahucher ]";
+		mes "Guardian has been installed, guardian will protect our guild base against enemies.";
+		close;
+L4Error:
+	mes "[ Gnahucher ]";
+	mes "Master, you do not have any guild skill to install guardian, if you want to gain skill to install guardian, you must get ^ff0000GUARDIAN SKILL^000000. Guardian Installation has been cancelled.";
+	close;
+L4Error2:
+	mes "[ Gnahucher ]";
+	mes "Master...you installed that guardian already.";
+	close;
+L4Error3:
+	mes "[ Gnahucher ]";
+	mes "Master, you do not have enough money to invest, investment has been cancelled.";
+	close;
+//================================================
+//Phase 5:カプラとの契約・解雇
+//================================================
+L5:
+	if (GetCastleData("gefg_cas01.gat",9) == 1) goto Lkafra_dimi;
+//=========================
+//(When Karfa off) Employment
+//=========================
+	If(getskilllv(10002)== 0) goto L_k_a;
+	mes "[ Gnahucher ]";
+	mes "Would you like to employee  new Kafra Service?";
+	mes "^ff0000 You need 10,000 Zeny to employee... ";
+	next;
+	menu "Employ Kafra.",L_k_0,"Cancel",L_k_E;
+
+	L_k_a:
+		mes "[ Gnahucher ]";
+		mes "Master, you havn't contract with Kafra Service Company. In order to contract with Kafra Server is to have ^ff0000KAFRA SKILL^000000 employment has been cancelled .";
+		close;
+	L_k_0:
+		if (Zeny > 10000) goto L_k_1;
+		mes "[ Gnahucher ]";
+		mes "Master, you do not have enough money to employee Kafra, employment has been cancelled.";
+		close;
+	L_k_1:
+		set Zeny,Zeny-10000;
+		enablenpc "Kafra Service#gefg1";
+		SetCastleData "gefg_cas01.gat",9,1;
+		mes "[ Gnahucher ]";
+		mes "You have been contracted with Kafra Service Company.";
+		next;
+		cutin "kafra_01",2;
+		mes "[ Kafra Service ]";
+		mes "Hello, I came here to follow your order sir!^^.";
+		mes "I'll do the best I can.";
+		next;
+		cutin "kafra_01",255;
+		mes "[ Gnahucher ]";
+		mes "You must pay zeny every month to keep Kafra in your guild base.";
+		mes "I hope you guyz have good time with our sexy Kafra /gg.";
+		close;
+L_k_e:
+		mes "[ Gnahucher ]";
+		mes "Yes Master! But you must get Kafra as soon as possible.";
+		close;
+//=========================
+//(When karfa ON) Dismissal
+//=========================
+Lkafra_dimi:
+	mes "[ Gnahucher ]";
+	mes "Would you like to dismissal current Kafra Service?";
+	next;
+	menu "Dismissal",-,"Cancel",L_D_1;
+		cutin "kafra_01",2;
+		mes "[ Kafra Service ]";
+		mes "What have I done wrong? if so, would you please forgive me?";
+		next;
+		menu "Dismissal",-,"Cancel",L_D_2;
+				mes "[ Kafra Service ]";
+				mes "OMG!! how could you do this to meeeeh!! T_T~";
+				next;
+				disablenpc "Kafra Service#gefg1";
+				SetCastleData "gefg_cas01.gat",9,0;
+				cutin "kafra_01",255;
+				mes "[ Gnahucher ]";
+				mes "....";
+				mes "Kafra Service has been dismissed";
+				close;
+			L_D_2:
+				mes "[ Kafra Service ]";
+				mes "Thank you master, I'll do my best! ^^.";
+				cutin "kafra_01",255;
+				close;
+		L_D_1:
+			mes "[ Gnahucher ]";
+			mes "I think you should keep the current Kafra sir, she's trying her best sir.";
+			close;
+L5_1:
+//================================================
+//Phase 6:マスタールームに行く
+//================================================
+L6:
+	mes "[ Gnahucher ]";
+	mes "Would you like to get into our treasure room?";
+	mes "That place is only for guild master, which means you are the only one who has access to enter.";
+	next;
+	menu "Enter Master's room.",-,"Cancel",L6_1;
+			mes "[ Gnahucher ]";
+			mes "Please follow me through the secret way.";
+			mes "You must push downt the secret switch in order to get out.";
+			next;
+			warp "gefg_cas01",155,112;
+		L6_1:
+			mes "[ Gnahucher ]";
+			mes "Goods are producing everyday, you must get'em whenever you can.";
+			mes "Please don't forget to get all the goods in time.";
+			close;
+//================================================
+//Phase 7: アジト放棄
+//================================================
+L7:
+	mes "[ Gnahucher ]";
+	mes "Master!!";
+	mes "Are you goin to give our guild up?!";
+	mes "It is not worth to give up on our guild master!!!";
+	mes "Please reconsider master!!";
+	next;
+	menu "Empty Guild Base",L7_1,"Cancel",L7_2;
+		L7_1:
+			mes "[ Gnahucher ]";
+			mes "Master, please reconsider...T_T!!";
+			mes "OMG, please!!!!!!!!";
+			next;
+			menu "Cancel",L7_2,"Empty Guild Base",-;
+				mes "[ Gnahucher ]";
+				mes "Master!!.....";
+				mes "......BAS......TA..RD......";
+				next;
+		SetCastleData "gefg_cas01.gat",1,0;
+		SetCastleData "gefg_cas01.gat",2,0;
+		SetCastleData "gefg_cas01.gat",3,0;
+		SetCastleData "gefg_cas01.gat",4,0;
+		SetCastleData "gefg_cas01.gat",5,0;
+		SetCastleData "gefg_cas01.gat",6,0;
+		SetCastleData "gefg_cas01.gat",7,0;
+		SetCastleData "gefg_cas01.gat",8,0;
+		SetCastleData "gefg_cas01.gat",9,0;
+		SetCastleData "gefg_cas01.gat",10,0;
+		SetCastleData "gefg_cas01.gat",11,0;
+		SetCastleData "gefg_cas01.gat",12,0;
+		SetCastleData "gefg_cas01.gat",13,0;
+		SetCastleData "gefg_cas01.gat",14,0;
+		SetCastleData "gefg_cas01.gat",15,0;
+		SetCastleData "gefg_cas01.gat",16,0;
+		SetCastleData "gefg_cas01.gat",17,0;
+		Announce "Stronghold [" + GetCastleName("gefg_cas01.gat") + "], [" + GetGuildName(@GIDg1) + "] has surrendered the castle",0;
+		MapRespawnGuildID "gefg_cas01.gat",GetCastleData("gefg_cas01.gat",1),7;
+		break;
+		L7_2:
+			mes "[ Gnahucher ]";
+			mes "I knew it master^^!!";
+			mes "Please, don't freak me out like that again^^.";
+			close;
+}
+

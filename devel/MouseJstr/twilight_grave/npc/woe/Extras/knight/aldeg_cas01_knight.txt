@@ -1,0 +1,42 @@
+//WoE Castle Knight NPC Script by holyAngelX
+
+alde_gld.gat,54,85,5	script	Noisyubantian Knight	733,{
+
+	set @GIDa1,GetCastleData("aldeg_cas01.gat",1);
+	if (@GIDa1 == 0) goto Lclear;
+	if (getcharid(2) == @GIDa1) goto LStartg;
+	mes "[Noisyubantian Knight]";
+	mes "You're not allies of my King! Halt your Pursuit now or face death beyond your worst fear.";
+	goto L_EXIT;
+
+Lclear:
+	mes "[Noisyubantian Knight]";
+	mes "When the time is ripe, the Uncrowned shall be Crowned once again... and the broken blade shall be one again...";
+	close;
+
+L_EXIT:
+	close;
+
+LStartg:
+	mes "[Noisyubantian Knight]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDa1) + "^000000 members";
+	mes "May the light be with you...";
+	next;
+	menu "Save",Lsave,"Protect Emperium",protect_emp,"Leave Here",leave,"Cancel",Lcancel;
+
+	Lsave:
+		savepoint "alde_gld.gat",55,82;
+		mes "[Noisyubantian Knight]";
+		mes "Your respawn point has saved. Thank you.";
+		close;
+
+	protect_emp:
+		warp "aldeg_cas01.gat",	215,	23;	close;
+
+	leave:
+		warp "prontera.gat",	154,	194;	close;
+
+	Lcancel:
+		close;
+
+}

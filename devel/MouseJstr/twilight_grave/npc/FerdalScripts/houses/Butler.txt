@@ -1,0 +1,14 @@
+prt_in2.gat,231,29,5	script	Butler#1::butler1	109,{
+	set @npcnum, 1;
+	callfunc "F_Butler_Start";
+}
+
+prt_in2.gat,129,116,5	script	Butler#2::butler2	109,{
+	set @npcnum, 1;
+	callfunc "F_Butler_Start";
+}
+
+prt_in2.gat,135,34,5	script	Butler#3::butler3	109,{
+	set @npcnum, 1;
+	callfunc "F_Butler_Start";
+}

@@ -1,0 +1,42 @@
+//WoE Castle Knight NPC Script by holyAngelX
+
+pay_gld.gat,199,261,7	script	Zhulinxian Knight	733,{
+
+	set @GIDf5,GetCastleData("payg_cas05.gat",1);
+	if (@GIDf5 == 0) goto Lclear;
+	if (getcharid(2) == @GIDf5) goto LStartg;
+	mes "[Zhulinxian Knight]";
+	mes "You're not allies of my King! Halt your Pursuit now or face death beyond your worst fear.";
+	goto L_EXIT;
+
+Lclear:
+	mes "[Zhulinxian Knight]";
+	mes "When the time is ripe, the Uncrowned shall be Crowned once again... and the broken blade shall be one again...";
+	close;
+
+L_EXIT:
+	close;
+
+LStartg:
+	mes "[Zhulinxian Knight]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDf5) + "^000000 members";
+	mes "May the light be with you...";
+	next;
+	menu "Save",Lsave,"Protect Emperium",protect_emp,"Leave Here",leave,"Cancel",Lcancel;
+
+	Lsave:
+		savepoint "pay_gld.gat",194,266;
+		mes "[Zhulinxian Knight]";
+		mes "Your respawn point has saved. Thank you.";
+		close;
+
+	protect_emp:
+		warp "payg_cas05.gat",	29,	29;	close;
+
+	leave:
+		warp "prontera.gat",	154,	194;	close;
+
+	Lcancel:
+		close;
+
+}

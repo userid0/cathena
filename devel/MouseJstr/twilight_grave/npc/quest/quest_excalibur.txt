@@ -1,0 +1,40 @@
+prt_castle.gat,82,169,4	script	Excalibur Quest	108,{
+mes "[Excalibur Quest]";
+mes "Do you seek the Holy Blade, Excalibur?";
+next;
+menu "Yes",yes,"What are the requirements?",reqs,"No, sorry.",end;
+
+yes:
+if((countitem(523) < 50) || (countitem(1120) < 2) || (countitem(714) < 4) || (countitem(2254) < 2) || (countitem(7079) < 100)) goto noitem;
+mes "[Excalibur Quest]";
+mes "Here is thy sword.";
+next;
+delitem 523,50;
+delitem 1120,2;
+delitem 714,4;
+delitem 2254,2;
+delitem 7079,100;
+getitem 1137,1;
+close;
+
+reqs:
+mes "[Excalibur Quest]";
+mes "To forge excalibur, I require:";
+mes "^3355FF50 Holy Water^000000";
+mes "^3355FF2 2-slotted Tsurugi^000000";
+mes "^3355FF4 Emperium^000000";
+mes "^3355FF2 Angel Wing^000000";
+mes "^3355FF100 Feather of Angel Wing^000000";
+close;
+
+noitem:
+mes "[Excalibur Quest]";
+mes "You do not appear to have the required items at this time.";
+close;
+
+end:
+mes "[Excalibur Quest]";
+mes "Alright then.";
+close;
+
+}

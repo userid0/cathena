@@ -1,0 +1,134 @@
+//===== eAthena Script ======================================= 
+//= Trading Agency NPC (English Version)
+//===== By: ================================================== 
+//= Shadow Architects Team
+//===== Current Version: ===================================== 
+//= 1.0b
+//===== Compatible With: ===================================== 
+//= eAthena 7.15 +
+//===== Description: ========================================= 
+// Bank of Alberta is an integrated financial solution created for use with
+// our Trading Agency system.
+//============================================================
+
+//===== Additional Comments: ================================= 
+//= custom quest, ingridients were based on official RO FAQ
+//============================================================ 
+
+//function	script	F_AlbBank	{
+//	set @branch$,getarg(0);
+//	return;
+//}
+
+-	script	Bank Clerk#proto-0::BankofAlberta	-1,{
+	mes "[Bank Clerk]";
+	mes "Welcome to one of the ^5555FFBank of Alberta^000000's branch.";
+	next;
+	Start:
+	if (#bank_alb_acc==0) goto NewAccount;
+	set @i,0;
+	XferLoop:
+	if (#bank_alb_acc==$bank_alb_xacc[@i]) goto XferUpdate;
+	set @i,@i+1;
+	if (@i<$bank_alb_xfers) goto XferLoop;
+	goto MainMenu;
+	XferUpdate:
+		mes "[Bank Clerk]";
+		mes "Recent incoming transfer: ^5555FF" + $bank_alb_xfer[@i] + "z^000000";
+		set #bank_alb_zeny,#bank_alb_zeny+$bank_alb_xfer[@i];
+		set $bank_alb_xfer[@i],0;
+		next;
+	MainMenu:
+	mes "[Bank Clerk]";
+	mes "Account: ^5555FF#" + #bank_alb_acc + "^000000";
+	mes "Your current deposit is: ^5555FF" + #bank_alb_zeny + "z^000000";	
+	menu "Deposit",Deposit,"Withdraw",Withdraw,"Transfer",Transfer,"Cancel",Cancel;
+	Deposit:
+		mes "[Bank Clerk]";
+		mes "Enter amount of deposit:";
+		input @deposit;
+		if (zeny<@deposit) goto ZenyError;
+		set zeny,zeny-@deposit;
+		set #bank_alb_zeny,#bank_alb_zeny+@deposit;
+		mes "[Bank Clerk]";
+		mes "^5555FF" + @deposit +"z^000000 deposited to your account.";
+		next;
+		goto Start;
+	Withdraw:
+		mes "[Bank Clerk]";
+		mes "Enter amount of withdrawal:";
+		input @withdraw;
+		if (#bank_alb_zeny<@withdraw) goto ZenyError;
+		set zeny,zeny+@withdraw;
+		set #bank_alb_zeny,#bank_alb_zeny-@withdraw;
+		mes "[Bank Clerk]";
+		mes "^5555FF" + @withdraw +"z^000000 withdrawn from your account.";
+		next;
+		goto Start;
+	Transfer:
+		mes "[Bank Clerk]";
+		mes "Since we have strong policy to protect our customers' privacy, we can't give you information about target account's owner. So... ^FF0000Please check target account number carefully to ensure that it really belongs to your target.^000000";
+		next;
+		mes "[Bank Clerk]";
+		mes "Enter target account number: (0=cancel)";
+		input @xfer_acc;
+		if  (@xfer_acc<1) goto MainMenu;
+		mes "^5555FF#" + @xfer_acc + "^000000";
+		mes "Enter amount of transfer: (0=cancel)";
+		input @xfer_zeny;
+		if  (@xfer_zeny<1) goto MainMenu;
+		mes "^5555FF" + @xfer_zeny + "z^000000";
+		if (#bank_alb_zeny<@xfer_zeny) goto ZenyError;
+		set @i,0;
+		if ($bank_alb_xfers<1) goto NewXfer;
+		AccLoop:
+		if (@xfer_acc==$bank_alb_xacc[@i]) goto AccFound;
+		set @i,@i+1;
+		if (@i<$bank_alb_xfers) goto AccLoop;
+		NewXfer:
+			set $bank_alb_xacc[@i],@xfer_acc;
+			set $bank_alb_xfers,$bank_alb_xfers+1;
+		AccFound:
+			set #bank_alb_zeny,#bank_alb_zeny-@xfer_zeny;
+			set $bank_alb_xfer[@i],$bank_alb_xfer[@i]+@xfer_zeny;
+			next;		
+			mes "[Bank Clerk]";
+			mes "Amount: ^5555FF" + @xfer_zeny +"z^000000";
+			mes "From: ^5555FF#" + #bank_alb_acc +"^000000";
+			mes "To: ^5555FF#" + @xfer_acc +"^000000";
+			mes "Transfer completed";
+			next;
+			goto Start;
+	NewAccount: // 1000z required to open new account
+		mes "[Bank Clerk]";
+		mes "You've never opened an account with our bank.";
+		mes "Do you want to do it now?";
+		menu "Ok",NewAccProcess,"Cancel",Cancel;
+		NewAccProcess:
+			mes "[Bank Clerk]";
+			mes "Enter amount of first deposit: (Not less than ^5555FF1000z^000000)";
+			input @deposit;
+			if (zeny<@deposit) goto ZenyError;
+			if (@deposit<1000) goto NewAccError;
+			set zeny,zeny-@deposit;
+			set #bank_alb_acc,getcharid(0);
+			set #bank_alb_zeny,@deposit;
+			next;
+			mes "[Bank Clerk]";
+			mes "Your account number is: ^5555FF" + #bank_alb_acc + "^000000";
+			mes "Thanks for trusting in our service.";
+			next;
+			goto MainMenu;
+	NewAccError:
+			mes "[Bank Clerk]";
+			mes "You entered invalid amount.";
+			close;	
+	ZenyError:
+			mes "[Bank Clerk]";
+			mes "You don't have enough money or deposit.";
+			close;
+	Cancel:
+		close;
+}
+
+prontera.gat,160,184,4 duplicate(BankofAlberta) BankClerk#1-1 833

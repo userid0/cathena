@@ -1,0 +1,557 @@
+//WoE Notice Board NPC Script by holyAngelX
+//This is very hard work.. pls don't steal credit for it.
+//optimized by devil. ^-^
+
+prontera.gat,171,204,4	script	WoE Notice Board	722,{
+	mes "       [ WoE Notice Board ]";
+	mes "Welcome to the Notice Board of WoE";
+	mes "Here you'll be able to check which";
+	mes "Castle is taken or untaken.";
+	mes "And also!! The Castle Status Info!";
+	mes "Which castle's info interests you?";
+	next;
+	menu "Aldebaran Castles",C_aldeg,"Geffen Castles",C_gefg,"Payon Castles",C_payg,"Prontera Castles",C_prtg,"Cancel",Lcancel;
+Lcancel:
+	mes "       [ WoE Notice Board ]";
+	mes "Check back here again soon for the latest WoE update!!";
+	close;
+
+C_aldeg_NoGuardians:
+	mes "^008080They do not have a Guardian Defend System^000000 .";
+	next;
+	goto C_aldeg;
+C_gefg_NoGuardians:
+	mes "^008080They do not have a Guardian Defend System^000000 .";
+	next;
+	goto C_gefg;
+C_payg_NoGuardians:
+	mes "^008080They do not have a Guardian Defend System^000000 .";
+	next;
+	goto C_payg;
+C_prtg_NoGuardians:
+	mes "^008080They do not have a Guardian Defend System^000000 .";
+	next;
+	goto C_prtg;
+
+//
+/// Aldebaran Castles
+//
+C_aldeg:
+	mes "       [ WoE Notice Board ]";
+	mes "Ah I see that you've taken a liking to the the Castles of Aldebaran.";
+	mes "So, which of the 5 castles do you wish to check up on?";
+	next;
+	menu "Noisyubantian",C_aldeg_Noisyubantian,"Hohensyubangawoo",C_aldeg_Hohensyubangawoo,"Nyirenverk",C_aldeg_Nyirenverk,"Byirtsburi",C_aldeg_Byirtsburi,"Rotenburk",C_aldeg_Rotenburk,"Cancel",Lcancel;
+
+//aldeg_cas01
+C_aldeg_Noisyubantian:
+	set @GIDa1,GetCastleData("aldeg_cas01.gat",1);
+	if (@GIDa1 != 0) goto C_aldeg_Noisyubantian2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Noisyubantian is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_aldeg;
+C_aldeg_Noisyubantian2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Noisyubantian is currently controlled by the guild ^ff0000" + GetGuildName(@GIDa1) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDa1) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("aldeg_cas01.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("aldeg_cas01.gat",3)  + ".^000000";
+	if ((GetCastleData("aldeg_cas01.gat",10) <= 0) && (GetCastleData("aldeg_cas01.gat",11) <= 0) &&
+	    (GetCastleData("aldeg_cas01.gat",12) <= 0) && (GetCastleData("aldeg_cas01.gat",13) <= 0) &&
+	    (GetCastleData("aldeg_cas01.gat",14) <= 0) && (GetCastleData("aldeg_cas01.gat",15) <= 0) &&
+	    (GetCastleData("aldeg_cas01.gat",16) <= 0) && (GetCastleData("aldeg_cas01.gat",17) <= 0)) goto C_aldeg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_aldeg;
+//End of aldeg_cas01
+
+//aldeg_cas02
+C_aldeg_Hohensyubangawoo:
+	set @GIDa2,GetCastleData("aldeg_cas02.gat",1);
+	if (@GIDa2 != 0) goto C_aldeg_Hohensyubangawoo2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Hohensyubangawoo is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_aldeg;
+C_aldeg_Hohensyubangawoo2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Hohensyubangawoo is currently controlled by the guild ^ff0000" + GetGuildName(@GIDa2) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDa2) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("aldeg_cas02.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("aldeg_cas02.gat",3)  + ".^000000";
+	if ((GetCastleData("aldeg_cas02.gat",10) <= 0) && (GetCastleData("aldeg_cas02.gat",11) <= 0) &&
+	    (GetCastleData("aldeg_cas02.gat",12) <= 0) && (GetCastleData("aldeg_cas02.gat",13) <= 0) &&
+	    (GetCastleData("aldeg_cas02.gat",14) <= 0) && (GetCastleData("aldeg_cas02.gat",15) <= 0) &&
+	    (GetCastleData("aldeg_cas02.gat",16) <= 0) && (GetCastleData("aldeg_cas02.gat",17) <= 0)) goto C_aldeg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_aldeg;
+//End of aldeg_cas02
+
+//aldeg_cas03
+C_aldeg_Nyirenverk:
+	set @GIDa3,GetCastleData("aldeg_cas03.gat",1);
+	if (@GIDa3 != 0) goto C_aldeg_Nyirenverk2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Nyirenverk is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_aldeg;
+C_aldeg_Nyirenverk2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Nyirenverk is currently controlled by the guild ^ff0000" + GetGuildName(@GIDa3) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDa3) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("aldeg_cas03.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("aldeg_cas03.gat",3)  + ".^000000";
+	if ((GetCastleData("aldeg_cas03.gat",10) <= 0) && (GetCastleData("aldeg_cas03.gat",11) <= 0) &&
+	    (GetCastleData("aldeg_cas03.gat",12) <= 0) && (GetCastleData("aldeg_cas03.gat",13) <= 0) &&
+	    (GetCastleData("aldeg_cas03.gat",14) <= 0) && (GetCastleData("aldeg_cas03.gat",15) <= 0) &&
+	    (GetCastleData("aldeg_cas03.gat",16) <= 0) && (GetCastleData("aldeg_cas03.gat",17) <= 0)) goto C_aldeg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_aldeg;
+//End of aldeg_cas03
+
+//aldeg_cas04
+C_aldeg_Byirtsburi:
+	set @GIDa4,GetCastleData("aldeg_cas04.gat",1);
+	if (@GIDa4 != 0) goto C_aldeg_Byirtsburi2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Byirtsburi is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_aldeg;
+C_aldeg_Byirtsburi2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Byirtsburi is currently controlled by the guild ^ff0000" + GetGuildName(@GIDa4) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDa4) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("aldeg_cas04.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("aldeg_cas04.gat",3)  + ".^000000";
+	if ((GetCastleData("aldeg_cas04.gat",10) <= 0) && (GetCastleData("aldeg_cas04.gat",11) <= 0) &&
+	    (GetCastleData("aldeg_cas04.gat",12) <= 0) && (GetCastleData("aldeg_cas04.gat",13) <= 0) &&
+	    (GetCastleData("aldeg_cas04.gat",14) <= 0) && (GetCastleData("aldeg_cas04.gat",15) <= 0) &&
+	    (GetCastleData("aldeg_cas04.gat",16) <= 0) && (GetCastleData("aldeg_cas04.gat",17) <= 0)) goto C_aldeg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_aldeg;
+//End of aldeg_cas04
+
+//aldeg_cas05
+C_aldeg_Rotenburk:
+	set @GIDa5,GetCastleData("aldeg_cas05.gat",1);
+	if (@GIDa5 != 0) goto C_aldeg_Rotenburk2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Rotenburk is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_aldeg;
+C_aldeg_Rotenburk2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Rotenburk is currently controlled by the guild ^ff0000" + GetGuildName(@GIDa5) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDa5) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("aldeg_cas05.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("aldeg_cas05.gat",3)  + ".^000000";
+	if ((GetCastleData("aldeg_cas05.gat",10) <= 0) && (GetCastleData("aldeg_cas05.gat",11) <= 0) &&
+	    (GetCastleData("aldeg_cas05.gat",12) <= 0) && (GetCastleData("aldeg_cas05.gat",13) <= 0) &&
+	    (GetCastleData("aldeg_cas05.gat",14) <= 0) && (GetCastleData("aldeg_cas05.gat",15) <= 0) &&
+	    (GetCastleData("aldeg_cas05.gat",16) <= 0) && (GetCastleData("aldeg_cas05.gat",17) <= 0)) goto C_aldeg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_aldeg;
+//End of aldeg_cas05
+
+//
+/// Geffen Castles
+//
+C_gefg:
+	mes "       [ WoE Notice Board ]";
+	mes "Ah I see that you've taken a liking to the the Castles of Geffen.";
+	mes "So, which of the 5 castles do you wish to check up on?";
+	next;
+	menu "Reprion",C_gefg_Reprion,"Yolbriger",C_gefg_Yolbriger,"Isinlife",C_gefg_Isinlife,"Berikel",C_gefg_Berikel,"Melsesdetsu",C_gefg_Melsesdetsu,"Cancel",Lcancel;
+
+//gefg_cas01
+C_gefg_Reprion:
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 != 0) goto C_gefg_Reprion2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Reprion is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_gefg;
+C_gefg_Reprion2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Reprion is currently controlled by the guild ^ff0000" + GetGuildName(@GIDg1) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDg1) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("gefg_cas01.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("gefg_cas01.gat",3)  + ".^000000";
+	if ((GetCastleData("gefg_cas01.gat",10) <= 0) && (GetCastleData("gefg_cas01.gat",11) <= 0) &&
+	    (GetCastleData("gefg_cas01.gat",12) <= 0) && (GetCastleData("gefg_cas01.gat",13) <= 0) &&
+	    (GetCastleData("gefg_cas01.gat",14) <= 0) && (GetCastleData("gefg_cas01.gat",15) <= 0) &&
+	    (GetCastleData("gefg_cas01.gat",16) <= 0) && (GetCastleData("gefg_cas01.gat",17) <= 0)) goto C_gefg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_gefg;
+//End of gefg_cas01
+
+//gefg_cas02
+C_gefg_Yolbriger:
+	set @GIDg2,GetCastleData("gefg_cas02.gat",1);
+	if (@GIDg2 != 0) goto C_gefg_Yolbriger2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Yolbriger is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_gefg;
+C_gefg_Yolbriger2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Yolbriger is currently controlled by the guild ^ff0000" + GetGuildName(@GIDg2) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDg2) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("gefg_cas02.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("gefg_cas02.gat",3)  + ".^000000";
+	if ((GetCastleData("gefg_cas02.gat",10) <= 0) && (GetCastleData("gefg_cas02.gat",11) <= 0) &&
+	    (GetCastleData("gefg_cas02.gat",12) <= 0) && (GetCastleData("gefg_cas02.gat",13) <= 0) &&
+	    (GetCastleData("gefg_cas02.gat",14) <= 0) && (GetCastleData("gefg_cas02.gat",15) <= 0) &&
+	    (GetCastleData("gefg_cas02.gat",16) <= 0) && (GetCastleData("gefg_cas02.gat",17) <= 0)) goto C_gefg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_gefg;
+//End of gefg_cas02
+
+//gefg_cas03
+C_gefg_Isinlife:
+	set @GIDg3,GetCastleData("gefg_cas03.gat",1);
+	if (@GIDg3 != 0) goto C_gefg_Isinlife2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Isinlife is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_gefg;
+C_gefg_Isinlife2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Isinlife is currently controlled by the guild ^ff0000" + GetGuildName(@GIDg3) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDg3) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("gefg_cas03.gat",2) + ".";
+	if ((GetCastleData("gefg_cas03.gat",10) <= 0) && (GetCastleData("gefg_cas03.gat",11) <= 0) &&
+	    (GetCastleData("gefg_cas03.gat",12) <= 0) && (GetCastleData("gefg_cas03.gat",13) <= 0) &&
+	    (GetCastleData("gefg_cas03.gat",14) <= 0) && (GetCastleData("gefg_cas03.gat",15) <= 0) &&
+	    (GetCastleData("gefg_cas03.gat",16) <= 0) && (GetCastleData("gefg_cas03.gat",17) <= 0)) goto C_gefg_NoGuardians;
+	mes "Current Defence Investment is " +  GetCastleData("gefg_cas03.gat",3)  + ".^000000";
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_gefg;
+//End of gefg_cas03
+
+//gefg_cas04
+C_gefg_Berikel:
+	set @GIDg4,GetCastleData("gefg_cas04.gat",1);
+	if (@GIDg4 != 0) goto C_gefg_Berikel2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Berikel is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_gefg;
+C_gefg_Berikel2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Berikel is currently controlled by the guild ^ff0000" + GetGuildName(@GIDg4) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDg4) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("gefg_cas04.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("gefg_cas04.gat",3)  + ".^000000";
+	if ((GetCastleData("gefg_cas04.gat",10) <= 0) && (GetCastleData("gefg_cas04.gat",11) <= 0) &&
+	    (GetCastleData("gefg_cas04.gat",12) <= 0) && (GetCastleData("gefg_cas04.gat",13) <= 0) &&
+	    (GetCastleData("gefg_cas04.gat",14) <= 0) && (GetCastleData("gefg_cas04.gat",15) <= 0) &&
+	    (GetCastleData("gefg_cas04.gat",16) <= 0) && (GetCastleData("gefg_cas04.gat",17) <= 0)) goto C_gefg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_gefg;
+//End of gefg_cas04
+
+//gefg_cas05
+C_gefg_Melsesdetsu:
+	set @GIDg5,GetCastleData("gefg_cas05.gat",1);
+	if (@GIDg5 != 0) goto C_gefg_Melsesdetsu2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Melsesdetsu is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_gefg;
+C_gefg_Melsesdetsu2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Melsesdetsu is currently controlled by the guild ^ff0000" + GetGuildName(@GIDg5) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDg5) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("gefg_cas05.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("gefg_cas05.gat",3)  + ".^000000";
+	if ((GetCastleData("gefg_cas05.gat",10) <= 0) && (GetCastleData("gefg_cas05.gat",11) <= 0) &&
+	    (GetCastleData("gefg_cas05.gat",12) <= 0) && (GetCastleData("gefg_cas05.gat",13) <= 0) &&
+	    (GetCastleData("gefg_cas05.gat",14) <= 0) && (GetCastleData("gefg_cas05.gat",15) <= 0) &&
+	    (GetCastleData("gefg_cas05.gat",16) <= 0) && (GetCastleData("gefg_cas05.gat",17) <= 0)) goto C_gefg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_gefg;
+//End of gefg_cas05
+
+//
+/// Payon Castles
+//
+C_payg:
+	mes "       [ WoE Notice Board ]";
+	mes "Ah I see that you've taken a liking to the the Castles of Payon.";
+	mes "So, which of the 5 castles do you wish to check up on?";
+	next;
+	menu "Mingting",C_payg_Mingting,"Tiantan",C_payg_Tiantan,"Fuying",C_payg_Fuying,"Honglou",C_payg_Honglou,"Zhulinxian",C_payg_Zhulinxian,"Cancel",Lcancel;
+
+//payg_cas01
+C_payg_Mingting:
+	set @GIDf1,GetCastleData("payg_cas01.gat",1);
+	if (@GIDf1 != 0) goto C_payg_Mingting2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Mingting is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_payg;
+C_payg_Mingting2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Mingting is currently controlled by the guild ^ff0000" + GetGuildName(@GIDf1) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDf1) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("payg_cas01.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("payg_cas01.gat",3)  + ".^000000";
+	if ((GetCastleData("payg_cas01.gat",10) <= 0) && (GetCastleData("payg_cas01.gat",11) <= 0) &&
+	    (GetCastleData("payg_cas01.gat",12) <= 0) && (GetCastleData("payg_cas01.gat",13) <= 0) &&
+	    (GetCastleData("payg_cas01.gat",14) <= 0) && (GetCastleData("payg_cas01.gat",15) <= 0) &&
+	    (GetCastleData("payg_cas01.gat",16) <= 0) && (GetCastleData("payg_cas01.gat",17) <= 0)) goto C_payg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_payg;
+//End of payg_cas01
+
+//payg_cas02
+C_payg_Tiantan:
+	set @GIDf2,GetCastleData("payg_cas02.gat",1);
+	if (@GIDf2 != 0) goto C_payg_Tiantan2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Tiantan is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_payg;
+C_payg_Tiantan2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Tiantan is currently controlled by the guild ^ff0000" + GetGuildName(@GIDf2) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDf2) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("payg_cas02.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("payg_cas02.gat",3)  + ".^000000";
+	if ((GetCastleData("payg_cas02.gat",10) <= 0) && (GetCastleData("payg_cas02.gat",11) <= 0) &&
+	    (GetCastleData("payg_cas02.gat",12) <= 0) && (GetCastleData("payg_cas02.gat",13) <= 0) &&
+	    (GetCastleData("payg_cas02.gat",14) <= 0) && (GetCastleData("payg_cas02.gat",15) <= 0) &&
+	    (GetCastleData("payg_cas02.gat",16) <= 0) && (GetCastleData("payg_cas02.gat",17) <= 0)) goto C_payg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_payg;
+//End of payg_cas02
+
+//payg_cas03
+C_payg_Fuying:
+	set @GIDf3,GetCastleData("payg_cas03.gat",1);
+	if (@GIDf3 != 0) goto C_payg_Fuying2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Fuying is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_payg;
+C_payg_Fuying2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Fuying is currently controlled by the guild ^ff0000" + GetGuildName(@GIDf3) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDf3) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("payg_cas03.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("payg_cas03.gat",3)  + ".^000000";
+	if ((GetCastleData("payg_cas03.gat",10) <= 0) && (GetCastleData("payg_cas03.gat",11) <= 0) &&
+	    (GetCastleData("payg_cas03.gat",12) <= 0) && (GetCastleData("payg_cas03.gat",13) <= 0) &&
+	    (GetCastleData("payg_cas03.gat",14) <= 0) && (GetCastleData("payg_cas03.gat",15) <= 0) &&
+	    (GetCastleData("payg_cas03.gat",16) <= 0) && (GetCastleData("payg_cas03.gat",17) <= 0)) goto C_payg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_payg;
+//End of payg_cas03
+
+//payg_cas04
+C_payg_Honglou:
+	set @GIDf4,GetCastleData("payg_cas04.gat",1);
+	if (@GIDf4 != 0) goto C_payg_Honglou2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Honglou is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_payg;
+C_payg_Honglou2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Honglou is currently controlled by the guild ^ff0000" + GetGuildName(@GIDf4) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDf4) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("payg_cas04.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("payg_cas04.gat",3)  + ".^000000";
+	if ((GetCastleData("payg_cas04.gat",10) <= 0) && (GetCastleData("payg_cas04.gat",11) <= 0) &&
+	    (GetCastleData("payg_cas04.gat",12) <= 0) && (GetCastleData("payg_cas04.gat",13) <= 0) &&
+	    (GetCastleData("payg_cas04.gat",14) <= 0) && (GetCastleData("payg_cas04.gat",15) <= 0) &&
+	    (GetCastleData("payg_cas04.gat",16) <= 0) && (GetCastleData("payg_cas04.gat",17) <= 0)) goto C_payg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_payg;
+//End of payg_cas04
+
+//payg_cas05
+C_payg_Zhulinxian:
+	set @GIDf5,GetCastleData("payg_cas05.gat",1);
+	if (@GIDf5 != 0) goto C_payg_Zhulinxian2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Zhulinxian is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_payg;
+C_payg_Zhulinxian2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Zhulinxian is currently controlled by the guild ^ff0000" + GetGuildName(@GIDf5) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDf5) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("payg_cas05.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("payg_cas05.gat",3)  + ".^000000";
+	if ((GetCastleData("payg_cas05.gat",10) <= 0) && (GetCastleData("payg_cas05.gat",11) <= 0) &&
+	    (GetCastleData("payg_cas05.gat",12) <= 0) && (GetCastleData("payg_cas05.gat",13) <= 0) &&
+	    (GetCastleData("payg_cas05.gat",14) <= 0) && (GetCastleData("payg_cas05.gat",15) <= 0) &&
+	    (GetCastleData("payg_cas05.gat",16) <= 0) && (GetCastleData("payg_cas05.gat",17) <= 0)) goto C_payg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_payg;
+//End of payg_cas05
+
+//
+/// Prontera Castles
+//
+C_prtg:
+	mes "       [ WoE Notice Board ]";
+	mes "Ah I see that you've taken a liking to the the Castles of Prontera.";
+	mes "So, which of the 5 castles do you wish to check up on?";
+	next;
+	menu "Creamhillt",C_prtg_Creamhillt,"Sbanhealt",C_prtg_Sbanhealt,"Lazrigees",C_prtg_Lazrigees,"Squagul",C_prtg_Squagul,"Guindull",C_prtg_Guindull,"Cancel",Lcancel;
+
+//prtg_cas01
+C_prtg_Creamhillt:
+	set @GIDp1,GetCastleData("prtg_cas01.gat",1);
+	if (@GIDp1 != 0) goto C_prtg_Creamhillt2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Creamhillt is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_prtg;
+C_prtg_Creamhillt2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Creamhillt is currently controlled by the guild ^ff0000" + GetGuildName(@GIDp1) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDp1) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("prtg_cas01.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("prtg_cas01.gat",3)  + ".^000000";
+	if ((GetCastleData("prtg_cas01.gat",10) <= 0) && (GetCastleData("prtg_cas01.gat",11) <= 0) &&
+	    (GetCastleData("prtg_cas01.gat",12) <= 0) && (GetCastleData("prtg_cas01.gat",13) <= 0) &&
+	    (GetCastleData("prtg_cas01.gat",14) <= 0) && (GetCastleData("prtg_cas01.gat",15) <= 0) &&
+	    (GetCastleData("prtg_cas01.gat",16) <= 0) && (GetCastleData("prtg_cas01.gat",17) <= 0)) goto C_prtg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_prtg;
+//End of prtg_cas01
+
+//prtg_cas02
+C_prtg_Sbanhealt:
+	set @GIDp2,GetCastleData("prtg_cas02.gat",1);
+	if (@GIDp2 != 0) goto C_prtg_Sbanhealt2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Sbanhealt is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_prtg;
+C_prtg_Sbanhealt2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Sbanhealt is currently controlled by the guild ^ff0000" + GetGuildName(@GIDp2) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDp2) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("prtg_cas02.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("prtg_cas02.gat",3)  + ".^000000";
+	if ((GetCastleData("prtg_cas02.gat",10) <= 0) && (GetCastleData("prtg_cas02.gat",11) <= 0) &&
+	    (GetCastleData("prtg_cas02.gat",12) <= 0) && (GetCastleData("prtg_cas02.gat",13) <= 0) &&
+	    (GetCastleData("prtg_cas02.gat",14) <= 0) && (GetCastleData("prtg_cas02.gat",15) <= 0) &&
+	    (GetCastleData("prtg_cas02.gat",16) <= 0) && (GetCastleData("prtg_cas02.gat",17) <= 0)) goto C_prtg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_prtg;
+//End of prtg_cas02
+
+//prtg_cas03
+C_prtg_Lazrigees:
+	set @GIDp3,GetCastleData("prtg_cas03.gat",1);
+	if (@GIDp3 != 0) goto C_prtg_Lazrigees2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Lazrigees is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_prtg;
+C_prtg_Lazrigees2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Lazrigees is currently controlled by the guild ^ff0000" + GetGuildName(@GIDp3) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDp3) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("prtg_cas03.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("prtg_cas03.gat",3)  + ".^000000";
+	if ((GetCastleData("prtg_cas03.gat",10) <= 0) && (GetCastleData("prtg_cas03.gat",11) <= 0) &&
+	    (GetCastleData("prtg_cas03.gat",12) <= 0) && (GetCastleData("prtg_cas03.gat",13) <= 0) &&
+	    (GetCastleData("prtg_cas03.gat",14) <= 0) && (GetCastleData("prtg_cas03.gat",15) <= 0) &&
+	    (GetCastleData("prtg_cas03.gat",16) <= 0) && (GetCastleData("prtg_cas03.gat",17) <= 0)) goto C_prtg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_prtg;
+//End of prtg_cas03
+
+//prtg_cas04
+C_prtg_Squagul:
+	set @GIDp4,GetCastleData("prtg_cas04.gat",1);
+	if (@GIDp4 != 0) goto C_prtg_Squagul2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Squagul is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_prtg;
+C_prtg_Squagul2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Squagul is currently controlled by the guild ^ff0000" + GetGuildName(@GIDp4) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDp4) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("prtg_cas04.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("prtg_cas04.gat",3)  + ".^000000";
+	if ((GetCastleData("prtg_cas04.gat",10) <= 0) && (GetCastleData("prtg_cas04.gat",11) <= 0) &&
+	    (GetCastleData("prtg_cas04.gat",12) <= 0) && (GetCastleData("prtg_cas04.gat",13) <= 0) &&
+	    (GetCastleData("prtg_cas04.gat",14) <= 0) && (GetCastleData("prtg_cas04.gat",15) <= 0) &&
+	    (GetCastleData("prtg_cas04.gat",16) <= 0) && (GetCastleData("prtg_cas04.gat",17) <= 0)) goto C_prtg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_prtg;
+//End of prtg_cas04
+
+//prtg_cas05
+C_prtg_Guindull:
+	set @GIDp5,GetCastleData("prtg_cas05.gat",1);
+	if (@GIDp5 != 0) goto C_prtg_Guindull2;
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Guindull is currently not controlled by any guild.";
+	mes "Is there no brave man who would shed his blood for honor and valor!!";
+	next;
+	goto C_prtg;
+C_prtg_Guindull2:
+	mes "       [ WoE Notice Board ]";
+	mes "The Castle Guindull is currently controlled by the guild ^ff0000" + GetGuildName(@GIDp5) + "^000000 .";
+	mes "Their Guild Master is ^ff0000" + GetGuildMaster(@GIDp5) + "^000000 .";
+	mes "^0000ffCurrent Commerce Investment is " + GetCastleData("prtg_cas05.gat",2) + ".";
+	mes "Current Defence Investment is " +  GetCastleData("prtg_cas05.gat",3)  + ".^000000";
+	if ((GetCastleData("prtg_cas05.gat",10) <= 0) && (GetCastleData("prtg_cas05.gat",11) <= 0) &&
+	    (GetCastleData("prtg_cas05.gat",12) <= 0) && (GetCastleData("prtg_cas05.gat",13) <= 0) &&
+	    (GetCastleData("prtg_cas05.gat",14) <= 0) && (GetCastleData("prtg_cas05.gat",15) <= 0) &&
+	    (GetCastleData("prtg_cas05.gat",16) <= 0) && (GetCastleData("prtg_cas05.gat",17) <= 0)) goto C_prtg_NoGuardians;
+	mes "^FF0080Their Guardians Defend System is Installed^000000 .";
+	next;
+	goto C_prtg;
+//End of prtg_cas05
+
+}
+

@@ -1,0 +1,186 @@
+// Perfect upgrader, see PRICELIST for details
+comodo.gat,175,233,5	script	Illegal Upgrader	726,{
+mes "[Illegal Upgrader]";
+mes "I'm upgrading weapons and armor.";
+mes "I will never fail, so I charge more.";
+mes "Be sure to check the price list!";
+mes "Would you like to upgrade some of yours?";
+menu "Refine something",SELECT,
+     "Price list",PRICELIST;
+
+PRICELIST:
+mes "[Illegal Upgrader]";
+mes "For a level 1 weapon it is 1 pharacon and 2750z per +1.";
+mes "For a level 2 weapon it is 1 emveretarcon and 3000z per +1.";
+mes "For a level 3 weapon it is 2 oridecon and 9500z per +1.";
+mes "For a level 4 weapon it is 4 oridecon and 22000z per +1.";
+mes "Armor is 2 elunium and 12000z per +1.";
+next;
+goto TOPMENU;
+
+TOPMENU:
+mes "[Illegal Upgrader]";
+mes "I'm upgrading weapons and armor.";
+mes "I will never fail, so I charge more.";
+mes "Be sure to check the price list!";
+mes "Would you like to upgrade some of yours?";
+menu "Refine something",SELECT,
+     "Price list",PRICELIST;
+
+SELECT:
+mes "[Illegal Upgrader]";
+mes "Which would you like to refine?";
+menu getequipname(1),PART1,
+     getequipname(2),PART2,
+     getequipname(3),PART3,
+     getequipname(4),PART4,
+     getequipname(5),PART5,
+     getequipname(6),PART6,
+     getequipname(7),PART7,
+     getequipname(8),PART8,
+     getequipname(9),PART9,
+     getequipname(10),PART10;
+
+PART1:
+set @part,1;
+if (getequipisequiped(1)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART2:
+set @part,2;
+if (getequipisequiped(2)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART3:
+set @part,3;
+if (getequipisequiped(3)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART4:
+set @part,4;
+if (getequipisequiped(4)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART5:
+set @part,5;
+if (getequipisequiped(5)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART6:
+set @part,6;
+if (getequipisequiped(6)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART7:
+set @part,7;
+if (getequipisequiped(7)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART8:
+set @part,8;
+if (getequipisequiped(8)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART9:
+set @part,9;
+if (getequipisequiped(9)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+PART10:
+set @part,10;
+if (getequipisequiped(10)) goto CHECK1;
+mes "[Illegal Upgrader]";
+mes "You have nothing equipped in that spot!";
+close;
+
+CHECK1:
+if (getequipisenableref(@part)) goto CHECK2;
+mes "[Illegal Upgrader]";
+mes "You can not refine this!";
+close;
+
+CHECK2:
+if (getequipisidentify(@part)) goto CHECK3;
+mes "[Illegal Upgrader]";
+mes "This item is not identified!";
+close;
+
+CHECK3:
+if (getequiprefinerycnt(@part) < 10) goto ARMOR_REFINE;
+mes "[Illegal Upgrader]";
+mes "This item is already +10!";
+close;
+
+ARMOR_REFINE:
+if (getequipweaponlv(@part) > 0) goto LEVEL1_REFINE;
+if ((countitem(985) < 2) || (Zeny < 12000)) goto NO;
+delitem 985,2;
+set zeny,zeny-12000;
+successrefitem @part;
+mes "[Illegal Upgrader]";
+mes "There you are!";
+close;
+
+LEVEL1_REFINE:
+if (getequipweaponlv(@part) > 1) goto LEVEL2_REFINE;
+if ((countitem(1010) < 1) || (Zeny < 2750)) goto NO;
+delitem 1010,1;
+set zeny,zeny-2750;
+successrefitem @part;
+mes "[Illegal Upgrader]";
+mes "There you are!";
+close;
+
+LEVEL2_REFINE:
+if (getequipweaponlv(@part) > 2) goto LEVEL3_REFINE;
+if ((countitem(1011) < 1) || (Zeny < 3000)) goto NO;
+delitem 1011,1;
+set zeny,zeny-3000;
+successrefitem @part;
+mes "[Illegal Upgrader]";
+mes "There you are!";
+close;
+
+LEVEL3_REFINE:
+if (getequipweaponlv(@part) > 3) goto LEVEL4_REFINE;
+if ((countitem(984) < 2) || (Zeny < 9500)) goto NO;
+delitem 984,2;
+set zeny,zeny-9500;
+successrefitem @part;
+mes "[Illegal Upgrader]";
+mes "There you are!";
+close;
+
+LEVEL4_REFINE:
+if (getequipweaponlv(@part) < 4) goto LEVEL1_REFINE;
+if ((countitem(984) < 4) || (Zeny < 22000)) goto NO;
+delitem 984,4;
+set zeny,zeny-22000;
+successrefitem @part;
+mes "[Illegal Upgrader]";
+mes "There you are!";
+close;
+
+NO:
+mes "[Illegal Upgrader]";
+mes "You don't have enough zeny or the metal to refine this item!";
+close;
+}

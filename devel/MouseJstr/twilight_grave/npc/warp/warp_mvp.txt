@@ -1,0 +1,28 @@
+//===== Athena Script ========================================
+//= MVP Arean for TwilightRO
+//===== By: ==================================================
+//= Darkchild (1.0vA); Athena (1.0vB)/ Emuz
+//===== Current Version: =====================================
+//= 1.1 (Akaru)
+//===== Compatible With: =====================================
+//= Any Athena Version; TwilightRO New
+//===== Description: =========================================
+//= Warp Points for the MVP Arena
+//===== Additional Comments: =================================
+//= Split off npc_warp.txt
+//============================================================
+
+//Dungeon Level 2
+mvp_arena.gat,103,208,0	warp	mvpa0020	1,1,mvp_arena.gat,116,208
+mvp_arena.gat,113,208,0	warp	mvpa0019	1,1,mvp_arena.gat,100,208
+mvp_arena.gat,169,38,0	warp	mvpa0025	1,1,mvp_arena.gat,180,38
+mvp_arena.gat,177,38,0	warp	mvpa0026	1,1,mvp_arena.gat,166,38
+mvp_arena.gat,216,77,0	warp	mvpa0018	1,1,mvp_arena.gat,217,88
+mvp_arena.gat,216,84,0	warp	mvpa0017	1,1,mvp_arena.gat,214,74
+mvp_arena.gat,222,259,0	warp	mvpa0015	1,1,mvp_arena.gat,234,255
+mvp_arena.gat,231,255,0	warp	mvpa0016	1,1,mvp_arena.gat,219,260
+mvp_arena.gat,25,244,0	warp	mvpa0022	1,1,mvp_arena.gat,35,251
+mvp_arena.gat,33,249,0	warp	mvpa0021	1,1,mvp_arena.gat,23,242
+mvp_arena.gat,60,88,0	warp	mvpa0023	1,1,mvp_arena.gat,66,77
+mvp_arena.gat,63,80,0	warp	mvpa0024	1,1,mvp_arena.gat,59,92
+

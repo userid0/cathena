@@ -1,0 +1,42 @@
+//WoE Castle Knight NPC Script by holyAngelX
+
+gef_fild13.gat,156,47,5	script	Reprion Knight	733,{
+
+	set @GIDg1,GetCastleData("gefg_cas01.gat",1);
+	if (@GIDg1 == 0) goto Lclear;
+	if (getcharid(2) == @GIDg1) goto LStartg;
+	mes "[Reprion Knight]";
+	mes "You're not allies of my King! Halt your Pursuit now or face death beyond your worst fear.";
+	goto L_EXIT;
+
+Lclear:
+	mes "[Reprion Knight]";
+	mes "When the time is ripe, the Uncrowned shall be Crowned once again... and the broken blade shall be one again...";
+	close;
+
+L_EXIT:
+	close;
+
+LStartg:
+	mes "[Reprion Knight]";
+	mes "Welcome. ^ff0000" + GetGuildName(@GIDg1) + "^000000 members";
+	mes "May the light be with you...";
+	next;
+	menu "Save",Lsave,"Protect Emperium",protect_emp,"Leave Here",leave,"Cancel",Lcancel;
+
+	Lsave:
+		savepoint "gef_fild13.gat",158,48;
+		mes "[Reprion Knight]";
+		mes "Your respawn point has saved. Thank you.";
+		close;
+
+	protect_emp:
+		warp "gefg_cas01.gat",	197,	181;	close;
+
+	leave:
+		warp "prontera.gat",	154,	194;	close;
+
+	Lcancel:
+		close;
+
+}

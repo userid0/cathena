@@ -1,0 +1,51 @@
+//===== eAthena Script =======================================
+//= War of Emperium - payg_cas01_treasure script
+//===== By: ==================================================
+//= ho|yAnge|X (Beta 1.0)
+//===== Current Version: =====================================
+//= Epsilon 4.0
+//===== Compatible With: =====================================
+//= eAthena 0.1+; RO Episode 4+
+//===== Description: =========================================
+//= Treasure Chest Spawn Control Center & Exit Switch in payg_cas01
+//===== Additional Comments: =================================
+//= Epsilon 4.0 by ho|yAnge|X
+//============================================================
+
+payg_cas01.gat,295,8,0	script	Switch	111,{
+mes " ";
+mes "There is a little switch here. Would you like to pull the switch down?";
+next;
+menu "Yes",L1,"No",L2;
+L1:
+	warp "payg_cas01",120,59;
+L2:
+  close;
+}
+
+payg_cas01.gat,290,7,0	script	Treasure_C01	-1,{
+OnClock1200:
+	SetCastleData "payg_cas01.gat",4,0;
+	SetCastleData "payg_cas01.gat",5,0;
+	KillMonster "payg_cas01.gat","Treasure_C01::TreasureDied";
+	set $Economy10,GetCastleData("payg_cas01.gat",2);
+	if ($Economy10 > 100) break;
+	if (GetCastleData("payg_cas01.gat",1) == 0) break;
+	set $boxnum10,GetCastleData("payg_cas01.gat",2)/5+4;
+	goto TreasureCheck;
+
+TreasureCheck:
+	if ($boxnum10 <= 0) break;
+	set $boxid10,rand(1344,1344,1344,1345);
+	goto TreasureSpawn;
+
+TreasureSpawn:
+	areamonster "payg_cas01.gat",286,4,295,13,"Treasure Chest",$boxid10,1,"Treasure_C01::TreasureDied";
+	set $boxnum10,$boxnum10-1;
+	if ($boxnum10 <= 0) break;
+	goto TreasureCheck;
+
+TreasureDied:
+	MapAnnounce "payg_cas01.gat","Treasure Chest Broken Open",17;
+	break;	
+}

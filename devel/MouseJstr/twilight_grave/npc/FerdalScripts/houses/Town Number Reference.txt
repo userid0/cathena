@@ -1,0 +1,29 @@
+House Numbers:
+#1-5 Prontera
+#6-10 Morocc
+#11-15 Payon
+#16-20 Juno
+#21-25 Geffen
+#26-30 Gonryun
+#31-35 Umbala
+#36-40 Izlude
+#41-45 Lutie
+#46-50 Al De Baran
+#51-55 Amatsu
+#56-60 Comodo
+#61-65 Alberta
+
+Town Numbers:
+#1 Prontera
+#2 Morocc
+#3 Payon
+#4 Juno
+#5 Geffen
+#6 Gonryun
+#7 Umbala
+#8 Izlude
+#9 Lutie
+#10 Al De Baran
+#11 Amatsu
+#12 Comodo
+#13 Alberta

@@ -1,0 +1,306 @@
+//===== eAthena Script =======================================
+//= War of Emperium - ev_agit_aldeg script
+//===== By: ==================================================
+//= jAthena - kalen (Beta 1.0)
+//= eAthena - AppleGirl (Beta 1.0)
+//===== Current Version: =====================================
+//= Epsilon 4.0
+//===== Compatible With: =====================================
+//= eAthena 0.1+; RO Episode 4+
+//===== Description: =========================================
+//= Aldeg Castles' Monster Spawn and Emperium & Agit Control Center
+//===== Additional Comments: =================================
+//= Epsilon 4.0 by ho|yAnge|X
+//============================================================
+
+aldeg_cas01.gat,216,24,0	script	Agit_A01	-1,{
+OnAgitInit:
+	GetCastleData "aldeg_cas01.gat",0;
+	Break;
+OnInterIfInit:
+	GetCastleData "aldeg_cas01.gat",0,"::OnRecvCastleA01";
+	Break;
+OnRecvCastleA01:
+	RequestGuildInfo GetCastleData("aldeg_cas01.gat",1);
+	Break;
+OnAgitStart:
+	MapRespawnGuildID "aldeg_cas01.gat",GetCastleData("aldeg_cas01.gat",1),2;
+	Monster "aldeg_cas01.gat",216,24,"Emperium",1288,1,"Agit_A01::OnAgitBreak";
+	GvgOn "aldeg_cas01.gat";
+	if (GetCastleData("aldeg_cas01.gat",1) != 0) Break;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1117,10;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1132,4;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1219,2;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1205,1;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1216,10;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1193,17;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1269,9;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1276,7;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1208,3;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1275,1;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1268,1;
+	areamonster "aldeg_cas01.gat",0,0,300,300,"--ja--",1272,1;
+	monster "aldeg_cas01.gat",216,23,"--ja--",1272,1;
+	monster "aldeg_cas01.gat",216,23,"--ja--",1270,4;
+	monster "aldeg_cas01.gat",216,23,"--ja--",1268,1;
+	monster "aldeg_cas01.gat",216,23,"--ja--",1219,1;
+	monster "aldeg_cas01.gat",216,23,"--ja--",1276,5;
+	Break;
+OnAgitBreak:
+	set @GIDa1,getcharid(2);
+	if (@GIDa1 <= 0) Break;
+	set @Economy,GetCastleData("aldeg_cas01.gat",2);
+	SetCastleData "aldeg_cas01.gat",2,@Economy-5;
+	if (GetCastleData("aldeg_cas01.gat",2) < 0) SetCastleData "aldeg_cas01.gat",2,0;
+	set @Defence,GetCastleData("aldeg_cas01.gat",3);
+	SetCastleData "aldeg_cas01.gat",3,@Defence-5;
+	if (GetCastleData("aldeg_cas01.gat",3) < 0) SetCastleData "aldeg_cas01.gat",3,0;
+	SetCastleData "aldeg_cas01.gat",1,@GIDa1;
+	Announce "Guild Base [" + GetCastleName("aldeg_cas01.gat") + "] has been taken by [" + GetGuildName(@GIDa1) + "] guild.",0;
+	MapAnnounce "aldeg_cas01.gat","Emperium has been destroyed.",17;
+	GetCastleData "aldeg_cas01.gat",0,"::OnRecvCastleA01";
+	Break;
+OnAgitEliminate:
+	MapRespawnGuildID "aldeg_cas01.gat",GetCastleData("aldeg_cas01.gat",1),6;
+	Monster "aldeg_cas01.gat",216,24,"Emperium",1288,1,"Agit_A01::OnAgitBreak";
+	Break;
+OnAgitEnd:
+	MapRespawnGuildID "aldeg_cas01.gat",GetCastleData("aldeg_cas01.gat",1),4;
+	KillMonster "aldeg_cas01.gat","Agit_A01::OnAgitBreak";
+	GvgOff "aldeg_cas01.gat";
+	Break;
+}
+//--------------------------------------------------------------------------------------------------------------------------
+aldeg_cas02.gat,214,24,0	script	Agit_A02	-1,{
+OnAgitInit:
+	GetCastleData "aldeg_cas02.gat",0;
+	Break;
+OnInterIfInit:
+	GetCastleData "aldeg_cas02.gat",0,"::OnRecvCastleA02";
+	Break;
+OnRecvCastleA02:
+	RequestGuildInfo GetCastleData("aldeg_cas02.gat",1);
+	Break;
+OnAgitStart:
+	MapRespawnGuildID "aldeg_cas02.gat",GetCastleData("aldeg_cas02.gat",1),2;
+	Monster "aldeg_cas02.gat",214,24,"Emperium",1288,1,"Agit_A02::OnAgitBreak";
+	GvgOn "aldeg_cas02.gat";
+	if (GetCastleData("aldeg_cas02.gat",1) != 0) Break;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1117,10;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1132,4;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1219,2;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1205,1;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1216,10;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1193,18;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1269,9;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1276,7;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1208,3;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1275,1;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1268,1;
+	areamonster "aldeg_cas02.gat",0,0,300,300,"--ja--",1272,1;
+	monster "aldeg_cas02.gat",213,23,"--ja--",1272,1;
+	monster "aldeg_cas02.gat",213,23,"--ja--",1270,4;
+	monster "aldeg_cas02.gat",213,23,"--ja--",1268,1;
+	monster "aldeg_cas02.gat",213,23,"--ja--",1219,1;
+	monster "aldeg_cas02.gat",213,23,"--ja--",1276,5;
+	Break;
+OnAgitBreak:
+	set @GIDa2,getcharid(2);
+	if (@GIDa2 <= 0) Break;
+	set @Economy,GetCastleData("aldeg_cas02.gat",2);
+	SetCastleData "aldeg_cas02.gat",2,@Economy-5;
+	if (GetCastleData("aldeg_cas02.gat",2) < 0) SetCastleData "aldeg_cas02.gat",2,0;
+	set @Defence,GetCastleData("aldeg_cas02.gat",3);
+	SetCastleData "aldeg_cas02.gat",3,@Defence-5;
+	if (GetCastleData("aldeg_cas02.gat",3) < 0) SetCastleData "aldeg_cas02.gat",3,0;
+	SetCastleData "aldeg_cas02.gat",1,@GIDa2;
+	Announce "Guild Base [" + GetCastleName("aldeg_cas02.gat") + "] has been taken by [" + GetGuildName(@GIDa2) + "] guild.",0;
+	MapAnnounce "aldeg_cas02.gat","Emperium has been destroyed.",17;
+	GetCastleData "aldeg_cas02.gat",0,"::OnRecvCastleA02";
+	Break;
+OnAgitEliminate:
+	MapRespawnGuildID "aldeg_cas02.gat",GetCastleData("aldeg_cas02.gat",1),6;
+	Monster "aldeg_cas02.gat",214,24,"Emperium",1288,1,"Agit_A02::OnAgitBreak";
+	Break;
+OnAgitEnd:
+	MapRespawnGuildID "aldeg_cas02.gat",GetCastleData("aldeg_cas02.gat",1),4;
+	KillMonster "aldeg_cas02.gat","Agit_A02::OnAgitBreak";
+	GvgOff "aldeg_cas02.gat";
+	Break;
+}
+//--------------------------------------------------------------------------------------------------------------------------
+aldeg_cas03.gat,206,32,0	script	Agit_A03	-1,{
+OnAgitInit:
+	GetCastleData "aldeg_cas03.gat",0;
+	Break;
+OnInterIfInit:
+	GetCastleData "aldeg_cas03.gat",0,"::OnRecvCastleA03";
+	Break;
+OnRecvCastleA03:
+	RequestGuildInfo GetCastleData("aldeg_cas03.gat",1);
+	Break;
+OnAgitStart:
+	MapRespawnGuildID "aldeg_cas03.gat",GetCastleData("aldeg_cas03.gat",1),2;
+	Monster "aldeg_cas03.gat",206,32,"Emperium",1288,1,"Agit_A03::OnAgitBreak";
+	GvgOn "aldeg_cas03.gat";
+	if (GetCastleData("aldeg_cas03.gat",1) != 0) Break;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1117,10;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1132,4;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1219,2;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1205,1;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1216,10;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1193,18;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1269,9;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1276,7;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1208,3;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1275,1;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1268,1;
+	areamonster "aldeg_cas03.gat",0,0,300,300,"--ja--",1272,1;
+	monster "aldeg_cas03.gat",205,31,"--ja--",1272,1;
+	monster "aldeg_cas03.gat",205,31,"--ja--",1270,4;
+	monster "aldeg_cas03.gat",205,31,"--ja--",1268,1;
+	monster "aldeg_cas03.gat",205,31,"--ja--",1219,1;
+	monster "aldeg_cas03.gat",205,31,"--ja--",1276,5;
+	Break;
+OnAgitBreak:
+	set @GIDa3,getcharid(2);
+	if (@GIDa3 <= 0) Break;
+	set @Economy,GetCastleData("aldeg_cas03.gat",2);
+	SetCastleData "aldeg_cas03.gat",2,@Economy-5;
+	if (GetCastleData("aldeg_cas03.gat",2) < 0) SetCastleData "aldeg_cas03.gat",2,0;
+	set @Defence,GetCastleData("aldeg_cas03.gat",3);
+	SetCastleData "aldeg_cas03.gat",3,@Defence-5;
+	if (GetCastleData("aldeg_cas03.gat",3) < 0) SetCastleData "aldeg_cas03.gat",3,0;
+	SetCastleData "aldeg_cas03.gat",1,@GIDa3;
+	Announce "Guild Base [" + GetCastleName("aldeg_cas03.gat") + "] has been taken by [" + GetGuildName(@GIDa3) + "] guild.",0;
+	MapAnnounce "aldeg_cas03.gat","Emperium has been destroyed.",17;
+	GetCastleData "aldeg_cas03.gat",0,"::OnRecvCastleA03";
+	Break;
+OnAgitEliminate:
+	MapRespawnGuildID "aldeg_cas03.gat",GetCastleData("aldeg_cas03.gat",1),6;
+	Monster "aldeg_cas03.gat",206,32,"Emperium",1288,1,"Agit_A03::OnAgitBreak";
+	Break;
+OnAgitEnd:
+	MapRespawnGuildID "aldeg_cas03.gat",GetCastleData("aldeg_cas03.gat",1),4;
+	KillMonster "aldeg_cas03.gat","Agit_A03::OnAgitBreak";
+	GvgOff "aldeg_cas03.gat";
+	Break;
+}
+//--------------------------------------------------------------------------------------------------------------------------
+aldeg_cas04.gat,36,218,0	script	Agit_A04	-1,{
+OnAgitInit:
+	GetCastleData "aldeg_cas04.gat",0;
+	Break;
+OnInterIfInit:
+	GetCastleData "aldeg_cas04.gat",0,"::OnRecvCastleA04";
+	Break;
+OnRecvCastleA04:
+	RequestGuildInfo GetCastleData("aldeg_cas04.gat",1);
+	Break;
+OnAgitStart:
+	MapRespawnGuildID "aldeg_cas04.gat",GetCastleData("aldeg_cas04.gat",1),2;
+	Monster "aldeg_cas04.gat",36,218,"Emperium",1288,1,"Agit_A04::OnAgitBreak";
+	GvgOn "aldeg_cas04.gat";
+	if (GetCastleData("aldeg_cas04.gat",1) != 0) Break;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1117,10;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1132,4;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1219,2;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1205,1;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1216,10;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1193,18;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1269,9;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1276,7;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1208,3;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1275,1;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1268,1;
+	areamonster "aldeg_cas04.gat",0,0,300,300,"--ja--",1272,1;
+	monster "aldeg_cas04.gat",36,217,"--ja--",1272,1;
+	monster "aldeg_cas04.gat",36,217,"--ja--",1270,4;
+	monster "aldeg_cas04.gat",36,217,"--ja--",1268,1;
+	monster "aldeg_cas04.gat",36,217,"--ja--",1219,1;
+	monster "aldeg_cas04.gat",36,217,"--ja--",1276,5;
+	Break;
+OnAgitBreak:
+	set @GIDa4,getcharid(2);
+	if (@GIDa4 <= 0) Break;
+	set @Economy,GetCastleData("aldeg_cas04.gat",2);
+	SetCastleData "aldeg_cas04.gat",2,@Economy-5;
+	if (GetCastleData("aldeg_cas04.gat",2) < 0) SetCastleData "aldeg_cas04.gat",2,0;
+	set @Defence,GetCastleData("aldeg_cas04.gat",3);
+	SetCastleData "aldeg_cas04.gat",3,@Defence-5;
+	if (GetCastleData("aldeg_cas04.gat",3) < 0) SetCastleData "aldeg_cas04.gat",3,0;
+	SetCastleData "aldeg_cas04.gat",1,@GIDa4;
+	Announce "Guild Base [" + GetCastleName("aldeg_cas04.gat") + "] has been taken by [" + GetGuildName(@GIDa4) + "] guild.",0;
+	MapAnnounce "aldeg_cas04.gat","Emperium has been destroyed.",17;
+	GetCastleData "aldeg_cas04.gat",0,"::OnRecvCastleA04";
+	Break;
+OnAgitEliminate:
+	MapRespawnGuildID "aldeg_cas04.gat",GetCastleData("aldeg_cas04.gat",1),6;
+	Monster "aldeg_cas04.gat",36,218,"Emperium",1288,1,"Agit_A04::OnAgitBreak";
+	Break;
+OnAgitEnd:
+	MapRespawnGuildID "aldeg_cas04.gat",GetCastleData("aldeg_cas04.gat",1),4;
+	KillMonster "aldeg_cas04.gat","Agit_A04::OnAgitBreak";
+	GvgOff "aldeg_cas04.gat";
+	Break;
+}
+//--------------------------------------------------------------------------------------------------------------------------
+aldeg_cas05.gat,28,102,0	script	Agit_A05	-1,{
+OnAgitInit:
+	GetCastleData "aldeg_cas05.gat",0;
+	Break;
+OnInterIfInit:
+	GetCastleData "aldeg_cas05.gat",0,"::OnRecvCastleA05";
+	Break;
+OnRecvCastleA05:
+	RequestGuildInfo GetCastleData("aldeg_cas05.gat",1);
+	Break;
+OnAgitStart:
+	MapRespawnGuildID "aldeg_cas05.gat",GetCastleData("aldeg_cas05.gat",1),2;
+	Monster "aldeg_cas05.gat",28,102,"Emperium",1288,1,"Agit_A05::OnAgitBreak";
+	GvgOn "aldeg_cas05.gat";
+	if (GetCastleData("aldeg_cas05.gat",1) != 0) Break;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1117,10;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1132,4;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1219,2;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1205,1;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1216,10;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1193,18;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1269,9;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1276,7;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1208,3;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1275,1;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1268,1;
+	areamonster "aldeg_cas05.gat",0,0,300,300,"--ja--",1272,1;
+	monster "aldeg_cas05.gat",27,101,"--ja--",1272,1;
+	monster "aldeg_cas05.gat",27,101,"--ja--",1270,4;
+	monster "aldeg_cas05.gat",27,101,"--ja--",1268,1;
+	monster "aldeg_cas05.gat",27,101,"--ja--",1219,1;
+	monster "aldeg_cas05.gat",27,101,"--ja--",1276,5;
+	Break;
+OnAgitBreak:
+	set @GIDa5,getcharid(2);
+	if (@GIDa5 <= 0) Break;
+	set @Economy,GetCastleData("aldeg_cas05.gat",2);
+	SetCastleData "aldeg_cas05.gat",2,@Economy-5;
+	if (GetCastleData("aldeg_cas05.gat",2) < 0) SetCastleData "aldeg_cas05.gat",2,0;
+	set @Defence,GetCastleData("aldeg_cas05.gat",3);
+	SetCastleData "aldeg_cas05.gat",3,@Defence-5;
+	if (GetCastleData("aldeg_cas05.gat",3) < 0) SetCastleData "aldeg_cas05.gat",3,0;
+	SetCastleData "aldeg_cas05.gat",1,@GIDa5;
+	Announce "Guild Base [" + GetCastleName("aldeg_cas05.gat") + "] has been taken by [" + GetGuildName(@GIDa5) + "] guild.",0;
+	MapAnnounce "aldeg_cas05.gat","Emperium has been destroyed.",17;
+	GetCastleData "aldeg_cas05.gat",0,"::OnRecvCastleA05";
+	Break;
+OnAgitEliminate:
+	MapRespawnGuildID "aldeg_cas05.gat",GetCastleData("aldeg_cas05.gat",1),6;
+	Monster "aldeg_cas05.gat",28,102,"Emperium",1288,1,"Agit_A05::OnAgitBreak";
+	Break;
+OnAgitEnd:
+	MapRespawnGuildID "aldeg_cas05.gat",GetCastleData("aldeg_cas05.gat",1),4;
+	KillMonster "aldeg_cas05.gat","Agit_A05::OnAgitBreak";
+	GvgOff "aldeg_cas05.gat";
+	Break;
+}
+//--------------------------------------------------------------------------------------------------------------------------
+
