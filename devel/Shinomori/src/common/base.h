@@ -16,6 +16,39 @@
 #define CHECK_LOCKS			// enables check of locking/unlocking sync objects
 //#define SINGLETHREAD		// builds without multithread guards
 //#define CHECK_EXCEPTIONS	// use exceptions for "exception" handling
+#define _USE_32BIT_TIME_T	// use 32 bit time variables on windows
+
+
+//////////////////////////////////////////////////////////////////////////
+// setting some defines platforms
+//////////////////////////////////////////////////////////////////////////
+#if (defined(__WIN32__) || defined(__WIN32) || defined(_WIN32) || defined(_MSC_VER) || defined(__BORLANDC__)) && !defined(WIN32)
+#define WIN32
+#endif
+
+// __APPLE__ is the only predefined macro on MacOS X
+#if defined(__APPLE__)
+#define __DARWIN__
+#endif
+
+#if defined(_DEBUG) && !defined(DEBUG)
+#define DEBUG
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////
+// setting some defines for compile modes
+//////////////////////////////////////////////////////////////////////////
+// check global objects count and array boundaries in debug mode
+#if defined(DEBUG) && !defined(COUNT_GLOBALS)
+#define COUNT_GLOBALS
+#endif
+#if defined(DEBUG) && !defined(CHECK_BOUNDS)
+#define CHECK_BOUNDS
+#endif
+#if defined(DEBUG) && !defined(CHECK_LOCKS)
+#define CHECK_LOCKS
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -43,6 +76,8 @@
 //////////////////////////////
 #define WIN32_LEAN_AND_MEAN
 #define _WINSOCKAPI_	// prevent inclusion of winsock.h
+
+#pragma warning(disable : 4996)	// disable deprecated warnings
 
 #include <windows.h>
 #include <winsock2.h>
@@ -77,46 +112,12 @@
 
 
 //////////////////////////////////////////////////////////////////////////
-// setting some defines platforms
-//////////////////////////////////////////////////////////////////////////
-#if (defined(__WIN32__) || defined(__WIN32) || defined(_WIN32) || defined(_MSC_VER) || defined(__BORLANDC__)) && !defined(WIN32)
-#define WIN32
-#endif
-
-// __APPLE__ is the only predefined macro on MacOS X
-#if defined(__APPLE__)
-#define __DARWIN__
-#endif
-
-#if defined(_DEBUG) && !defined(DEBUG)
-#define DEBUG
-#endif
-
-
-//////////////////////////////////////////////////////////////////////////
 // no c support anymore
 //////////////////////////////////////////////////////////////////////////
 #ifndef __cplusplus
 #  error "this is C++ source"
 #endif
 
-
-
-
-
-//////////////////////////////////////////////////////////////////////////
-// setting some defines for compile modes
-//////////////////////////////////////////////////////////////////////////
-// check global objects count and array boundaries in debug mode
-#if defined(DEBUG) && !defined(COUNT_GLOBALS)
-#define COUNT_GLOBALS
-#endif
-#if defined(DEBUG) && !defined(CHECK_BOUNDS)
-#define CHECK_BOUNDS
-#endif
-#if defined(DEBUG) && !defined(CHECK_LOCKS)
-#define CHECK_LOCKS
-#endif
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -258,8 +259,8 @@ extern inline void gettimeofday(struct timeval *timenow, void *dummy)
 {
 	time_t t;
 	t = clock();
-	timenow->tv_usec = t;
-	timenow->tv_sec = t / CLK_TCK;
+	timenow->tv_usec = (long)t;
+	timenow->tv_sec = (long)t / CLK_TCK;
 	return;
 }
 

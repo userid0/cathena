@@ -1,8 +1,4 @@
 // $Id: party.c,v 1.2 2004/09/22 02:59:47 Akitasha Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "party.h"
 #include "db.h"
 #include "timer.h"

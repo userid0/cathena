@@ -232,7 +232,7 @@ int SessionInsertSocket(const SOCKET elem)
 		if((size_t)fd_max<=fd)	fd_max = fd+1;
 		socket_pos[fd] = elem;	// corrosponding to session[fd]
 
-		return fd;
+		return (int)fd;
 	}
 	// otherwise the socket is already in the list
 	return -1;
@@ -870,13 +870,13 @@ void process_read(size_t fd)
 	if( session[fd] )
 	{
 		if( session[fd]->func_recv )
-			session[fd]->func_recv(fd);
+			session[fd]->func_recv((int)fd);
 
 		if(session[fd]->rdata_size==0 && session[fd]->flag.connected)
 			return;
 
 		if( session[fd]->func_parse )
-			session[fd]->func_parse(fd);
+			session[fd]->func_parse((int)fd);
 
 		// session could be deleted in func_parse so better check again
 		if(session[fd]) 
@@ -894,7 +894,7 @@ void process_write(size_t fd)
 	if( session[fd] )
 	{
 		if( session[fd]->func_send )
-			session[fd]->func_send(fd);
+			session[fd]->func_send((int)fd);
 	}
 }
 
@@ -1065,7 +1065,7 @@ int do_sendrecv(int next)
 			{	// delete marked sessions here
 				// we have to go through the field anyway
 				// and this is the safest place for deletions
-				session_Delete(fd);
+				session_Delete((int)fd);
 				continue;
 			}
 			else if( session[fd]->flag.connected )
@@ -1083,7 +1083,7 @@ int do_sendrecv(int next)
 			cnt = fd; 
 		}
 	}
-	fd_max = cnt+1;
+	fd_max = (int)(cnt+1);
 
 	timeout.tv_sec  = next/1000;
 	timeout.tv_usec = next%1000*1000;

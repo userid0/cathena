@@ -1,9 +1,4 @@
 // $Id: mob.c,v 1.7 2004/09/25 05:32:18 MouseJstr Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-
 #include "timer.h"
 #include "socket.h"
 #include "db.h"

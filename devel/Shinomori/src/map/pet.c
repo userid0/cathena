@@ -1,8 +1,4 @@
 // $Id: pet.c,v 1.4 2004/09/25 05:32:18 MouseJstr Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "db.h"
 #include "timer.h"
 #include "socket.h"

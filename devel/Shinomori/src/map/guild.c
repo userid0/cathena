@@ -1,8 +1,4 @@
 // $Id: guild.c,v 1.5 2004/09/25 05:32:18 MouseJstr Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "guild.h"
 #include "storage.h"
 #include "db.h"

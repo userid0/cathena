@@ -1,11 +1,4 @@
 // $Id: npc.c,v 1.5 2004/09/25 05:32:18 MouseJstr Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
-
 #include "db.h"
 #include "timer.h"
 #include "nullpo.h"

@@ -1,9 +1,4 @@
 // $Id: battle.c,v 1.10 2004/09/29 21:08:17 Akitasha Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-
 #include "battle.h"
 
 #include "timer.h"

@@ -1,8 +1,4 @@
 // $Id: path.c,v 1.1.1.1 2004/09/10 17:27:00 MagicalTux Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "base.h"
 #include "map.h"
 #include "battle.h"

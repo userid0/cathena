@@ -1,8 +1,4 @@
 // $Id: storage.c,v 1.3 2004/09/25 02:05:22 MouseJstr Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "db.h"
 #include "itemdb.h"
 #include "clif.h"

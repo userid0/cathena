@@ -1,11 +1,6 @@
 // $Id: skill.c,v 1.8 2004/02/24 10:28:24 PM Celestia $
 /* ƒXƒLƒ‹?ŒW */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
 #include "timer.h"
 #include "nullpo.h"
 #include "malloc.h"
@@ -5383,7 +5378,7 @@ int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned lon
 			} else
 				status_change_start(bl,type,sg->skill_lv,(int)src,0,0,
 					skill_get_time2(sg->skill_id,sg->skill_lv),0);
-		} else if (0 != 0x20&status_get_mode(bl))
+		} else if (0 != (0x20&status_get_mode(bl)))
 			skill_blown(&src->bl,bl,1);
 		break;
 

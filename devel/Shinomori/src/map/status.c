@@ -1,11 +1,5 @@
 
 // ステータス計算、状態異常処理
-#include <time.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-
 #include "pc.h"
 #include "map.h"
 #include "pet.h"

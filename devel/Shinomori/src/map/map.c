@@ -1,10 +1,4 @@
 // $Id: map.c,v 1.6 2004/09/25 17:37:01 MouseJstr Exp $
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <math.h>
-
 #include "base.h"
 #include "core.h"
 #include "timer.h"
@@ -3393,7 +3387,7 @@ int do_init(int argc, char *argv[]) {
 			clif_setip(localaddr);
 		if (chrif_getip() == INADDR_LOOPBACK)
 			chrif_setip(localaddr);
-		if (localaddr&0xFFFF0000 == 0xC0A80000)//192.168.x.x
+		if ((localaddr&0xFFFF0000) == 0xC0A80000)//192.168.x.x
 			ShowMessage("\nPrivate Network detected.. \nedit lan_support.conf and map_athena.conf\n\n");
 	}
 	if (SHOW_DEBUG_MSG) ShowNotice("Server running in '"CL_WHITE"Debug Mode"CL_RESET"'.\n");

@@ -1,10 +1,4 @@
 // $Id: pc.c 101 2004-12-13 7:23:07 PM Celestia $
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <time.h>
-
 #include "socket.h" // [Valaris]
 #include "timer.h"
 #include "db.h"

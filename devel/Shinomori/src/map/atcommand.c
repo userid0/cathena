@@ -3,8 +3,8 @@
 #include "socket.h"
 #include "timer.h"
 #include "nullpo.h"
-#include "../common/mmo.h"
-#include "../common/db.h"
+#include "mmo.h"
+#include "db.h"
 
 #include "log.h"
 #include "clif.h"
@@ -3093,7 +3093,7 @@ int atcommand_monster(
 		ShowMessage("%s monster='%s' name='%s' id=%d count=%d (%d,%d)\n", command, monster, name, mob_id, number, x, y);
 
 	count = 0;
-	range = (int)(sqrt(number) / 2);
+	range = (int)(sqrt((double)number) / 2);
 	range = range * 2 + 5; // calculation of an odd number (+ 4 area around)
 	for (i = 0; i < number; i++) {
 		j = 0;
@@ -3185,7 +3185,7 @@ int atcommand_spawn(
 		ShowMessage("%s monster='%s' name='%s' id=%d count=%d (%d,%d)\n", command, monster, name, mob_id, number, x, y);
 
 	count = 0;
-	range = (int)(sqrt(number) / 2);
+	range = (int)(sqrt((double)number) / 2);
 	range = range * 2 + 5; // calculation of an odd number (+ 4 area around)
 	for (i = 0; i < number; i++) {
 		j = 0;
@@ -6207,9 +6207,9 @@ int atcommand_servertime(const int fd, struct map_session_data* sd,
 			sprintf(temp, msg_table[235], txt_time((timer_data->tick - gettick()) / 1000)); // Game time: The game is actualy in daylight for %s.
 			clif_displaymessage(fd, temp);
 			if (timer_data->tick > timer_data2->tick)
-				sprintf(temp, msg_table[237], txt_time((timer_data->interval - abs(timer_data->tick - timer_data2->tick)) / 1000)); // Game time: After, the game will be in night for %s.
+				sprintf(temp, msg_table[237], txt_time((timer_data->interval - (unsigned long)abs((long)(timer_data->tick - timer_data2->tick))) / 1000)); // Game time: After, the game will be in night for %s.
 			else
-				sprintf(temp, msg_table[237], txt_time(abs(timer_data->tick - timer_data2->tick) / 1000)); // Game time: After, the game will be in night for %s.
+				sprintf(temp, msg_table[237], txt_time((unsigned long)abs((long)(timer_data->tick - timer_data2->tick)) / 1000)); // Game time: After, the game will be in night for %s.
 			clif_displaymessage(fd, temp);
 			sprintf(temp, msg_table[238], txt_time(timer_data->interval / 1000)); // Game time: A day cycle has a normal duration of %s.
 			clif_displaymessage(fd, temp);
@@ -6219,9 +6219,9 @@ int atcommand_servertime(const int fd, struct map_session_data* sd,
 			sprintf(temp, msg_table[233], txt_time((timer_data->tick - gettick()) / 1000)); // Game time: The game is actualy in night for %s.
 			clif_displaymessage(fd, temp);
 			if (timer_data->tick > timer_data2->tick)
-				sprintf(temp, msg_table[239], txt_time((timer_data->interval - abs(timer_data->tick - timer_data2->tick)) / 1000)); // Game time: After, the game will be in daylight for %s.
+				sprintf(temp, msg_table[239], txt_time((timer_data->interval - (unsigned long)abs((long)(timer_data->tick - timer_data2->tick))) / 1000)); // Game time: After, the game will be in daylight for %s.
 			else
-				sprintf(temp, msg_table[239], txt_time(abs(timer_data->tick - timer_data2->tick) / 1000)); // Game time: After, the game will be in daylight for %s.
+				sprintf(temp, msg_table[239], txt_time((unsigned long)abs((long)(timer_data->tick - timer_data2->tick)) / 1000)); // Game time: After, the game will be in daylight for %s.
 			clif_displaymessage(fd, temp);
 			sprintf(temp, msg_table[238], txt_time(timer_data->interval / 1000)); // Game time: A day cycle has a normal duration of %s.
 			clif_displaymessage(fd, temp);

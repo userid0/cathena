@@ -3515,7 +3515,7 @@ int do_init(int argc, char **argv){
 			login_ip  = localaddr;
 		if (char_ip == INADDR_ANY)
 			char_ip  = localaddr;
-		if (localaddr&0xFFFF0000 == 0xC0A80000)//192.168.x.x
+		if ((localaddr&0xFFFF0000) == 0xC0A80000)//192.168.x.x
 			ShowMessage("Private Network detected.. edit lan_support.conf and char_athena.conf\n");
 	}
 
