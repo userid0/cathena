@@ -46,11 +46,13 @@
 
 #define SCRIPT_BLOCK_SIZE 256
 enum { LABEL_NEXTLINE=1,LABEL_START };
-static unsigned char * script_buf;
+static char * script_buf;
 static int script_pos,script_size;
 
 char *str_buf;
-int str_pos,str_size;
+size_t str_pos;
+size_t str_size;
+
 static struct s_str_data {
 	int type;
 	int str;
@@ -87,7 +89,7 @@ static int parse_cmd;
  * ローカルプロトタイプ宣言 (必要な物のみ)
  *------------------------------------------
  */
-unsigned char* parse_subexpr(unsigned char *,int);
+char* parse_subexpr(char *,int);
 int buildin_mes(struct script_state *st);
 int buildin_goto(struct script_state *st);
 int buildin_callsub(struct script_state *st);
@@ -551,8 +553,9 @@ enum {
  * 文字列のハッシュを計算
  *------------------------------------------
  */
-static int calc_hash(const unsigned char *p)
-{
+static int calc_hash(const char *str)
+{	// we need it unsigned here
+	const unsigned char *p = (const unsigned char *)str;
 	int h=0;
 	while(*p){
 		h=(h<<1)+(h>>3)+(h>>5)+(h>>8);
@@ -566,12 +569,12 @@ static int calc_hash(const unsigned char *p)
  *------------------------------------------
  */
 // 既存のであれば番号、無ければ-1
-static int search_str(const unsigned char *p)
+static int search_str(const char *p)
 {
 	int i;
 	i=str_hash[calc_hash(p)];
 	while(i){
-		if(strcmp(str_buf+str_data[i].str,(char*)p)==0){
+		if(strcmp(str_buf+str_data[i].str,p)==0){
 			return i;
 		}
 		i=str_data[i].next;
@@ -584,19 +587,33 @@ static int search_str(const unsigned char *p)
  *------------------------------------------
  */
 // 既存のであれば番号、無ければ登録して新規番号
-static int add_str(const unsigned char *p)
+static int add_str(const char *p)
 {
 	int i;
+
+//	char *lowcase = aStrdup((char*)p);
+//	for(i=0;lowcase[i];i++)
+//		lowcase[i]=tolower(lowcase[i]);
+//	if(strcmp((char*)lowcase,(char*)lowcase1)!=0)
+//		printf("'%s' %s'\n", lowcase,lowcase1);
+//	if((i=search_str((unsigned char*)lowcase))>=0){
+//		aFree(lowcase);
+//		return i;
+//	}
+//	aFree(lowcase);
+
+	// maybe a fixed size buffer would be sufficient
 	char *lowcase;
 
-	lowcase=aStrdup((char*)p);
-	for(i=0;lowcase[i];i++)
-		lowcase[i]=tolower(lowcase[i]);
-	if((i=search_str((unsigned char*)lowcase))>=0){
-		aFree(lowcase);
-		return i;
-	}
+	if(NULL==p) return -1; // should not happen
+
+	lowcase=(char *)aMalloc((strlen(p)+1)*sizeof(char));
+	for(i=0; p[i]; i++)
+		lowcase[i]=tolower(p[i]);
+	lowcase[i] = 0;//EOS
+	i=search_str(lowcase);
 	aFree(lowcase);
+	if(i >= 0) return i;
 
 	i=calc_hash(p);
 	if(str_hash[i]==0){
@@ -604,7 +621,7 @@ static int add_str(const unsigned char *p)
 	} else {
 		i=str_hash[i];
 		for(;;){
-			if(strcmp(str_buf+str_data[i].str,(char*)p)==0){
+			if(strcmp(str_buf+str_data[i].str,p)==0){
 				return i;
 			}
 			if(str_data[i].next==0)
@@ -618,12 +635,13 @@ static int add_str(const unsigned char *p)
 		str_data=(struct s_str_data*)aRealloc(str_data,str_data_size*sizeof(struct s_str_data));
 		memset(str_data + (str_data_size - 128), 0, 128*sizeof(struct s_str_data));
 	}
-	while(str_pos+(int)strlen((char*)p)+1>=str_size){
+	while(str_pos+(int)strlen(p)+1>=str_size){
 		str_size+=256;
 		str_buf=(char *)aRealloc(str_buf,str_size*sizeof(char));
 		memset(str_buf + (str_size - 256), 0, 256*sizeof(char));
 	}
-	strcpy(str_buf+str_pos,(char*)p);
+
+	memcpy(str_buf+str_pos,(char*)p,strlen((char*)p)+1);
 	str_data[str_num].type=C_NOP;
 	str_data[str_num].str=str_pos;
 	str_data[str_num].next=0;
@@ -643,8 +661,8 @@ static void check_script_buf(int size)
 {
 	if(script_pos+size>=script_size){
 		script_size+=SCRIPT_BLOCK_SIZE;
-		script_buf=(unsigned char *)aRealloc(script_buf,script_size*sizeof(unsigned char));
-		memset(script_buf + (script_size - SCRIPT_BLOCK_SIZE), 0, SCRIPT_BLOCK_SIZE*sizeof(unsigned char));
+		script_buf=(char *)aRealloc(script_buf,script_size*sizeof(char));
+		memset(script_buf + (script_size - SCRIPT_BLOCK_SIZE), 0, SCRIPT_BLOCK_SIZE*sizeof(char));
 	}
 }
 
@@ -732,7 +750,6 @@ void set_label(int l,int pos)
 	str_data[l].type=C_POS;
 	str_data[l].label=pos;
 	for(i=str_data[l].backpatch;i>=0 && i!=0x00ffffff;){
-//		next=(!*!(int!*!)(script_buf+i)) & 0x00ffffff;
 		next = (0xFF&script_buf[i])
 			 | (0xFF&script_buf[i+1])<<8
 			 | (0xFF&script_buf[i+2])<<16;
@@ -748,7 +765,7 @@ void set_label(int l,int pos)
  * スペース/コメント読み飛ばし
  *------------------------------------------
  */
-static unsigned char *skip_space(unsigned char *p)
+static char *skip_space(char *p)
 {
 	while(1){
 		while(isspace(*p))
@@ -771,8 +788,9 @@ static unsigned char *skip_space(unsigned char *p)
  * １単語スキップ
  *------------------------------------------
  */
-static unsigned char *skip_word(unsigned char *p)
+static char *skip_word(char *str)
 {
+	unsigned char*p =(unsigned char*)str;
 	// prefix
 	if(*p=='$') p++;	// MAP鯖内共有変数用
 	if(*p=='@') p++;	// 一時的変数用(like weiss)
@@ -780,6 +798,8 @@ static unsigned char *skip_word(unsigned char *p)
 	if(*p=='#') p++;	// ワールドaccount変数用
 	if(*p=='l') p++;	// 一時的変数用(like weiss)
 
+	// this is for skipping multibyte characters
+	// I do not modify here but just set the string pointer back to unsigned
 	while(isalnum(*p)||*p=='_'|| *p>=0x81)
 		if(*p>=0x81 && p[1]){
 			p+=2;
@@ -789,24 +809,24 @@ static unsigned char *skip_word(unsigned char *p)
 	// postfix
 	if(*p=='$') p++;	// 文字列変数
 
-	return p;
+	return (char*)p;
 }
 
-static unsigned char *startptr;
+static char *startptr;
 static int startline;
 
 /*==========================================
  * エラーメッセージ出力
  *------------------------------------------
  */
-static void disp_error_message(const char *mes,const unsigned char *pos)
+static void disp_error_message(const char *mes,const char *pos)
 {
 	int line,c=0,i;
-	unsigned char *p,*linestart,*lineend;
+	char *p,*linestart,*lineend;
 
-	for(line=startline,p=startptr;p && *p;line++){
+	for(line=startline,p=startptr; p && *p; line++){
 		linestart=p;
-		lineend=(unsigned char*)strchr((char*)p,'\n');
+		lineend=strchr(p,'\n');
 		if(lineend){
 			c=*lineend;
 			*lineend=0;
@@ -833,7 +853,7 @@ static void disp_error_message(const char *mes,const unsigned char *pos)
  * 項の解析
  *------------------------------------------
  */
-unsigned char* parse_simpleexpr(unsigned char *p)
+char* parse_simpleexpr(char *p)
 {
 	p=skip_space(p);
 
@@ -854,10 +874,10 @@ unsigned char* parse_simpleexpr(unsigned char *p)
 			exit(1);
 		}
 	} else if(isdigit(*p) || ((*p=='-' || *p=='+') && isdigit(p[1]))){
-		unsigned char *np;
-		int i=strtoul((char*)p,(char**)(&np),0);
+		char *np;
+		int i=strtoul(p,&np,0);
 		add_scripti(i);
-		p=(unsigned char *) np;
+		p= np;
 	} else if(*p=='"'){
 		add_scriptc(C_STR);
 		p++;
@@ -878,7 +898,7 @@ unsigned char* parse_simpleexpr(unsigned char *p)
 		p++;	//'"'
 	} else {
 		int c,l;
-		unsigned char *p2;
+		char *p2;
 		// label , register , function etc
 		if(skip_word(p)==p){
 			disp_error_message("unexpected character",p);
@@ -889,7 +909,7 @@ unsigned char* parse_simpleexpr(unsigned char *p)
 		l=add_str(p);
 
 		parse_cmd=l;	// warn_*_mismatch_paramnumのために必要
-		if(l==search_str((const unsigned char *)"if"))	// warn_cmd_no_commaのために必要
+		if(l==search_str("if"))	// warn_cmd_no_commaのために必要
 			parse_cmd_if++;
 /*
 		// 廃止予定のl14/l15,およびプレフィックスｌの警告
@@ -900,12 +920,12 @@ unsigned char* parse_simpleexpr(unsigned char *p)
 			disp_error_message("prefix 'l' is DEPRECATED. use prefix '@' instead.",p2);
 		}
 */
-		*p2=c;	
-                p=(unsigned char *) p2;
+		*p2=c;
+		p=p2;
 
 		if(str_data[l].type!=C_FUNC && c=='['){
 			// array(name[i] => getelementofarray(name,i) )
-			add_scriptl(search_str((unsigned char*)"getelementofarray"));
+			add_scriptl(search_str("getelementofarray"));
 			add_scriptc(C_ARG);
 			add_scriptl(l);
 			p=parse_subexpr(p+1,-1);
@@ -931,10 +951,10 @@ unsigned char* parse_simpleexpr(unsigned char *p)
  * 式の解析
  *------------------------------------------
  */
-unsigned char* parse_subexpr(unsigned char *p,int limit)
+char* parse_subexpr(char *p,int limit)
 {
 	int op,opl,len;
-	unsigned char *tmpp;
+	char *tmpp;
 
 #ifdef DEBUG_FUNCIN
 	if(battle_config.etc_log)
@@ -943,7 +963,7 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
 	p=skip_space(p);
 
 	if(*p=='-'){
-		tmpp = skip_space((unsigned char *) (p+1));
+		tmpp = skip_space(p+1);
 		if(*tmpp==';' || *tmpp==','){
 			add_scriptl(LABEL_NEXTLINE);
 			p++;
@@ -982,13 +1002,13 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
 			const char *plist[128];
 
 			if( str_data[func].type!=C_FUNC ){
-				disp_error_message("expect function",(unsigned char *) tmpp);
+				disp_error_message("expect function",tmpp);
 				exit(0);
 			}
 
 			add_scriptc(C_ARG);
 			do {
-				plist[i]=(char*)p;
+				plist[i]=p;
 				p=parse_subexpr(p,-1);
 				p=skip_space(p);
 				if(*p==',') p++;
@@ -998,7 +1018,7 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
 				p=skip_space(p);
 				i++;
 			} while(*p && *p!=')' && i<128);
-			plist[i]=(char*)p;
+			plist[i]=p;
 			if(*(p++)!=')'){
 				disp_error_message("func request '(' ')'",p);
 				exit(1);
@@ -1009,7 +1029,7 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
 				int j=0;
 				for(j=0;arg[j];j++) if(arg[j]=='*')break;
 				if( (arg[j]==0 && i!=j) || (arg[j]=='*' && i<j) ){
-					disp_error_message("illegal number of parameters",(unsigned char*)plist[(i<j)?i:j]);
+					disp_error_message("illegal number of parameters",plist[(i<j)?i:j]);
 				}
 			}
 		} else {
@@ -1029,7 +1049,7 @@ unsigned char* parse_subexpr(unsigned char *p,int limit)
  * 式の評価
  *------------------------------------------
  */
-unsigned char* parse_expr(unsigned char *p)
+char* parse_expr(char *p)
 {
 #ifdef DEBUG_FUNCIN
 	if(battle_config.etc_log)
@@ -1053,11 +1073,11 @@ unsigned char* parse_expr(unsigned char *p)
  * 行の解析
  *------------------------------------------
  */
-unsigned char* parse_line(unsigned char *p)
+char* parse_line(char *p)
 {
 	int i=0,cmd;
 	const char *plist[128];
-	unsigned char *p2;
+	char *p2;
 
 	p=skip_space(p);
 	if(*p==';')
@@ -1072,13 +1092,13 @@ unsigned char* parse_line(unsigned char *p)
 
 	cmd=parse_cmd;
 	if( str_data[cmd].type!=C_FUNC ){
-		disp_error_message("expect command",(unsigned char *) p2);
+		disp_error_message("expect command", p2);
 //		exit(0);
 	}
 
 	add_scriptc(C_ARG);
 	while(p && *p && *p!=';' && i<128){
-		plist[i]=(char*)p;
+		plist[i]=p;
 
 		p=parse_expr(p);
 		p=skip_space(p);
@@ -1102,7 +1122,7 @@ unsigned char* parse_line(unsigned char *p)
 		int j=0;
 		for(j=0;arg[j];j++) if(arg[j]=='*')break;
 		if( (arg[j]==0 && i!=j) || (arg[j]=='*' && i<j) ){
-			disp_error_message("illegal number of parameters",(unsigned char*)plist[(i<j)?i:j]);
+			disp_error_message("illegal number of parameters",plist[(i<j)?i:j]);
 		}
 	}
 
@@ -1118,7 +1138,7 @@ static void add_buildin_func(void)
 {
 	int i,n;
 	for(i=0;buildin_func[i].func;i++){
-		n=add_str((unsigned char*)buildin_func[i].name);
+		n=add_str(buildin_func[i].name);
 		str_data[n].type=C_FUNC;
 		str_data[n].val=i;
 		str_data[n].func=buildin_func[i].func;
@@ -1149,7 +1169,7 @@ static void read_constdb(void)
 		   sscanf(line,"%[A-Za-z0-9_] %d %d",name,&val,&type)>=2){
 			for(i=0;name[i];i++)
 				name[i]=tolower(name[i]);
-			n=add_str((unsigned char*)name);
+			n=add_str(name);
 			if(type==0)
 				str_data[n].type=C_INT;
 			else
@@ -1166,7 +1186,7 @@ static void read_constdb(void)
  */
 char* parse_script(unsigned char *src,int line)
 {
-	unsigned char *p,*tmpp;
+	char *p,*tmpp;
 	int i;
 	static int first=1;
 
@@ -1175,7 +1195,7 @@ char* parse_script(unsigned char *src,int line)
 		read_constdb();
 	}
 	first=0;
-	script_buf=(unsigned char *)aCallocA(SCRIPT_BLOCK_SIZE,sizeof(unsigned char));
+	script_buf=(char *)aCallocA(SCRIPT_BLOCK_SIZE,sizeof(char));
 	script_pos=0;
 	script_size=SCRIPT_BLOCK_SIZE;
 	str_data[LABEL_NEXTLINE].type=C_NOP;
@@ -1195,10 +1215,10 @@ char* parse_script(unsigned char *src,int line)
 	scriptlabel_db=strdb_init(50);
 
 	// for error message
-	startptr = src;
+	startptr = (char*)src;
 	startline = line;
 
-	p=src;
+	p=(char*)src;
 	p=skip_space(p);
 	if(*p!='{'){
 		disp_error_message("not found '{'",p);
@@ -1240,7 +1260,7 @@ char* parse_script(unsigned char *src,int line)
 	add_scriptc(C_NOP);
 
 	script_size = script_pos;
-	script_buf=(unsigned char*)aRealloc(script_buf,(script_pos + 1)*sizeof(unsigned char));
+	script_buf=(char*)aRealloc(script_buf,(script_pos + 1)*sizeof(char));
 
 	// 未解決のラベルを解決
 	for(i=LABEL_START;i<str_num;i++){
@@ -1249,7 +1269,6 @@ char* parse_script(unsigned char *src,int line)
 			str_data[i].type=C_NAME;
 			str_data[i].label=i;
 			for(j=str_data[i].backpatch;j>=0 && j!=0x00ffffff;){
-//				next=(!*!(int!*!)(script_buf+j)) & 0x00ffffff;
 				next = (0xFF&script_buf[j])
 					 | (0xFF&script_buf[j+1])<<8
 					 | (0xFF&script_buf[j+2])<<16;
@@ -1701,8 +1720,8 @@ int buildin_menu(struct script_state *st)
 		st->state=END;
 	} else {	// goto動作
 		// ragemu互換のため
-		pc_setreg(sd,add_str((unsigned char*)"l15"),sd->npc_menu);
-		pc_setreg(sd,add_str((unsigned char*)"@menu"),sd->npc_menu);
+		pc_setreg(sd,add_str("l15"),sd->npc_menu);
+		pc_setreg(sd,add_str("@menu"),sd->npc_menu);
 		sd->state.menu_or_input=0;
 		if(sd->npc_menu>0 && sd->npc_menu<(st->end-st->start)/2){
 			int pos;
@@ -1904,7 +1923,7 @@ int buildin_input(struct script_state *st)
 				set_reg(sd,num,name,(void*)sd->npc_amount);
 			} else {
 				// ragemu互換のため
-				pc_setreg(sd,add_str((unsigned char*)"l14"),sd->npc_amount);
+				pc_setreg(sd,add_str("l14"),sd->npc_amount);
 			}
 		}
 	} else {
@@ -2668,12 +2687,12 @@ int buildin_getpartymember(struct script_state *st)
 		for(i=0;i<MAX_PARTY;i++){
 			if(p->member[i].account_id){
 //				ShowMessage("name:%s %d\n",p->member[i].name,i);
-				mapreg_setregstr(add_str((unsigned char*)"$@partymembername$")+(i<<24),p->member[i].name);
+				mapreg_setregstr(add_str("$@partymembername$")+(i<<24),p->member[i].name);
 				j++;
 			}
 		}
 	}
-	mapreg_setreg(add_str((unsigned char*)"$@partymembercount"),j);
+	mapreg_setreg(add_str("$@partymembercount"),j);
 
 	return 0;
 }
@@ -4659,7 +4678,7 @@ int buildin_warpwaitingpc(struct script_state *st)
 	for(i=0;i<n;i++){
 		struct map_session_data *sd=cd->usersd[0];	// リスト先頭のPCを次々に。
 
-		mapreg_setreg(add_str((unsigned char*)"$@warpwaitingpc")+(i<<24),sd->bl.id);
+		mapreg_setreg(add_str("$@warpwaitingpc")+(i<<24),sd->bl.id);
 
 		if(strcmp(str,"Random")==0)
 			pc_randomwarp(sd,3);
@@ -4672,7 +4691,7 @@ int buildin_warpwaitingpc(struct script_state *st)
 		}else
 			pc_setpos(sd,str,x,y,0);
 	}
-	mapreg_setreg(add_str((unsigned char*)"$@warpwaitingpcnum"),n);
+	mapreg_setreg(add_str("$@warpwaitingpcnum"),n);
 	return 0;
 }
 /*==========================================
@@ -5079,8 +5098,8 @@ int buildin_agitcheck(struct script_state *st)
 		if (agit_flag==1) push_val(st->stack,C_INT,1);
 		if (agit_flag==0) push_val(st->stack,C_INT,0);
 	} else {
-		if (agit_flag==1) pc_setreg(sd,add_str((unsigned char*)"@agit_flag"),1);
-		if (agit_flag==0) pc_setreg(sd,add_str((unsigned char*)"@agit_flag"),0);
+		if (agit_flag==1) pc_setreg(sd,add_str("@agit_flag"),1);
+		if (agit_flag==0) pc_setreg(sd,add_str("@agit_flag"),0);
 	}
 	return 0;
 }
@@ -5743,20 +5762,20 @@ int buildin_getinventorylist(struct script_state *st)
 	if(!sd) return 0;
 	for(i=0;i<MAX_INVENTORY;i++){
 		if(sd->status.inventory[i].nameid > 0 && sd->status.inventory[i].amount > 0){
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_id")+(j<<24),sd->status.inventory[i].nameid);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_amount")+(j<<24),sd->status.inventory[i].amount);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_equip")+(j<<24),sd->status.inventory[i].equip);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_refine")+(j<<24),sd->status.inventory[i].refine);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_identify")+(j<<24),sd->status.inventory[i].identify);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_attribute")+(j<<24),sd->status.inventory[i].attribute);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_card1")+(j<<24),sd->status.inventory[i].card[0]);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_card2")+(j<<24),sd->status.inventory[i].card[1]);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_card3")+(j<<24),sd->status.inventory[i].card[2]);
-			pc_setreg(sd,add_str((unsigned char*)"@inventorylist_card4")+(j<<24),sd->status.inventory[i].card[3]);
+			pc_setreg(sd,add_str("@inventorylist_id")+(j<<24),sd->status.inventory[i].nameid);
+			pc_setreg(sd,add_str("@inventorylist_amount")+(j<<24),sd->status.inventory[i].amount);
+			pc_setreg(sd,add_str("@inventorylist_equip")+(j<<24),sd->status.inventory[i].equip);
+			pc_setreg(sd,add_str("@inventorylist_refine")+(j<<24),sd->status.inventory[i].refine);
+			pc_setreg(sd,add_str("@inventorylist_identify")+(j<<24),sd->status.inventory[i].identify);
+			pc_setreg(sd,add_str("@inventorylist_attribute")+(j<<24),sd->status.inventory[i].attribute);
+			pc_setreg(sd,add_str("@inventorylist_card1")+(j<<24),sd->status.inventory[i].card[0]);
+			pc_setreg(sd,add_str("@inventorylist_card2")+(j<<24),sd->status.inventory[i].card[1]);
+			pc_setreg(sd,add_str("@inventorylist_card3")+(j<<24),sd->status.inventory[i].card[2]);
+			pc_setreg(sd,add_str("@inventorylist_card4")+(j<<24),sd->status.inventory[i].card[3]);
 			j++;
 		}
 	}
-	pc_setreg(sd,add_str((unsigned char*)"@inventorylist_count"),j);
+	pc_setreg(sd,add_str("@inventorylist_count"),j);
 	return 0;
 }
 
@@ -5767,13 +5786,13 @@ int buildin_getskilllist(struct script_state *st)
 	if(!sd) return 0;
 	for(i=0;i<MAX_SKILL;i++){
 		if(sd->status.skill[i].id > 0 && sd->status.skill[i].lv > 0){
-			pc_setreg(sd,add_str((unsigned char*)"@skilllist_id")+(j<<24),sd->status.skill[i].id);
-			pc_setreg(sd,add_str((unsigned char*)"@skilllist_lv")+(j<<24),sd->status.skill[i].lv);
-			pc_setreg(sd,add_str((unsigned char*)"@skilllist_flag")+(j<<24),sd->status.skill[i].flag);
+			pc_setreg(sd,add_str("@skilllist_id")+(j<<24),sd->status.skill[i].id);
+			pc_setreg(sd,add_str("@skilllist_lv")+(j<<24),sd->status.skill[i].lv);
+			pc_setreg(sd,add_str("@skilllist_flag")+(j<<24),sd->status.skill[i].flag);
 			j++;
 		}
 	}
-	pc_setreg(sd,add_str((unsigned char*)"@skilllist_count"),j);
+	pc_setreg(sd,add_str("@skilllist_count"),j);
 	return 0;
 }
 
@@ -7192,14 +7211,14 @@ static int script_load_mapreg()
 			}
 			p=(char *)aMalloc( (strlen(buf2) + 1)*sizeof(char));
 			strcpy(p,buf2);
-			s=add_str((unsigned char*)buf1);
+			s=add_str(buf1);
 			numdb_insert(mapregstr_db,(i<<24)|s,p);
 		}else{
 			if( sscanf(line+n,"%d",&v)!=1 ){
 				ShowMessage("%s: %s broken data !\n",mapreg_txt,buf1);
 				continue;
 			}
-			s=add_str((unsigned char*)buf1);
+			s=add_str(buf1);
 			numdb_insert(mapreg_db,(i<<24)|s,v);
 		}
 	}

@@ -425,9 +425,9 @@ struct skill_unit *map_find_skill_unit_oncell(int m,int x,int y,int skill_id)
  *------------------------------------------
  */
 void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int type,...) {
+	va_list ap;
 	int bx,by;
 	struct block_list *bl=NULL;
-	va_list ap=NULL;
 	int blockcount=bl_list_count,i,c;
 
 	if(m < 0)
@@ -490,7 +490,7 @@ void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int 
 void map_foreachinmovearea(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...) {
 	int bx,by;
 	struct block_list *bl=NULL;
-	va_list ap=NULL;
+	va_list ap;
 	int blockcount=bl_list_count,i,c;
 
 	va_start(ap,type);
@@ -599,7 +599,7 @@ void map_foreachinmovearea(int (*func)(struct block_list*,va_list),int m,int x0,
 void map_foreachincell(int (*func)(struct block_list*,va_list),int m,int x,int y,int type,...) {
 	int bx,by;
 	struct block_list *bl=NULL;
-	va_list ap=NULL;
+	va_list ap;
 	int blockcount=bl_list_count,i,c;
 
 	va_start(ap,type);
@@ -730,7 +730,7 @@ int map_delobject(int id) {
 void map_foreachobject(int (*func)(struct block_list*,va_list),int type,...) {
 	int i;
 	int blockcount=bl_list_count;
-	va_list ap=NULL;
+	va_list ap;
 
 	va_start(ap,type);
 
@@ -1088,7 +1088,7 @@ int map_quit(struct map_session_data *sd) {
 			numdb_erase(charid_db,sd->status.char_id);
 			aFree(p);
 		}
-	} 
+	}
 	
 	strdb_erase(nick_db,sd->status.name);
 	numdb_erase(charid_db,sd->status.char_id);
@@ -1208,7 +1208,7 @@ struct block_list * map_id2bl(int id)
  *------------------------------------------
  */
 int map_foreachiddb(int (*func)(void*,void*,va_list),...) {
-	va_list ap=NULL;
+	va_list ap;
 
 	va_start(ap,func);
 	numdb_foreach(id_db,func,ap);
@@ -1433,7 +1433,7 @@ int map_getcellp(struct map_data* m,int x,int y,cell_t cellchk)
 			return value;
 		default:
 			return 0;
-	}	
+	}
 }
 
 /*==========================================
@@ -1751,7 +1751,7 @@ static int map_cache_write(struct map_data *m)
 				len_new = m->xs * m->ys;
 				write_buf = m->gat;
 				map_cache.map[i].compressed     = 0;
-				map_cache.map[i].compressed_len = 0;	
+				map_cache.map[i].compressed_len = 0;
 			}
 			if(len_new <= len_old) {
 				// ƒTƒCƒY‚ª“¯‚¶‚©¬‚³‚­‚È‚Á‚½‚Ì‚ÅêŠ‚Í•Ï‚í‚ç‚È‚¢
@@ -2762,7 +2762,7 @@ int do_init(int argc, char *argv[]) {
 		ShowMessage("please edit the map_athena.conf file and set it to correct values.\n");
 		ShowMessage("(127.0.0.1 is valid if you have no network interface)\n");    
 	}
-	else if (clif_getip() == INADDR_ANY || chrif_getip() == INADDR_LOOPBACK) {
+	else if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK || chrif_getip() == INADDR_LOOPBACK) {
 		// The map server should know what IP address it is running on
 		//   - MouseJstr
 		int localaddr = ntohl(addr_[0]);
@@ -2773,7 +2773,7 @@ int do_init(int argc, char *argv[]) {
 			ShowMessage("Multiple interfaces detected..  using %s as our IP address\n", buf);
 		else
 			ShowMessage("Defaulting to %s as our IP address\n", buf);
-		if (clif_getip() == INADDR_ANY)
+		if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK)
 			clif_setip(buf);
 		if (chrif_getip() == INADDR_LOOPBACK)
 			chrif_setip(buf);

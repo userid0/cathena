@@ -100,9 +100,9 @@ static void sig_dump(int sn)
 	// search for a usable filename
 	do {
 		sprintf(tmp,"save/stackdump_%04d.txt", ++no);
-	} while((fp = fopen(tmp,"r")) && (fclose(fp), no < 9999));
+	} while((fp = savefopen(tmp,"r")) && (fclose(fp), no < 9999));
 	// dump the trace into the file
-	if ((fp = fopen (tmp,"w")) != NULL) {
+	if ((fp = savefopen (tmp,"w")) != NULL) {
 
 		fprintf(fp,"Exception: %s\n", strsignal(sn));
 		fprintf(fp,"Stack trace:\n");

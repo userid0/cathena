@@ -4,11 +4,11 @@
 
 #include "base.h"
 
-void grfio_init(char*);			// GRFIO Initialize
-int grfio_add(char*);			// GRFIO Resource file add
-void* grfio_read(char*);		// GRFIO data file read
-void* grfio_reads(char*,int*);	// GRFIO data file read & size get
-int grfio_size(char*);			// GRFIO data file size get
+void grfio_init(const char*);			// GRFIO Initialize
+int grfio_add(const char*);				// GRFIO Resource file add
+void* grfio_read(const char*);			// GRFIO data file read
+void* grfio_reads(const char*,int*);	// GRFIO data file read & size get
+int grfio_size(const char*);			// GRFIO data file size get
 
 int decode_zip(unsigned char *dest, unsigned long* destLen, const unsigned char* source, unsigned long sourceLen);
 int encode_zip(unsigned char *dest, unsigned long* destLen, const unsigned char* source, unsigned long sourceLen);

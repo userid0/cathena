@@ -134,7 +134,6 @@ enum {
 #define WFIFOPOS2(fd,pos,x0,y0,x1,y1) { WBUFPOS2(WFIFOP(fd,pos),0,x0,y0,x1,y1); }
 
 
-static char map_ip_str[16]="0.0.0.0";
 static in_addr_t map_ip = INADDR_ANY;
 static unsigned short map_port = 5121;
 int map_fd;
@@ -147,8 +146,8 @@ char talkie_mes[80];
  */
 void clif_setip(char *ip)
 {
-	memcpy(map_ip_str, ip, 16);
-	map_ip = inet_addr(map_ip_str);
+	if(ip)
+	map_ip = inet_addr(ip);
 }
 
 /*==========================================
@@ -7554,7 +7553,7 @@ void clif_parse_LoadEndAck(int fd,struct map_session_data *sd)
 	if(!sd->event_onconnect){
 		npc_event_doall_attached("OnConnect",sd);
 		sd->event_onconnect=1;
-}
+	}
 	// END ADDITION
 	// ============================================ 
 }
@@ -10739,21 +10738,21 @@ static int clif_parse(int fd) {
 	if (dump) {
 		int i;
 		if (fd)
-			printf("\nclif_parse: session #%d, packet 0x%x, lenght %d\n", fd, cmd, packet_len);
-		printf("---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
+			ShowMessage("\nclif_parse: session #%d, packet 0x%x, lenght %d\n", fd, cmd, packet_len);
+		ShowMessage("---- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F");
 		for(i = 0; i < packet_len; i++) {
 			if ((i & 15) == 0)
-				printf("\n%04X ",i);
-			printf("%02X ", RFIFOB(fd,i));
+				ShowMessage("\n%04X ",i);
+			ShowMessage("%02X ", RFIFOB(fd,i));
 		}
 		if (sd && sd->state.auth) {
 			if (sd->status.name != NULL)
-				printf("\nAccount ID %d, character ID %d, player name %s.\n",
+				ShowMessage("\nAccount ID %d, character ID %d, player name %s.\n",
 			       sd->status.account_id, sd->status.char_id, sd->status.name);
 			else
-				printf("\nAccount ID %d.\n", sd->bl.id);
+				ShowMessage("\nAccount ID %d.\n", sd->bl.id);
 		} else if (sd) // not authentified! (refused by char-server or disconnect before to be authentified)
-			printf("\nAccount ID %d.\n", sd->bl.id);
+			ShowMessage("\nAccount ID %d.\n", sd->bl.id);
 	}
 
 	RFIFOSKIP(fd, packet_len);
@@ -11336,7 +11335,7 @@ int do_init_clif(void) {
 	set_defaultparse(clif_parse);
 #ifdef __WIN32
 	if (!make_listen(map_ip, map_port)) {
-		printf("cant bind game port\n");
+		ShowMessage("cant bind game port\n");
 		exit(1);
 	}
 #else

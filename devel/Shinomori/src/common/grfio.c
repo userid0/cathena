@@ -69,7 +69,7 @@ typedef struct {
 //Since char defines *FILELIST.gentry, the maximum which can be added by grfio_add becomes by 127 pieces.
 
 #define	GENTRY_LIMIT	127
-#define	FILELIST_LIMIT	32768	// temporary maximum, and a theory top maximum are 2G.
+#define	FILELIST_LIMIT	65536	// temporary maximum, and a theory top maximum are 2G.
 
 static FILELIST *filelist;
 static int	filelist_entrys;
@@ -352,22 +352,35 @@ static void hashinit(void)
  *	File List : File find
  *------------------------------------------
  */
-FILELIST *filelist_find(char *fname)
+FILELIST *filelist_find(const char *fname)
 {
 	int hash;
 	char *p;
+	char *namebuffer;
+	
+	if(!fname) return NULL;
+
 	// grf files uses backslash seperator
 	// so we better check if there are backslashes used
-	// don't put in a 'const char*' as fname, we write on that
-	if(fname)
-	for(p= fname; *p!='\0'; p++)
-		if(*p == '/') *p='\\';
+	// combine it with the copy, we cannot write to a const char 
+	// without crashing on "real" machines
+	p = namebuffer = (char*)aMalloc((strlen(fname)+1)*sizeof(char));
+	while(*fname) {
+		if (*fname=='/') {
+			*p++ = '\\';
+			fname++;
+		}
+		else
+			*p++ = *fname++;
+	}
+	*p = 0; //EOS
 
-	for(hash=filelist_hash[filehash((unsigned char *) fname)];hash>=0;hash=filelist[hash].next) {
-		if(strcasecmp(filelist[hash].fn,fname)==0)
+	for(hash=filelist_hash[filehash((unsigned char *)namebuffer)];hash>=0;hash=filelist[hash].next) {
+		if(strcasecmp(filelist[hash].fn,namebuffer)==0)
 			break;
 	}
 
+	aFree(namebuffer);
 	return (hash>=0)? &filelist[hash] : NULL;
 }
 
@@ -437,7 +450,7 @@ static void filelist_adjust(void)
  * Grfio : Resnametable replace
  *------------------------------------------
  */
-char* grfio_resnametable(char* fname, char *lfname)
+const char* grfio_resnametable(const char* fname, char *lfname)
 {
    	FILE *fp;
 	char w1[256],w2[256],restable[256],line[512];
@@ -470,7 +483,7 @@ char* grfio_resnametable(char* fname, char *lfname)
  *	Grfio : Resource file size get
  *------------------------------------------
  */
-int grfio_size(char *fname)
+int grfio_size(const char *fname)
 {
 	FILELIST *entry;
 
@@ -494,7 +507,6 @@ int grfio_size(char *fname)
 			entry = filelist_modify(&lentry);
 		} else if (entry==NULL) {
 			ShowMessage("%s not found (grfio_size)\n", fname);
-			//exit(1);
          	return -1;
 		}
 	}
@@ -505,7 +517,7 @@ int grfio_size(char *fname)
  *	Grfio : Resource file read & size get
  *------------------------------------------
  */
-void* grfio_reads(char *fname, int *size)
+void* grfio_reads(const char *fname, int *size)
 {
 	FILE *in = NULL;
 	unsigned char *buf=NULL,*buf2=NULL;
@@ -519,7 +531,6 @@ void* grfio_reads(char *fname, int *size)
 		FILELIST lentry;
 		strncpy(lfname,fname,255);
 		sprintf(lfname,"%s%s",data_dir, grfio_resnametable(fname,lfname));
-		//ShowMessage("%s\n",lfname);
 
 		in = savefopen(lfname,"rb");
 		if(in!=NULL) {
@@ -610,7 +621,7 @@ errret:
  *	Grfio : Resource file read
  *------------------------------------------
  */
-void* grfio_read(char *fname)
+void* grfio_read(const char *fname)
 {
 	return grfio_reads(fname,NULL);
 }
@@ -635,7 +646,7 @@ static char * decode_filename(unsigned char *buf,int len)
  * Grfio : Entry table read
  *------------------------------------------
  */
-static int grfio_entryread(char *gfname,int gentry)
+static int grfio_entryread(const char *gfname,int gentry)
 {
 	FILE *fp;
 	long grf_size,list_size;
@@ -861,7 +872,7 @@ static void grfio_resourcecheck()
  */
 #define	GENTRY_ADDS	16	// The number increment of gentry_table entries
 
-int grfio_add(char *fname)
+int grfio_add(const char *fname)
 {
 	int len,result;
 	char *buf;
@@ -922,7 +933,7 @@ void grfio_final(void)
  * Grfio : Initialize
  *------------------------------------------
  */
-void grfio_init(char *fname)
+void grfio_init(const char *fname)
 {
 	FILE *data_conf;
 	char line[1024], w1[1024], w2[1024];
@@ -973,5 +984,5 @@ void grfio_init(char *fname)
 	if (result != 0 && result2 != 0 && result3 != 0 && result4 != 0) {
 		ShowMessage("not grf file readed exit!!\n");
 		exit(1);	// It ends, if a resource cannot read one.
-}
+	}
 }

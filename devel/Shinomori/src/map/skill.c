@@ -3910,7 +3910,8 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 	case ST_FULLSTRIP:	// Celest
 	{
 		struct status_change *tsc_data = status_get_sc_data(bl);
-		int scid, equip, strip_fix, strip_num = 0;
+		int scid, equip, strip_fix;
+		int strip_num = 1;
 		scid = SkillStatusChangeTable[skillid];
 		switch (skillid) {
 			case RG_STRIPWEAPON:
@@ -3927,7 +3928,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 				break;
 			case ST_FULLSTRIP:
 				equip = EQP_WEAPON | EQP_SHIELD | EQP_ARMOR | EQP_HELM;
-				strip_num = 3;
+				strip_num = 4;
 				break;
 			default:
 				return 1;
@@ -3945,9 +3946,10 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,int
 
 		if (dstsd) {
 			for (i=0;i<MAX_INVENTORY;i++) {
-				if (dstsd->status.inventory[i].equip && dstsd->status.inventory[i].equip & equip){
+				if( dstsd->status.inventory[i].equip && dstsd->status.inventory[i].equip & equip ){
 					pc_unequipitem(dstsd,i,3);
-					if ((--strip_num) <= 0)
+					strip_num--;
+					if( strip_num <= 0 )
 						break;
 				}
 			}
@@ -9125,7 +9127,7 @@ int skill_unitgrouptickset_delete(
 		}
 	}
 //	if (i == MAX_SKILLUNITGROUPTICKSET && battle_config.error_log) {
-//		printf("skill_unitgrouptickset_delete: tickset not found\n");
+//		ShowMessage("skill_unitgrouptickset_delete: tickset not found\n");
 //	}
 
 	return 0;

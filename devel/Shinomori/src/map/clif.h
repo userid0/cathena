@@ -23,6 +23,7 @@ extern struct Clif_Config {
 } clif_config;
 
 void clif_setip(char*);
+void clif_setbindip(char*);
 void clif_setport(int);
 
 in_addr_t clif_getip(void);

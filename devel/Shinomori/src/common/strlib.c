@@ -85,7 +85,7 @@ size_t jmemescapecpy (unsigned char* pt,unsigned char* spt, int size) {
 		}
 	}
 	// copy size is 0 ~ (j-1)
-		// and what about the final EOS? You __NEED__ it... 
+	// and what about the final EOS? You __NEED__ it... 
 	*p = '\0';
 	return (p-pt);
 }

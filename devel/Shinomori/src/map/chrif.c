@@ -29,7 +29,7 @@ static const int packet_len_table[0x20] = {
 
 int char_fd = -1;
 int srvinfo;
-static char char_ip_str[16] = "127.0.0.1";
+
 static in_addr_t  char_ip   = INADDR_LOOPBACK;
 static unsigned short char_port = 6121;
 static char userid[24];
@@ -63,9 +63,8 @@ void chrif_setpasswd(char *pwd)
  */
 void chrif_setip(char *ip) 
 {
-	memcpy(char_ip_str, ip, sizeof(char_ip_str));
-	char_ip_str[sizeof(char_ip_str)-1]=0;
-	char_ip = inet_addr(char_ip_str);
+	if(ip)
+	char_ip = inet_addr(ip);
 }
 
 in_addr_t chrif_getip()

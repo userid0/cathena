@@ -407,8 +407,8 @@ struct map_session_data {
 	int eventtimer[MAX_EVENTTIMER];
 	unsigned short eventcount; // [celest]
 
-	int last_skillid;
-	int last_skilllv;		// Added by RoVeRT
+//	int last_skillid;
+//	int last_skilllv;		// Added by RoVeRT
 	
 	unsigned short change_level;	// [celest]
 
@@ -419,7 +419,7 @@ struct map_session_data {
 	unsigned event_onconnect : 1;
 	// END ADDITION
 	// ============================================ 
-	int autoloot; //by Upa-Kun
+	int autoloot : 1; //by Upa-Kun
 
 #ifndef TXT_ONLY
 	int mail_counter;	// mail counter for mail system [Valaris]

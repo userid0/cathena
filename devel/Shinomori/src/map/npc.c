@@ -290,7 +290,7 @@ int npc_event_export(void *key,void *data,va_list ap)
 		ev = (struct event_data *)aCalloc(1, sizeof(struct event_data));
 
 		if (p==NULL || (p-lname)>24) {
-			ShowMessage("npc_event_export: label name error !\n");
+			ShowError("npc_event_export: label name error !\n");
 			exit(1);
 		}else{
 			ev->nd=nd;
@@ -380,13 +380,13 @@ int npc_event_do_clock(int tid,unsigned int tick,int id,int data)
 	time_t timer;
 	struct tm *t;
 	char buf[64];
-        char *day="";
+	char *day="";
 	int c=0;
 	
 	time(&timer);
 	t=localtime(&timer);
-
-        switch (t->tm_wday) {
+	
+	switch (t->tm_wday) {
 	case 0: day = "Sun"; break;
 	case 1: day = "Mon"; break;
 	case 2: day = "Tue"; break;
@@ -1878,8 +1878,8 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 			// エクスポートされる
 			ev=(struct event_data *)aCalloc(1,sizeof(struct event_data));
 			
-			if (strlen(lname)>24) {
-				ShowError("npc_parse_script: label name longer than 24 chars!\n");
+			if (strlen(lname) > 24) {
+				ShowError("npc_parse_script: label name longer than 24 chars! '%s'\n", lname);
 				exit(1);
 			}else{
 				ev->nd=nd;
@@ -2470,8 +2470,8 @@ int do_init_npc(void)
 			npc_npcclear(marker->nd);
 			aFree(marker->nd);
 			aFree(marker);
-			}
 		}
+	}
 	
 	ShowInfo("\rDone loading '"CL_WHITE"%d"CL_RESET"' NPCs:%30s\n\t-'"
 		CL_WHITE"%d"CL_RESET"' Warps\n\t-'"
@@ -2484,8 +2484,6 @@ int do_init_npc(void)
 	add_timer_func_list(npc_event_timer,"npc_event_timer");
 	add_timer_func_list(npc_event_do_clock,"npc_event_do_clock");
 	add_timer_func_list(npc_timerevent,"npc_timerevent");
-
-	//exit(1);
 
 	return 0;
 }

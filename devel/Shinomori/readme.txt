@@ -1,6 +1,7 @@
 my personal kingdom
 
-based on svn1042
+based on svn1057
+
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
 c++ compilable with VC and g++
@@ -22,6 +23,9 @@ calling conventions depending on the compiler
 fast socket access
 replacing the loop with IS_FDSET 
 is much faster, still testing
+adding different socket handling on WIN32
+it is not exactly the same version I did for jAthena,
+I'm still looking for a better implementation
 ///////////////////////////////////////////////////////////
 npc duplication fix for multimap
 duplication is not working on ,ultiple map servers 
