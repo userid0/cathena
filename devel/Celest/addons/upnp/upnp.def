@@ -5,3 +5,5 @@ EXPORTS
 	do_final
 	Firewall_AddPort
 	UPNP_AddPort
+	release_mappings;
+	close_ports;

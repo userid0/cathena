@@ -6,10 +6,14 @@
 #include <natupnp.h>
 #include <comutil.h>
 
-INetFwProfile* profile = NULL;
+	INetFwProfile* profile = NULL;
+	IStaticPortMappingCollection *collection = NULL;
 
-IUPnPNAT *nat = NULL;
-IStaticPortMappingCollection *collection = NULL;
+	int release_mappings = 1;
+	int upnpPort = 0;
+
+	int close_ports = 1;
+	int firewallPort = 0;
 
 #ifdef _DEBUG
 	#define ShowMessage(msg) printf(msg);
@@ -21,6 +25,7 @@ int Firewall_init ()
 {
 	INetFwMgr* manager = NULL;
 	INetFwPolicy* policy = NULL;
+	VARIANT_BOOL enabled;
 
 	CoCreateInstance(__uuidof(NetFwMgr), NULL, CLSCTX_INPROC_SERVER,
 		__uuidof(INetFwMgr), (void**)&manager);
@@ -40,6 +45,22 @@ int Firewall_init ()
 		return 0;
 	}
 
+	profile->get_FirewallEnabled(&enabled);
+	if (enabled == VARIANT_FALSE) {
+		ShowMessage ("Firewall not enabled\n");
+		manager->Release();
+		policy->Release();
+		return 0;
+	}
+
+	profile->get_ExceptionsNotAllowed(&enabled);
+	if (enabled == VARIANT_TRUE) {
+		ShowMessage ("Firewall exceptions not allowed\n");
+		manager->Release();
+		policy->Release();
+		return 0;
+	}
+
 	if (manager) manager->Release();
 	if (policy) policy->Release();
 
@@ -47,12 +68,6 @@ int Firewall_init ()
 
 	return 1;
 }
-int Firewall_finalize ()
-{
-	if (profile) profile->Release();
-	return 1;
-}
-
 int Firewall_AddPort (char *desc, int portNum)
 {
 	INetFwOpenPort* port = NULL;
@@ -93,6 +108,7 @@ int Firewall_AddPort (char *desc, int portNum)
 	name = _com_util::ConvertStringToBSTR(desc);
 	port->put_Name(name);
 	ports->Add(port);
+	firewallPort = portNum;
 	ShowMessage ("Add port done\n");
 
 	if (port) port->Release();
@@ -100,9 +116,35 @@ int Firewall_AddPort (char *desc, int portNum)
 	
 	return 1;
 }
+int Firewall_RemovePort (int portNum)
+{
+	INetFwOpenPorts* ports = NULL;
+	
+	if (!profile)
+		return 0;
+
+	profile->get_GloballyOpenPorts(&ports);
+	if (!ports)
+		return 0;
+	
+	ports->Remove(portNum, NET_FW_IP_PROTOCOL_TCP);
+	ports->Release ();
+	return 1;
+}
+int Firewall_finalize ()
+{
+	if (close_ports && firewallPort > 0) {
+		ShowMessage ("Closing firewall port\n");
+		Firewall_RemovePort (firewallPort);
+	}
+	if (profile) profile->Release();
+	return 1;
+}
 
 int UPNP_init ()
 {	
+	IUPnPNAT *nat = NULL;
+
 	ShowMessage ("init NAT...");
 	CoCreateInstance(__uuidof(UPnPNAT), NULL, CLSCTX_ALL,
 		__uuidof(IUPnPNAT), (void**)&nat);
@@ -120,12 +162,8 @@ int UPNP_init ()
 		return 0;
 	}
 	ShowMessage ("\n");
-	
-	return 1;
-}
-int UPNP_finalize ()
-{
-	//if (nat) nat->Release();
+
+	if (nat) nat->Release();	
 	return 1;
 }
 int UPNP_AddPort (char *desc, char *ip, int portNum)
@@ -152,6 +190,8 @@ int UPNP_AddPort (char *desc, char *ip, int portNum)
 		return 0;
 	}
 	ShowMessage ("Success\n");
+	upnpPort = portNum;
+
 	return 1;
 }
 int UPNP_RemovePort (int portNum)
@@ -163,16 +203,34 @@ int UPNP_RemovePort (int portNum)
 	collection->Remove(portNum, protocol);
 	return 1;
 }
-
-int do_init ()
+int UPNP_finalize ()
 {
-	int ret = 0;
+	if(release_mappings && upnpPort > 0) {
+		ShowMessage ("Releasing port mappings\n");
+		UPNP_RemovePort (upnpPort);
+	}
+	if (collection) collection->Release();
+	return 1;
+}
+
+int CheckWindowsVersion ()
+{
 	OSVERSIONINFO vi;
 
 	vi.dwOSVersionInfoSize = sizeof(vi);
 	GetVersionEx(&vi);
 
-	if (vi.dwMajorVersion <5 || (vi.dwMajorVersion == 5 && vi.dwMinorVersion <1))
+	if (vi.dwMajorVersion >=5 && vi.dwMinorVersion >= 1)
+		return 1;
+
+	return 0;
+}
+
+int do_init ()
+{
+	int ret = 0;
+	
+	if (CheckWindowsVersion() == 0)
 		return 0;
 
 	CoInitializeEx(0, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
@@ -185,16 +243,12 @@ int do_init ()
 
 int do_final ()
 {
-	OSVERSIONINFO vi;
-
-	vi.dwOSVersionInfoSize = sizeof(vi);
-	GetVersionEx(&vi);
-	if (vi.dwMajorVersion <5 || (vi.dwMajorVersion == 5 && vi.dwMinorVersion <1))
+	if (CheckWindowsVersion() == 0)
 		return 0;
 
-	CoUninitialize();
 	UPNP_finalize ();
 	Firewall_finalize ();
+	CoUninitialize();
 
 	return 1;
 }
