@@ -12,7 +12,7 @@
 
 #ifdef __cplusplus
 
-#ifdef __GNUC__ 
+#ifdef __GNUC__
 // message convention for gnu compilers
 #warning "INFO: Building C++"
 #warning "INFO: This build will work on little and big endian machines"
@@ -24,7 +24,7 @@
 
 #else// !__cplusplus
 
-#ifdef __GNUC__ 
+#ifdef __GNUC__
 // message convention for gnu compilers
 #warning "INFO: Building standard C"
 #warning "INFO: This build will not work on big endian machines even if it compiles successfully, build C++ instead"
@@ -56,7 +56,7 @@ fd_set readfds;
 int fd_max=0;		// greatest SOCKET(+1) in the field
 					// it is used for the select call on Berkeley sockets
 					// but it could be replaced with FD_SETSIZE there
-					// maybe using this is a speedup on some systems, 
+					// maybe using this is a speedup on some systems,
 					// but my solaris does not show speed differences
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -71,8 +71,8 @@ SOCKET	socket_pos[FD_SETSIZE];	// list of sockets
 ///////////////////////////////////////////////////////////////////////////////
 // binary search implementation
 // might be not that efficient in this implementation
-// it first checks the boundaries so calls outside 
-// the list range are handles much faster 
+// it first checks the boundaries so calls outside
+// the list range are handles much faster
 // at the expence of some extra code
 // runtime behaviour much faster if often called for outside data
 ///////////////////////////////////////////////////////////////////////////////
@@ -90,12 +90,12 @@ bool SessionFindSocket(const SOCKET elem, size_t *retpos)
 	else if( elem < readfds.fd_array[a] )
 	{	// less than lower
 		pos = a;
-		ret = false; 
+		ret = false;
 	}
 	else if( elem > readfds.fd_array[b] )
 	{	// larger than upper
 		pos = b+1;
-		ret = false; 
+		ret = false;
 	}
 	else if( elem == readfds.fd_array[a] )
 	{	// found at first position
@@ -125,7 +125,7 @@ bool SessionFindSocket(const SOCKET elem, size_t *retpos)
 				a=c;
 		}while( (a+1) < b );
 		pos = b;
-		// return the next larger element to the given 
+		// return the next larger element to the given
 		// or the found element so we can insert a new element there
 	}
 	// just make sure we call this with a pointer,
@@ -150,9 +150,9 @@ int SessionInsertSocket(const SOCKET elem)
 		for(fd=0; fd<FD_SETSIZE; fd++)
 			if( NULL==session[fd] )
 				break;
-		// we should net need to test validity 
+		// we should net need to test validity
 		// since there must have been an empty place
-		
+
 		session_pos[pos]      = fd;
 		readfds.fd_array[pos] = elem;
 		readfds.fd_count++;
@@ -218,7 +218,7 @@ int SessionInsertSocket(const SOCKET elem)
 		FD_SET(elem,&readfds);
 		// need for select
 		// we reduce this on building the writefds when necessary
-		if(fd_max<=elem) fd_max = elem+1; 
+		if(fd_max<=elem) fd_max = elem+1;
 	}
 	return elem;
 }
@@ -240,7 +240,7 @@ SOCKET SessionGetSocket(const size_t pos)
 		return (SOCKET)pos;
 	return (SOCKET)-1;
 }
-	
+
 
 ///////////////////////////////////////////////////////////////////////////////
 #endif//! _WIN32
@@ -351,7 +351,7 @@ static int send_from_fifo(int fd)
 	return 0;
 }
 
-void flush_fifos() 
+void flush_fifos()
 {
 	size_t i;
 	for(i=0;i<(size_t)fd_max;i++)
@@ -381,15 +381,15 @@ static int connect_client(int listen_fd)
 
 	len=sizeof(client_address);
 
-	sock=accept(SessionGetSocket(listen_fd),(struct sockaddr*)&client_address,&len);
-	if(sock==-1) 
-	{	
+	sock=accept(SessionGetSocket(listen_fd),(struct sockaddr*)&client_address,(socklen_t*)&len);
+	if(sock==-1)
+	{
 		perror("accept");
 		return -1;
 	}
 #ifndef WIN32
 	// on unix a socket can only be in range from 1 to FD_SETSIZE
-	// otherwise it would not fit into the fd_set structure and 
+	// otherwise it would not fit into the fd_set structure and
 	// overwrite data outside that range, so we have to reject them
 	// windows uses a different fd_set structure and is not affected
 	if(sock > FD_SETSIZE)
@@ -407,7 +407,7 @@ static int connect_client(int listen_fd)
 
 	//ShowMessage("connect_client: %d <- %d\n",listen_fd, fd);
 
-	if(fd<0) 
+	if(fd<0)
 	{	close(sock);
 		ShowWarning("socket insert");
 		return -1;
@@ -440,7 +440,7 @@ int make_listen(unsigned long ip, unsigned short port)
 	sock = socket( AF_INET, SOCK_STREAM, 0 );
 #ifndef WIN32
 	// on unix a socket can only be in range from 1 to FD_SETSIZE
-	// otherwise it would not fit into the fd_set structure and 
+	// otherwise it would not fit into the fd_set structure and
 	// overwrite data outside that range, so we have to reject them
 	// windows uses a different fd_set structure and is not affected
 	if(sock > FD_SETSIZE)
@@ -473,7 +473,7 @@ int make_listen(unsigned long ip, unsigned short port)
 	// insert the socket to the fields and get the position
 	fd = SessionInsertSocket(sock);
 
-	if(fd<0) 
+	if(fd<0)
 	{	close(sock);
 		ShowWarning("socket insert");
 		return -1;
@@ -519,14 +519,14 @@ static int null_console_parse(char *buf)
 
 // Console Input [Wizputer]
 int start_console(void) {
-	
+
 	SOCKET sock=0;
 	size_t fd;
-    
+
 	// insert the socket to the fields and get the position
 	fd = SessionInsertSocket(sock);
 
-	if(fd<0) 
+	if(fd<0)
 	{	ShowWarning("socket insert");
 		return -1;
 	}
@@ -536,15 +536,15 @@ int start_console(void) {
 		ShowMessage("out of memory : start_console\n");
 		exit(1);
 	}
-	
+
 	memset(session[fd],0,sizeof(*session[0]));
-	
+
 	session[fd]->func_recv = console_recieve;
 	session[fd]->func_console = default_console_parse;
-	
+
 	return 0;
-}   
-    
+}
+
 int make_connection(unsigned long ip, unsigned short port)
 {
 	struct sockaddr_in server_address;
@@ -555,7 +555,7 @@ int make_connection(unsigned long ip, unsigned short port)
 	sock = socket( AF_INET, SOCK_STREAM, 0 );
 #ifndef WIN32
 	// on unix a socket can only be in range from 1 to FD_SETSIZE
-	// otherwise it would not fit into the fd_set structure and 
+	// otherwise it would not fit into the fd_set structure and
 	// overwrite data outside that range, so we have to reject them
 	// windows uses a different fd_set structure and is not affected
 	if(sock > FD_SETSIZE)
@@ -578,7 +578,7 @@ int make_connection(unsigned long ip, unsigned short port)
 	// insert the socket to the fields and get the position
 	fd = SessionInsertSocket(sock);
 
-	if(fd<0) 
+	if(fd<0)
 	{	close(sock);
 		ShowWarning("socket insert failed");
 		return -1;
@@ -648,7 +648,7 @@ int WFIFOSET(int fd,int len)
 	}
 	s->wdata_size=(s->wdata_size+(len)+2048 < s->max_wdata) ?
 		 s->wdata_size+len : (ShowMessage("socket: %d wdata lost !!\n",fd),s->wdata_size);
-	if (s->wdata_size > (TCP_FRAME_LEN)) 
+	if (s->wdata_size > (TCP_FRAME_LEN))
 		send_from_fifo(fd);
 	return 0;
 }
@@ -659,29 +659,29 @@ int WFIFOSET(int fd,int len)
 // in this case for 32bit input it would be 11 operations
 inline unsigned long log2(unsigned long v)
 {
-//	static const unsigned long b[] = 
+//	static const unsigned long b[] =
 //		{0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000};
-//	static const unsigned long S[] = 
+//	static const unsigned long S[] =
 //		{1, 2, 4, 8, 16};
 	// result of log2(v) will go here
-	register unsigned long c = 0; 
+	register unsigned long c = 0;
 //	int i;
-//	for (i = 4; i >= 0; i--) 
+//	for (i = 4; i >= 0; i--)
 //	{
 //	  if (v & b[i])
 //	  {
 //		v >>= S[i];
 //		c |= S[i];
-//	  } 
+//	  }
 //	}
 	// unroll for speed...
-//	if (v & b[4]) { v >>= S[4]; c |= S[4]; } 
+//	if (v & b[4]) { v >>= S[4]; c |= S[4]; }
 //	if (v & b[3]) { v >>= S[3]; c |= S[3]; }
 //	if (v & b[2]) { v >>= S[2]; c |= S[2]; }
 //	if (v & b[1]) { v >>= S[1]; c |= S[1]; }
 //	if (v & b[0]) { v >>= S[0]; c |= S[0]; }
 	// put values in for more speed...
-	if (v & 0xFFFF0000) { v >>= 0x10; c |= 0x10; } 
+	if (v & 0xFFFF0000) { v >>= 0x10; c |= 0x10; }
 	if (v & 0x0000FF00) { v >>= 0x08; c |= 0x08; }
 	if (v & 0x000000F0) { v >>= 0x04; c |= 0x04; }
 	if (v & 0x0000000C) { v >>= 0x02; c |= 0x02; }
@@ -698,7 +698,7 @@ inline void process_fdset(fd_set* rfd, fd_set* wfd)
 //        u_int fd_count;               /* how many are SET? */
 //        SOCKET  fd_array[FD_SETSIZE];   /* an array of SOCKETs */
 // } fd_set;
-// 
+//
 // the select sets the correct fd_count and the array
 // so just access the signaled sockets one by one
 
@@ -718,23 +718,23 @@ inline void process_fdset(fd_set* rfd, fd_set* wfd)
 	}
 #else // some unix, might work on darwin as well
 //
-// unix uses a bit array where the socket number equals the 
-// position in the array, so finding sockets inside that array 
+// unix uses a bit array where the socket number equals the
+// position in the array, so finding sockets inside that array
 // is not that easy exept the socket is knows before
-// so this method here goes through the bit array 
-// and build the socket number from the position 
-// where a set bit was found. 
+// so this method here goes through the bit array
+// and build the socket number from the position
+// where a set bit was found.
 // since we can skip 32 sockets all together when none is set
 // we can travel quite fast through the array
 //
-// it seams on linux you need to compile with __BSD_VISIBLE 
+// it seams on linux you need to compile with __BSD_VISIBLE
 // defined to get the internal structures visible.
-// anyway, since I can only test on solaris, 
+// anyway, since I can only test on solaris,
 // i cannot tell what other machines would need
 // so I explicitely set the necessary structures here.
 // and you would not need to redefine anything
 //
-// it should be checked if the fd_mask is still an ulong 
+// it should be checked if the fd_mask is still an ulong
 // on 64bit machines
 // if lucky the compiler will throw a redefinition warning if different
 
@@ -744,7 +744,7 @@ typedef	unsigned long	fd_mask;
 #endif
 #ifndef howmany
 #define	howmany(x, y)	(((x) + ((y) - 1)) / (y))
-#endif  
+#endif
 #ifndef NFDBITS
 #define	NFDBITS	(sizeof (fds_mask) * NBBY)	/* bits per mask */
 #endif
@@ -771,20 +771,20 @@ typedef	unsigned long	fd_mask;
 		while( bits )
 		{	// calc the highest bit with log2
 			// and clear it from the field
-			// this method is especially fast 
+			// this method is especially fast
 			// when only a few bits are set in the field
 			// which usually happens on read events
 			val = log2( bits );
-			bits ^= (1<<val);	
+			bits ^= (1<<val);
 			// build the socket number
 			sock = nfd*NFDBITS + val;
 
 			// calc the next set bit with shift/add
-			// therefore copy the value from fds_bits 
+			// therefore copy the value from fds_bits
 			// array to an unsigned type
 			// (fd_bits is an field of long)
 			// otherwise it would not shift the MSB
-			// the shift add method is faster 
+			// the shift add method is faster
 			// if many bits are set in the field
 			// which is usually valid for write operations
 //			while( !(bits & 1) )
@@ -825,20 +825,20 @@ typedef	unsigned long	fd_mask;
 		while( bits )
 		{	// calc the highest bit with log2
 			// and clear it from the field
-			// this method is especially fast 
+			// this method is especially fast
 			// when only a few bits are set in the field
 			// which usually happens on read events
 			val = log2( bits );
-			bits ^= (1<<val);	
+			bits ^= (1<<val);
 			// build the socket number
 			sock = nfd*NFDBITS + val;
 
 			// calc the next set bit with shift/add
-			// therefore copy the value from fds_bits 
+			// therefore copy the value from fds_bits
 			// array to an unsigned type
 			// (fd_bits is an field of long)
 			// otherwise it would not shift the MSB
-			// the shift add method is faster 
+			// the shift add method is faster
 			// if many bits are set in the field
 			// which is usually valid for write operations
 //			while( !(bits & 1) )
@@ -900,7 +900,7 @@ int do_sendrecv(int next)
 		//}
 		if( session[i] )
 		{
-			fd_max = i;	 
+			fd_max = i;
 			if( session[i]->wdata_size )
 				FD_SET( SessionGetSocket(i),&wfd);
 		}
@@ -913,7 +913,7 @@ int do_sendrecv(int next)
 
 	// wait until timeout or some events on the line
 	ret = select(fd_max,&rfd,&wfd,NULL,&timeout);
-	
+
 	// check if something happend before timeout
 	if(ret<=0) return 0;
 
@@ -928,7 +928,7 @@ int do_parsepacket(void)
 	for(i=0;i<(size_t)fd_max;i++){
 		if(!session[i])
 			continue;
-		if ((session[i]->rdata_tick != 0) && ((tick_ - session[i]->rdata_tick) > stall_time_)) 
+		if ((session[i]->rdata_tick != 0) && ((tick_ - session[i]->rdata_tick) > stall_time_))
 			session[i]->eof = 1;
 		if(session[i]->rdata_size==0 && session[i]->eof==0)
 			continue;
@@ -972,19 +972,19 @@ int  Net_Init(void)
 	unsigned int i;
 	char fullhost[255];
 	struct hostent* hent;
-	
+
 	/* Start up the windows networking */
 	WSADATA wsaData;
 	if ( WSAStartup(WINSOCK_VERSION, &wsaData) != 0 ) {
 		ShowMessage("SYSERR: WinSock not available!\n");
 		exit(1);
 	}
-	
+
 	if(gethostname(fullhost, sizeof(fullhost)) == SOCKET_ERROR) {
 		ShowMessage("Ugg.. no hostname defined!\n");
 		return 0;
-	} 
-	
+	}
+
 	// XXX This should look up the local IP addresses in the registry
 	// instead of calling gethostbyname. However, the way IP addresses
 	// are stored in the registry is annoyingly complex, so I'll leave
@@ -1005,7 +1005,7 @@ int  Net_Init(void)
 	int fdes = socket(AF_INET, SOCK_STREAM, 0);
 	char buf[16 * sizeof(struct ifreq)];
 	struct ifconf ic;
-	
+
 	// The ioctl call will fail with Invalid Argument if there are more
 	// interfaces than will fit in the buffer
 	ic.ifc_len = sizeof(buf);
@@ -1018,7 +1018,7 @@ int  Net_Init(void)
 	{
 		struct ifreq * ir = (struct ifreq *) (ic.ifc_buf + pos);
 		struct sockaddr_in * a = (struct sockaddr_in *) &(ir->ifr_addr);
-		
+
 		if(a->sin_family == AF_INET) {
 			u_long ad = ntohl(a->sin_addr.s_addr);
 			if(ad != INADDR_LOOPBACK) {
