@@ -46,12 +46,35 @@
  *
  *  The first and most important function is defpattern
  *
- *  ....
+ *    defpattern 1, "[^:]+: (.*) loves (.*)", "label";
  *
- *  TODO:
- *    Memory management has not been finished.. ie, it leaks like
- *    my brothers car...
+ *  this defines a new pattern in set 1 using perl syntax 
+ *    (http://www.troubleshooters.com/codecorn/littperl/perlreg.htm)
+ *  and tells it to jump to the supplied label when the pattern
+ *  is matched.
  *
+ *  each of the matched Groups will result in a variable being
+ *  set ($p1$ through $p9$  with $p0$ being the entire string)
+ *  before the script gets executed.
+ *
+ *    activatepset 1;
+ * 
+ *  This activates a set of patterns.. You can have many pattern
+ *  sets defined and many active all at once.  This feature allows
+ *  you to set up "conversations" and ever changing expectations of
+ *  the pattern matcher
+ *
+ *    deactivatepset 1;
+ *
+ *  turns off a pattern set;
+ *
+ *    deactivatepset -1;
+ *
+ *  turns off ALL pattern sets;
+ *
+ *    deletepset 1;
+ *
+ *  deletes a pset
  */
 
 /* Structure containing all info associated with a single pattern
@@ -71,7 +94,6 @@ struct pcrematch_entry {
 struct pcrematch_set {
     struct pcrematch_set *next_, *prev_;
     struct pcrematch_entry *head_;
-    int active_;
     int setid_;
 };
 
@@ -80,7 +102,7 @@ struct pcrematch_set {
  *
  * The reason I have done it this way (a void * in npc_data and then
  * this) was to reduce the number of patches that needed to be applied
- * to another ragnarok distribution to bring this code online.  I
+ * to a ragnarok distribution to bring this code online.  I
  * also wanted people to be able to grab this one file to get updates
  * without having to do a large number of changes.
  */
@@ -90,6 +112,19 @@ struct npc_parse {
     struct pcrematch_set *inactive_;
 };
 
+
+/**
+ * delete everythign associated with a entry
+ *
+ * This does NOT do the list management
+ */
+
+void finalize_pcrematch_entry(struct pcrematch_entry *e) {
+    free(e->pcre_);
+    free(e->pcre_extra_);
+    aFree(e->pattern_);
+    aFree(e->label_);
+}
 
 /**
  * Lookup (and possibly create) a new set of patterns by the set id
@@ -126,7 +161,6 @@ static struct pcrematch_set * lookup_pcreset(struct npc_data *nd,int setid)
             pcreset->next_->prev_ = pcreset;
         pcreset->prev_ = 0;
         npcParse->inactive_ = pcreset;
-        pcreset->active_ = 0;
         pcreset->setid_ = setid;
     }
 
@@ -177,6 +211,11 @@ static void deactivate_pcreset(struct npc_data *nd,int setid) {
     struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
     if (npcParse == NULL) 
         return; // Nothing to deactivate...
+    if (setid == -1) {
+      while(npcParse->active_ != NULL)
+        deactivate_pcreset(nd, npcParse->active_->setid_);
+      return;
+    }
     pcreset = npcParse->active_;
     while (pcreset != NULL) {
         if (pcreset->setid_ == setid)
@@ -203,6 +242,7 @@ static void deactivate_pcreset(struct npc_data *nd,int setid) {
  * delete a set of patterns.
  */
 static void delete_pcreset(struct npc_data *nd,int setid) {
+    int active = 1;
     struct pcrematch_set *pcreset;
     struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
     if (npcParse == NULL) 
@@ -213,20 +253,35 @@ static void delete_pcreset(struct npc_data *nd,int setid) {
             break;
         pcreset = pcreset->next_;
     }
-    if (pcreset == NULL)
-        return; // not in active list
+    if (pcreset == NULL) {
+        active = 0;
+    	pcreset = npcParse->inactive_;
+    	while (pcreset != NULL) {
+        	if (pcreset->setid_ == setid)
+            	break;
+        	pcreset = pcreset->next_;
+    	}
+    }
+    if (pcreset == NULL) 
+	return;
+        
     if (pcreset->next_ != NULL)
         pcreset->next_->prev_ = pcreset->prev_;
     if (pcreset->prev_ != NULL)
         pcreset->prev_->next_ = pcreset->next_;
-    else 
+    else if(active == 1)
         npcParse->active_ = pcreset->next_;
+     else
+        npcParse->inactive_ = pcreset->next_;
 
     pcreset->prev_ = NULL;
     pcreset->next_ = NULL;
 
-    // while (pcreset->head_)
-    // finalize_pcrematch_entry(pcreset->head_);
+    while (pcreset->head_) {
+    	struct pcrematch_entry *n = pcreset->head_->next_;;
+    	finalize_pcrematch_entry(pcreset->head_);
+	pcreset->head_ = n;
+    }
 
     aFree(pcreset);
 }
@@ -280,26 +335,22 @@ void npc_chat_def_pattern(struct npc_data *nd, int setid,
 }
 
 /**
- * delete everythign associated with a entry
- *
- * This does NOT do the list management
- */
-
-void finalize_pcrematch_entry(struct pcrematch_entry *e) {
-    free(e->pcre_);
-    free(e->pcre_extra_);
-    aFree(e->pattern_);
-    aFree(e->label_);
-}
-
-/**
  * Delete everything associated with a NPC concerning the pattern
  * matching code 
+ *
+ * this could be more efficent but.. how often do you do this?
  */
 void npc_chat_finalize(struct npc_data *nd)
 {
-    if (nd->chatdb == NULL)
+    struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
+    if (npcParse == NULL)
         return;
+
+    while(npcParse->active_)
+      delete_pcreset(nd, npcParse->active_->setid_);
+
+    while(npcParse->inactive_)
+      delete_pcreset(nd, npcParse->inactive_->setid_);
 }
 
 /**
@@ -307,12 +358,12 @@ void npc_chat_finalize(struct npc_data *nd)
  */
 int npc_chat_sub(struct block_list *bl, va_list ap)
 {
+    struct npc_data *nd = (struct npc_data *)bl;
+    struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
     unsigned char *msg;
     int len, pos, i;
-    struct npc_data *nd = (struct npc_data *)bl;
     struct map_session_data *sd;
     struct npc_label_list *lst;
-    struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
     struct pcrematch_set *pcreset;
 
     // Not interested in anything you might have to say...
@@ -381,7 +432,7 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
                     set_var(sd, "$p0$", buf);
                 }
 
-                // find the target label
+                // find the target label.. this sucks..
                 lst=nd->u.scr.label_list;
                 pos = -1;
                 for (i = 0; i < nd->u.scr.label_list_num; i++) {
