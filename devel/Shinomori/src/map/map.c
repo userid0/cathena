@@ -38,8 +38,6 @@
 #include "memwatch.h"
 #endif
 
-unsigned long ticks = 0; // by MC Cameri
-
 #ifndef TXT_ONLY
 
 #include "mail.h" // mail system [Valaris]
@@ -155,6 +153,7 @@ char help_txt[256] = "conf/help.txt";
 char wisp_server_name[24] = "Server"; // can be modified in char-server configuration file
 
 int console = 0;
+
 /*==========================================
  * 全map鯖?計での接??設定
  * (char鯖から送られてくる)
@@ -226,10 +225,27 @@ int map_freeblock_unlock(void) {
 	}else if(block_free_lock<0){
 		if(battle_config.error_log)
 			ShowMessage("map_freeblock_unlock: lock count < 0 !\n");
+		block_free_lock = 0; // 次回以降のロックに支障が出てくるのでリセット
 	}
 	return block_free_lock;
 }
 
+// map_freeblock_lock() を呼んで map_freeblock_unlock() を呼ばない
+// 関数があったので、定期的にblock_free_lockをリセットするようにする。
+// この関数は、do_timer() のトップレベルから呼ばれるので、
+// block_free_lock を直接いじっても支障無いはず。
+
+int map_freeblock_timer(int tid,unsigned long tick,int id,int data) {
+	if(block_free_lock > 0) {
+		ShowMessage("map_freeblock_timer: block_free_lock(%d) is invalid.\n",block_free_lock);
+		block_free_lock = 1;
+		map_freeblock_unlock();
+	}
+	// else {
+	// 	ShowMessage("map_freeblock_timer: check ok\n");
+	// }
+	return 0;
+}
 
 //
 // block化?理
@@ -425,7 +441,7 @@ struct skill_unit *map_find_skill_unit_oncell(struct block_list *target,int x,in
  *------------------------------------------
  */
 void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int type,...) {
-	va_list ap;	
+	va_list ap;
 	int bx,by;
 	struct block_list *bl=NULL;
 	int blockcount=bl_list_count,i,c;
@@ -749,7 +765,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 	if(bl_list_count>=BL_LIST_MAX) {
 		if(battle_config.error_log)
-			ShowMessage("map_foreachinarea: *WARNING* block count too many!\n");
+			ShowMessage("map_foreachinpath: *WARNING* block count too many!\n");
 	}
 
 	map_freeblock_lock();	// メモリからの解放を禁止する
@@ -950,7 +966,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 	if(bl_list_count>=BL_LIST_MAX) {
 		if(battle_config.error_log)
-			ShowWarning("map_foreachinarea: *WARNING* block count too many!\n");
+			ShowWarning("map_foreachinpath: *WARNING* block count too many!\n");
 	}
 
 	va_start(ap,type);
@@ -966,8 +982,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	bl_list_count = blockcount;
 
 */
-
-
+/*
 //////////////////////////////////////////////////////////////
 //
 // sharp shooting 2
@@ -1046,7 +1061,8 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 					if( bl && ( !type || bl->type==type ) && bl_list_count<BL_LIST_MAX )
 					{	
 						// check if block xy is on the line
-						if( (bl->x-x0)*(y1-y0) == (bl->y-y0)*(x1-x0) )
+						if( abs((bl->x-x0)*(y1-y0) - (bl->y-y0)*(x1-x0)) <= tmax/2 )
+
 						// and if it is within start and end point
 						if( (((x0<=x1)&&(x0<=bl->x)&&(bl->x<=x1)) || ((x0>=x1)&&(x0>=bl->x)&&(bl->x>=x1))) &&
 							(((y0<=y1)&&(y0<=bl->y)&&(bl->y<=y1)) || ((y0>=y1)&&(y0>=bl->y)&&(bl->y>=y1))) )
@@ -1060,7 +1076,8 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 				for(i=0;i<c2 && bl;i++,bl=bl->next){
 					if(bl && bl_list_count<BL_LIST_MAX) {
 						// check if mob xy is on the line
-						if( (bl->x-x0)*(y1-y0) == (bl->y-y0)*(x1-x0) )
+						if( abs((bl->x-x0)*(y1-y0) - (bl->y-y0)*(x1-x0)) <= tmax/2 )
+
 						// and if it is within start and end point
 						if( (((x0<=x1)&&(x0<=bl->x)&&(bl->x<=x1)) || ((x0>=x1)&&(x0>=bl->x)&&(bl->x>=x1))) &&
 							(((y0<=y1)&&(y0<=bl->y)&&(bl->y<=y1)) || ((y0>=y1)&&(y0>=bl->y)&&(bl->y>=y1))) )
@@ -1073,7 +1090,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 	if(bl_list_count>=BL_LIST_MAX) {
 		if(battle_config.error_log)
-			ShowWarning("map_foreachinarea: *WARNING* block count too many!\n");
+			ShowWarning("map_foreachinpath: *WARNING* block count too many!\n");
 	}
 
 	va_start(ap,type);
@@ -1087,6 +1104,149 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	va_end(ap);
 	
 	bl_list_count = blockcount;
+*/
+
+//////////////////////////////////////////////////////////////
+//
+// sharp shooting 2 version 2
+// mix between line calculation and point storage
+//////////////////////////////////////////////////////////////
+// problem: 
+// finding targets standing exactly on a line
+// (only t1 and t2 get hit)
+//
+//     target 1
+//      x t4
+//     t2
+// t3 x
+//   x
+//  S
+//////////////////////////////////////////////////////////////
+	va_list ap;
+	int i,k, blockcount = bl_list_count;
+	struct block_list *bl;
+	int c1,c2;
+
+	//////////////////////////////////////////////////////////////
+	// linear parametric equation
+	// x=(x1-x0)*t+x0; y=(y1-y0)*t+y0; t=[0,1]
+	//////////////////////////////////////////////////////////////
+	// linear equation for finding a single line between (x0,y0)->(x1,y1)
+	// independent of the given xy-values
+	double dx = 0.0;
+	double dy = 0.0;
+	int bx=-1;	// initialize block coords to some impossible value
+	int by=-1;
+	int t, tmax, x,y;
+
+	int save_x[BLOCK_SIZE],save_y[BLOCK_SIZE],save_cnt=0;
+
+	// no map
+	if(m < 0) return;
+
+	// xy out of range
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 >= map[m].xs) x1 = map[m].xs-1;
+	if (y1 >= map[m].ys) y1 = map[m].ys-1;
+
+	///////////////////////////////
+	// find maximum runindex, 
+	if( abs(y1-y0) > abs(x1-x0) )
+		tmax = abs(y1-y0);
+	else
+		tmax = abs(x1-x0);
+	// pre-calculate delta values for x and y destination
+	// should speed up cause you don't need to divide in the loop
+	if(tmax>0)
+	{
+		dx = ((double)(x1-x0)) / ((double)tmax);
+		dy = ((double)(y1-y0)) / ((double)tmax);
+}
+	// go along the index t from 0 to tmax
+	t=0;
+	do {	
+		x = (int)floor(dx * (double)t +0.5)+x0;
+		y = (int)floor(dy * (double)t +0.5)+y0;
+
+
+		// check the block index of the calculated xy, or the last block
+		if( (bx!=x/BLOCK_SIZE) || (by!=y/BLOCK_SIZE) || t>tmax)
+		{	// we have reached a new block
+
+			// and process the data of the formerly stored block, if any
+			if( save_cnt!=0 )
+			{
+				c1  = map[m].block_count[bx+by*map[m].bxs];		// number of elements in the block
+				c2  = map[m].block_mob_count[bx+by*map[m].bxs];	// number of mobs in the mob block
+				if( (c1!=0) || (c2!=0) )						// skip if nothing in the block
+				{
+
+					if(type==0 || type!=BL_MOB) {
+						bl = map[m].block[bx+by*map[m].bxs];		// a block with the elements
+						for(i=0;i<c1 && bl;i++,bl=bl->next){		// go through all elements
+							if( bl && ( !type || bl->type==type ) && bl_list_count<BL_LIST_MAX )
+							{	// check if block xy is on the line
+								for(k=0; k<save_cnt; k++)
+								{
+									if( (save_x[k]==bl->x)&&(save_y[k]==bl->y) )
+									{
+										bl_list[bl_list_count++]=bl;
+										break;
+									}
+								}
+							}
+						}//end for elements
+					}
+
+					if(type==0 || type==BL_MOB) {
+						bl = map[m].block_mob[bx+by*map[m].bxs];	// and the mob block
+						for(i=0;i<c2 && bl;i++,bl=bl->next){
+							if(bl && bl_list_count<BL_LIST_MAX) {
+								// check if mob xy is on the line
+								for(k=0; k<save_cnt; k++)
+								{
+									if( (save_x[k]==bl->x)&&(save_y[k]==bl->y) )
+									{
+										bl_list[bl_list_count++]=bl;
+										break;
+									}
+								}
+							}
+						}//end for mobs
+					}
+				}
+				// reset the point storage
+				save_cnt=0;
+			}
+
+			// store the current block coordinates
+			bx = x/BLOCK_SIZE;
+			by = y/BLOCK_SIZE;
+		}
+		// store the new point of the line
+		save_x[save_cnt]=x;
+		save_y[save_cnt]=y;
+		save_cnt++;
+	}while( t++ <= tmax );
+
+	if(bl_list_count>=BL_LIST_MAX) {
+		if(battle_config.error_log)
+			ShowWarning("map_foreachinpath: *WARNING* block count too many!\n");
+	}
+
+	va_start(ap,type);
+	map_freeblock_lock();	// メモリからの解放を禁止する
+
+	for(i=blockcount;i<bl_list_count;i++)
+		if(bl_list[i]->prev)	// 有?かどうかチェック
+			func(bl_list[i],ap);
+
+	map_freeblock_unlock();	// 解放を許可する
+	va_end(ap);
+	
+	bl_list_count = blockcount;
+
 }
 
 
@@ -1296,7 +1456,7 @@ int map_addflooritem(struct item *item_data,int amount,int m,int x,int y,struct 
 	fitem->bl.type=BL_ITEM;
 	fitem->bl.prev = fitem->bl.next = NULL;
 	fitem->bl.m=m;
-	fitem->bl.x= xy     &0xffff;
+	fitem->bl.x=xy&0xffff;
 	fitem->bl.y=(xy>>16)&0xffff;
 	fitem->first_get_id = 0;
 	fitem->first_get_tick = 0;
@@ -1430,6 +1590,7 @@ int map_quit(struct map_session_data *sd) {
 
 	nullpo_retr(0, sd);
 
+	if(!sd->state.waitingdisconnect) {
 	if (sd->state.event_disconnect) {
 		struct npc_data *npc;
 		if ((npc = npc_name2id(script_config.logout_event_name))) {
@@ -1479,6 +1640,7 @@ int map_quit(struct map_session_data *sd) {
 		pc_stopattack(sd);
 		pc_delinvincibletimer(sd);
 	}
+		skill_unit_move(&sd->bl,gettick(),0);
 
 	status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
 	skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
@@ -1510,13 +1672,13 @@ int map_quit(struct map_session_data *sd) {
 	chrif_save(sd);
 	storage_storage_dirty(sd);
 	storage_storage_save(sd);
+		map_delblock(&sd->bl);
+	}
 
 	if( sd->npc_stackbuf && sd->npc_stackbuf != NULL) {
 		aFree( sd->npc_stackbuf );
 		sd->npc_stackbuf = NULL;
 	}
-
-	map_delblock(&sd->bl);
 
 #ifndef TXT_ONLY
 	chrif_char_offline(sd);
@@ -1833,6 +1995,19 @@ int map_calc_dir( struct block_list *src,int x,int y) {
  * (m,x,y)の状態を調べる
  *------------------------------------------
  */
+/////////////////////////////////////////////////////////////////////
+// as far as I have seen the gat.type values can contain
+// GAT_NONE		= 0,
+// GAT_WALL		= 1,
+// GAT_UNUSED1	= 2,
+// GAT_WATER	= 3,
+// GAT_UNUSED2	= 4,
+// GAT_GROUND	= 5,
+// GAT_HOLE		= 6,	// holes in morroc desert
+// GAT_UNUSED3	= 7,
+// change the gat to a bitfield with tree bits 
+// instead of using an unsigned char have it merged with other usages
+/////////////////////////////////////////////////////////////////////
 
 int map_getcell(int m,int x,int y,cell_t cellchk)
 {
@@ -1850,43 +2025,39 @@ int map_getcellp(struct map_data* m,int x,int y,cell_t cellchk)
 		return 0;
 	}
 	mg = m->gat+x+y*m->xs;
-	
+
 	switch(cellchk)
 	{
 		case CELL_CHKPASS:
-			return (mg->type != 1 && mg->type != 5);
+			return (mg->type != GAT_WALL && mg->type != GAT_GROUND);
 		case CELL_CHKNOPASS:
-			return (mg->type == 1 || mg->type == 5);
+			return (mg->type == GAT_WALL || mg->type == GAT_GROUND);
 		case CELL_CHKWALL:
-			return (mg->type == 1);
+			return (mg->type == GAT_WALL);
 		case CELL_CHKWATER:
-			// also when raining
-			return (mg->type == 3) || (m->flag.rain && battle_config.rainy_waterball);
+			return (mg->type == GAT_WATER);
 		case CELL_CHKGROUND:
-			return (mg->type == 5);
+			return (mg->type == GAT_GROUND);
+		case CELL_CHKHOLE:
+			return (mg->type == GAT_HOLE);
 		case CELL_GETTYPE:
 			return mg->type;
 		case CELL_CHKNPC:
 			return mg->npc;
 		case CELL_CHKBASILICA:
 			return mg->basilica;
+		case CELL_CHKMOONLIT:
+			return mg->moonlit;
+		case CELL_CHKREGEN:
+			return mg->regen;
 		default:
 			return 0;
 	}
 }
-
 /*==========================================
  * (m,x,y)の状態を設定する
  *------------------------------------------
  */
-
-/////////////////////////////////////////////////////////////////////
-// as far as I have seen the gat.type values can contain
-// 1 - wall
-// 3 - water
-// 5 - ground
-// change the gat to a bitfield instead of using an unsinged char
-/////////////////////////////////////////////////////////////////////
 void map_setcell(int m,int x,int y,int cellck)
 {
 	struct mapgat *mg;
@@ -1897,31 +2068,45 @@ void map_setcell(int m,int x,int y,int cellck)
 
 	switch(cellck)
 	{
-	case CELL_SETNPC:
+		case CELL_SETNPC:
 		if(mg->npc < 15) // max for a 4bit counter
 			mg->npc++;
 		else
 			ShowWarning("usage of more then 15 stacked npc touchup areas\n");
-		break;
+			break;
 	case CELL_CLRNPC:
 		if(mg->npc > 0) // 4bit counter
 			mg->npc--;
 		//else no warning, has been warned at setting up the touchups already
 		break;
-	case CELL_SETBASILICA:
+		case CELL_SETBASILICA:
 		mg->basilica = 1;
-		break;
-	case CELL_CLRBASILICA:
+			break;
+		case CELL_CLRBASILICA:
 		mg->basilica = 0;
+			break;
+	case CELL_SETMOONLIT:
+		mg->moonlit = 1;
 		break;
-	default:
-		if(cellck > 5)
-			ShowWarning("Setting mapcell with improper value %i\n", cellck);
+	case CELL_CLRMOONLIT:
+		mg->moonlit = 0;
+		break;
+	case CELL_SETREGEN:
+		mg->regen = 1;
+		break;
+	case CELL_CLRREGEN:
+		mg->regen = 0;
+		break;
+		default:
+		// check the numbers from the gat and warn on an unknown type
+		if( (cellck != GAT_NONE) && (cellck != GAT_WALL) && (cellck != GAT_WATER) && 
+			(cellck != GAT_GROUND) && (cellck != GAT_HOLE) )
+			ShowWarning("Setting mapcell with improper value %i on %s (%i,%i)\n", cellck,map[m].name,x,y);
 		else
 			mg->type = cellck & CELL_MASK;
-		break;
+			break;
 	};
-}
+	}
 
 /*==========================================
  * 他鯖管理のマップをdbに追加
@@ -1951,12 +2136,12 @@ int map_setipport(char *name, unsigned long ip, unsigned short port) {
 			mdos->map  = md;
 			strdb_insert(map_db,mdos->name,mdos);
 			// ShowMessage("from char server : %s -> %08lx:%d\n",name,ip,port);
-	} else {
+		} else {
 			// 読み込んでいて、担当になったマップ（何もしない）
 			;
-			}
+		}
 	} else {
-			mdos=(struct map_data_other_server *)md;
+		mdos=(struct map_data_other_server *)md;
 		if(ip == clif_getip() && port == clif_getport()) {
 			// 自分の担当になったマップ
 			if(mdos->map == NULL) {
@@ -1966,7 +2151,7 @@ int map_setipport(char *name, unsigned long ip, unsigned short port) {
 			} else {
 				// 読み込んでいるので置き換える
 				md = mdos->map;
-				free(mdos);
+				aFree(mdos);
 				strdb_insert(map_db,md->name,md);
 			}
 		} else {
@@ -1986,7 +2171,7 @@ int map_eraseallipport_sub(void *key,void *data,va_list va) {
 	struct map_data_other_server *mdos = (struct map_data_other_server*)data;
 	if(mdos->gat == NULL && mdos->map == NULL) {
 		strdb_erase(map_db,key);
-		free(mdos);
+		aFree(mdos);
 	}
 	return 0;
 }
@@ -2017,7 +2202,7 @@ int map_eraseipport(char *name,unsigned long ip,int port)
 					return 1; // 呼び出し元で chrif_sendmap() をする
 				} else {
 					strdb_erase(map_db,name);
-					free(mdos);
+					aFree(mdos);
 				}
 				if(battle_config.etc_log)
 					ShowStatus("erase map %s %d.%d.%d.%d:%d\n",name,(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF,port);
@@ -2091,20 +2276,20 @@ struct map_cache_info {
 	unsigned short ys;		//幅と高さ
 	int water_height;
 	size_t pos;				// データが入れてある場所
-	int compressed;			// zilb通せるようにする為の予約
+	int compressed;     // zilb通せるようにする為の予約
 	size_t datalen;
 }; // 40 byte
 
 struct map_cache_head {
 	size_t sizeof_header;
 	size_t sizeof_map;
-							// 上の２つ改変不可
+    // 上の２つ改変不可
 	size_t nmaps;			// マップの個数
 	long filesize;
 };
 
 struct map_cache {
-	struct map_cache_head head;
+        struct map_cache_head head;
 	struct map_cache_info *map;
 	FILE *fp;
 	int dirty;
@@ -2188,11 +2373,11 @@ int map_cache_read(struct map_data *m)
 		map_cache.map[i].water_height == map_waterheight(m->name) )		// 水場の高さが違うので読み直し
 	{
 		if(map_cache.map[i].compressed == 0) {
-			// 非圧縮ファイル
-			m->xs = map_cache.map[i].xs;
-			m->ys = map_cache.map[i].ys;
+				// 非圧縮ファイル
+				m->xs = map_cache.map[i].xs;
+				m->ys = map_cache.map[i].ys;
 			m->gat = (struct mapgat *)aMalloc( map_cache.map[i].datalen );
-			fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
+				fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
 			if(fread(m->gat, 1, map_cache.map[i].datalen, map_cache.fp) != map_cache.map[i].datalen) {
 				// なぜかファイル後半が欠けてるので読み直し
 				aFree(m->gat);
@@ -2201,54 +2386,54 @@ int map_cache_read(struct map_data *m)
 				m->ys = 0; 
 				return 0;
 			} else {
-				// 成功
-				return 1;
-			}
+					// 成功
+					return 1;
+				}
 		} else if(map_cache.map[i].compressed == 1) { //zlib compressed
-			// 圧縮フラグ=1 : zlib
-			unsigned char *buf;
+				// 圧縮フラグ=1 : zlib
+				unsigned char *buf;
 			unsigned long size_compress = map_cache.map[i].datalen;
 			unsigned long dest_len = map_cache.map[i].xs * map_cache.map[i].ys * sizeof(struct mapgat);
-			m->xs = map_cache.map[i].xs;
-			m->ys = map_cache.map[i].ys;
-			buf = (unsigned char*)aMalloc(size_compress);
-			fseek(map_cache.fp, map_cache.map[i].pos, SEEK_SET);
-			if(fread(buf, 1, size_compress, map_cache.fp) != size_compress) {
-				// なぜかファイル後半が欠けてるので読み直し
+				m->xs = map_cache.map[i].xs;
+				m->ys = map_cache.map[i].ys;
+				buf = (unsigned char*)aMalloc(size_compress);
+				fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
+				if(fread(buf,1,size_compress,map_cache.fp) != size_compress) {
+					// なぜかファイル後半が欠けてるので読み直し
 				aFree(buf);
 				buf = NULL;
 				m->gat = NULL;
 				m->xs = 0; 
 				m->ys = 0; 
-				return 0;
-			}
+					return 0;
+				}
 			m->gat = (struct mapgat *)aMalloc( dest_len );				
 			decode_zip((unsigned char*)m->gat, &dest_len, buf, size_compress);
 			if(dest_len != map_cache.map[i].xs * map_cache.map[i].ys * sizeof(struct mapgat)) {
-				// 正常に解凍が出来てない
+					// 正常に解凍が出来てない
 				aFree(buf);
 				buf=NULL;
 				aFree(m->gat);
 				m->gat = NULL;
 				m->xs = 0; 
 				m->ys = 0; 
-				return 0;
-			}
+					return 0;
+				}
 			if(buf)// might be ok without this check
 			{	aFree(buf);
 				buf=NULL;
 			}
-			return 1;
-		}
+				return 1;
+			}
 		// might add other compressions here
-	}
+		}
 	return 0;
 }
 
 int map_cache_write(struct map_data *m)
 {
 	size_t i;
-	unsigned long len_new, len_old;
+	unsigned long len_new , len_old;
 	unsigned char *write_buf;
 	if(!map_cache.fp) { return 0; }
 
@@ -2256,7 +2441,7 @@ int map_cache_write(struct map_data *m)
 	{
 		if( (0==strcmp(m->name,map_cache.map[i].fn)) || (map_cache.map[i].fn[0] == 0) )
 			break;
-	}
+			}
 
 	if(i<map_cache.head.nmaps) // should always be valid but better check it
 	{
@@ -2268,12 +2453,12 @@ int map_cache_write(struct map_data *m)
 		// prepare write_buf and len_new
 		if(compress == 1) // zlib compress
 		{
-			// 圧縮保存
-			// さすがに２倍に膨れる事はないという事で
+				// 圧縮保存
+				// さすがに２倍に膨れる事はないという事で
 			len_new = 2 * m->xs * m->ys * sizeof(struct mapgat);
 			write_buf = (unsigned char *)aMalloc( len_new );
 			encode_zip(write_buf,&len_new,(unsigned char *)m->gat, m->xs*m->ys*sizeof(struct mapgat));
-		} 
+			}
 		else // no compress
 		{ 
 			len_new = m->xs * m->ys *sizeof(struct mapgat);
@@ -2284,17 +2469,17 @@ int map_cache_write(struct map_data *m)
 		if( (map_cache.map[i].fn[0] == 0) ) // new map is inserted
 		{
 			// write at the end of the mapcache file
-			fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
-			fwrite(write_buf,1, len_new, map_cache.fp);
+				fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
+				fwrite(write_buf,1,len_new,map_cache.fp);
 
 			// prepare the data header
 			memcpy(map_cache.map[i].fn, m->name, sizeof(map_cache.map[i].fn));
 			map_cache.map[i].fn[sizeof(map_cache.map[i].fn)-1]=0;			
 
 			// update file header
-			map_cache.map[i].pos = map_cache.head.filesize;
-			map_cache.head.filesize += len_new;
-		}
+				map_cache.map[i].pos = map_cache.head.filesize;
+				map_cache.head.filesize += len_new;
+			}
 		else // update an existing map
 		{
 			len_old = map_cache.map[i].datalen;
@@ -2307,128 +2492,36 @@ int map_cache_write(struct map_data *m)
 			}
 			else // new len is larger then the old space ->write at file end
 			{	// 新しい場所に登録
-				fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
-				fwrite(write_buf,1,len_new,map_cache.fp);
+			fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
+			fwrite(write_buf,1,len_new,map_cache.fp);
 
 				// update file header
-				map_cache.map[i].pos = map_cache.head.filesize;
+			map_cache.map[i].pos = map_cache.head.filesize;
 				map_cache.head.filesize += len_new;			
 			}
 		}
 		// just make sure that everything gets updated
-		map_cache.map[i].xs           = m->xs;
-		map_cache.map[i].ys           = m->ys;
-		map_cache.map[i].water_height = map_waterheight(m->name);
+			map_cache.map[i].xs  = m->xs;
+			map_cache.map[i].ys  = m->ys;
+			map_cache.map[i].water_height = map_waterheight(m->name);
 		map_cache.map[i].compressed   = compress;
 		map_cache.map[i].datalen      = len_new;
-		map_cache.dirty = 1;
+			map_cache.dirty = 1;
 
 		if(compress == 1)	// zlib compress has alloced an additional buffer
 		{
 			aFree(write_buf);
 			write_buf = NULL;
-		}
-		return 0;
-	}
-	// 書き込めなかった
-	return 1;
-
-
-
-/*
-	size_t i;
-	unsigned long len_new, len_old;
-	unsigned char *write_buf;
-	if(!map_cache.fp) { return 0; }
-	for(i = 0;i < map_cache.head.nmaps ; i++) {
-		if(0==strcmp(m->name,map_cache.map[i].fn)) {
-			// 同じエントリーがあれば上書き
-			if(map_cache.map[i].compressed == 0) {
-				len_old = map_cache.map[i].xs * map_cache.map[i].ys * sizeof(struct mapgat);
-			} else if(map_cache.map[i].compressed == 1) {
-				len_old = map_cache.map[i].compressed_len;
-			} else {
-				// サポートされてない形式なので長さ０
-				len_old = 0;
-			}
-			if(map_read_flag == READ_FROM_BITMAP_COMPRESSED) {
-				// 圧縮保存
-				// さすがに２倍に膨れる事はないという事で
-				len_new = m->xs * m->ys * 2 * sizeof(struct mapgat);
-				write_buf = (unsigned char *)aMalloc(len_new);
-				encode_zip(write_buf,&len_new,(unsigned char *)m->gat,m->xs*m->ys*sizeof(struct mapgat));
-				map_cache.map[i].compressed     = 1;
-				map_cache.map[i].compressed_len = len_new;
-			} else {
-				len_new = m->xs * m->ys *sizeof(struct mapgat);
-				write_buf = (unsigned char*)m->gat;
-				map_cache.map[i].compressed     = 0;
-				map_cache.map[i].compressed_len = 0;
-			}
-			if(len_new <= len_old) {
-				// サイズが同じか小さくなったので場所は変わらない
-				fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
-				fwrite(write_buf,1,len_new,map_cache.fp);
-			} else {
-				// 新しい場所に登録
-				fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
-				fwrite(write_buf,1,len_new,map_cache.fp);
-				map_cache.map[i].pos = map_cache.head.filesize;
-				map_cache.head.filesize += len_new;
-			}
-			map_cache.map[i].xs  = m->xs;
-			map_cache.map[i].ys  = m->ys;
-			map_cache.map[i].water_height = map_waterheight(m->name);
-			map_cache.dirty = 1;
-			if(map_read_flag == READ_FROM_BITMAP_COMPRESSED) {
-				aFree(write_buf);
-				write_buf=NULL;
 			}
 			return 0;
 		}
-	}
-	// 同じエントリが無ければ書き込める場所を探す
-	for(i = 0;i < map_cache.head.nmaps ; i++) {
-		if(map_cache.map[i].fn[0] == 0) {
-			// 新しい場所に登録
-			if(map_read_flag == READ_FROM_BITMAP_COMPRESSED) {
-				len_new = m->xs * m->ys * 2 * sizeof(struct mapgat);
-				write_buf = (unsigned char*)aMalloc(len_new);
-				encode_zip(write_buf,&len_new,(unsigned char *)m->gat,m->xs*m->ys*sizeof(struct mapgat));
-				map_cache.map[i].compressed     = 1;
-				map_cache.map[i].compressed_len = len_new;
-			} else {
-				len_new = m->xs * m->ys * sizeof(unsigned char);
-				write_buf = (unsigned char*)m->gat;
-				map_cache.map[i].compressed     = 0;
-				map_cache.map[i].compressed_len = 0;
-			}
-			memcpy(map_cache.map[i].fn, m->name, sizeof(map_cache.map[i].fn));
-			map_cache.map[i].fn[sizeof(map_cache.map[i].fn)-1]=0;
-			fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
-			fwrite(write_buf,1,len_new,map_cache.fp);
-			map_cache.map[i].pos = map_cache.head.filesize;
-			map_cache.map[i].xs  = m->xs;
-			map_cache.map[i].ys  = m->ys;
-			map_cache.map[i].water_height = map_waterheight(m->name);
-			map_cache.head.filesize += len_new;
-			map_cache.dirty = 1;
-			if(map_read_flag == READ_FROM_BITMAP_COMPRESSED) {
-				aFree(write_buf);
-				write_buf = NULL;
-			}
-			return 0;
-		}
-	}
 	// 書き込めなかった
 	return 1;
-*/
-
 
 }
 
 #ifdef USE_AFM
-static int map_readafm(int m,char *fn) {
+int map_readafm(int m,char *fn) {
 
 	/*
 	Advanced Fusion Maps Support
@@ -2520,7 +2613,9 @@ static int map_readafm(int m,char *fn) {
 		for (y = 0; y < ys; y++) {
 			str=fgets(afm_line, sizeof(afm_line)-1, afm_file);
 			for (x = 0; x < xs; x++) {
-				map[m].gat[x+y*xs].type = (str[x]-48) & CELL_MASK;
+				// no direct access
+				//map[m].gat[x+y*xs].type = (str[x]-48) & CELL_MASK;
+				map_setcell(m,x,y, str[x] & CELL_MASK );
 			}
 		}
 
@@ -2592,11 +2687,15 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 			}
 			if(wh!=NO_WATER && pp.type==0){
 				// ﾉ倏揮ｩﾆ
-				map[m].gat[x+y*map[m].xs].type=(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0;
-			} else {
-				map[m].gat[x+y*map[m].xs].type=(pp.type) & CELL_MASK;
+				// no direct access
+				//map[m].gat[x+y*map[m].xs].type=(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0;
+				map_setcell(m,x,y,(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0);
+				} else {
+				// no direct access
+				//map[m].gat[x+y*map[m].xs].type=() & CELL_MASK;
+				map_setcell(m,x,y,pp.type);
+				}
 			}
-		}
 		map_cache_write(&map[m]);
 		aFree(gat);
 	}
@@ -3173,10 +3272,12 @@ int map_db_final(void *k,void *d,va_list ap)
 {
 	struct map_data *id=(struct map_data *)d;
 	nullpo_retr(0, id);
+	if(id)
+	{
 	if(id->gat)
 		aFree(id->gat);
-	if(id)
 		aFree(id);
+	}
 	return 0;
 }
 int nick_db_final(void *k,void *d,va_list ap){ return 0; }
@@ -3370,25 +3471,25 @@ int do_init(int argc, char *argv[]) {
 		ShowMessage("\nUnable to automatically determine the IP address.\n");
 		ShowMessage("please edit the map_athena.conf file and set it to correct values.\n");
 		ShowMessage("(127.0.0.1 is valid if you have no network interface)\n");
-	}
+        }
 	else if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK || chrif_getip() == INADDR_LOOPBACK) {
-		// The map server should know what IP address it is running on
-		//   - MouseJstr
+          // The map server should know what IP address it is running on
+          //   - MouseJstr
 		unsigned long localaddr = addr_[0]; // host order network address
-		if (naddr_ != 1)
+          if (naddr_ != 1)
 			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n",
 							(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
-		else
+          else
 			ShowMessage("Defaulting to %d.%d.%d.%d as our IP address\n",
 							(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
-		
+
 		if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK)
 			clif_setip(localaddr);
 		if (chrif_getip() == INADDR_LOOPBACK)
 			chrif_setip(localaddr);
 		if ((localaddr&0xFFFF0000) == 0xC0A80000)//192.168.x.x
 			ShowMessage("\nPrivate Network detected.. \nedit lan_support.conf and map_athena.conf\n\n");
-	}
+        }
 	if (SHOW_DEBUG_MSG) ShowNotice("Server running in '"CL_WHITE"Debug Mode"CL_RESET"'.\n");
 	battle_config_read(BATTLE_CONF_FILENAME);
 	msg_config_read(MSG_CONF_NAME);
@@ -3425,11 +3526,16 @@ int do_init(int argc, char *argv[]) {
 
 	map_readallmap();
 
+	add_timer_func_list(map_freeblock_timer,"map_freeblock_timer");
 	add_timer_func_list(map_clearflooritem_timer, "map_clearflooritem_timer");
+	add_timer_interval(gettick()+1000,60*1000,map_freeblock_timer,0,0);
 
 	//Added by Mugendai for GUI support
 	if (flush_on)
 		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
+	//Added for Mugendais I'm Alive mod
+	if (imalive_on)
+		add_timer_interval(gettick()+10, imalive_time*1000, imalive_timer,0,0);
 
 #ifndef TXT_ONLY // online status timer, checks every hour [Valaris]
 	add_timer_func_list(online_timer, "online_timer");
@@ -3472,13 +3578,7 @@ int do_init(int argc, char *argv[]) {
 	if (battle_config.pk_mode == 1)
 		ShowNotice("Server is running on '"CL_WHITE"PK Mode"CL_RESET"'.\n");
 
-	//Added for Mugendais I'm Alive mod
-	if (imalive_on)
-		add_timer_interval(gettick()+10,imalive_time*1000, imalive_timer,0,0);
-
 	ShowStatus("Server is '"CL_GREEN"ready"CL_RESET"' and listening on port '"CL_WHITE"%d"CL_RESET"'.\n\n", clif_getport());
-
-	ticks = gettick();
 
 	return 0;
 }

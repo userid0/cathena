@@ -118,7 +118,8 @@ int mob_once_spawn(struct map_session_data *sd,char *mapname,
 {
 	struct mob_data *md=NULL;
 	int m,count,lv=255,r=class_;
-
+	int i, j;
+	
 	if( sd )
 		lv=sd->status.base_level;
 
@@ -131,8 +132,8 @@ int mob_once_spawn(struct map_session_data *sd,char *mapname,
 		return 0;
 
 	if(class_<0){	// ランダムに召喚
-		int i=0;
-		int j=-class_-1;
+		i = 0;
+		j = -class_-1;
 		int k;
 		if(j>=0 && j<MAX_RANDOMMONSTER){
 			do{
@@ -149,13 +150,28 @@ int mob_once_spawn(struct map_session_data *sd,char *mapname,
 //		if(battle_config.etc_log)
 //			ShowMessage("mobclass=%d try=%d\n",class_,i);
 	}
-
-	if(sd){
-		if(x<=0) x=sd->bl.x;
-		if(y<=0) y=sd->bl.y;
-	}else if(x<=0 || y<=0){
+	if (sd) { //even if the coords were wrong, spawn mob anyways (but look for most suitable coords first) Got from Freya [Lupus]
+		if (x <= 0 || y <= 0) {
+			if (x <= 0) x = sd->bl.x + rand() % 3 - 1;
+			if (y <= 0) y = sd->bl.y + rand() % 3 - 1;
+			if (map_getcell(m, x, y, CELL_CHKNOPASS)) {
+				x = sd->bl.x;
+				y = sd->bl.y;
+			}
+		}
+	} else if (x <= 0 || y <= 0) {
+		i = j = 0;
 		ShowMessage("mob_once_spawn: ?? %i %i %p\n", x,y,sd);
+		do {
+			x = rand() % (map[m].xs - 2) + 1;
+			y = rand() % (map[m].ys - 2) + 1;
+		} while ((i=map_getcell(m, x, y, CELL_CHKNOPASS)) && j++ < 64);
+		if (i) { // not solved?
+			x = 0;
+			y = 0;
+		}
 	}
+
 
 	for(count=0;count<amount;count++){
 		md=(struct mob_data *)aCalloc(1,sizeof(struct mob_data));
@@ -1080,7 +1096,7 @@ int mob_stop_walking(struct mob_data *md,int type)
 	if(type&0x02) {
 		int delay=status_get_dmotion(&md->bl);
 		unsigned long tick = gettick();
-		if(md->canmove_tick < tick)
+		if(battle_config.monster_damage_delay && md->canmove_tick < tick)
 			md->canmove_tick = tick + delay;
 	}
 
@@ -1578,7 +1594,7 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 	nullpo_retr(0, ap);
 	nullpo_retr(0, md=(struct mob_data*)bl);
 
-	tick=va_arg(ap,unsigned long);
+	tick=(unsigned long)va_arg(ap,int);
 
 
 	if(DIFF_TICK(tick,md->last_thinktime)<MIN_MOBTHINKTIME)
@@ -1851,7 +1867,7 @@ static int mob_ai_sub_foreachclient(struct map_session_data *sd,va_list ap)
 	nullpo_retr(0, sd);
 	nullpo_retr(0, ap);
 
-	tick=va_arg(ap,unsigned long);
+	tick=(unsigned long)va_arg(ap,int);
 	map_foreachinarea(mob_ai_sub_hard,sd->bl.m,
 					  sd->bl.x-AREA_SIZE*2,sd->bl.y-AREA_SIZE*2,
 					  sd->bl.x+AREA_SIZE*2,sd->bl.y+AREA_SIZE*2,
@@ -1898,7 +1914,7 @@ static int mob_ai_sub_lazy(void * key,void * data,va_list app)
 	if(!md->bl.type || md->bl.type!=BL_MOB)
 		return 0;
 
-	tick=va_arg(ap,unsigned long);
+	tick=(unsigned long)va_arg(ap,int);
 
 	if(DIFF_TICK(tick,md->last_thinktime)<MIN_MOBTHINKTIME*10)
 		return 0;
@@ -2212,7 +2228,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 		return 0;
 	}
 
-	if(md->sc_data[SC_ENDURE].timer == -1)
+	if(battle_config.monster_damage_delay && md->sc_data[SC_ENDURE].timer == -1)
 		mob_stop_walking(md,3);
 	if(damage > max_hp>>2)
 		skill_stop_dancing(&md->bl,0);
@@ -2575,11 +2591,11 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			if(mob_db[md->class_].dropitem[i].nameid <= 0)
 				continue;
 			drop_rate = mob_db[md->class_].dropitem[i].p;
-			if(drop_rate <= 0 && battle_config.drop_rate0item)
+			if(drop_rate <= 0 && !battle_config.drop_rate0item)
 				drop_rate = 1;
 			if(battle_config.drops_by_luk>0 && sd && md) drop_rate+=(sd->status.luk*battle_config.drops_by_luk)/100;	// drops affected by luk [Valaris]
 			if(sd && md && battle_config.pk_mode==1 && (mob_db[md->class_].lv - sd->status.base_level >= 20)) drop_rate=(int)(1.25*drop_rate); // pk_mode increase drops if 20 level difference [Valaris]
-			if(drop_rate <= rand()%10000) {
+			if(drop_rate <= rand()%10000+1) { //if rate == 0, then it doesn't drop (from Freya)
 				drop_ore = i; //we rmember an empty slot to put there ORE DISCOVERY drop later.
 				continue;
 			}
@@ -2682,13 +2698,14 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			if(mob_db[md->class_].mvpitem[i].nameid <= 0)
 				continue;
 			drop_rate = mob_db[md->class_].mvpitem[i].p;
-			if(drop_rate <= 0 && battle_config.drop_rate0item)
+			if(drop_rate <= 0 && !battle_config.drop_rate0item)
 				drop_rate = 1;
-			if(drop_rate < battle_config.item_drop_mvp_min)
+/*			if(drop_rate < battle_config.item_drop_mvp_min)
 				drop_rate = battle_config.item_drop_mvp_min;
 			else if(drop_rate > battle_config.item_drop_mvp_max) //fixed
 				drop_rate = battle_config.item_drop_mvp_max;
-			if(drop_rate <= rand()%10000)
+*/
+			if(drop_rate <= rand()%10000+1) //if ==0, then it doesn't drop
 				continue;
 			memset(&item,0,sizeof(item));
 			item.nameid=mob_db[md->class_].mvpitem[i].nameid;
@@ -3214,6 +3231,9 @@ int mobskill_castend_id( int tid, unsigned long tick, int id,int data )
 	if(battle_config.mob_skill_log)
 		ShowMessage("MOB skill castend skill=%d, class_ = %d\n",md->skillid,md->class_);
 //	mob_stop_walking(md,0);
+
+if(md->skillid<0)
+printf("mobskill_castend_id negative skill trap 1\n");
 
 	switch( skill_get_nk(md->skillid) )
 	{
@@ -3769,11 +3789,14 @@ int mob_gvmobcheck(struct map_session_data *sd, struct block_list *bl)
 			return 0;//ギルド未加入ならダメージ無し
 		else if(gc != NULL && !map[sd->bl.m].flag.gvg)
 			return 0;//砦内でGvじゃないときはダメージなし
-		else if(g && gc != NULL && g->guild_id == gc->guild_id)
-			return 0;//自占領ギルドのエンペならダメージ無し
-		else if(g && guild_checkskill(g,GD_APPROVAL) <= 0 && md->class_ == 1288)
-			return 0;//正規ギルド承認がないとダメージ無し
-
+		else if(g) {
+			if (gc != NULL && g->guild_id == gc->guild_id)
+				return 0;//自占領ギルドのエンペならダメージ無し
+			else if(guild_checkskill(g,GD_APPROVAL) <= 0 && md->class_ == 1288)
+				return 0;//正規ギルド承認がないとダメージ無し
+			else if (gc && guild_check_alliance(gc->guild_id, g->guild_id, 0) == 1)
+				return 0;	// 同盟ならダメージ無し
+		}
 	}
 
 	return 1;
@@ -3982,8 +4005,11 @@ static int mob_readdb(void)
 			mob_db[class_].mexpper=atoi(str[50]);
 			// MVP Drops: MVP1id,MVP1per,MVP2id,MVP2per,MVP3id,MVP3per
 			for(i=0;i<3;i++){
+				int rate=atoi(str[52+i*2])*battle_config.mvp_item_rate/100; //idea of the fix from Freya
 				mob_db[class_].mvpitem[i].nameid=atoi(str[51+i*2]);
-				mob_db[class_].mvpitem[i].p=atoi(str[52+i*2])*battle_config.mvp_item_rate/100;
+				mob_db[class_].mvpitem[i].p= (rate < battle_config.item_drop_mvp_min) 
+					? battle_config.item_drop_mvp_min : (rate > battle_config.item_drop_mvp_max) 
+					? battle_config.item_drop_mvp_max : rate;
 			}
 			for(i=0;i<MAX_RANDOMMONSTER;i++)
 				mob_db[class_].summonper[i]=0;

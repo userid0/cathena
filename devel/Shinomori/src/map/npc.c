@@ -180,7 +180,7 @@ int npc_event_dequeue(struct map_session_data *sd)
 		for(ev=0;ev<MAX_EVENTTIMER;ev++)
 			if( sd->eventtimer[ev]==-1 )
 				break;
-		if(ev < MAX_EVENTTIMER)
+		if(ev<MAX_EVENTTIMER)
 		{	// generate and insert the timer
 			int i;
 			// copy the first event
@@ -225,7 +225,7 @@ int npc_event_timer(int tid,unsigned long tick,int id,int data)
 	char *eventname = (char *)data;
 	struct event_data *ev = (struct event_data *)strdb_search(ev_db,eventname);
 	struct npc_data *nd;
-	struct map_session_data *sd = map_id2sd(id);
+	struct map_session_data *sd=map_id2sd(id);
 	size_t i;
 
 	if((ev==NULL || (nd=ev->nd)==NULL))
@@ -233,7 +233,7 @@ int npc_event_timer(int tid,unsigned long tick,int id,int data)
 		if(battle_config.error_log)
 			ShowWarning("npc_event: event not found [%s]\n",eventname);
 	}	
-	else 
+	else
 		
 		if(sd)
 	{
@@ -508,9 +508,9 @@ int npc_deleventtimer(struct npc_data *nd,const char *name)
 		if( nd->eventtimer[i]!=-1 && strcmp(evname, name)==0 ){
 			aFree(evname);
 			get_timer(nd->eventtimer[i])->data = 0;
-			delete_timer(nd->eventtimer[i],npc_event_timer);
-			nd->eventtimer[i]=-1;
-			break;
+				delete_timer(nd->eventtimer[i],npc_event_timer);
+				nd->eventtimer[i]=-1;
+				break;
 		}
 	}
 	return 0;
@@ -728,14 +728,14 @@ int npc_event(struct map_session_data *sd,const char *eventname,int mob_kill)
 	}
 
 	if(ev==NULL && eventname && strcmp(((eventname)+strlen(eventname)-9),"::OnTouch") == 0)
-		return 1;
+	return 1;
 
 	if(ev==NULL || (nd=ev->nd)==NULL){
 		if(mob_kill && (ev==NULL || (nd=ev->nd)==NULL)){
 			strcpy( mobevent, eventname);
 			strcat( mobevent, "::OnMyMobDead");
 			ev= (struct event_data *) strdb_search(ev_db,mobevent);
-		if (ev==NULL || (nd=ev->nd)==NULL) {
+	if (ev==NULL || (nd=ev->nd)==NULL) {
 				if (strncasecmp(eventname,"GM_MONSTER",10)!=0)
 					ShowMessage("npc_event: event not found [%s]\n",mobevent);
 				return 0;
@@ -1719,6 +1719,7 @@ int npc_convertlabel_db(void *key,void *data,va_list ap)
 	struct npc_data *nd;
 	struct npc_label_list *lst;
 	int num;
+
 	char *p=strchr(lname,':');
 
 	if(NULL==p)	return 0;
@@ -1737,8 +1738,13 @@ int npc_convertlabel_db(void *key,void *data,va_list ap)
 		lst=(struct npc_label_list *)aRealloc(lst,(num+1)*sizeof(struct npc_label_list));
 	}
 	*p='\0';
-	memcpy(lst[num].name,lname,sizeof(lst[num].name));
-	lst[num].name[sizeof(lst[num].name)-1]=0;
+
+	if( strlen(lname)>23 ) {
+		ShowError("npc_parse_script: label name longer than 23 chars! '%s'\n", lname);
+		exit(1);
+	}
+	memcpy(lst[num].labelname,lname,strlen(lname)+1);
+
 	*p=':';
 	lst[num].pos=pos;
 	nd->u.scr.ref->label_list    = lst;
@@ -1912,11 +1918,11 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	map_addblock(&nd->bl);
 
 	if (evflag) {	// イベント型
-		struct event_data *ev=(struct event_data *)aCalloc(1,sizeof(struct event_data));
-		ev->nd=nd;
-		ev->pos=0;
-		strdb_insert(ev_db,nd->exname,ev);
-	}else
+			struct event_data *ev=(struct event_data *)aCalloc(1,sizeof(struct event_data));
+			ev->nd=nd;
+			ev->pos=0;
+			strdb_insert(ev_db,nd->exname,ev);
+		}else
 		clif_spawnnpc(nd);
 	}
 	
@@ -1928,7 +1934,7 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 		// script本体がある場合の処理
 		// ラベルデータのコンバート
 		if(!dummy_npc)
-		strdb_foreach( script_get_label_db() ,npc_convertlabel_db,nd);
+		strdb_foreach(script_get_label_db(), npc_convertlabel_db, nd);
 
 		// もう使わないのでバッファ解放
 		aFree(srcbuf);
@@ -1946,24 +1952,33 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	// イベント用ラベルデータのエクスポート
 	if(!dummy_npc)
 	for(i=0;i<nd->u.scr.ref->label_list_num;i++){
-		char *lname=nd->u.scr.ref->label_list[i].name;
+		char *lname=nd->u.scr.ref->label_list[i].labelname;
 		int pos=nd->u.scr.ref->label_list[i].pos;
 
 		if ((lname[0]=='O' || lname[0]=='o')&&(lname[1]=='N' || lname[1]=='n')) {
-			struct event_data *ev;
-			char *buf;
 			// エクスポートされる
-			ev=(struct event_data *)aCalloc(1,sizeof(struct event_data));
-			
-			if (strlen(lname)>24) {
-				ShowError("npc_parse_script: label name longer than 24 chars! '%s'\n", lname);
+			if (strlen(lname)>23) {
+				ShowError("npc_parse_script: label name longer than 23 chars! '%s'\n", lname);
 				exit(1);
 			}else{
-				ev->nd=nd;
-				ev->pos=pos;
+				struct event_data *ev;
+				struct event_data *ev2;
+				char *buf;
+				
 				buf=(char *)aMalloc( (3+strlen(nd->exname)+strlen(lname))*sizeof(char));
 				sprintf(buf,"%s::%s",nd->exname,lname);
-				strdb_insert(ev_db,buf,ev);
+				ev2 = (struct event_data *)strdb_search(ev_db,buf);
+				if(ev2 != NULL) {
+					ShowMessage("npc_parse_script : duplicate event %s (%i)\n",buf,i);
+					aFree(buf);
+				}
+				else
+				{
+					ev=(struct event_data *)aCalloc(1,sizeof(struct event_data));
+					ev->nd=nd;
+					ev->pos=pos;
+					strdb_insert(ev_db,buf,ev);
+				}
 			}
 		}
 	}
@@ -1972,7 +1987,7 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	if(!dummy_npc)
 	for(i=0;i<nd->u.scr.ref->label_list_num;i++){
 		int t=0,k=0;
-		char *lname=nd->u.scr.ref->label_list[i].name;
+		char *lname=nd->u.scr.ref->label_list[i].labelname;
 		int pos=nd->u.scr.ref->label_list[i].pos;
 		if(sscanf(lname,"OnTimer%d%n",&t,&k)==1 && lname[k]=='\0') {
 			// タイマーイベント
@@ -2445,7 +2460,7 @@ int do_init_npc(void)
 	npc_read_indoors();
 	//npc_read_weather();
 
-	ev_db=strdb_init(24);
+	ev_db=strdb_init(50);
 	npcname_db=strdb_init(24);
 
         ev_db->release = ev_release;

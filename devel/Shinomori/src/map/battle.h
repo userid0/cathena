@@ -58,8 +58,7 @@ int battle_stopattack(struct block_list *bl);
 int battle_stopwalking(struct block_list *bl,int type);
 
 // 通常攻撃処理まとめ
-int battle_weapon_attack( struct block_list *bl,struct block_list *target,
-	 unsigned int tick,int flag);
+int battle_weapon_attack( struct block_list *bl,struct block_list *target,unsigned long tick,int flag);
 
 // 各種パラメータを得る
 int battle_counttargeted(struct block_list *bl,struct block_list *src,int target_lv);
@@ -280,15 +279,18 @@ extern struct Battle_Config {
 	int gm_can_drop_lv;
 	int disp_hpmeter;
 	int bone_drop;
+	int monster_damage_delay;
 
+// eAthena additions
 	int night_at_start; // added by [Yor]
 	int day_duration; // added by [Yor]
 	int night_duration; // added by [Yor]
 	int ban_spoof_namer; // added by [Yor]
+	int ban_hack_trade; // added by [Yor]
 	int hack_info_GM_level; // added by [Yor]
 	int any_warp_GM_min_level; // added by [Yor]
 	int packet_ver_flag; // added by [Yor]
-	int muting_players; // added by [Apple]
+	int muting_players; // added by [PoW]
 	
 	int min_hair_style; // added by [MouseJstr]
 	int max_hair_style; // added by [MouseJstr]

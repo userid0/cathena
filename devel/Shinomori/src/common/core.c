@@ -3,8 +3,8 @@
 
 #ifdef DUMPSTACK
 	#ifndef _WIN32	// HAVE_EXECINFO_H
-#include <execinfo.h>
-#endif
+		#include <execinfo.h>
+	#endif
 #endif
 
 #include "mmo.h"
@@ -76,6 +76,11 @@ sigfunc *compat_signal(int signo, sigfunc *func)
 
 static void sig_proc(int sn)
 {
+	static int is_called = 0;
+
+	if(is_called++)
+		return;
+
 	switch(sn){
 	case SIGINT:
 	case SIGTERM:
@@ -100,44 +105,45 @@ static void sig_proc(int sn)
  *	Dumps the stack using glibc's backtrace
  *-----------------------------------------
  */
-static void sig_dump(int sn)
+#ifdef DUMPSTACK
+void sig_dump(int sn)
 {
-	#ifdef DUMPSTACK
-	FILE *fp;
-	void* array[20];
 
-	char **stack;
-	size_t size;		
-	int no = 0;
-	char tmp[256];
+		FILE *fp;
+		void* array[20];
 
-	// search for a usable filename
-	do {
-		sprintf(tmp,"save/stackdump_%04d.txt", ++no);
+		char **stack;
+		size_t size;		
+		int no = 0;
+		char tmp[256];
+
+		// search for a usable filename
+		do {
+			sprintf(tmp,"save/stackdump_%04d.txt", ++no);
 	} while((fp = savefopen(tmp,"r")) && (fclose(fp), no < 9999));
-	// dump the trace into the file
+		// dump the trace into the file
 	if ((fp = savefopen (tmp,"w")) != NULL) {
 
-		fprintf(fp,"Exception: %s\n", strsignal(sn));
-		fprintf(fp,"Stack trace:\n");
-		size = backtrace (array, 20);
-		stack = backtrace_symbols (array, size);
+			fprintf(fp,"Exception: %s\n", strsignal(sn));
+			fprintf(fp,"Stack trace:\n");
+			size = backtrace (array, 20);
+			stack = backtrace_symbols (array, size);
 
-		for (no = 0; no < size; no++) {
+			for (no = 0; no < size; no++) {
 
-			fprintf(fp, "%s\n", stack[no]);
+				fprintf(fp, "%s\n", stack[no]);
 
+			}
+			fprintf(fp,"End of stack trace\n");
+
+			fclose(fp);
+			aFree(stack);
 		}
-		fprintf(fp,"End of stack trace\n");
-
-		fclose(fp);
-		free(stack);
-	}
-	#endif
 	// When pass the signal to the system's default handler
 	compat_signal(sn, SIG_DFL);
 	raise(sn);
 }
+#endif
 
 int get_svn_revision(char *svnentry) { // Warning: minor syntax checking
 	char line[1024];
@@ -191,31 +197,74 @@ static void display_title(void)
  *	CORE : MAINROUTINE
  *--------------------------------------
  */
+char pid_file[256];
 
+void pid_delete(void) {
+	unlink(pid_file);
+}
 
+void pid_create(const char* file) {
+	FILE *fp;
+	int len = strlen(file);
+	memcpy(pid_file,file,len+1);
+	if(len > 4 && pid_file[len - 4] == '.') {
+		pid_file[len - 4] = 0;
+	}
+	strcat(pid_file,".pid");
+	fp = savefopen(pid_file,"w");
+	if(fp) {
+#ifdef WIN32
+		fprintf(fp,"%ld",GetCurrentProcessId());
+#else
+		fprintf(fp,"%ld",getpid());
+#endif
+		fclose(fp);
+		atexit(pid_delete);
+	}
+}
 
 int main(int argc,char **argv)
 {
 	int next;
 	///////////////////////////////////////////////////////////////////////////
-	// signal initialisation
+	pid_create(argv[0]);
+
+#ifdef DUMPSTACK
+	///////////////////////////////////////////////////////////////////////////
+	// glibc dump
+	compat_signal(SIGPIPE,SIG_IGN);
+	compat_signal(SIGTERM,sig_proc);
+	compat_signal(SIGINT,sig_proc);
+
+	// Signal to create coredumps by system when necessary (crash)
+	compat_signal(SIGSEGV, sig_dump);
+	compat_signal(SIGFPE, sig_dump);
+	compat_signal(SIGILL, sig_dump);
+#ifndef WIN32
+	compat_signal(SIGBUS, sig_dump);
+	compat_signal(SIGTRAP, SIG_DFL);
+#endif
+	///////////////////////////////////////////////////////////////////////////
+#else
+	///////////////////////////////////////////////////////////////////////////
+	// normal dump
 	compat_signal(SIGPIPE,SIG_IGN);
 	compat_signal(SIGTERM,sig_proc);
 	compat_signal(SIGINT,sig_proc);
 	
- 	// Signal to create coredumps by system when necessary (crash)
-	compat_signal(SIGSEGV, sig_dump);
-	compat_signal(SIGFPE, sig_dump);
-	compat_signal(SIGILL, sig_dump);
-	#ifndef WIN32
-		compat_signal(SIGBUS, sig_dump);
-		compat_signal(SIGTRAP, SIG_DFL); 
-	#endif
+	// Signal to create coredumps by system when necessary (crash)
+	compat_signal(SIGSEGV, SIG_DFL);
+#ifndef _WIN32
+	compat_signal(SIGBUS, SIG_DFL);
+	compat_signal(SIGTRAP, SIG_DFL); 
+#endif
+	compat_signal(SIGILL, SIG_DFL);
+	///////////////////////////////////////////////////////////////////////////
+#endif
 	///////////////////////////////////////////////////////////////////////////
 	//
 	display_title();
 	do_init_memmgr(argv[0]); // àÍî‘ç≈èâÇ…é¿çsÇ∑ÇÈïKóvÇ™Ç†ÇÈ
-
 	tick_ = time(0);
 	///////////////////////////////////////////////////////////////////////////
 	// core component initialisation

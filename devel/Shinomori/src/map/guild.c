@@ -674,10 +674,10 @@ int guild_member_leaved(int guild_id,int account_id,int char_id,int flag,
 {
 	struct map_session_data *sd=map_id2sd(account_id);
 	struct guild *g=guild_search(guild_id);
-	int i;
 
-	if(g!=NULL)
-	for(i=0;i<g->max_member;i++) {
+	if(g!=NULL){
+		int i;
+		for(i=0;i<g->max_member;i++) {
 			if(	g->member[i].account_id==account_id &&
 				g->member[i].char_id==char_id ){
 				struct map_session_data *sd2=sd;
@@ -693,21 +693,19 @@ int guild_member_leaved(int guild_id,int account_id,int char_id,int flag,
 				g->member[i].account_id=0;
 				g->member[i].sd=NULL;
 			}
+		}
+		// メンバーリストを全員に再通知
+		for(i=0;i<g->max_member;i++){
+			if( g->member[i].sd!=NULL )
+				clif_guild_memberlist(g->member[i].sd);
+		}
 	}
 
 	if(sd!=NULL && sd->status.guild_id==guild_id){
-			sd->status.guild_id=0;
-			sd->guild_emblem_id=0;
-			sd->guild_sended=0;
-		}
-	// メンバーリストを全員に再通知
-	if(g!=NULL)
-	for(i=0;i<g->max_member;i++){
-		if( g->member[i].sd!=NULL )
-			clif_guild_memberlist(g->member[i].sd);
+		sd->status.guild_id=0;
+		sd->guild_emblem_id=0;
+		sd->guild_sended=0;
 	}
-
-
 	return 0;
 }
 // ギルドメンバのオンライン状態/Lv更新送信
@@ -1031,6 +1029,23 @@ int guild_get_alliance_count(struct guild *g,int flag)
 			c++;
 	}
 	return c;
+}
+// 同盟関係かどうかチェック
+// 同盟なら1、それ以外は0
+int guild_check_alliance(int guild_id1, int guild_id2, int flag)
+{
+	struct guild *g;
+	int i;
+
+	g = guild_search(guild_id1);
+	if (g == NULL)
+		return 0;
+
+	for (i=0; i<MAX_GUILDALLIANCE; i++)
+		if ((g->alliance[i].guild_id == guild_id2) && (g->alliance[i].opposition == flag))
+			return 1;
+
+	return 0;
 }
 // ギルド同盟要求
 int guild_reqalliance(struct map_session_data *sd,int account_id)
@@ -1406,9 +1421,9 @@ int guild_castledataloadack(int castle_id,int index,int value)
 		while(ev)
 		{
 			npc_event_do(ev->name);
-			ev2 = ev->next;
+			ev2=ev->next;
 			aFree(ev);
-			ev = ev2;
+			ev=ev2;
 		}
 	}
 	return 1;

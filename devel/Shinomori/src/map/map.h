@@ -57,6 +57,12 @@ struct walkpath_data {
 	unsigned char path_half;
 	unsigned char path[MAX_WALKPATH];
 };
+struct shootpath_data {
+	int rx,ry,len;
+	int x[MAX_WALKPATH];
+	int y[MAX_WALKPATH];
+};
+
 struct script_reg {
 	int index;
 	int data;
@@ -154,10 +160,7 @@ struct map_session_data {
 		unsigned potionpitcher_flag : 1;
 		unsigned storage_flag : 1;
 		unsigned snovice_flag : 4;
-		int leadership_flag;
-		int glorywounds_flag;
-		int soulcold_flag;
-		int hawkeyes_flag;
+		int gmaster_flag;
 		// originally by Qamera, adapted by celest
 		unsigned event_death : 1;
 		unsigned event_kill : 1;
@@ -233,12 +236,13 @@ struct map_session_data {
 	int attacktarget;
 	short attacktarget_lv;
 	unsigned int attackabletime;
-	
-	int followtimer; // [MouseJstr]
-	int followtarget;
 
-	short attackrange;
-	short attackrange_;
+        int followtimer; // [MouseJstr]
+        int followtarget;
+
+	time_t emotionlasttime; // to limit flood with emotion packets
+
+	short attackrange,attackrange_;
 	int skilltimer;
 	int skilltarget;
 	short skillx;
@@ -320,8 +324,8 @@ struct map_session_data {
 	int get_zeny_add_num;
 	short splash_range;
 	short splash_add_range;
-	short autospell_id;
-	short autospell_lv;
+	unsigned short autospell_id;
+	unsigned short autospell_lv;
 	short autospell_rate;
 	short hp_drain_rate;
 	short hp_drain_per;
@@ -441,7 +445,7 @@ struct npc_timerevent_list {
 	int pos;
 };
 struct npc_label_list {
-	char name[24];
+	char labelname[24];
 	int pos;
 };
 struct npc_item_list {
@@ -660,17 +664,77 @@ enum {
 
 
 
-struct mapgat
-{
-	unsigned char type : 3;		// 3bit for land,water,wall (values 0,1,3,5 used, could be encoded in 2 bits)
-	unsigned char basilica : 1;	// 1bit for basilica (is on/off for basilica enough, what about two casting priests?)
-	unsigned char npc : 4;		// 4bit counter for npc touchups, can hold 15 touchups;
+
+
+
+
+
+
+
+
+
+
+
+
+// map_getcell()/map_setcell()で使用されるフラグ
+typedef enum { 
+	CELL_CHKWALL=0,		// 壁(セルタイプ1)
+	CELL_CHKWATER,		// 水場(セルタイプ3)
+	CELL_CHKGROUND,		// 地面障害物(セルタイプ5)
+	CELL_CHKPASS,		// 通過可能(セルタイプ1,5以外)
+	CELL_CHKNOPASS,		// 通過不可(セルタイプ1,5)
+	CELL_CHKHOLE,		// a hole in morroc desert
+	CELL_GETTYPE,		// セルタイプを返す
+	CELL_CHKNPC=0x10,	// タッチタイプのNPC(セルタイプ0x80フラグ)
+	CELL_SETNPC,		// タッチタイプのNPCをセット
+	CELL_CLRNPC,		// タッチタイプのNPCをclear suru
+	CELL_CHKBASILICA,	// バジリカ(セルタイプ0x40フラグ)
+	CELL_SETBASILICA,	// バジリカをセット
+	CELL_CLRBASILICA,	// バジリカをクリア
+	CELL_CHKMOONLIT,
+	CELL_SETMOONLIT,
+	CELL_CLRMOONLIT,
+	CELL_CHKREGEN,
+	CELL_SETREGEN,
+	CELL_CLRREGEN
+} cell_t;
+
+// CELL
+#define CELL_MASK		0x07	// 3 bit for cell mask
+
+// celests new stuff
+//#define CELL_MOONLIT	0x100
+//#define CELL_REGEN		0x200
+
+enum {
+	GAT_NONE		= 0,	// normal ground
+	GAT_WALL		= 1,	// not passable and blocking
+	GAT_UNUSED1		= 2,
+	GAT_WATER		= 3,	// water
+	GAT_UNUSED2		= 4,
+	GAT_GROUND		= 5,	// not passable but can shoot/cast over it
+	GAT_HOLE		= 6,	// holes in morroc desert
+	GAT_UNUSED3		= 7,
 };
+
+struct mapgat // values from .gat & 
+{
+	unsigned char type : 3;		// 3bit used for land,water,wall,(hole) (values 0,1,3,5,6 used)
+								// providing 4 bit space and interleave two cells in x dimension
+								// would not waste memory too much; will implement it later on a new map model
+	unsigned char npc : 4;		// 4bit counter for npc touchups, can hold 15 touchups;
+	unsigned char basilica : 1;	// 1bit for basilica (is on/off for basilica enough, what about two casting priests?)
+	unsigned char moonlit : 1;	// 1bit for moonlit
+	unsigned char regen : 1;	// 1bit for regen
+	unsigned char _unused : 6;	// 6 bits left
+};
+// will alloc a short now
 
 
 struct map_data {
 	char name[24];
-	struct mapgat *gat;	// NULLなら下のmap_data_other_serverとして扱う
+	struct mapgat	*gat;	// NULLなら下のmap_data_other_serverとして扱う
+
 	char *alias; // [MouseJstr]
 	struct block_list **block;
 	struct block_list **block_mob;
@@ -797,26 +861,6 @@ enum {
 	LOOK_BASE,LOOK_HAIR,LOOK_WEAPON,LOOK_HEAD_BOTTOM,LOOK_HEAD_TOP,LOOK_HEAD_MID,LOOK_HAIR_COLOR,LOOK_CLOTHES_COLOR,LOOK_SHIELD,LOOK_SHOES
 };
 
-// CELL
-#define CELL_MASK		0x07	// 3 bit for cell mask
-
-/*
- * map_getcell()/map_setcell()で使用されるフラグ
-  */
-typedef enum { 
-	CELL_CHKWALL=0,		// 壁(セルタイプ1)
-	CELL_CHKWATER,		// 水場(セルタイプ3)
-	CELL_CHKGROUND,		// 地面障害物(セルタイプ5)
-	CELL_CHKPASS,		// 通過可能(セルタイプ1,5以外)
-	CELL_CHKNOPASS,		// 通過不可(セルタイプ1,5)
-	CELL_GETTYPE,		// セルタイプを返す
-	CELL_CHKNPC=0x10,	// タッチタイプのNPC(セルタイプ0x80フラグ)
-	CELL_SETNPC,		// タッチタイプのNPCをセット
-	CELL_CLRNPC,		// タッチタイプのNPCをclear suru
-	CELL_CHKBASILICA,	// バジリカ(セルタイプ0x40フラグ)
-	CELL_SETBASILICA,	// バジリカをセット
-	CELL_CLRBASILICA,	// バジリカをクリア
-} cell_t;
 
 
 
@@ -923,15 +967,13 @@ int map_calc_dir( struct block_list *src,int x,int y);
 
 // path.cより
 int path_search(struct walkpath_data*,int,int,int,int,int,int);
-int path_search_long(int m,int x0,int y0,int x1,int y1);
+int path_search_long(struct shootpath_data *,int,int,int,int,int);
 int path_blownpos(int m,int x0,int y0,int dx,int dy,int count);
 
 int map_who(int fd);
 
 void map_helpscreen(); // [Valaris]
 int map_delmap(char *mapname);
-
-extern unsigned long ticks;
 
 #ifndef TXT_ONLY
 

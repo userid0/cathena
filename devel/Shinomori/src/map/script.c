@@ -1266,7 +1266,7 @@ char* parse_script(unsigned char *src,int line)
 				exit(1);
 			}
 			set_label(l,script_pos);
-			strdb_insert(scriptlabel_db,p,script_pos);	// èOòöùplabel dbôoÿ^
+			strdb_insert(scriptlabel_db,p,script_pos);
 			*skip_word(p)=c;
 			p=tmpp+1;
 			continue;
@@ -1330,7 +1330,7 @@ enum {STOP=1,END,RERUNLINE,GOTO,RETFUNC};
 struct map_session_data *script_rid2sd(struct script_state *st)
 {
 	struct map_session_data *sd=map_id2sd(st->rid);
-	if(!sd) {
+	if(!sd){
 		ShowError("script_rid2sd: fatal error ! player not attached!\n");
 	}
 	return sd;
@@ -1738,7 +1738,7 @@ int buildin_menu(struct script_state *st)
 			conv_str(st,& (st->stack->stack_data[i]));
 			len+=strlen(st->stack->stack_data[i].u.str)+1;
 		}
-		buf=(char *)aMalloc(len*sizeof(char));
+		buf=(char *)aMalloc((len+1)*sizeof(char));
 		buf[0]=0;
 		for(i=st->start+2,len=0;i<st->end;i+=2){
 			strcat(buf,st->stack->stack_data[i].u.str);
@@ -1808,6 +1808,10 @@ int buildin_warp(struct script_state *st)
 	str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 	x=conv_num(st,& (st->stack->stack_data[st->start+3]));
 	y=conv_num(st,& (st->stack->stack_data[st->start+4]));
+
+	if(str==NULL)
+		return 0;
+
 	if(strcmp(str,"Random")==0)
 		pc_randomwarp(sd,3);
 	else if(strcmp(str,"SavePoint")==0){
@@ -5683,7 +5687,7 @@ int buildin_strmobinfo(struct script_state *st)
 			char *buf;
 		buf = (char*)aMalloc(24*sizeof(char));
 			strcpy(buf,mob_db[class_].name);
-		push_str(st->stack,C_STR,buf);
+			push_str(st->stack,C_STR,buf);
 			break;
 		}
 	case 2:
@@ -5691,7 +5695,7 @@ int buildin_strmobinfo(struct script_state *st)
 			char *buf;
 		buf=(char*)aMalloc(24*sizeof(char));
 			strcpy(buf,mob_db[class_].jname);
-		push_str(st->stack,C_STR,buf);
+			push_str(st->stack,C_STR,buf);
 			break;
 		}
 	case 3:
@@ -6312,7 +6316,7 @@ int buildin_jump_zero(struct script_state *st) {
 	if(!sel) {
 		int pos;
 		if( st->stack->stack_data[st->start+3].type!=C_POS ){
-			printf("script: jump_zero: not label !\n");
+			ShowMessage("script: jump_zero: not label !\n");
 			st->state=END;
 			return 0;
 		}
@@ -6320,9 +6324,9 @@ int buildin_jump_zero(struct script_state *st) {
 		pos=conv_num(st,& (st->stack->stack_data[st->start+3]));
 		st->pos=pos;
 		st->state=GOTO;
-		// printf("script: jump_zero: jumpto : %d\n",pos);
+		// ShowMessage("script: jump_zero: jumpto : %d\n",pos);
 	} else {
-		// printf("script: jump_zero: fail\n");
+		// ShowMessage("script: jump_zero: fail\n");
 	}
 	return 0;
 }
@@ -6342,14 +6346,14 @@ int buildin_select(struct script_state *st)
 			conv_str(st,& (st->stack->stack_data[i]));
 			len+=strlen(st->stack->stack_data[i].u.str)+1;
 		}
-		buf=(char *)aCalloc(len,sizeof(char));
+		buf=(char *)aMalloc((len+1)*sizeof(char));
 		buf[0]=0;
 		for(i=st->start+2,len=0;i<st->end;i++){
 			strcat(buf,st->stack->stack_data[i].u.str);
 			strcat(buf,":");
 		}
 		clif_scriptmenu(script_rid2sd(st),st->oid,buf);
-		free(buf);
+		aFree(buf);
 	} else if(sd->npc_menu==0xff){	// cansel
 		sd->state.menu_or_input=0;
 		st->state=END;
@@ -6606,7 +6610,7 @@ int buildin_getsavepoint(struct script_state *st)
         y=sd->status.save_point.y;
         switch(type){
             case 0:
-		push_str(st->stack,C_STR,mapname);
+                push_str(st->stack,C_STR,mapname);
                 break;
             case 1:
                 push_val(st->stack,C_INT,x);
@@ -6865,7 +6869,7 @@ int buildin_isequipped(struct script_state *st)
 	
 	for (i=0; id!=0; i++) {
 		int flag = 0;
-
+	
 		if(st->end > st->start+i+2)
 			id = conv_num(st,&(st->stack->stack_data[st->start+i+2]));
 		else 

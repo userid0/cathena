@@ -7,6 +7,7 @@
 #include "malloc.h"
 #include "timer.h"
 
+extern unsigned long ticks;
 extern time_t tick_;
 extern time_t stall_time_;
 

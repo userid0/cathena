@@ -260,23 +260,26 @@ int mapif_load_pet(int fd, int account_id, int char_id, int pet_id){
 	return 0;
 }
 
-int mapif_save_pet(int fd, int account_id, struct s_pet *data) {
+int mapif_save_pet(int fd, int account_id, unsigned char* buf) {
 	//here process pet save request.
+	struct s_pet pet;
+
 	int len=RFIFOW(fd, 2);
 	if(sizeof(struct s_pet)!=len-8) {
 		ShowMessage("inter pet: data size error %d %d\n", sizeof(struct s_pet), len-8);
 	}
 
 	else{
-		if(data->hungry < 0)
-			data->hungry = 0;
-		else if(data->hungry > 100)
-			data->hungry = 100;
-		if(data->intimate < 0)
-			data->intimate = 0;
-		else if(data->intimate > 1000)
-			data->intimate = 1000;
-		inter_pet_tosql(data->pet_id,data);
+		s_pet_frombuffer(&pet, buf);
+		if(pet.hungry < 0)
+			pet.hungry = 0;
+		else if(pet.hungry > 100)
+			pet.hungry = 100;
+		if(pet.intimate < 0)
+			pet.intimate = 0;
+		else if(pet.intimate > 1000)
+			pet.intimate = 1000;
+		inter_pet_tosql(pet.pet_id, &pet);
 		mapif_save_pet_ack(fd, account_id, 0);
 	}
 
@@ -301,7 +304,7 @@ int mapif_parse_LoadPet(int fd){
 }
 
 int mapif_parse_SavePet(int fd){
-	mapif_save_pet(fd, RFIFOL(fd, 4), (struct s_pet *) RFIFOP(fd, 8));
+	mapif_save_pet(fd, RFIFOL(fd, 4), RFIFOP(fd, 8));
 	return 0;
 }
 

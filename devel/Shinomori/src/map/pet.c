@@ -1319,7 +1319,7 @@ static int pet_ai_sub_foreachclient(struct map_session_data *sd,va_list ap)
 	nullpo_retr(0, sd);
 	nullpo_retr(0, ap);
 
-	tick=va_arg(ap,unsigned long);
+	tick=(unsigned long)va_arg(ap,int);
 	if(sd->status.pet_id && sd->pd && sd->petDB)
 		pet_ai_sub_hard(sd->pd,tick);
 
@@ -1573,6 +1573,9 @@ int pet_skillattack_timer(int tid,unsigned long tick,int id,int data)
 			skill_castend_pos2(&pd->bl,md->bl.x,md->bl.y,pd->skilltype,pd->skillval+rand()%100,tick,0);
 			break;
 		default:
+if(pd->skilltype<0)
+printf("pet_skillattack_timer negative skill trap 1\n");
+
 			skill_castend_damage_id(&pd->bl,&md->bl,pd->skilltype,pd->skillval,tick,0);
 			break;
 		}

@@ -394,7 +394,7 @@ int mapif_account_reg_reply(int fd,int account_id)
 int check_ttl_wisdata_sub(void *key, void *data, va_list ap) {
 	unsigned long tick;
 	struct WisData *wd = (struct WisData *)data;
-	tick = va_arg(ap, unsigned long);
+	tick = (unsigned long)va_arg(ap, int);
 
 	if (DIFF_TICK(tick, wd->tick) > WISDATA_TTL && wis_delnum < WISDELLIST_MAX)
 		wis_dellist[wis_delnum++] = wd->id;

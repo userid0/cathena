@@ -14,8 +14,12 @@ struct dbn {
 	int color;
 	void *key;
 	void *data;
+	int deleted;	// 削除済みフラグ(db_foreach)
 };
-
+struct db_free {
+	struct dbn *z;
+	struct dbn **root;
+};
 struct dbt {
 	int (*cmp)(struct dbt*,void*,void*);
 	unsigned int (*hash)(struct dbt*,void*);
@@ -25,7 +29,13 @@ struct dbt {
 	struct dbn *ht[HASH_SIZE];
 	int item_count; // vf?
 	const char* alloc_file; // DB?t@C
-	int         alloc_line; // DB?s
+	int alloc_line; // DB?s
+	// db_foreach 内部でdb_erase される対策として、
+	// db_foreach が終わるまでロックすることにする
+	struct db_free *free_list;
+	int free_count;
+	int free_max;
+	int free_lock;
 };
 
 #define strdb_search(t,k)   db_search((t),(void*)(k))

@@ -186,6 +186,7 @@ struct item {
 	char attribute;
 	short card[4];
 };
+
 extern inline void _item_tobuffer(const struct item *p, unsigned char **buf)
 {
 	if( NULL==p || NULL==buf)	return;
@@ -324,10 +325,10 @@ struct s_pet {
 	int pet_id;
 	short class_;
 	short level;
-	short egg_id;//pet egg id
-	short equip;//pet equip name_id
-	short intimate;//pet friendly
-	short hungry;//pet hungry
+	short egg_id;		//pet egg id
+	short equip;		//pet equip name_id
+	short intimate;		//pet friendly
+	short hungry;		//pet hungry
 	char name[24];
 	char rename_flag;
 	char incuvate;
@@ -1236,7 +1237,6 @@ struct square {
 };
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-
 
 
 #endif	// _MMO_H_

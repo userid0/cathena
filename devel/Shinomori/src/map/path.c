@@ -181,7 +181,7 @@ static int can_place(struct map_data *m,int x,int y,int flag)
 
 	if(map_getcellp(m,x,y,CELL_CHKPASS))
 		return 1;
-	else if((flag&0x10000)&&map_getcellp(m,x,y,CELL_CHKGROUND))
+	else if((flag&0x10000) && map_getcellp(m,x,y,CELL_CHKGROUND))
 		return 1;
 	return 0;
 }
@@ -255,14 +255,14 @@ int path_blownpos(int m,int x0,int y0,int dx,int dy,int count)
  *------------------------------------------
  */
 
-int path_search_long(int m,int x0,int y0,int x1,int y1)
+int path_search_long(struct shootpath_data *spd,int m,int x0,int y0,int x1,int y1)
 {
 	int dx, dy;
 	int wx = 0, wy = 0;
 	int weight;
 	struct map_data *md;
 
-	if (!map[m].gat)
+	if (m < 0 || m > MAX_MAP_PER_SERVER || !map[m].gat)
 		return 0;
 	md = &map[m];
 
@@ -274,13 +274,25 @@ int path_search_long(int m,int x0,int y0,int x1,int y1)
 	}
 	dy = (y1 - y0);
 
+	if (spd) {
+		spd->rx = spd->ry = 0;
+		spd->len = 1;
+		spd->x[0] = x0;
+		spd->y[0] = y0;
+	}
+
 	if (map_getcellp(md,x1,y1,CELL_CHKWALL))
 		return 0;
 
-	if (dx > abs(dy))
+	if (dx > abs(dy)) {
 		weight = dx;
-	else
+		if (spd)
+			spd->ry=1;
+	} else {
 		weight = abs(y1 - y0);
+		if (spd)
+			spd->rx=1;
+	}
 
 	while (x0 != x1 || y0 != y1) {
 		if (map_getcellp(md,x0,y0,CELL_CHKWALL))
@@ -298,6 +310,11 @@ int path_search_long(int m,int x0,int y0,int x1,int y1)
 			wy += weight;
 			y0 --;
 		}
+		if (spd && spd->len<MAX_WALKPATH) {
+			spd->x[spd->len] = x0;
+			spd->y[spd->len] = y0;
+			spd->len++;
+		}
 	}
 
 	return 1;
@@ -312,7 +329,7 @@ int path_search_long2(int m,int x0,int y0,int x1,int y1)
 
 	struct map_data *md;
 
-	if (!map[m].gat)
+	if (m < 0 || m > MAX_MAP_PER_SERVER || !map[m].gat)
 		return 0;
 	md = &map[m];
 
@@ -391,7 +408,7 @@ int path_search_long3(int m,int x0,int y0,int x1,int y1)
 
 	struct map_data *md;
 
-	if (!map[m].gat)
+	if (m < 0 || m > MAX_MAP_PER_SERVER || !map[m].gat)
 		return 0;
 	md = &map[m];
 
@@ -502,7 +519,7 @@ int path_search(struct walkpath_data *wpd,int m,int x0,int y0,int x1,int y1,int 
 
 	nullpo_retr(0, wpd);
 
-	if(!map[m].gat)
+	if(m < 0 || m > MAX_MAP_PER_SERVER || !map[m].gat)
 		return -1;
 
 	md=&map[m];
