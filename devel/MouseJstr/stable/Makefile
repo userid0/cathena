@@ -6,7 +6,7 @@ CC = gcc -pipe
 # CC = /usr/local/bin/gcc -fbounds-checking -pipe -DBCHECK
 
 # GCLIB = -lgc
-GCLIB =
+GCLIB = -L/usr/local/lib -lpcre
 # GCLIB = -ldmalloc
 
 PACKETDEF = -DPACKETVER=6 -DNEW_006b -DSO_REUSEPORT
