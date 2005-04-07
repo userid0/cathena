@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+# Script to compile eAthena, for lazy people =D
+#  by Ancyker, v1.0 (First Release)
+#
+#  Requirements:
+#   Subversion (For update command)
+#   MySQL Libs (For compiling MySQL)
+#   Bash or CYGWIN
+#
+#  Tested Under:
+#   CYGWIN
+#
+#  Note: Not tested under Linux but should work
+#
+
+echo " "
+echo "        eAthena Build Manager by Ancyker        "
+echo " "
+
+if [ "$1" = "update" ]; then
+  echo "Updating eAthena..."
+  echo " + Getting latest SVN..."
+  svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ / > /dev/null
+  echo "Done."
+  exit
+fi
+
+if [ "$1" = "both" ]; then
+  if [ "$2" = "update" ]; then
+    echo "Updating eAthena..."
+    echo " + Getting latest SVN..."
+    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ / > /dev/null
+  fi
+  echo "Building eAthena..."
+  echo " + Cleaning..."
+ make clean > /dev/null
+  echo " + Building eAthena TXT..."
+ make > /dev/null
+  echo " + Cleaning..."
+ make clean > /dev/null
+  echo " + Building eAthena SQL..."
+ make sql > /dev/null
+  echo " + Cleaning..."
+ make clean > /dev/null
+  echo "Done."
+  exit
+fi
+if [ "$1" = "sql" ]; then
+  if [ "$2" = "update" ]; then
+    echo "Updating eAthena..."
+    echo " + Getting latest SVN..."
+    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ / > /dev/null
+  fi
+  echo "Building eAthena..."
+  echo " + Cleaning..."
+   make clean > /dev/null
+  echo " + Building eAthena SQL..."
+   make sql > /dev/null
+  echo " + Cleaning..."
+   make clean > /dev/null
+  echo "Done."
+  exit
+fi
+if [ "$1" = "sql" ]; then
+  if [ "$2" = "update" ]; then
+    echo "Updating eAthena..."
+    echo " + Getting latest SVN..."
+    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ / > /dev/null
+  fi
+  echo "Building eAthena..."
+  echo " + Cleaning..."
+   make clean > /dev/null
+  echo " + Building eAthena TXT..."
+   make > /dev/null
+  echo " + Cleaning..."
+   make clean > /dev/null
+  echo "Done."
+  exit
+fi
+
+echo "Useage: $0 < txt | sql | both | update > [ update ]"
+echo " - txt    -- Builds eAthena TXT"
+echo " - sql    -- Builds eAthena SQL"
+echo " - both   -- Builds eAthena TXT and SQL"
+echo " - update -- Updates to the latest SVN Version"
+echo " "
+echo " - If optional 'update' param is added to end, it will update before compiling."
+echo " "
+echo "Examples:"
+echo " $0 txt update  -- Will update and then build eAthena TXT"
+echo " $0 sql         -- Will build eAthena SQL"
+echo " $0 update      -- Will download latest source code from SVN server"
+echo " "
+echo " Note: Subversion MUST be installed (windows version is fine if using CYGWIN) or updating WILL fail."

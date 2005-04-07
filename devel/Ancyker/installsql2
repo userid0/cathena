@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# Downloads, configures, compiles, and installs MySQL for eAthena
+#
+# Really basic script, but it works. Written by Ancyker.
+#
+echo "This will download and install MySQL 4.1.10a for eAthena..."
+echo " Required files: mysql-4.1.10a.tar.gz"
+echo " "
+
+echo "Uncompressing..."
+gunzip mysql-4.1.10a.tar.gz > /dev/null
+tar -xf mysql-4.1.10a.tar > /dev/null
+
+echo "Preparing directories..."
+mv mysql-4.1.10a mysql > /dev/null
+cd mysql
+
+echo "Configuring MySQL..."
+./configure --without-server > /dev/null
+echo "Building MySQL..."
+make > /dev/null
+echo "Installing MySQL..."
+make install > /dev/null
+cd ..
+echo " "
+echo "Done!"
+echo " "
+echo "To compile eAthena SQL, use ./buildnow sql"
