@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Script to compile eAthena, for lazy people =D
-#  by Ancyker, v1.0 (First Release)
+#  by Ancyker, v1.01
 #
 #  Requirements:
 #   Subversion (For update command)
@@ -13,6 +13,10 @@
 #
 #  Note: Not tested under Linux but should work
 #
+#  Changelog:
+#   1.00 - Initial Release
+#   1.01 - Fixed SVN extracting to root (/) instead of current dir (./)
+#
 
 echo " "
 echo "        eAthena Build Manager by Ancyker        "
@@ -21,7 +25,7 @@ echo " "
 if [ "$1" = "update" ]; then
   echo "Updating eAthena..."
   echo " + Getting latest SVN..."
-  svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ / > /dev/null
+  svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ ./ > /dev/null
   echo "Done."
   exit
 fi
@@ -30,7 +34,7 @@ if [ "$1" = "both" ]; then
   if [ "$2" = "update" ]; then
     echo "Updating eAthena..."
     echo " + Getting latest SVN..."
-    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ / > /dev/null
+    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ ./ > /dev/null
   fi
   echo "Building eAthena..."
   echo " + Cleaning..."
@@ -50,7 +54,7 @@ if [ "$1" = "sql" ]; then
   if [ "$2" = "update" ]; then
     echo "Updating eAthena..."
     echo " + Getting latest SVN..."
-    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ / > /dev/null
+    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ ./ > /dev/null
   fi
   echo "Building eAthena..."
   echo " + Cleaning..."
@@ -66,7 +70,7 @@ if [ "$1" = "sql" ]; then
   if [ "$2" = "update" ]; then
     echo "Updating eAthena..."
     echo " + Getting latest SVN..."
-    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ / > /dev/null
+    svn checkout http://svn2.stormbirds.org:8080/svn/ea/branches/stable/ ./ > /dev/null
   fi
   echo "Building eAthena..."
   echo " + Cleaning..."
