@@ -1,2 +1,1 @@
-dead-trunk
-stable - current proposed release of eAthena
+stable - current proposed development release of eAthena
