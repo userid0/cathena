@@ -1,11 +1,13 @@
 my personal kingdom
 
-based on svn1388
+based on svn1522
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
 preparing the switch to my other class library
 and testing some new gimmicks
+///////////////////////////////////////////////////////////
+keep on updating with branch but do not copy any "enhancement"
 ///////////////////////////////////////////////////////////
 integrated the anti freeze system into the user count update messages
 (which are already send between chat,login and map)

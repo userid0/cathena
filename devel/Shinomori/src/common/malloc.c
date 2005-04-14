@@ -8,14 +8,14 @@
 #endif
 
 // 独自メモリマネージャを使用する場合、次のコメントを外してください。
-// #define USE_MEMMGR
+#define USE_MEMMGR
 
 #if !defined(DMALLOC) && !defined(GCOLLECT) && !defined(BCHECK) && !defined(USE_MEMMGR)
 
 void* aMalloc_( size_t size, const char *file, int line, const char *func )
 {
 	void *ret;
-	
+
 //	ShowMessage("%s:%d: in func %s: malloc %d\n",file,line,func,size);
 #ifdef MEMWATCH
 	ret=mwMalloc(size,file,line);
@@ -23,7 +23,7 @@ void* aMalloc_( size_t size, const char *file, int line, const char *func )
 	ret=malloc(size);
 #endif
 	if(ret==NULL){
-		ShowError("%s:%d: in func %s: malloc error out of memory!\n",file,line,func);
+		ShowFatalError("%s:%d: in func %s: malloc error out of memory!\n",file,line,func);
 		exit(1);
 	}
 	return ret;
@@ -31,7 +31,7 @@ void* aMalloc_( size_t size, const char *file, int line, const char *func )
 void* aCalloc_( size_t num, size_t size, const char *file, int line, const char *func )
 {
 	void *ret;
-	
+
 //	ShowMessage("%s:%d: in func %s: calloc %d %d\n",file,line,func,num,size);
 #ifdef MEMWATCH
 	ret=mwCalloc(num,size,file,line);
@@ -39,7 +39,7 @@ void* aCalloc_( size_t num, size_t size, const char *file, int line, const char 
 	ret=calloc(num,size);
 #endif
 	if(ret==NULL){
-		ShowError("%s:%d: in func %s: calloc error out of memory!\n",file,line,func);
+		ShowFatalError("%s:%d: in func %s: calloc error out of memory!\n",file,line,func);
 		exit(1);
 	}
 	return ret;
@@ -48,7 +48,7 @@ void* aCalloc_( size_t num, size_t size, const char *file, int line, const char 
 void* aRealloc_( void *p, size_t size, const char *file, int line, const char *func )
 {
 	void *ret;
-	
+
 //	ShowMessage("%s:%d: in func %s: realloc %p %d\n",file,line,func,p,size);
 #ifdef MEMWATCH
 	ret=mwRealloc(p,size,file,line);
@@ -56,14 +56,14 @@ void* aRealloc_( void *p, size_t size, const char *file, int line, const char *f
 	ret=realloc(p,size);
 #endif
 	if(ret==NULL){
-		ShowError("%s:%d: in func %s: realloc error out of memory!\n",file,line,func);
+		ShowFatalError("%s:%d: in func %s: realloc error out of memory!\n",file,line,func);
 		exit(1);
 
 	}
 	return ret;
 }
 
-char* aStrdup_( const void *p, const char *file, int line, const char *func )
+char* aStrdup_(const char *p, const char *file, int line, const char *func )
 {
 	char *ret;
 	
@@ -71,10 +71,10 @@ char* aStrdup_( const void *p, const char *file, int line, const char *func )
 #ifdef MEMWATCH
 	ret=mwStrdup(p,file,line);
 #else
-	ret= aStrdup((char *) p);
+	ret= aStrdup( p);
 #endif
 	if(ret==NULL){
-		ShowMessage("%s:%d: in func %s: strdup error out of memory!\n",file,line,func);
+		ShowFatalError("%s:%d: in func %s: strdup error out of memory!\n",file,line,func);
 		exit(1);
 
 	}
@@ -111,8 +111,8 @@ char * _bstrdup(const char *chr) {
 		int len = strlen(chr)+1;
 		char *ret = (char*)aMalloc(len*sizeof(char));
 		memcpy(ret, chr, len);
-		return ret;
-	}
+	return ret;
+}
 	return NULL;
 }
 
@@ -161,11 +161,12 @@ struct block {
 	char   data[BLOCK_DATA_SIZE];
 };
 
-struct unit_head {
-	struct block* block;
-	int    size;
-	const  char* file;
-	int    line;
+struct unit_head 
+{
+	struct block*	block;
+	size_t			size;
+	const  char*	file;
+	int				line;
 };
 
 static struct block* block_first  = NULL;
@@ -189,7 +190,8 @@ static struct block* block_malloc(void);
 static void   block_free(struct block* p);
 static void memmgr_info(void);
 
-void* aMalloc_(size_t size, const char *file, int line, const char *func ) {
+void* aMalloc_(size_t size, const char *file, int line, const char *func )
+{
 	int i;
 	struct block *block;
 	int size_hash = (size+BLOCK_ALIGNMENT-1) / BLOCK_ALIGNMENT;
@@ -224,7 +226,7 @@ void* aMalloc_(size_t size, const char *file, int line, const char *func ) {
 			}
 			return (char *)p + sizeof(struct unit_head_large);
 		} else {
-			ShowMessage("MEMMGR::memmgr_alloc failed.\n");
+			ShowFatalError("MEMMGR::memmgr_alloc failed.\n");
 			exit(1);
 		}
 	}
@@ -283,7 +285,7 @@ void* aMalloc_(size_t size, const char *file, int line, const char *func ) {
 		}
 	}
 	// ここに来てはいけない。
-	ShowMessage("MEMMGR::memmgr_malloc() serious error.\n");
+	ShowFatalError("MEMMGR::memmgr_malloc() serious error.\n");
 	memmgr_info();
 	exit(1);
 	return NULL;
@@ -316,15 +318,16 @@ void* aRealloc_(void *memblock, size_t size, const char *file, int line, const c
 	}
 }
 
-void* aStrdup_(const void* string, const char *file, int line, const char *func ) {
-	if(string == NULL) {
-		return NULL;
-	} else {
-		int  len = strlen(string);
-		char *p  = (char *)aMalloc_(len + 1,file,line,func);
-		memcpy(p,string,len+1);
-		return p;
+char* aStrdup_(const char *p, const char *file, int line, const char *func )
+{
+	if(p != NULL)
+	{
+		size_t len = 1+strlen(p);
+		char *string  = (char *)aMalloc_(len,file,line,func);
+		memcpy(string,p,len);
+		return string;
 	}
+	return NULL;
 }
 
 void aFree_(void *ptr, const char *file, int line, const char *func ) {
@@ -348,7 +351,7 @@ void aFree_(void *ptr, const char *file, int line, const char *func ) {
 		/* ユニット解放 */
 		struct block *block = head->block;
 		if(head->block == NULL) {
-			ShowMessage("memmgr: args of aFree is freed pointer %s line %d\n",file,line);
+			ShowError("memmgr: args of aFree is freed pointer %s line %d\n",file,line);
 		} else {
 			head->block = NULL;
 			if(--block->unit_used == 0) {
@@ -398,7 +401,7 @@ void aFree_(void *ptr, const char *file, int line, const char *func ) {
 static void memmgr_info(void) {
 	int i;
 	struct block *p;
-	ShowMessage("** Memory Maneger Information **\n");
+	ShowInfo("** Memory Manager Information **\n");
 	if(block_first == NULL) {
 		ShowMessage("Uninitialized.\n");
 		return;
@@ -450,7 +453,7 @@ static struct block* block_malloc(void) {
 		int  block_no;
 		struct block* p = (struct block *)calloc(sizeof(struct block),BLOCK_ALLOC);
 		if(p == NULL) {
-			ShowMessage("MEMMGR::block_alloc failed.\n");
+			ShowFatalError("MEMMGR::block_alloc failed.\n");
 			exit(1);
 		}
 		if(block_first == NULL) {
@@ -503,20 +506,23 @@ static FILE* memmgr_log(void) {
 
 static void memmer_exit(void) {
 	FILE *fp = NULL;
-	int i;
-	int count = 0;
 	struct block *block = block_first;
-	struct unit_head_large *large = unit_head_large_first;
+	struct unit_head_large *large = unit_head_large_first, *large2;
+	int i, count = 0;
+	char *ptr;
+	
 	while(block) {
 		if(block->unit_size) {
 			if(!fp) { fp = memmgr_log(); }
-			for(i=0;i<block->unit_count;i++) {
+			for (i = 0; i < block->unit_count; i++) {
 				struct unit_head *head = (struct unit_head*)(&block->data[block->unit_size * i]);
 				if(head->block != NULL) {
-					fprintf(
-						fp,"%04d : %s line %d size %d\n",++count,
-						head->file,head->line,head->size
+					fprintf (
+						fp, "%04d : %s line %d size %d\n", ++count, 
+						head->file, head->line, head->size
 					);
+					ptr = (char *)head + sizeof(struct unit_head);
+					aFree_ (ptr, ALC_MARK);
 				}
 			}
 		}
@@ -524,26 +530,44 @@ static void memmer_exit(void) {
 	}
 	while(large) {
 		if(!fp) { fp = memmgr_log(); }
-		fprintf(
-			fp,"%04d : %s line %d size %d\n",++count,
-			large->unit_head.file,
-			large->unit_head.line,large->unit_head.size
+		large2 = large->next;
+		fprintf (
+			fp, "%04d : %s line %d size %d\n", ++count,
+			large->unit_head.file, large->unit_head.line, large->unit_head.size
 		);
-		large = large->next;
+		if (large->prev) {
+			large->prev->next = large->next;
+		} else {
+			unit_head_large_first  = large->next;
+		}
+		if (large->next) {
+			large->next->prev = large->prev;
+		}
+		free(large);
+		large = large2;
 	}
 	if(!fp) {
-		ShowMessage("memmgr: no memory leaks found.\n");
+		ShowInfo("memmgr: no memory leaks found.\n");
 	} else {
-		ShowMessage("memmgr: memory leaks found.\n");
+		ShowWarning("Memory manager: Memory leaks found and fixed.\n");
 		fclose(fp);
 	}
 }
-
-int do_init_memmgr(const char* file) {
-	sprintf(memmer_logfile,"%s.log",file);
-	atexit(memmer_exit);
-	ShowMessage("memmgr: initialised: %s\n",memmer_logfile);
-	return 0;
-}
-
 #endif
+
+
+
+int memmgr_init(const char* file)
+{
+#ifdef USE_MEMMGR
+  sprintf(memmer_logfile,"%s.log",file);
+  ShowInfo("memmgr: initialised: %s\n",memmer_logfile);
+#endif
+  return 0;
+}
+void memmgr_final()
+{
+#ifdef USE_MEMMGR
+	memmer_exit();
+#endif
+}

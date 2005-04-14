@@ -38,6 +38,7 @@
 #define MAX_GUILDSKILL	15 // increased max guild skills because of new skills [Sara-chan]
 #define MAX_GUILDCASTLE 24	// increased to include novice castles [Valaris]
 #define MAX_GUILDLEVEL 50
+#define MAX_FRIENDLIST 20
 
 #define MIN_HAIR_STYLE battle_config.min_hair_style
 #define MAX_HAIR_STYLE battle_config.max_hair_style
@@ -66,7 +67,8 @@
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
-enum {
+enum
+{
 	GBI_EXP			=1,		// ギルドのEXP
 	GBI_GUILDLV		=2,		// ギルドのLv
 	GBI_SKILLPOINT	=3,		// ギルドのスキルポイント
@@ -77,7 +79,8 @@ enum {
 
 };
 
-enum {
+enum
+{
 	GD_SKILLBASE=10000,
 	GD_APPROVAL=10000,
 	GD_KAFRACONTACT=10001,
@@ -96,6 +99,48 @@ enum {
 	GD_EMERGENCYCALL=10013,
 	GD_DEVELOPMENT=10014,
 };
+
+
+/////////////////////////////////////////////////////////////////////////////
+// char server definition for incomming map server connections
+
+// currently only lanip/lanport are used for storing the ip/port 
+// which are sent in connect packet
+// maybe it is not necessary to store extra lan/wan ip
+// since there is already the client ip in session_data
+
+struct mmo_map_server
+{
+	int fd;
+	unsigned long	lanip;
+	unsigned short	lanport;
+	unsigned long	lanmask;
+	unsigned long	wanip;
+	unsigned short	wanport;
+
+	int users;
+	char map[MAX_MAP_PER_SERVER][16];
+};
+
+/////////////////////////////////////////////////////////////////////////////
+// login server definition for incomming char server connections
+struct mmo_char_server {
+	int fd;
+	unsigned long	lanip;
+	unsigned short	lanport;
+	unsigned long	lanmask;
+	unsigned long	wanip;
+	unsigned short	wanport;
+
+	char name[20];
+	size_t users;
+	int maintenance;
+	int new_;
+};
+
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 // simplified buffer functions with moving buffer pointer 
@@ -176,7 +221,8 @@ struct map_session_data;
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-struct item {
+struct item
+{
 	int id;
 	short nameid;
 	short amount;
@@ -229,7 +275,8 @@ extern inline void item_frombuffer(struct item *p, const unsigned char *buf)
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-struct point{
+struct point
+{
 	char map[24];
 	short x;
 	short y;
@@ -260,7 +307,8 @@ extern inline void point_frombuffer(struct point *p, const unsigned char *buf)
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-struct skill {
+struct skill
+{
 	unsigned short id;
 	unsigned short lv;
 	unsigned short flag;
@@ -291,7 +339,8 @@ extern inline void skill_frombuffer(struct skill *p, const unsigned char *buf)
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-struct global_reg {
+struct global_reg
+{
 	char str[32];
 	int value;
 };
@@ -319,7 +368,8 @@ extern inline void global_reg_frombuffer(struct global_reg *p, const unsigned ch
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-struct s_pet {
+struct s_pet
+{
 	int account_id;
 	int char_id;
 	int pet_id;
@@ -376,7 +426,8 @@ extern inline void s_pet_frombuffer(struct s_pet *p, const unsigned char *buf)
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
-struct mmo_charstatus {
+struct mmo_charstatus
+{
 	int char_id;
 	int account_id;
 	int partner_id;
@@ -404,6 +455,7 @@ struct mmo_charstatus {
 	int party_id;
 	int guild_id;
 	int pet_id;
+	int fame;
 
 	short weapon;
 	short shield;
@@ -439,8 +491,8 @@ struct mmo_charstatus {
 	struct global_reg account_reg2[ACCOUNT_REG2_NUM];
 
 	// Friends list vars
-	int friend_id[20];
-	char friend_name[20][24];
+	int friend_id[MAX_FRIENDLIST];
+	char friend_name[MAX_FRIENDLIST][24];
 };
 extern inline void _mmo_charstatus_tobuffer(const struct mmo_charstatus *p, unsigned char **buf)
 {
@@ -476,6 +528,8 @@ extern inline void _mmo_charstatus_tobuffer(const struct mmo_charstatus *p, unsi
 	_L_tobuffer( (unsigned long*) (&p->party_id),		buf);
 	_L_tobuffer( (unsigned long*) (&p->guild_id),		buf);
 	_L_tobuffer( (unsigned long*) (&p->pet_id),			buf);
+
+	_L_tobuffer( (unsigned long*) (&p->fame),			buf);
 
 	_W_tobuffer( (unsigned short*)(&p->option),			buf);
 	_W_tobuffer( (unsigned short*)(&p->karma),			buf);
@@ -535,9 +589,9 @@ extern inline void _mmo_charstatus_tobuffer(const struct mmo_charstatus *p, unsi
 		_global_reg_tobuffer(      p->account_reg2+i,	buf);
 
 	// Friends list vars
-	for(i=0; i<20; i++)
+	for(i=0; i<MAX_FRIENDLIST; i++)
 		_L_tobuffer((unsigned long*) (&p->friend_id[i]),	buf);
-	for(i=0; i<20; i++)
+	for(i=0; i<MAX_FRIENDLIST; i++)
 		_S_tobuffer(               p->friend_name[i],	buf, 24);
 }
 extern inline void mmo_charstatus_tobuffer(const struct mmo_charstatus *p, unsigned char *buf)
@@ -569,18 +623,20 @@ extern inline void _mmo_charstatus_frombuffer(struct mmo_charstatus *p, const un
 	_L_frombuffer( (unsigned long*) (&p->max_sp),		buf);
 
 	_W_frombuffer( (unsigned short*)(&p->option),		buf);
-	_W_frombuffer( (unsigned short*)(&p->karma),			buf);
+	_W_frombuffer( (unsigned short*)(&p->karma),		buf);
 	_W_frombuffer( (unsigned short*)(&p->manner),		buf);
 	_W_frombuffer( (unsigned short*)(&p->hair),			buf);
 	_W_frombuffer( (unsigned short*)(&p->hair_color),	buf);
-	_W_frombuffer( (unsigned short*)(&p->clothes_color),	buf);
+	_W_frombuffer( (unsigned short*)(&p->clothes_color),buf);
 
 	_L_frombuffer( (unsigned long*) (&p->party_id),		buf);
 	_L_frombuffer( (unsigned long*) (&p->guild_id),		buf);
 	_L_frombuffer( (unsigned long*) (&p->pet_id),		buf);
 
+	_L_frombuffer( (unsigned long*) (&p->fame),			buf);
+
 	_W_frombuffer( (unsigned short*)(&p->option),		buf);
-	_W_frombuffer( (unsigned short*)(&p->karma),			buf);
+	_W_frombuffer( (unsigned short*)(&p->karma),		buf);
 	_W_frombuffer( (unsigned short*)(&p->manner),		buf);
 	_W_frombuffer( (unsigned short*)(&p->hair),			buf);
 
@@ -637,9 +693,9 @@ extern inline void _mmo_charstatus_frombuffer(struct mmo_charstatus *p, const un
 		_global_reg_frombuffer(      p->account_reg2+i,	buf);
 
 	// Friends list vars
-	for(i=0; i<20; i++)
+	for(i=0; i<MAX_FRIENDLIST; i++)
 		_L_frombuffer((unsigned long*) (&p->friend_id[i]),buf);
-	for(i=0; i<20; i++)
+	for(i=0; i<MAX_FRIENDLIST; i++)
 		_S_frombuffer(               p->friend_name[i],	buf, 24);
 }
 extern inline void mmo_charstatus_frombuffer(struct mmo_charstatus *p, const unsigned char *buf)

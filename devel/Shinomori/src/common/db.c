@@ -1,6 +1,7 @@
 // $Id: db.c,v 1.2 2004/09/23 14:43:06 MouseJstr Exp $
 
 
+
 #include "db.h"
 #include "mmo.h"
 #include "utils.h"
@@ -10,7 +11,7 @@
 #include "memwatch.h"
 #endif
 
-//#define MALLOC_DBN
+#define MALLOC_DBN
 
 // Backup cleaning routine in case the core doesn't do so properly,
 // only enabled if malloc_dbn is not defined.
@@ -71,7 +72,7 @@ void exit_dbn(void)
 		p = p2;
 		i++;
 	}
-	//printf ("freed %d stray dbn\n", i);
+	//ShowInfo ("freed %d stray dbn\n", i);
 	return;
 }
 #endif
@@ -441,7 +442,7 @@ struct dbn* db_insert(struct dbt *table,void* key,void* data)
 					}
 				}
 				if(i == table->free_count || table->free_count <= 0) {
-					ShowMessage("db_insert: cannnot find deleted db node.\n");
+					ShowError("db_insert: cannnot find deleted db node.\n");
 				} else {
 					table->free_count--;
 					if(table->cmp == strdb_cmp) {
@@ -462,12 +463,12 @@ struct dbn* db_insert(struct dbt *table,void* key,void* data)
 		}
 	}
 #ifdef MALLOC_DBN
-	p=malloc_dbn();
+	p = (struct dbn*)malloc_dbn();
 #else
 	CREATE(p, struct dbn, 1);
 #endif
 	if(p==NULL){
-		ShowMessage("out of memory : db_insert\n");
+		ShowError("out of memory : db_insert\n");
 		return NULL;
 	}
 	p->parent= NULL;
@@ -529,7 +530,7 @@ void* db_erase(struct dbt *table,void* key)
 	if(table->free_lock) {
 		if(table->free_count == table->free_max) {
 			table->free_max += 32;
-			table->free_list = (struct db_free*)realloc(table->free_list,sizeof(struct db_free) * table->free_max);
+			table->free_list = (struct db_free*)aRealloc(table->free_list,sizeof(struct db_free) * table->free_max);
 		}
 		table->free_list[table->free_count].z    = p;
 		table->free_list[table->free_count].root = &table->ht[hash];
@@ -602,8 +603,10 @@ void db_foreach(struct dbt *table,int (*func)(void*,void*,va_list),...)
 	}
 	db_free_unlock(table);
 	if(count) {
-		ShowMessage("db_foreach : data lost %d item(s) allocated from %s line %d\n",
-			count,table->alloc_file,table->alloc_line);
+		ShowError(
+			"db_foreach : data lost %d item(s) allocated from %s line %d\n",
+			count,table->alloc_file,table->alloc_line
+		);
 	}
 	va_end(ap);
 }

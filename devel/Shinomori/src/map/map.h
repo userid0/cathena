@@ -17,7 +17,7 @@
 #define DAMAGELOG_SIZE 30
 #define LOOTITEM_SIZE 10
 #define MAX_SKILL_LEVEL 100
-#define MAX_STATUSCHANGE 210
+#define MAX_STATUSCHANGE 200
 #define MAX_SKILLUNITGROUP 32
 #define MAX_MOBSKILLUNITGROUP 8
 #define MAX_SKILLUNITGROUPTICKSET 32
@@ -38,7 +38,7 @@
 
 #define OPTION_HIDE 0x40
 
-enum { BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_CHAT, BL_SKILL , BL_PET };
+enum { BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_CHAT, BL_SKILL, BL_PET };
 enum { WARP, SHOP, SCRIPT, MONS };
 
 struct block_list {
@@ -239,9 +239,9 @@ struct map_session_data {
 	int attacktarget;
 	short attacktarget_lv;
 	unsigned int attackabletime;
-	
-	int followtimer; // [MouseJstr]
-	int followtarget;
+
+        int followtimer; // [MouseJstr]
+        int followtarget;
 
 	time_t emotionlasttime; // to limit flood with emotion packets
 
@@ -281,9 +281,6 @@ struct map_session_data {
 	unsigned long inchealsptick;
 	unsigned long inchealspirithptick;
 	unsigned long inchealspiritsptick;
-// -- moonsoul (new tick for berserk self-damage)
-//	unsigned long berserkdamagetick;
-	int fame;
 
 	short view_class;
 	short weapontype1,weapontype2;
@@ -431,6 +428,7 @@ struct map_session_data {
 
 	int die_counter;
 	short doridori_counter;
+	char potion_success_counter;
 
 	int reg_num;
 	struct script_reg *reg;
@@ -824,15 +822,17 @@ struct map_data {
 		unsigned noskill : 1;
 		unsigned nowarp : 1;
 		unsigned nowarpto : 1;
-		unsigned nopvp : 1; // [Valaris]
-		unsigned noicewall : 1; // [Valaris]
-		unsigned snow : 1; // [Valaris]
-		unsigned fog : 1; // [Valaris]
-		unsigned sakura : 1; // [Valaris]
-		unsigned leaves : 1; // [Valaris]
-		unsigned rain : 1; // [Valaris]
-		unsigned indoors : 1; // celest
-		unsigned nogo : 1; // [Valaris]
+		unsigned nopvp : 1;
+		unsigned noicewall : 1;
+		unsigned snow : 1;
+		unsigned clouds : 1;
+		unsigned fog : 1;
+		unsigned fireworks : 1;
+		unsigned sakura : 1;
+		unsigned leaves : 1;
+		unsigned rain : 1;
+		unsigned indoors : 1;
+		unsigned nogo : 1;
 	} flag;
 	struct point save;
 	struct npc_data *npc[MAX_NPC_PER_MAP];

@@ -10,6 +10,7 @@
 #include "mmo.h"
 #include "malloc.h"
 #include "core.h"
+#include "db.h"
 #include "socket.h"
 #include "timer.h"
 #include "version.h"
@@ -21,25 +22,78 @@
 #endif
 
 
-
-
-
-
+///////////////////////////////////////////////////////////////////////////////
+// global data
 int runflag = 1;
-/*======================================
- *	CORE : Set function
- *--------------------------------------
- */
 
-static void (*term_func)(void)=NULL;
 
-void set_termfunc(void (*termfunc)(void))
+///////////////////////////////////////////////////////////////////////////////
+// pid stuff
+char pid_file[256];
+
+void pid_delete(void)
 {
-	term_func = termfunc;
+	unlink(pid_file);
 }
 
+void pid_create(const char* file)
+{
+	FILE *fp;
+	int len = strlen(file);
+	memcpy(pid_file,file,len+1);
+	if(len > 4 && pid_file[len - 4] == '.') {
+		pid_file[len - 4] = 0;
+	}
+	strcat(pid_file,".pid");
+	fp = savefopen(pid_file,"w");
+	if(fp) {
+#ifdef WIN32
+		fprintf(fp,"%ld",GetCurrentProcessId());
+#else
+		fprintf(fp,"%ld",getpid());
+#endif
+		fclose(fp);
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// uptime logging
+#define LOG_UPTIME 0
+void log_uptime(void)
+{
+#if LOG_UPTIME
+	time_t curtime;
+	char curtime2[24];
+	FILE *fp;
+	long seconds = 0, day = 24*60*60, hour = 60*60,
+		minute = 60, days = 0, hours = 0, minutes = 0;
+
+	fp = savefopen("log/uptime.log","a");
+	if (fp)
+	{
+		time(&curtime);
+		strftime(curtime2, 24, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+
+		seconds = (gettick()-ticks)/CLOCKS_PER_SEC;
+		days = seconds/day;
+		seconds -= (seconds/day>0)?(seconds/day)*day:0;
+		hours = seconds/hour;
+		seconds -= (seconds/hour>0)?(seconds/hour)*hour:0;
+		minutes = seconds/minute;
+		seconds -= (seconds/minute>0)?(seconds/minute)*minute:0;
+
+		fprintf(fp, "%s: %s uptime - %ld days, %ld hours, %ld minutes, %ld seconds.\n",
+			curtime2, server_type, days, hours, minutes, seconds);
+		fclose(fp);
+	}
+	return;
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// signal and dump
+
 // Added by Gabuzomeu
-//
 // This is an implementation of signal() using sigaction() for portability.
 // (sigaction() is POSIX; signal() is not.)  Taken from Stevens' _Advanced
 // Programming in the UNIX Environment_.
@@ -59,7 +113,7 @@ sigfunc *compat_signal(int signo, sigfunc *func)
   sigemptyset(&sact.sa_mask);
   sact.sa_flags = 0;
 #ifdef SA_INTERRUPT
-  sact.sa_flags |= SA_INTERRUPT;	/* SunOS */
+  sact.sa_flags |= SA_INTERRUPT;	// SunOS
 #endif
 
   if (sigaction(signo, &sact, &oact) < 0)
@@ -76,28 +130,19 @@ sigfunc *compat_signal(int signo, sigfunc *func)
 
 static void sig_proc(int sn)
 {
+	//////////////////////////////////
+	// force shut down
 	static int is_called = 0;
+	if(++is_called > 3)
+		exit(0);
 
-	if(is_called++)
-		return;
-
-	switch(sn){
+	switch(sn)
+	{
 	case SIGINT:
 	case SIGTERM:
 		//////////////////////////////////
-		// shut down main loop if possible
-		runflag=0;
-		///////////////////////////////////////////////////////////////////////////
-		// user termination
-		if(term_func) term_func();
-		///////////////////////////////////////////////////////////////////////////
-		// core module termination
-		socket_final();
-		//timer_final();
-		///////////////////////////////////////////////////////////////////////////
-		// force exit
-		exit(0);
-		///////////////////////////////////////////////////////////////////////////
+		// shut down main loop
+                runflag = 0;
 	}
 }
 
@@ -105,37 +150,36 @@ static void sig_proc(int sn)
  *	Dumps the stack using glibc's backtrace
  *-----------------------------------------
  */
-	#ifdef DUMPSTACK
+#ifdef DUMPSTACK
 void sig_dump(int sn)
-{
-
-		FILE *fp;
+{	
+	FILE *fp;
 		void* array[20];
-
 		char **stack;
-		size_t size;		
-		int no = 0;
-		char tmp[256];
+		size_t size;
+	int no = 0;
+	char tmp[256];
 
-		// search for a usable filename
-		do {
-			sprintf(tmp,"log/stackdump_%04d.txt", ++no);
+	// search for a usable filename
+	do {
+		sprintf(tmp,"log/stackdump_%04d.txt", ++no);
 	} while((fp = savefopen(tmp,"r")) && (fclose(fp), no < 9999));
-		// dump the trace into the file
-	if ((fp = savefopen (tmp,"w")) != NULL) {
 
-			fprintf(fp,"Exception: %s\n", strsignal(sn));
-			fprintf(fp,"Stack trace:\n");
-			size = backtrace (array, 20);
-			stack = backtrace_symbols (array, size);
-			for (no = 0; no < size; no++) {
-				fprintf(fp, "%s\n", stack[no]);
-			}
-			fprintf(fp,"End of stack trace\n");
-
-			fclose(fp);
-			aFree(stack);
+	// dump the trace into the file
+	if ((fp = savefopen (tmp,"w")) != NULL)
+	{
+		fprintf(fp, "Exception: %s \n", strsignal(sn));
+		fprintf(fp, "Stack trace:\n");
+		size = backtrace (array, 20);
+		stack = backtrace_symbols (array, size);
+		for (no = 0; no < size; no++)
+		{
+			fprintf(fp, "%s\n", stack[no]);
 		}
+		fprintf(fp,"End of stack trace\n");
+		fclose(fp);
+		aFree(stack);
+	}
 	//cygwin_stackdump ();
 	// When pass the signal to the system's default handler
 	compat_signal(sn, SIG_DFL);
@@ -143,28 +187,32 @@ void sig_dump(int sn)
 }
 #endif
 
-int get_svn_revision(char *svnentry) { // Warning: minor syntax checking
+///////////////////////////////////////////////////////////////////////////////
+// revision
+int get_svn_revision(char *svnentry)
+{	// Warning: minor syntax checking
 	char line[1024];
 	int rev = 0;
 	FILE *fp;
-
-	if( svnentry && ( NULL!=(fp = savefopen(svnentry, "r")) ) ) {
-		while (fgets(line,1023,fp)) {
-			if (strstr(line,"revision=")) 
+	if( svnentry && ( NULL!=(fp = savefopen(svnentry, "r")) ) )
+	{
+		while (fgets(line,1023,fp))
+		{
+			if (strstr(line,"revision="))
 				break;
 		}
 		fclose(fp);
-		if (sscanf(line," %*[^\"]\"%d%*[^\n]",&rev)==1) 
-		return rev;
+		if (sscanf(line," %*[^\"]\"%d%*[^\n]",&rev)==1)
+			return rev;
 	}
-		return 0;
-	}
+	return 0;
+}
 
+///////////////////////////////////////////////////////////////////////////////
 /*======================================
  *	CORE : Display title
  *--------------------------------------
  */
-
 static void display_title(void)
 {
 	int revision;
@@ -186,73 +234,17 @@ static void display_title(void)
 	ShowMessage(CL_XXBL"          ("CL_BT_YELLOW"  Advanced Fusion Maps (c) 2003-2004 The Fusion Project  "CL_XXBL")"CL_CLL""CL_NORM"\n"); // yellow writing (33)
 	ShowMessage(CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=)"CL_CLL""CL_NORM"\n\n"); // reset color
 	
-	if ((revision = get_svn_revision(".svn\\entries"))>0) {
+	if ((revision = get_svn_revision(".svn\\entries"))>0)
+	{
 		ShowInfo("SVN Revision: '"CL_WHITE"%d"CL_RESET"'.\n",revision);
 	}
 }
 
+///////////////////////////////////////////////////////////////////////////////
 /*======================================
  *	CORE : MAINROUTINE
  *--------------------------------------
  */
-char pid_file[256];
-
-void pid_delete(void) {
-	unlink(pid_file);
-}
-
-void pid_create(const char* file) {
-	FILE *fp;
-	int len = strlen(file);
-	memcpy(pid_file,file,len+1);
-	if(len > 4 && pid_file[len - 4] == '.') {
-		pid_file[len - 4] = 0;
-	}
-	strcat(pid_file,".pid");
-	fp = savefopen(pid_file,"w");
-	if(fp) {
-#ifdef WIN32
-		fprintf(fp,"%ld",GetCurrentProcessId());
-#else
-		fprintf(fp,"%ld",getpid());
-#endif
-		fclose(fp);
-		atexit(pid_delete);
-	}
-}
-
-#define LOG_UPTIME 0
-void log_uptime(void)
-{
-#if LOG_UPTIME
-	time_t curtime;
-	char curtime2[24];
-	FILE *fp;
-	long seconds = 0, day = 24*60*60, hour = 60*60,
-		minute = 60, days = 0, hours = 0, minutes = 0;
-
-	fp = savefopen("log/uptime.log","a");
-	if (fp) {
-		time(&curtime);
-		strftime(curtime2, 24, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-
-		seconds = (gettick()-ticks)/CLOCKS_PER_SEC;
-		days = seconds/day;
-		seconds -= (seconds/day>0)?(seconds/day)*day:0;
-		hours = seconds/hour;
-		seconds -= (seconds/hour>0)?(seconds/hour)*hour:0;
-		minutes = seconds/minute;
-		seconds -= (seconds/minute>0)?(seconds/minute)*minute:0;
-
-		fprintf(fp, "%s: %s uptime - %ld days, %ld hours, %ld minutes, %ld seconds.\n",
-			curtime2, server_type, days, hours, minutes, seconds);
-		fclose(fp);
-	}
-
-	return;
-#endif
-}
-
 int main(int argc,char **argv)
 {
 	int next;
@@ -269,7 +261,7 @@ int main(int argc,char **argv)
 	compat_signal(SIGSEGV, sig_dump);
 	compat_signal(SIGFPE, sig_dump);
 	compat_signal(SIGILL, sig_dump);
-#ifndef WIN32
+ #ifndef WIN32
 		compat_signal(SIGBUS, sig_dump);
 		compat_signal(SIGTRAP, SIG_DFL);
 	#endif
@@ -283,36 +275,58 @@ int main(int argc,char **argv)
 
 	// Signal to create coredumps by system when necessary (crash)
 	compat_signal(SIGSEGV, SIG_DFL);
-#ifndef _WIN32
+ #ifndef _WIN32
 	compat_signal(SIGBUS, SIG_DFL);
 	compat_signal(SIGTRAP, SIG_DFL); 
-#endif
+ #endif
 	compat_signal(SIGILL, SIG_DFL);
 	///////////////////////////////////////////////////////////////////////////
 #endif
+
 	///////////////////////////////////////////////////////////////////////////
-	//
+	// startup
+
 	display_title();
 
-	pid_create(argv[0]);
-	do_init_memmgr(argv[0]); // 一番最初に実行する必要がある
-	tick_ = time(0);
 	///////////////////////////////////////////////////////////////////////////
-	// core component initialisation
+	// stuff
+	pid_create(argv[0]);
+	tick_ = time(0);
+
+	///////////////////////////////////////////////////////////////////////////
+	// core module initialisation
+	memmgr_init(argv[0]); // 一番最初に実行する必要がある
 	timer_init();
 	socket_init();
+
 	///////////////////////////////////////////////////////////////////////////
 	// user module initialisation
 	do_init(argc,argv);
+
 	///////////////////////////////////////////////////////////////////////////
 	// run loop
-	while(runflag){
+	while(runflag)
+	{
 		next=do_timer(gettick_nocache());
 		do_sendrecv(next);
 	}
 	///////////////////////////////////////////////////////////////////////////
-	// wait for termination
-	while(1) sleep(100);
+	// termination
+
 	///////////////////////////////////////////////////////////////////////////
+	// user module termination
+	do_final();
+
+	///////////////////////////////////////////////////////////////////////////
+	// core module termination
+	exit_dbn();
+	socket_final();
+	timer_final();
+	memmgr_final();
+	
+	///////////////////////////////////////////////////////////////////////////
+	// stuff
+	log_uptime();
+	pid_delete();
 	return 0;
 }

@@ -38,7 +38,6 @@
 
 static char command_symbol = '@'; // first char of the commands (by [Yor])
 
-#define MAX_MSG 1000
 char *msg_table[MAX_MSG]; // Server messages (0-499 reserved for GM commands, 500-999 reserved for others)
 
 #define ACMD_FUNC(x) int atcommand_ ## x (const int fd, struct map_session_data* sd, const char* command, const char* message)
@@ -166,6 +165,7 @@ ACMD_FUNC(guildrecall); // by Yor
 ACMD_FUNC(partyrecall); // by Yor
 ACMD_FUNC(nuke); // [Valaris]
 ACMD_FUNC(enablenpc);
+ACMD_FUNC(hidenpc);
 ACMD_FUNC(disablenpc);
 ACMD_FUNC(servertime); // by Yor
 ACMD_FUNC(chardelitem); // by Yor
@@ -196,7 +196,9 @@ ACMD_FUNC(summon);
 ACMD_FUNC(rain);
 ACMD_FUNC(snow);
 ACMD_FUNC(sakura);
+ACMD_FUNC(clouds);
 ACMD_FUNC(fog);
+ACMD_FUNC(fireworks);
 ACMD_FUNC(leaves);
 ACMD_FUNC(adjgmlvl); // by MouseJstr
 ACMD_FUNC(adjcmdlvl); // by MouseJstr
@@ -264,6 +266,12 @@ ACMD_FUNC(disguiseall);
 ACMD_FUNC(changelook);
 ACMD_FUNC(mobinfo);	//by Lupus
 ACMD_FUNC(adopt); // by Veider
+
+ACMD_FUNC(version); // by Ancyker
+
+ACMD_FUNC(mutearea); // by MouseJstr
+ACMD_FUNC(shuffle); // by MouseJstr
+ACMD_FUNC(rates); // by MouseJstr
 
 /*==========================================
  *AtCommandInfo atcommand_info[]構造体の定義
@@ -432,6 +440,7 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_PartyRecall,		"@partyrecall",		60, atcommand_partyrecall }, // by Yor
 	{ AtCommand_Nuke,				"@nuke",			60, atcommand_nuke }, // [Valaris]
 	{ AtCommand_Enablenpc,			"@enablenpc",		80, atcommand_enablenpc }, // []
+	{ AtCommand_Hidenpc,			"@hidenpc",			80, atcommand_hidenpc }, // []
 	{ AtCommand_Disablenpc,			"@disablenpc",		80, atcommand_disablenpc }, // []
 	{ AtCommand_ServerTime,			"@time",			 0, atcommand_servertime }, // by Yor
 	{ AtCommand_ServerTime,			"@date",			 0, atcommand_servertime }, // by Yor
@@ -469,13 +478,10 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_Rain,				"@rain",			99, atcommand_rain },
 	{ AtCommand_Snow,				"@snow",			99, atcommand_snow },
 	{ AtCommand_Sakura,				"@sakura",			99, atcommand_sakura },
+	{ AtCommand_Clouds,				"@clouds",			99,	atcommand_clouds },
 	{ AtCommand_Fog,				"@fog",				99,	atcommand_fog },
+	{ AtCommand_Fireworks,			"@fireworks",		99,	atcommand_fireworks },
 	{ AtCommand_Leaves,				"@leaves",			99, atcommand_leaves },
-/*
-	{ AtCommand_Shuffle,			"@shuffle",			99, atcommand_shuffle },
-	{ AtCommand_Maintenance,		"@maintenance",		99, atcommand_maintenance },
-	{ AtCommand_Misceffect,			"@misceffect",		60, atcommand_misceffect },
-*/
 	{ AtCommand_Summon,				"@summon",			60, atcommand_summon },
 	{ AtCommand_AdjGmLvl,			"@adjgmlvl",		99, atcommand_adjgmlvl },
 	{ AtCommand_AdjCmdLvl,			"@adjcmdlvl",		99, atcommand_adjcmdlvl },
@@ -550,6 +556,12 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_MobInfo,		"@monsterinfo",	1,	atcommand_mobinfo }, // [Lupus]
 	{ AtCommand_MobInfo,		"@mi",	1,	atcommand_mobinfo }, // [Lupus]
         { AtCommand_Adopt,              "@adopt",       40, atcommand_adopt }, // [Veider]
+	{ AtCommand_Version,				"@version",			0, atcommand_version },
+
+	{ AtCommand_MuteArea,				"@mutearea",			99, atcommand_mutearea }, // MouseJstr
+	{ AtCommand_MuteArea,				"@stfu",			99, atcommand_mutearea }, // MouseJstr
+	{ AtCommand_Shuffle,				"@shuffle",			40, atcommand_shuffle }, // MouseJstr
+	{ AtCommand_Rates,				"@rates",			10, atcommand_rates }, // MouseJstr
 	
 // add new commands before this line
 	{ AtCommand_Unknown,             NULL,                1, NULL }
@@ -1214,11 +1226,20 @@ int atcommand_who(
 				memcpy(player_name, pl_sd->status.name, 24);
 				for (j = 0; player_name[j]; j++)
 					player_name[j] = tolower(player_name[j]);
-				if (strstr(player_name, match_text) != NULL) { // search with no case sensitive
-					if (pl_GM_level > 0)
-						sprintf(output, "(CID:%d/AID:%d) Name: %s (GM:%d) | Location: %s %d %d", pl_sd->status.char_id, pl_sd->status.account_id, pl_sd->status.name, pl_GM_level, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
-					else
-						sprintf(output, "(CID:%d/AID:%d) Name: %s | Location: %s %d %d", pl_sd->status.char_id, pl_sd->status.account_id, pl_sd->status.name, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+				if (strstr(player_name, match_text) != NULL)
+				{	// search with no case sensitive
+					if (battle_config.who_display_aid > 0 && pc_isGM(sd) >= battle_config.who_display_aid) {
+						if (pl_GM_level > 0)
+							sprintf(output, "(CID:%d/AID:%d) Name: %s (GM:%d) | Location: %s %d %d", pl_sd->status.char_id, pl_sd->status.account_id, pl_sd->status.name, pl_GM_level, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+						else
+							sprintf(output, "(CID:%d/AID:%d) Name: %s | Location: %s %d %d", pl_sd->status.char_id, pl_sd->status.account_id, pl_sd->status.name, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+					}
+					else {
+						if (pl_GM_level > 0)
+							sprintf(output, "Name: %s (GM:%d) | Location: %s %d %d", pl_sd->status.name, pl_GM_level, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+						else
+							sprintf(output, "Name: %s | Location: %s %d %d", pl_sd->status.name, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+					}
 					clif_displaymessage(fd, output);
 					count++;
 				}
@@ -2728,9 +2749,9 @@ int atcommand_model(
 	if (hair_style >= MIN_HAIR_STYLE && hair_style <= MAX_HAIR_STYLE &&
 		hair_color >= MIN_HAIR_COLOR && hair_color <= MAX_HAIR_COLOR &&
 		cloth_color >= MIN_CLOTH_COLOR && cloth_color <= MAX_CLOTH_COLOR) {
-		//服の色変更
+		//秒ﾌ色変更
 		if (cloth_color != 0 && sd->status.sex == 1 && (sd->status.class_ == 12 ||  sd->status.class_ == 17)) {
-			//服の色未実装職の判定
+			//秒ﾌ色未実装職の判定
 			clif_displaymessage(fd, msg_table[35]); // You can't use this command with this class_.
 			return -1;
 		} else {
@@ -2880,10 +2901,11 @@ int atcommand_go(
 	       { "umbala.gat",    89, 157  },	//	12=Umbala
 	       { "niflheim.gat",  21, 153  },	//	13=Niflheim
 	       { "louyang.gat",  217,  40  },	//	14=Lou Yang
-	       { "new_1-1.gat",   53, 111  },	//	15=Start point
+	       { "new_1-1.gat",   53, 111  },	//	15=Training Grounds
 	       { "sec_pri.gat",   23,  61  },	//	16=Prison
            { "jawaii.gat",   249, 127  },	//  17=Jawaii
 		   { "ayothaya.gat", 151, 117  },	//  18=Ayothaya
+		   { "einbroch.gat", 64, 200  },	//  19=Einbroch		   
 	};
 
 	nullpo_retr(-1, sd);
@@ -2899,14 +2921,14 @@ int atcommand_go(
 	if (!message || !*message || sscanf(message, "%99s", map_name) < 1 || town < -3 || town >= (int)(sizeof(data) / sizeof(data[0]))) {
 		clif_displaymessage(fd, msg_table[38]); // Invalid location number or name.
 		clif_displaymessage(fd, msg_table[82]); // Please, use one of this number/name:
-		clif_displaymessage(fd, "-3=(Memo point 2)   4=Alberta       11=Gon Ryun");
-		clif_displaymessage(fd, "-2=(Memo point 1)   5=Izlude        12=Umbala");
-		clif_displaymessage(fd, "-1=(Memo point 0)   6=Al de Baran   13=Niflheim");
-		clif_displaymessage(fd, " 0=Prontera         7=Lutie         14=Lou Yang");
-		clif_displaymessage(fd, " 1=Morroc           8=Comodo        15=Start point");
-		clif_displaymessage(fd, " 2=Geffen           9=Yuno          16=Prison");
-		clif_displaymessage(fd, " 3=Payon           10=Amatsu        17=Jawaii");
-		clif_displaymessage(fd, "                                    18=Ayothaya");
+		clif_displaymessage(fd, "-3=(Memo point 2)   5=Izlude       13=Niflheim");
+		clif_displaymessage(fd, "-2=(Memo point 1)   6=Al de Baran  14=Lou Yang");
+		clif_displaymessage(fd, "-1=(Memo point 0)   7=Lutie        15=Training Grounds");
+		clif_displaymessage(fd, " 0=Prontera         8=Comodo       16=Prison");
+		clif_displaymessage(fd, " 1=Morroc           9=Yuno         17=Jawaii");
+		clif_displaymessage(fd, " 2=Geffen           10=Amatsu      18=Ayothaya");
+		clif_displaymessage(fd, " 3=Payon            11=Gon Ryun    19=Einbroch");
+		clif_displaymessage(fd, " 4=Alberta          12=Umbala");
 		return -1;
 	} else {
 		// get possible name of the city and add .gat if not in the name
@@ -2967,6 +2989,9 @@ int atcommand_go(
 		} else if (strncmp(map_name, "ayothaya.gat", 4) == 0 || // 3 first characters
 		           strncmp(map_name, "ayotaya.gat", 4) == 0) { // writing error (3 first characters)
 			town = 18;
+		} else if (strncmp(map_name, "einbroch.gat", 3) == 0 || // 3 first characters
+		           strncmp(map_name, "ainbroch.gat", 3) == 0) { // writing error (3 first characters)
+			town = 19;
 		}
 
 		if (town >= -3 && town <= -1) {
@@ -5631,9 +5656,9 @@ int atcommand_reloadscript(
 	rehash();
 
 	atcommand_broadcast( fd, sd, "@broadcast", "Reloading NPCs..." );
-	do_init_npc();
+	//do_init_npc();
 	do_init_script();
-
+	npc_reload();
 	npc_event_do_oninit();
 
 	clif_displaymessage(fd, msg_table[128]); // Scripts reloaded.
@@ -6072,7 +6097,7 @@ int atcommand_enablenpc(const int fd, struct map_session_data* sd,
  *
  *------------------------------------------
  */
-int atcommand_disablenpc(const int fd, struct map_session_data* sd,
+int atcommand_hidenpc(const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
 	char NPCname[128];
@@ -6087,6 +6112,32 @@ int atcommand_disablenpc(const int fd, struct map_session_data* sd,
 
 	if (npc_name2id(NPCname) != NULL) {
 		npc_enable(NPCname, 0);
+		clif_displaymessage(fd, msg_table[112]); // Npc Disabled.
+	} else {
+		clif_displaymessage(fd, msg_table[111]); // This NPC doesn't exist.
+		return -1;
+	}
+
+	return 0;
+}
+
+int atcommand_disablenpc(const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+	struct npc_data *nd;
+	char NPCname[100];
+	nullpo_retr(-1, sd);
+
+	memset(NPCname, '\0', sizeof(NPCname));
+
+	if (!message || !*message || sscanf(message, "%99[^\n]", NPCname) < 1) {
+		clif_displaymessage(fd, "Please, enter a NPC name (usage: @npcoff <NPC_name>).");
+		return -1;
+	}
+
+	if ((nd = npc_name2id(NPCname)) != NULL)
+	{
+		npc_remove_map(nd);
 		clif_displaymessage(fd, msg_table[112]); // Npc Disabled.
 	} else {
 		clif_displaymessage(fd, msg_table[111]); // This NPC doesn't exist.
@@ -7583,9 +7634,8 @@ atcommand_rain(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	int effno = 0;
+	int effno = 161;
 	nullpo_retr(-1, sd);
-	effno = 161;
 	if (map[sd->bl.m].flag.rain) {
 		map[sd->bl.m].flag.rain=0;
 		clif_displaymessage(fd, "The rain has stopped.");
@@ -7605,8 +7655,7 @@ atcommand_snow(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	int effno = 0;
-	effno = 162;
+	int effno = 162;
 	nullpo_retr(-1, sd);
 	if (map[sd->bl.m].flag.snow) {
 		map[sd->bl.m].flag.snow=0;
@@ -7629,8 +7678,7 @@ atcommand_sakura(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	int effno = 0;
-	effno = 163;
+	int effno = 163;
 	nullpo_retr(-1, sd);
 	if (map[sd->bl.m].flag.sakura) {
 		map[sd->bl.m].flag.sakura=0;
@@ -7644,6 +7692,29 @@ atcommand_sakura(
 }
 
 /*==========================================
+ * Clouds appear.
+ *------------------------------------------
+ */
+int
+atcommand_clouds(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+	int effno = 233;
+	nullpo_retr(-1, sd);
+	if (map[sd->bl.m].flag.clouds) {
+		map[sd->bl.m].flag.clouds=0;
+		clif_displaymessage(fd, "The clouds has gone.");
+	} else {
+		map[sd->bl.m].flag.clouds=1;
+		clif_specialeffect(&sd->bl,effno,2);
+		clif_displaymessage(fd, "Clouds appear.");
+	}
+
+	return 0;
+}
+
+/*==========================================
  * Fog hangs over.
  *------------------------------------------
  */
@@ -7652,8 +7723,7 @@ atcommand_fog(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	int effno = 0;
-	effno = 233;
+	int effno = 515;
 	nullpo_retr(-1, sd);
 	if (map[sd->bl.m].flag.fog) {
 		map[sd->bl.m].flag.fog=0;
@@ -7676,8 +7746,7 @@ atcommand_leaves(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	int effno = 0;
-	effno = 333;
+	int effno = 333;
 	nullpo_retr(-1, sd);
 	if (map[sd->bl.m].flag.leaves) {
 		map[sd->bl.m].flag.leaves=0;
@@ -7692,6 +7761,32 @@ atcommand_leaves(
 }
 
 /*==========================================
+ * Clouds appear.
+ *------------------------------------------
+ */
+int
+atcommand_fireworks(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+	//int effno = 0;
+	//effno = 233;
+	nullpo_retr(-1, sd);
+	if (map[sd->bl.m].flag.fireworks) {
+		map[sd->bl.m].flag.fireworks=0;
+		clif_displaymessage(fd, "Fireworks are launched.");
+	} else {
+		map[sd->bl.m].flag.fireworks=1;
+		clif_specialeffect(&sd->bl,297,2);
+		clif_specialeffect(&sd->bl,299,2);
+		clif_specialeffect(&sd->bl,301,2);
+		clif_displaymessage(fd, "Fireworks are launched.");
+	}
+
+	return 0;
+}
+
+/*==========================================
  * Clearing Weather Effects by Dexity
  *------------------------------------------
  */
@@ -7700,14 +7795,15 @@ atcommand_clearweather(
    const int fd, struct map_session_data* sd,
    const char* command, const char* message)
 {
-	//int effno = 0;
 	nullpo_retr(-1, sd);
 	map[sd->bl.m].flag.rain=0;
 	map[sd->bl.m].flag.snow=0;
 	map[sd->bl.m].flag.sakura=0;
+	map[sd->bl.m].flag.clouds=0;
 	map[sd->bl.m].flag.fog=0;
+	map[sd->bl.m].flag.fireworks=0;
 	map[sd->bl.m].flag.leaves=0;
-	//clif_specialeffect(&sd->bl,effno,2); // not required. [celest]
+
 	return 0;
 }
 
@@ -9024,7 +9120,7 @@ const char* command, const char* message)
                 return -1;
         }
 
-        printf("Adopting: --%s--%s--%s--\n",player1,player2,player3);
+        ShowMessage("Adopting: --%s--%s--%s--\n",player1,player2,player3);
 
         if((pl_sd1=map_nick2sd((char *) player1)) == NULL) {
                 sprintf(player2, "Cannot find player %s online", player1);
@@ -9057,3 +9153,116 @@ const char* command, const char* message)
                 return -1;
 }
 
+int atcommand_version(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+	const char * revision;
+	char tmp[200];
+
+ 	if( (revision = get_svn_revision()) != 0 )
+	{
+		sprintf(tmp,"eAthena Version SVN r%s",revision);
+		clif_displaymessage(fd,tmp);
+	}
+	else 
+		clif_displaymessage(fd,"Cannot determine SVN revision");
+	return 0;
+}
+
+
+static int atcommand_mutearea_sub(struct block_list *bl,va_list ap)
+{
+	int time;
+	struct map_session_data *pl_sd = (struct map_session_data *) bl;
+	if (bl == NULL)
+		return 1;
+	
+	time = va_arg(ap, int);
+	
+	if( !pc_isGM(pl_sd) )
+	{
+		pl_sd->status.manner -= time;
+		if( pl_sd->status.manner < 0 )
+			status_change_start(&pl_sd->bl,SC_NOCHAT,0,0,0,0,0,0);
+	}
+	return 0;
+}
+
+/*==========================================
+ * @mutearea by MouseJstr
+ *------------------------------------------
+ */
+int atcommand_mutearea(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+	int time;
+	nullpo_retr(0, sd);
+	
+	time = atoi(message);
+	if (time <= 0)
+		time = 15; // 15 second default
+	map_foreachinarea(atcommand_mutearea_sub,sd->bl.m, 
+		sd->bl.x-AREA_SIZE,sd->bl.y-AREA_SIZE, 
+		sd->bl.x+AREA_SIZE, sd->bl.y+AREA_SIZE, BL_PC, 15);
+	
+	return 0;
+}
+
+static int atcommand_shuffle_sub(struct block_list *bl,va_list ap)
+{
+	struct map_session_data *pl_sd = (struct map_session_data *) bl;
+	if (bl == NULL)
+		return 1;
+	
+	if (!pc_isGM(pl_sd)) 
+		pc_setpos(pl_sd, pl_sd->mapname, rand() % 399 + 1, rand() % 399 + 1, 3);
+	
+	return 0;
+}
+
+/*==========================================
+ * @shuffle by MouseJstr
+ *------------------------------------------
+ */
+int atcommand_shuffle(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+  nullpo_retr(0, sd);
+
+  if (strcmp(message, "area")== 0) {
+    map_foreachinarea(atcommand_shuffle_sub,sd->bl.m, 
+      sd->bl.x-AREA_SIZE,sd->bl.y-AREA_SIZE, 
+      sd->bl.x+AREA_SIZE, sd->bl.y+AREA_SIZE, BL_PC);  
+  } else if (strcmp(message, "map")== 0) {
+    map_foreachinarea(atcommand_shuffle_sub,sd->bl.m, 
+      0, 399, 0, 399, BL_PC);
+  } else if (strcmp(message, "world") == 0) {
+    struct map_session_data *pl_sd;
+    int i;
+    for (i = 0; i < fd_max; i++) 
+      if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data) != NULL && pl_sd->state.auth)
+        atcommand_shuffle_sub(&pl_sd->bl, 0);
+  } else 
+    clif_displaymessage(fd, "options are area, map, or world");
+
+  return 0;
+}
+
+int atcommand_rates(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+  char buf[255];
+
+  nullpo_retr(0, sd);
+
+  sprintf(buf, "base_exp_rate: %d    job_exp_rate: %d", 
+    battle_config.base_exp_rate, battle_config.job_exp_rate);
+
+  clif_displaymessage(fd, buf);
+
+  return 0;
+}

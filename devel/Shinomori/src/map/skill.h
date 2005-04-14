@@ -82,6 +82,9 @@ struct skill_abra_db {
 };
 extern struct skill_abra_db skill_abra_db[MAX_SKILL_ABRA_DB];
 
+extern int enchant_eff[5];
+extern int deluge_eff[5];
+
 struct block_list;
 struct map_session_data;
 struct skill_unit;
@@ -142,8 +145,8 @@ int skill_check_unit_range(int m,int x,int y,unsigned short skillid, unsigned sh
 int skill_check_unit_range2(int m,int x,int y,unsigned short skillid, unsigned short skilllv, int type);
 
 // -- moonsoul	(added skill_check_unit_cell)
-int skill_check_unit_cell(int skillid,int m,int x,int y,int unit_id);
-int skill_unit_out_all( struct block_list *bl,unsigned long tick,int range);
+//int skill_check_unit_cell(int skillid,int m,int x,int y,int unit_id);
+//int skill_unit_out_all( struct block_list *bl,unsigned long tick,int range);
 int skill_unit_move(struct block_list *bl,unsigned long tick,int flag);
 int skill_unit_move_unit_group( struct skill_unit_group *group, int m,int dx,int dy);
 
@@ -701,6 +704,18 @@ enum {
 	WS_WEAPONREFINE,
 	CR_SLIMPITCHER,
 	CR_FULLPROTECTION,
+	PA_SHIELDCHAIN,
+	HP_MANARECHARGE,
+	PF_DOUBLECASTING,
+	HW_GANBANTEIN,
+	HW_GRAVITATION,
+	WS_CARTTERMINATION,
+	WS_OVERTHRUSTMAX,
+	CG_LONGINGFREEDOM,
+	CG_HERMODE,
+	CG_TAROTCARD,
+	CR_ACIDDEMONSTRATION,
+	CR_CULTIVATION,
 };
 
 #endif

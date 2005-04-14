@@ -14,12 +14,6 @@
 
 #define DEFAULT_AUTOSAVE_INTERVAL 300*1000
 
-struct mmo_map_server{
-  unsigned long ip;
-  unsigned short port;
-  size_t users;
-  char map[MAX_MAP_PER_SERVER][16];
-};
 struct itemtmp {
 	int flag;//checked = 1 else 0
 	int id;

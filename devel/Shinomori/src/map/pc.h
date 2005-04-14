@@ -52,6 +52,7 @@ int pc_checkequip(struct map_session_data *sd,int pos);
 
 int pc_calc_skilltree(struct map_session_data *sd);
 int pc_calc_skilltree_normalize_job(int c, struct map_session_data *sd);
+int pc_clean_skilltree(struct map_session_data *sd);
 
 int pc_checkoverhp(struct map_session_data*);
 int pc_checkoversp(struct map_session_data*);
@@ -195,7 +196,7 @@ struct skill_tree_entry {
 		short id;
 		unsigned char lv;
 	} need[5];
-};// Celest
+}; // Celest
 	
 extern struct skill_tree_entry skill_tree[3][25][MAX_SKILL_TREE];
 
@@ -204,8 +205,14 @@ int pc_setinvincibletimer(struct map_session_data *sd,int);
 int pc_delinvincibletimer(struct map_session_data *sd);
 int pc_addspiritball(struct map_session_data *sd,int,int);
 int pc_delspiritball(struct map_session_data *sd,int,int);
-
 int pc_eventtimer(int tid,unsigned long tick,int id,int data);
+
+struct Fame_list {
+	int id;
+	int fame;
+};
+extern struct Fame_list smith_fame_list[10];
+extern struct Fame_list chemist_fame_list[10];
 
 int pc_readdb(void);
 int do_init_pc(void);

@@ -33,27 +33,27 @@ static size_t				timer_heap_pos	=0;
 
 /////////////////////////////////////////////////////////////////////////////////////
 // for debug
-struct timer_func_list {
+struct timer_func_list
+{
 	int (*func)(int,unsigned long,int,int);
 	struct timer_func_list* next;
-	char name[40];
+	char name[2];// will allocate larger from here and copy the name beyond this structure
 };
+
 static struct timer_func_list* tfl_root=NULL;
 
 //
 int add_timer_func_list(int (*func)(int,unsigned long,int,int),char* name)
 {
-	struct timer_func_list* tfl;
+	if(name)
+	{	// pad a struct timer_func_list together with the name
+		struct timer_func_list* tfl = (struct timer_func_list*)aMalloc(sizeof(struct timer_func_list) + strlen(name) );
 
-	CREATE(tfl, struct timer_func_list, 1);
-	//CREATE(tfl->name, char, strlen(name) + 1); // is fixed size buffer now
-
-	tfl->next = tfl_root;
-	tfl->func = func;
-	memcpy(tfl->name, name, sizeof(tfl->name));
-	tfl->name[sizeof(tfl->name)-1] = 0;
-	tfl_root = tfl;
-
+		tfl->func = func;
+		memcpy(tfl->name, name, 1+strlen(name));
+		tfl->next = tfl_root;
+		tfl_root = tfl;
+	}
 	return 0;
 }
 
@@ -520,13 +520,14 @@ void timer_init(void)
 
 void timer_final(void) 
 {
-	struct timer_func_list *tfl, *tfl_next;
-	for(tfl = tfl_root; tfl; tfl = tfl_next)
+	struct timer_func_list *tfl_next;
+	while(tfl_root)
 	{
-		tfl_next = tfl->next;
-		aFree(tfl);
-		tfl = NULL;
+		tfl_next = tfl_root->next;
+		aFree(tfl_root);
+		tfl_root = tfl_next;
 	}
+
 	if(timer_heap)	aFree(timer_heap);
 	if(timer_free)	aFree(timer_free);
 	if(timer_data)	aFree(timer_data);

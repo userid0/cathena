@@ -110,10 +110,10 @@ int	VPRINTF(const char *fmt, va_list argptr)
 
 	// start with processing
 	p = ibuf;
-	while ((q = strchr(p, 0x1b)) != NULL) { // find the escape character
-
+	while ((q = strchr(p, 0x1b)) != NULL)
+	{	// find the escape character
 		if( 0==WriteConsole(handle, p, q-p, &written, 0) ) // write up to the escape
-			WriteFile(handle,p, q-p, &written, 0);
+			WriteFile(handle, p, q-p, &written, 0);
 
 
 		if( q[1]!='[' )

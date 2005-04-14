@@ -6,6 +6,7 @@
 #include "core.h"
 #include "socket.h"
 #include "timer.h"
+#include "db.h"
 #include "mmo.h"
 #include "malloc.h"
 #include "version.h"
@@ -25,7 +26,7 @@
 #endif
 
 struct mmo_map_server server[MAX_MAP_SERVERS];
-int server_fd[MAX_MAP_SERVERS];
+
 
 int login_fd= -1;
 int char_fd = -1;
@@ -216,6 +217,45 @@ char * search_character_name(int index) {
 	return unknown_char_name;
 }
 
+//-------------------------------------------------
+// Set Character online/offline [Wizputer]
+//-------------------------------------------------
+
+void set_char_online(int char_id, int account_id) {
+	if( !session_isActive(login_fd) )
+		return;
+	WFIFOW(login_fd,0) = 0x272b;
+	WFIFOL(login_fd,2) = account_id;
+	WFIFOSET(login_fd,6);
+
+	//SendMessage ("set online\n");
+}
+void set_char_offline(int char_id, int account_id)
+{
+	if( !session_isActive(login_fd) )
+		return;
+	WFIFOW(login_fd,0) = 0x272c;
+	WFIFOL(login_fd,2) = account_id;
+	WFIFOSET(login_fd,6);
+
+	//SendMessage ("set offline\n");
+}
+void set_all_offline(void)
+{
+	if( !session_isActive(login_fd) )
+		return;
+	/*while some condition {
+		if (login_fd > 0) {
+			SendMessage("send user offline: %d\n",atoi(sql_row[0]));
+			WFIFOW(login_fd,0) = 0x272c;
+			WFIFOL(login_fd,2) = atoi(sql_row[0]);
+			WFIFOSET(login_fd,6);
+		}
+	}*/
+
+	//SendMessage ("set all offline\n");
+}
+
 /*---------------------------------------------------
   Make a data line for friends list
  --------------------------------------------------*/
@@ -225,7 +265,7 @@ int mmo_friends_list_data_str(char *str, struct mmo_charstatus *p) {
 	char *str_p = str;
 	str_p += sprintf(str_p, "%d", p->char_id);
 
-	for (i=0;i<20;i++)
+	for (i=0;i<MAX_FRIENDLIST;i++)
 	{
 		str_p += sprintf(str_p, ",%d,%s", p->friend_id[i],p->friend_name[i]);
 	}
@@ -247,21 +287,22 @@ int mmo_char_tostr(char *str, struct mmo_charstatus *p) {
 	}
 
 	str_p += sprintf(str_p, "%d\t%d,%d\t%s\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-	  "\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-	  "\t%s,%d,%d\t%s,%d,%d,%d,%d,%d,%d\t",
-	  p->char_id, p->account_id, p->char_num, p->name, //
-	  p->class_, p->base_level, p->job_level,
-	  p->base_exp, p->job_exp, p->zeny,
-	  p->hp, p->max_hp, p->sp, p->max_sp,
-	  p->str, p->agi, p->vit, p->int_, p->dex, p->luk,
-	  p->status_point, p->skill_point,
-	  p->option, p->karma, p->manner,	//
-	  p->party_id, p->guild_id, p->pet_id,
-	  p->hair, p->hair_color, p->clothes_color,
-	  p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
-	  p->last_point.map, p->last_point.x, p->last_point.y, //
-	  p->save_point.map, p->save_point.x, p->save_point.y,
-	  p->partner_id,p->father_id,p->mother_id,p->child_id);
+		"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+		"\t%s,%d,%d\t%s,%d,%d,%d,%d,%d,%d,%d\t",
+		p->char_id, p->account_id, p->char_num, p->name,
+		p->class_, p->base_level, p->job_level,
+		p->base_exp, p->job_exp, p->zeny,
+		p->hp, p->max_hp, p->sp, p->max_sp,
+		p->str, p->agi, p->vit, p->int_, p->dex, p->luk,
+		p->status_point, p->skill_point,
+		p->option, p->karma, p->manner,
+		p->party_id, p->guild_id, p->pet_id,
+		p->hair, p->hair_color, p->clothes_color,
+		p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
+		p->last_point.map, p->last_point.x, p->last_point.y,
+		p->save_point.map, p->save_point.x, p->save_point.y,
+		p->partner_id,p->father_id,p->mother_id,p->child_id,
+		p->fame);
 	for(i = 0; i < 10; i++)
 		if (p->memo_point[i].map[0]) {
 			str_p += sprintf(str_p, "%s,%d,%d", p->memo_point[i].map, p->memo_point[i].x, p->memo_point[i].y);
@@ -311,93 +352,120 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	// initilialise character
 	memset(p, '\0', sizeof(struct mmo_charstatus));
 	
-	// If it's not char structure of version 1363 and after
+	// If it's not char structure of version 1488 and after
 	if ((set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-	   "\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-	   "\t%[^,],%d,%d\t%[^,],%d,%d,%d,%d,%d,%d%n",
-	   &tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-	   &tmp_int[3], &tmp_int[4], &tmp_int[5],
-           &tmp_int[6], &tmp_int[7], &tmp_int[8],
-           &tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-           &tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-           &tmp_int[19], &tmp_int[20],
-           &tmp_int[21], &tmp_int[22], &tmp_int[23], //
-           &tmp_int[24], &tmp_int[25], &tmp_int[26],
-           &tmp_int[27], &tmp_int[28], &tmp_int[29],
-           &tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-           p->last_point.map, &tmp_int[35], &tmp_int[36], //
-           p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
-	   &tmp_int[40], &tmp_int[41], &tmp_int[42], &next)) != 46) {
-		tmp_int[40] = 0; // father
-		tmp_int[41] = 0; // mother
-		tmp_int[42] = 0; // child
-	// If it's not char structure of version 1008 and before 1363
-	if ((set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-	   "\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-	   "\t%[^,],%d,%d\t%[^,],%d,%d,%d%n",
-	   &tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-	   &tmp_int[3], &tmp_int[4], &tmp_int[5],
-	   &tmp_int[6], &tmp_int[7], &tmp_int[8],
-	   &tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-	   &tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-	   &tmp_int[19], &tmp_int[20],
-	   &tmp_int[21], &tmp_int[22], &tmp_int[23], //
-	   &tmp_int[24], &tmp_int[25], &tmp_int[26],
-	   &tmp_int[27], &tmp_int[28], &tmp_int[29],
-	   &tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-	   p->last_point.map, &tmp_int[35], &tmp_int[36], //
-	   p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], &next)) != 43) {
-		tmp_int[39] = 0; // partner id
-		// If not char structure from version 384 to 1007
+		"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+		"\t%[^,],%d,%d\t%[^,],%d,%d,%d,%d,%d,%d,%d%n",
+		&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
+		&tmp_int[3], &tmp_int[4], &tmp_int[5],
+		&tmp_int[6], &tmp_int[7], &tmp_int[8],
+		&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+		&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+		&tmp_int[19], &tmp_int[20],
+		&tmp_int[21], &tmp_int[22], &tmp_int[23], //
+		&tmp_int[24], &tmp_int[25], &tmp_int[26],
+		&tmp_int[27], &tmp_int[28], &tmp_int[29],
+		&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+		p->last_point.map, &tmp_int[35], &tmp_int[36], //
+		p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
+		&tmp_int[40], &tmp_int[41], &tmp_int[42], &tmp_int[43], &next)) != 47)
+	{
+		tmp_int[43] = 0;	
+		// If it's not char structure of version 1363 and after
 		if ((set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-		   "\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-		   "\t%[^,],%d,%d\t%[^,],%d,%d%n",
-		   &tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-		   &tmp_int[3], &tmp_int[4], &tmp_int[5],
-		   &tmp_int[6], &tmp_int[7], &tmp_int[8],
-		   &tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-		   &tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-		   &tmp_int[19], &tmp_int[20],
-		   &tmp_int[21], &tmp_int[22], &tmp_int[23], //
-		   &tmp_int[24], &tmp_int[25], &tmp_int[26],
-		   &tmp_int[27], &tmp_int[28], &tmp_int[29],
-		   &tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-		   p->last_point.map, &tmp_int[35], &tmp_int[36], //
-		   p->save_point.map, &tmp_int[37], &tmp_int[38], &next)) != 42) {
-			// It's char structure of a version before 384
-			tmp_int[26] = 0; // pet id
-			set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-			      "\t%d,%d,%d\t%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-			      "\t%[^,],%d,%d\t%[^,],%d,%d%n",
-			      &tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-			      &tmp_int[3], &tmp_int[4], &tmp_int[5],
-			      &tmp_int[6], &tmp_int[7], &tmp_int[8],
-			      &tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-			      &tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-			      &tmp_int[19], &tmp_int[20],
-			      &tmp_int[21], &tmp_int[22], &tmp_int[23], //
-			      &tmp_int[24], &tmp_int[25], //
-			      &tmp_int[27], &tmp_int[28], &tmp_int[29],
-			      &tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-			      p->last_point.map, &tmp_int[35], &tmp_int[36], //
-			      p->save_point.map, &tmp_int[37], &tmp_int[38], &next);
-			set += 2;
+			"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+			"\t%[^,],%d,%d\t%[^,],%d,%d,%d,%d,%d,%d%n",
+			&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
+			&tmp_int[3], &tmp_int[4], &tmp_int[5],
+			&tmp_int[6], &tmp_int[7], &tmp_int[8],
+			&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+			&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+			&tmp_int[19], &tmp_int[20],
+			&tmp_int[21], &tmp_int[22], &tmp_int[23], //
+			&tmp_int[24], &tmp_int[25], &tmp_int[26],
+			&tmp_int[27], &tmp_int[28], &tmp_int[29],
+			&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+			p->last_point.map, &tmp_int[35], &tmp_int[36], //
+			p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
+			&tmp_int[40], &tmp_int[41], &tmp_int[42], &next)) != 46)
+		{
+			tmp_int[40] = 0; // father
+			tmp_int[41] = 0; // mother
+			tmp_int[42] = 0; // child
+			// If it's not char structure of version 1008 and before 1363
+			if ((set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
+				"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+				"\t%[^,],%d,%d\t%[^,],%d,%d,%d%n",
+				&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
+				&tmp_int[3], &tmp_int[4], &tmp_int[5],
+				&tmp_int[6], &tmp_int[7], &tmp_int[8],
+				&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+				&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+				&tmp_int[19], &tmp_int[20],
+				&tmp_int[21], &tmp_int[22], &tmp_int[23], //
+				&tmp_int[24], &tmp_int[25], &tmp_int[26],
+				&tmp_int[27], &tmp_int[28], &tmp_int[29],
+				&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+				p->last_point.map, &tmp_int[35], &tmp_int[36], //
+				p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], &next)) != 43)
+			{
+				tmp_int[39] = 0; // partner id
+				// If not char structure from version 384 to 1007
+				if ((set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
+					"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+					"\t%[^,],%d,%d\t%[^,],%d,%d%n",
+					&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
+					&tmp_int[3], &tmp_int[4], &tmp_int[5],
+					&tmp_int[6], &tmp_int[7], &tmp_int[8],
+					&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+					&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+					&tmp_int[19], &tmp_int[20],
+					&tmp_int[21], &tmp_int[22], &tmp_int[23], //
+					&tmp_int[24], &tmp_int[25], &tmp_int[26],
+					&tmp_int[27], &tmp_int[28], &tmp_int[29],
+					&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+					p->last_point.map, &tmp_int[35], &tmp_int[36], //
+					p->save_point.map, &tmp_int[37], &tmp_int[38], &next)) != 42)
+				{
+					// It's char structure of a version before 384
+					tmp_int[26] = 0; // pet id
+					set = sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
+					"\t%d,%d,%d\t%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+					"\t%[^,],%d,%d\t%[^,],%d,%d%n",
+					&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
+					&tmp_int[3], &tmp_int[4], &tmp_int[5],
+					&tmp_int[6], &tmp_int[7], &tmp_int[8],
+					&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+					&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+					&tmp_int[19], &tmp_int[20],
+					&tmp_int[21], &tmp_int[22], &tmp_int[23], //
+					&tmp_int[24], &tmp_int[25], //
+					&tmp_int[27], &tmp_int[28], &tmp_int[29],
+					&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+					p->last_point.map, &tmp_int[35], &tmp_int[36], //
+					p->save_point.map, &tmp_int[37], &tmp_int[38], &next);
+					set += 2;
 			//ShowMessage("char: old char data ver.1\n");
-		// Char structure of version 1007 or older
+				// Char structure of version 1007 or older
+				} else {
+					set++;
+			//ShowMessage("char: old char data ver.2\n");
+				}
+			// Char structure of version 1008+
+			} else {
+				set += 3;
+			//ShowMessage("char: new char data ver.3\n");
+			}
+		// Char structture of version 1363+
 		} else {
 			set++;
-			//ShowMessage("char: old char data ver.2\n");
+			//SendMessage("char: new char data ver.4\n");
 		}
-	// Char structure of version 1008+
-		} else {
-			set+=3;
-			//ShowMessage("char: new char data ver.3\n");
-		}
-	// Char structture of version 1363+
+	// Char structture of version 1488+
 	} else {
-		//ShowMessage("char: new char data ver.4\n");
+		//SendMessage("char: new char data ver.5\n");
 	}
-	if (set != 46)
+	if (set != 47)
 		return 0;
 
 	p->char_id = tmp_int[0];
@@ -443,6 +511,7 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	p->father_id = tmp_int[40];
 	p->mother_id = tmp_int[41];
 	p->child_id = tmp_int[42];
+	p->fame = tmp_int[43];
 
 	// Some checks
 	for(i = 0; i < char_num; i++) {
@@ -628,7 +697,7 @@ int parse_friend_txt(struct mmo_charstatus *p)
 
 	// Fill in the list
 
-	for (i=0; i<20; i++)
+	for (i=0; i<MAX_FRIENDLIST; i++)
 		p->friend_id[i] = temp[i];
 
 	fclose(fp);
@@ -638,7 +707,8 @@ int parse_friend_txt(struct mmo_charstatus *p)
 //---------------------------------
 // Function to read characters file
 //---------------------------------
-int mmo_char_init(void) {
+int mmo_char_init(void)
+{
 	char line[65536];
 	int i;
 	int ret, line_count;
@@ -1080,7 +1150,7 @@ void create_online_files(void) {
 			if (j == -1) {
 				online_chars[i].char_id = -1;
 				continue;
-			} else if (server_fd[j] < 0) {
+			} else if( server[j].fd < 0) {
 				server[j].users = 0;
 				online_chars[i].char_id = -1;
 				online_chars[i].server = -1;
@@ -1091,7 +1161,7 @@ void create_online_files(void) {
 			for(j = i + 1; j < online_players_max; j++)
 				if (online_chars[i].char_id == online_chars[j].char_id) {
 					k = online_chars[j].server;
-					if (k != -1 && server_fd[k] >= 0 && server[k].users > 0)
+					if (k != -1 && server[k].fd >= 0 && server[k].users > 0)
 						server[k].users--;
 					online_chars[j].char_id = -1;
 					online_chars[j].server = -1;
@@ -1368,7 +1438,7 @@ int count_users(void) {
 
 	users = 0;
 	for(i = 0; i < MAX_MAP_SERVERS; i++)
-		if (server_fd[i] >= 0)
+		if (server[i].fd >= 0)
 			users += server[i].users;
 
 	return users;
@@ -1385,6 +1455,8 @@ int mmo_char_send006b(int fd, struct char_session_data *sd) {
 #else
 	const int offset = 4;
 #endif
+
+	set_char_online(99,sd->account_id);
 
 	found_num = 0;
 	for(i = 0; i < char_num; i++) {
@@ -1559,7 +1631,7 @@ int parse_tologin(int fd) {
 	{
 		session_Remove(fd);
 		return 0;
-	}
+		}
 	// else it is the login_fd
 	if( !session_isActive(fd) )
 	{
@@ -1588,9 +1660,10 @@ int parse_tologin(int fd) {
 				exit(1);
 			} else {
 				ShowMessage("Connected to login-server (connection #%d).\n", fd);
+				set_all_offline();
 				// if no map-server already connected, display a message...
 				for(i = 0; i < MAX_MAP_SERVERS; i++)
-					if (server_fd[i] >= 0 && server[i].map[0][0]) // if map-server online and at least 1 map
+					if (server[i].fd >= 0 && server[i].map[0][0]) // if map-server online and at least 1 map
 						break;
 				if (i == MAX_MAP_SERVERS)
 					ShowMessage("Awaiting maps from map-server.\n");
@@ -1658,7 +1731,6 @@ int parse_tologin(int fd) {
 		case 0x2718:
 			if (RFIFOREST(fd) < 2)
 				return 0;
-			// do whatever it's supposed to do here?
 
 			RFIFOSKIP(fd,2);
 			break;
@@ -1779,7 +1851,7 @@ int parse_tologin(int fd) {
 			else {
 				// at least 1 map-server
 				for(i = 0; i < MAX_MAP_SERVERS; i++)
-					if (server_fd[i] >= 0)
+					if (server[i].fd >= 0)
 						break;
 				if (i == MAX_MAP_SERVERS)
 					char_log("'ladmin': Receiving a message for broadcast, but no map-server is online." RETCODE);
@@ -2024,25 +2096,23 @@ int parse_tologin(int fd) {
 	return 0;
 }
 
-
-
 int parse_frommap(int fd) {
 	int i, j;
 	int id;
 
 	for(id = 0; id < MAX_MAP_SERVERS; id++)
-		if (server_fd[id] == fd)
+		if (server[id].fd == fd)
 			break;
 	if(id==MAX_MAP_SERVERS) {
 		// not a map server
 		session_Remove(fd);
 		return 0;
-	}
+			}
 	// else it is a valid map server
 	if( !session_isActive(fd) ) {
 		// a map server is disconnecting
 		ShowMessage("Map-server %d has disconnected.\n", id);
-		server_fd[id] = -1;
+		server[id].fd = -1;
 		session_Remove(fd);// have it removed by do_sendrecv
 		create_online_files();
 		return 0;
@@ -2052,16 +2122,12 @@ int parse_frommap(int fd) {
 //		ShowMessage("parse_frommap: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, (unsigned short)RFIFOW(fd,0), RFIFOREST(fd));
 		switch(RFIFOW(fd,0)) {
 
-
 		// map-server alive packet
 		case 0x2718:
 			if (RFIFOREST(fd) < 2)
 				return 0;
-			// do whatever it's supposed to do here?
-
 			RFIFOSKIP(fd,2);
 			break;
-
 
 		// request from map-server to reload GM accounts. Transmission to login-server (by Yor)
 		case 0x2af7:
@@ -2072,6 +2138,16 @@ int parse_frommap(int fd) {
 //				ShowMessage("char : request from map-server to reload GM accounts -> login-server.\n");
 			}
 			RFIFOSKIP(fd,2);
+			break;
+
+		case 0x2af8: // login as map-server; update ip addresses
+			if (RFIFOREST(fd) < 60)
+				return 0;
+
+			server[id].lanip	= RFIFOLIP(fd,54);
+			server[id].lanport = RFIFOW(fd,58);
+
+			RFIFOSKIP(fd,60);
 			break;
 
 		// Receiving map names list from the map-server
@@ -2087,10 +2163,11 @@ int parse_frommap(int fd) {
 			}
 			{
 				ShowMessage("Map-Server %d connected: %d maps, from IP %d.%d.%d.%d port %d.\n",
-				       id, j, (server[id].ip>>24)&0xFF, (server[id].ip>>16)&0xFF, (server[id].ip>>8)&0xFF, (server[id].ip)&0xFF, server[id].port);
+					id, j, (server[id].lanip>>24)&0xFF, (server[id].lanip>>16)&0xFF, (server[id].lanip>>8)&0xFF, (server[id].lanip)&0xFF, server[id].lanport);
 				ShowMessage("Map-server %d loading complete.\n", id);
 				char_log("Map-Server %d connected: %d maps, from IP %d.%d.%d.%d port %d. Map-server %d loading complete." RETCODE,
-				         id, j, (server[id].ip>>24)&0xFF, (server[id].ip>>16)&0xFF, (server[id].ip>>8)&0xFF, (server[id].ip)&0xFF, server[id].port, id);
+					id, j, (server[id].lanip>>24)&0xFF, (server[id].lanip>>16)&0xFF, (server[id].lanip>>8)&0xFF, (server[id].lanip)&0xFF, server[id].lanport, id);
+				set_all_offline();
 			}
 			WFIFOW(fd,0) = 0x2afb;
 			WFIFOB(fd,2) = 0;
@@ -2106,17 +2183,17 @@ int parse_frommap(int fd) {
 				} else {
 					WBUFW(buf,0) = 0x2b04;
 					WBUFW(buf,2) = j * 16 + 10;
-					WBUFLIP(buf,4) = server[id].ip;
-					WBUFW(buf,8) = server[id].port;
+					WBUFLIP(buf,4) = server[id].lanip;
+					WBUFW(buf,8) = server[id].lanport;
 					memcpy(WBUFP(buf,10), RFIFOP(fd,4), j * 16);
 					mapif_sendallwos(fd, buf, WBUFW(buf,2));
 				}
 				// Transmitting the maps of the other map-servers to the new map-server
 				for(x = 0; x < MAX_MAP_SERVERS; x++) {
-					if (server_fd[x] >= 0 && x != id) {
+					if (server[x].fd >= 0 && x != id) {
 						WFIFOW(fd,0) = 0x2b04;
-						WFIFOLIP(fd,4) = server[x].ip;
-						WFIFOW(fd,8) = server[x].port;
+						WFIFOLIP(fd,4) = server[x].lanip;
+						WFIFOW(fd,8) = server[x].lanport;
 						j = 0;
 						for(i = 0; i < MAX_MAP_PER_SERVER; i++)
 							if (server[x].map[i][0])
@@ -2153,6 +2230,7 @@ int parse_frommap(int fd) {
 					WFIFOL(fd,4) = RFIFOL(fd,2);
 					WFIFOL(fd,8) = auth_fifo[i].login_id2;
 					WFIFOL(fd,12) = (unsigned long)auth_fifo[i].connect_until_time;
+					set_char_online(auth_fifo[i].char_id, auth_fifo[i].account_id);
 					char_dat[auth_fifo[i].char_pos].sex = auth_fifo[i].sex;
 					//memcpy(WFIFOP(fd,16), &char_dat[auth_fifo[i].char_pos], sizeof(struct mmo_charstatus));
 					mmo_charstatus_tobuffer(&char_dat[auth_fifo[i].char_pos], WFIFOP(fd,16));
@@ -2176,7 +2254,6 @@ int parse_frommap(int fd) {
 			if (RFIFOREST(fd) < 6 || RFIFOREST(fd) < RFIFOW(fd,2))
 				return 0;
 			server[id].users = RFIFOW(fd,4);
-
 			// remove all previously online players of the server
 			for(i = 0; i < online_players_max; i++)
 				if (online_chars[i].server == id) {
@@ -2481,7 +2558,105 @@ int parse_frommap(int fd) {
 			RFIFOSKIP(fd, RFIFOW(fd,2));
 //			ShowMessage("char: save_account_reg (from map)\n");
 			break;
-		  }
+		}
+		// Character disconnected set online 0 [Wizputer]
+		case 0x2b17:
+			if (RFIFOREST(fd) < 6)
+				return 0;
+			//SendMessage("Setting %d char offline\n",RFIFOL(fd,2));
+			set_char_offline(RFIFOL(fd,2),RFIFOL(fd,6));
+			RFIFOSKIP(fd,10);
+			break;
+
+		// Reset all chars to offline [Wizputer]
+		case 0x2b18:
+		    set_all_offline();
+			RFIFOSKIP(fd,2);
+			break;
+
+		// Character set online [Wizputer]
+		case 0x2b19:
+			if (RFIFOREST(fd) < 6)
+				return 0;
+			//SendMessage("Setting %d char online\n",RFIFOL(fd,2));
+			set_char_online(RFIFOL(fd,2),RFIFOL(fd,6));
+			RFIFOSKIP(fd,10);
+			break;
+
+		// Request sending of fame list
+		case 0x2b1a:
+			if (RFIFOREST(fd) < 2)
+				return 0;
+		{
+			int i, j, k, len = 6;
+			unsigned char buf[32000];
+			//struct mmo_charstatus *dat;
+			//dat = (struct mmo_charstatus *)aCalloc(char_num, sizeof(struct mmo_charstatus *));
+			CREATE_BUFFER(id, int, char_num);
+			
+			// copy character list into buffer
+			//for (i = 0; i < char_num; i++)
+			//	dat[i] = char_dat[i];
+			// sort according to fame
+			// qsort(dat, char_num, sizeof(struct mmo_charstatus *), sort_fame);
+
+			for(i = 0; i < char_num; i++) {
+				id[i] = i;
+				for(j = 0; j < i; j++) {
+					if (char_dat[i].fame > char_dat[id[j]].fame) {
+						for(k = i; k > j; k--)
+							id[k] = id[k-1];
+						id[j] = i; // id[i]
+						break;
+					}
+				}
+			}
+
+			// starting to send to map
+			WBUFW(buf,0) = 0x2b1b;
+			// send first list for blacksmiths
+			for (i = 0, j = 0; i < char_num && j < 10; i++) {
+				if (char_dat[id[i]].class_ == 10 ||
+					char_dat[id[i]].class_ == 4011 ||
+					char_dat[id[i]].class_ == 4033)
+				{
+					//WBUFL(buf, len) = dat[i].account_id;
+					//WBUFL(buf, len+4) = dat[i].fame;
+					WBUFL(buf, len) = char_dat[id[i]].account_id;
+					WBUFL(buf, len+4) = char_dat[id[i]].fame;
+					len += 8;
+					j++;
+				}
+			}
+			// adding blacksmith's list length
+			WBUFW(buf, 4) = len;
+			
+			// adding second list for alchemists
+			for (i = 0, j = 0; i < char_num && j < 10; i++) {
+				if (char_dat[id[i]].class_ == 18 ||
+					char_dat[id[i]].class_ == 4019 ||
+					char_dat[id[i]].class_ == 4041)
+				{
+					//WBUFL(buf, len) = dat[i].account_id;
+					//WBUFL(buf, len+4) = dat[i].fame;
+					WBUFL(buf, len) = char_dat[id[i]].account_id;
+					WBUFL(buf, len+4) = char_dat[id[i]].fame;
+					len += 8;
+					j++;
+				}
+			}
+			// adding packet length			
+			WBUFW(buf, 2) = len;
+			
+			// sending to all maps
+			mapif_sendall(buf, len);
+			// done!
+			//aFree(dat);
+			DELETE_BUFFER(id);
+			RFIFOSKIP(fd,2);
+			break;
+		}			
+
 		default:
 			// inter server処理に渡す
 			{
@@ -2513,7 +2688,7 @@ int search_mapserver(char *map) {
 
 	temp_map_len = strlen(temp_map);
 	for(i = 0; i < MAX_MAP_SERVERS; i++)
-		if (server_fd[i] >= 0)
+		if (server[i].fd >= 0)
 			for (j = 0; server[i].map[j][0]; j++)
 				//ShowMessage("%s : %s = %d\n", server[i].map[j], map, strncmp(server[i].map[j], temp_map, temp_map_len));
 				if (strncmp(server[i].map[j], temp_map, temp_map_len) == 0) {
@@ -2548,6 +2723,8 @@ int parse_char(int fd) {
 	char email[40];
 	unsigned long client_ip = session[fd]->client_ip;
 	struct char_session_data *sd = (struct char_session_data *)session[fd]->session_data;
+
+	sd = (struct char_session_data*)session[fd]->session_data;
 
 	if (login_fd < 0)
 	{	// no login server available, reject connection
@@ -2605,7 +2782,7 @@ int parse_char(int fd) {
 				ShowMessage("Account Logged On; Account ID: %ld.\n", (unsigned long)RFIFOL(fd,2));
 			if (sd == NULL) {
 				sd = (struct char_session_data*)(session[fd]->session_data = aCalloc(1, sizeof(struct char_session_data)));
-				memcpy(sd->email, "no mail", 40); // put here a mail without '@' to refuse deletion if we don't receive the e-mail
+				strncpy(sd->email, "no mail", 40); // put here a mail without '@' to refuse deletion if we don't receive the e-mail
 				sd->connect_until_time = 0; // unknow or illimited (not displaying on map-server)
 			}
 			sd->account_id = RFIFOL(fd,2);
@@ -2682,6 +2859,7 @@ int parse_char(int fd) {
 					if (sd->found_char[ch] >= 0 && char_dat[sd->found_char[ch]].char_num == RFIFOB(fd,2))
 						break;
 				if (ch != 9) {
+					set_char_online(char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].account_id);
 					char_log("Character Selected, Account ID: %d, Character Slot: %d, Character Name: %s." RETCODE,
 					         sd->account_id, RFIFOB(fd,2), char_dat[sd->found_char[ch]].name);
 					// searching map server
@@ -2717,7 +2895,7 @@ int parse_char(int fd) {
 							// get first online server (with a map)
 							i = 0;
 							for(j = 0; j < MAX_MAP_SERVERS; j++)
-								if (server_fd[j] >= 0 && server[j].map[0][0]) { // change save point to one of map found on the server (the first)
+								if (server[j].fd >= 0 && server[j].map[0][0]) { // change save point to one of map found on the server (the first)
 									i = j;
 									memcpy(char_dat[sd->found_char[ch]].last_point.map, server[j].map[0], 16);
 									ShowMessage("Map-server #%d found with a map: '%s'.\n", j, server[j].map[0]);
@@ -2742,8 +2920,8 @@ int parse_char(int fd) {
 					if (lan_ip_check(client_ip))
 						WFIFOLIP(fd, 22) = lan_map_ip;
 					else
-						WFIFOLIP(fd, 22) = server[i].ip;
-					WFIFOW(fd,26) = server[i].port;
+						WFIFOLIP(fd, 22) = server[i].lanip;
+					WFIFOW(fd,26) = server[i].lanport;
 					WFIFOSET(fd,28);
 					if (auth_fifo_pos >= AUTH_FIFO_SIZE)
 						auth_fifo_pos = 0;
@@ -2927,7 +3105,7 @@ int parse_char(int fd) {
 				return 0;
 			WFIFOW(fd,0) = 0x2af9;
 			for(i = 0; i < MAX_MAP_SERVERS; i++) {
-				if (server_fd[i] < 0)
+				if (server[i].fd < 0)
 					break;
 			}
 			if (i == MAX_MAP_SERVERS || strcmp((char*)RFIFOP(fd,2), userid) || strcmp((char*)RFIFOP(fd,26), passwd)){
@@ -2938,10 +3116,10 @@ int parse_char(int fd) {
 				int len;
 				WFIFOB(fd,2) = 0;
 				session[fd]->func_parse = parse_frommap;
-				server_fd[i] = fd;
 
-				server[i].ip	= RFIFOLIP(fd,54);
-				server[i].port = RFIFOW(fd,58);
+				server[i].fd      = fd;
+				server[i].lanip	  = RFIFOLIP(fd,54);
+				server[i].lanport = RFIFOW(fd,58);
 				server[i].users = 0;
 				memset(server[i].map, 0, sizeof(server[i].map));
 				RFIFOSKIP(fd,60);
@@ -3017,11 +3195,14 @@ int parse_console(char *buf) {
 // 全てのMAPサーバーにデータ送信（送信したmap鯖の数を返す）
 int mapif_sendall(unsigned char *buf, unsigned int len) {
 	int i, c=0;
+		int fd;
 
 	if(buf)
-	for(i = 0; i < MAX_MAP_SERVERS; i++) {
-		int fd;
-		if ((fd = server_fd[i]) >= 0) {
+	for(i = 0; i < MAX_MAP_SERVERS; i++)
+	{
+		fd = server[i].fd;
+		if( fd >= 0 )
+		{
 			memcpy(WFIFOP(fd,0), buf, len);
 			WFIFOSET(fd,len);
 			c++;
@@ -3033,11 +3214,14 @@ int mapif_sendall(unsigned char *buf, unsigned int len) {
 // 自分以外の全てのMAPサーバーにデータ送信（送信したmap鯖の数を返す）
 int mapif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
 	int i, c;
+	int fd;
 
 	c = 0;
-	for(i = 0; i < MAX_MAP_SERVERS; i++) {
-		int fd;
-		if ((fd = server_fd[i]) >= 0 && fd != sfd) {
+	for(i = 0; i < MAX_MAP_SERVERS; i++)
+	{
+		fd = server[i].fd;
+		if( fd >= 0 && fd != sfd)
+		{
 			memcpy(WFIFOP(fd,0), buf, len);
 			WFIFOSET(fd, len);
 			c++;
@@ -3048,10 +3232,12 @@ int mapif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
 // MAPサーバーにデータ送信（map鯖生存確認有り）
 int mapif_send(int fd, unsigned char *buf, unsigned int len) {
 	int i;
-
-	if( session_isActive(fd) ) {
-		for(i = 0; i < MAX_MAP_SERVERS; i++) {
-			if (fd == server_fd[i]) {
+	if( session_isActive(fd) )
+	{
+		for(i = 0; i < MAX_MAP_SERVERS; i++)
+		{
+			if (fd == server[i].fd)
+			{
 				memcpy(WFIFOP(fd,0), buf, len);
 				WFIFOSET(fd,len);
 				return 1;
@@ -3088,25 +3274,25 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		login_fd = make_connection(login_ip, login_port);
 		if( session_isActive(login_fd) )
 		{
-			session[login_fd]->func_parse = parse_tologin;
-			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-			WFIFOW(login_fd,0) = 0x2710;
-			memset(WFIFOP(login_fd,2), 0, 24);
-			memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
-			memset(WFIFOP(login_fd,26), 0, 24);
-			memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
-			WFIFOL(login_fd,50) = 0;
+		session[login_fd]->func_parse = parse_tologin;
+		realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+		WFIFOW(login_fd,0) = 0x2710;
+		memset(WFIFOP(login_fd,2), 0, 24);
+		memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
+		memset(WFIFOP(login_fd,26), 0, 24);
+		memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
+		WFIFOL(login_fd,50) = 0;
 			WFIFOLIP(login_fd,54) = char_ip;
-			WFIFOL(login_fd,58) = char_port;
-			memset(WFIFOP(login_fd,60), 0, 20);
-			memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
-			WFIFOW(login_fd,80) = 0;
-			WFIFOW(login_fd,82) = char_maintenance;
-			WFIFOW(login_fd,84) = char_new;
-			WFIFOSET(login_fd,86);
-		}
+		WFIFOL(login_fd,58) = char_port;
+		memset(WFIFOP(login_fd,60), 0, 20);
+		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
+		WFIFOW(login_fd,80) = 0;
+		WFIFOW(login_fd,82) = char_maintenance;
+		WFIFOW(login_fd,84) = char_new;
+		WFIFOSET(login_fd,86);
 	}
-	return 0;
+}
+		return 0;
 }
 
 
@@ -3368,9 +3554,14 @@ void do_final(void) {
 
 	mmo_char_sync();
 	inter_save();
+	set_all_offline();
+
+	inter_final();
 
 	if(gm_account) aFree(gm_account);
 	if(char_dat) aFree(char_dat);
+
+
 	///////////////////////////////////////////////////////////////////////////
 	// delete sessions
 	for(i = 0; i < fd_max; i++)
@@ -3390,10 +3581,10 @@ int do_init(int argc, char **argv) {
 	char_config_read((argc < 2) ? CHAR_CONF_NAME : argv[1]);
 	lan_config_read((argc > 1) ? argv[1] : LOGIN_LAN_CONF_NAME);
 
-		// a newline in the log...
-		char_log("");
-		// moved behind char_config_read in case we changed the filename [celest]
-		char_log("The char-server starting..." RETCODE);
+	// a newline in the log...
+	char_log("");
+	// moved behind char_config_read in case we changed the filename [celest]
+	char_log("The char-server starting..." RETCODE);
 
 
 	if( naddr_ == 0 ) {
@@ -3403,7 +3594,7 @@ int do_init(int argc, char **argv) {
 	}
 	else if( login_ip == INADDR_LOOPBACK || char_ip == INADDR_ANY ) {
 		// The char server should know what IP address it is running on
-		//   - MouseJstr
+		 //   - MouseJstr
 		unsigned long localaddr = addr_[0]; // host order network address
 		if (naddr_ != 1)
 			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n", 
@@ -3421,14 +3612,7 @@ int do_init(int argc, char **argv) {
 
 	for(i = 0; i < MAX_MAP_SERVERS; i++) {
 		memset(&server[i], 0, sizeof(struct mmo_map_server));
-		server_fd[i] = -1;
-	}
-
-	online_players_max = 256;
-	online_chars = (struct online_chars*)aCalloc(online_players_max, sizeof(struct online_chars));
-	for(i = 0; i < online_players_max; i++) {
-		online_chars[i].char_id = -1;
-		online_chars[i].server = -1;
+		server[i].fd = -1;
 	}
 
 	mmo_char_init();
@@ -3438,7 +3622,6 @@ int do_init(int argc, char **argv) {
 
 	inter_init((argc > 2) ? argv[2] : inter_cfgName);	// inter server 初期化
 
-	set_termfunc(do_final);
 	set_defaultparse(parse_char);
 
 	char_fd = make_listen(char_ip,char_port);

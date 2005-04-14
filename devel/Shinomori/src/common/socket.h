@@ -776,16 +776,18 @@ class streamable;
 class buffer_iterator
 {
 	unsigned char *ipp;
+	const unsigned char *start;
 	const unsigned char *end;
 public:
 	buffer_iterator(const unsigned char* b, size_t sz)
-		: ipp(const_cast<unsigned char*>(b)), end(b+sz)
+		: ipp(const_cast<unsigned char*>(b)), start(b), end(b+sz)
 	{}
 
 	bool eof()
 	{	
 		return !(ipp && ipp<end);
 	}
+	size_t size()	{ return ipp-start; }
 
 	///////////////////////////////////////////////////////////////////////////
 	unsigned char operator = (const unsigned char ch)
@@ -1065,8 +1067,7 @@ public:
 
 	bool step(int i)
 	{	// can go to backwards with negative offset
-		// but this cannot handled by error checks
-		if(ipp+i <= end)
+		if(ipp+i <= end && ipp+i >= start)
 		{
 			ipp+=i;
 			return true;
@@ -1502,6 +1503,7 @@ int WFIFOSET(int fd, size_t len);
 int RFIFOSKIP(int fd, size_t len);
 
 int do_sendrecv(int next);
+void do_final_socket(void);
 
 void socket_init(void);
 void socket_final(void);

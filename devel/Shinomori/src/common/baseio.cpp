@@ -49,6 +49,7 @@ public:
 
 	/////////////////////////////////////////////////////////////////
 	// open the database, create when not exist
+	// extension is always ".txt" for db and ".inx" for index
 	bool open(const char *name)
 	{
 		ScopeLock sl(*this);
@@ -64,9 +65,9 @@ public:
 		// copy and correct the path seperators
 		checkpath(cName, name);
 
-		ip = strrchr(cName, '.');	// find a point in the name
-		if(!ip || strchr(ip, PATHSEP) )						
-			ip = cName+strlen(cName);
+		ip = strrchr(cName, '.');		// find a point in the name
+		if(!ip || strchr(ip, PATHSEP) )	// if name had no point					
+			ip = cName+strlen(cName);	// take all as name
 
 		strcpy(ip, ".txt");
 		cDB = fopen(cName, "rb+");
@@ -246,6 +247,9 @@ public:
 	// rebuild database and index
 	bool rebuild()
 	{
+		if(!cName || !cDB || !cIX)
+			return false;
+
 		ScopeLock sl(*this);
 		char buffer[1024];		// the fixed size here might be a problem
 		TslistDST<_key>	inx;	// new index
@@ -275,7 +279,7 @@ public:
 		fclose(cDB);
 
 		// swap databases
-		// need a new buffer for the name to do the rename
+		// need a new buffer for renaming
 		char *name = new char[1+strlen(cName)];
 		memcpy(name, cName,1+strlen(cName));
 		strcpy(ip, ".txt");

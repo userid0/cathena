@@ -27,17 +27,5 @@ struct mmo_account {
 	int sex;
 };
 
-struct mmo_char_server {
-	char name[21];
-	unsigned long ip;
-	unsigned short port;
-	int users;
-	int maintenance;
-	int new_;
-};
 
-
-extern unsigned short login_port;
-extern struct mmo_char_server server[MAX_SERVERS];
-extern int server_fd[MAX_SERVERS];
 #endif

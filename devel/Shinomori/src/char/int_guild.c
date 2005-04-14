@@ -435,7 +435,7 @@ int inter_guild_init() {
 	//デフォルトデータを作成
 	for(i = 0; i < MAX_GUILDCASTLE; i++) {
 		// check if castle i exist
-		gc = (struct guild_castle*)numdb_search(castle_db, c);
+		gc = (struct guild_castle*)numdb_search(castle_db, i);
 		if( NULL==gc )
 		{	// construct a new one if not
 			gc = (struct guild_castle*)aCalloc(1, sizeof(struct guild_castle));
@@ -1333,6 +1333,7 @@ int mapif_parse_GuildCastleDataLoad(int fd, int castle_id, int index) {
 
 	if (gc == NULL) {
 		// this is causing the loadack error
+		ShowMessage("called castle %i, index %i; does not exist.\n", castle_id, index);
 		return mapif_guild_castle_dataload(castle_id, 0, 0);
 	}
 	switch(index) {

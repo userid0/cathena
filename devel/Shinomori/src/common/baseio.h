@@ -10,6 +10,11 @@
 #include "strlib.h"
 #include "mmo.h"
 
+
+
+
+
+
 //////////////////////////////////////////////////////////////////////////
 // basic interface for reading defaults from file
 //////////////////////////////////////////////////////////////////////////
@@ -54,6 +59,7 @@ public:
 				remove_control_chars(w1);
 				remove_control_chars(w2);
 
+				// calling derived function to process
 				ProcessConfig(w1,w2);
 			}
 		}
@@ -68,7 +74,7 @@ public:
 
 
 	//////////////////////////////////////////////////////////////////////
-	// some data processings
+	// some global data processings
 	//////////////////////////////////////////////////////////////////////
 	ulong String2IP(const char*str)
 	{	// host byte order
@@ -85,7 +91,7 @@ public:
 	}
 	const char* IP2String(ulong ip, char*buffer=NULL)
 	{	// host byte order
-		// usage of the static buffer is not threadsave
+		// usage of the static buffer here is not threadsave
 		static char temp[20], *pp= (buffer) ? buffer:temp;
 
 		sprintf(pp, "%d.%d.%d.%d", (ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF);
@@ -608,7 +614,9 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 
 	GM_Database(DBDefaults& d) : Database(d)
-	{}
+	{
+		read_gm_account();
+	}
 	~GM_Database()	
 	{}
 
@@ -807,13 +815,106 @@ public:
 };
 
 
+class logger : private Mutex
+{
+	bool	cToScreen;
+	FILE*	cToFile;
 
+	bool log_screen(const char* msg, va_list va)
+	{
+		if(cToScreen)
+		{
+			ScopeLock sl(*this);
+			vprintf(msg,va);
+			return true;
+		}
+		return false;
+	}
+		
+	bool log_file(const char* msg, va_list va)
+	{
+		if(cToFile)
+		{	ScopeLock sl(*this);
+			vfprintf(cToFile,msg,va);
+			return true;
+		}
+		return false;
+	}
+public:
 
+	logger(bool s=true) : cToScreen(s), cToFile(NULL)
+	{
+	}
+	logger(bool s, const char* n) : cToScreen(s), cToFile(NULL)
+	{	
+		open(n);
+	}
+	logger(const char* n) : cToScreen(true), cToFile(NULL)
+	{	
+		open(n);
+	}
+	~logger()
+	{
+		close();
+	}
 
+	bool open(const char* name)
+	{
+		close();
+		cToFile = fopen(name, "a");
+		return (NULL != cToFile);
+	}
 
+	bool close()
+	{
+		if(cToFile)
+		{
+			fclose(cToFile);
+			cToFile = NULL;
+		}
+		return true;
+	}
 
+	bool SetLog(bool s)
+	{
+		bool x=cToScreen;
+		cToScreen = s;
+		return x;
+	}
+	bool isLog()
+	{
+		return cToScreen;
+	}
 
-
+	bool log(const char* msg, ...)
+	{
+		bool ret;
+		va_list va;
+		va_start( va, msg );
+		ret  = log_screen(msg, va);
+		ret &= log_file(msg, va);
+		va_end( va );
+		return ret;
+	}
+	bool log_screen(const char* msg,...)
+	{
+		bool ret;
+		va_list va;
+		va_start( va, msg );
+		ret = log_screen(msg, va);
+		va_end( va );
+		return ret;
+	}
+	bool log_file(const char* msg,...)
+	{
+		bool ret;
+		va_list va;
+		va_start( va, msg );
+		ret = log_file(msg, va);
+		va_end( va );
+		return ret;
+	}
+};
 
 
 

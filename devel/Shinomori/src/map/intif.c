@@ -121,7 +121,7 @@ int intif_GMmessage(char* mes, int flag)
 		WFIFOSET(inter_fd, lp + len);
 
 		// Send to the local players
-		clif_GMmessage(NULL, mes, 0);
+		clif_GMmessage(NULL, mes, flag);
 	}
 	return 0;
 }

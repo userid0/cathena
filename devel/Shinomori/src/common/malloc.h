@@ -3,9 +3,6 @@
 
 #include "base.h"
 
-// 独自メモリマネージャを使用する場合、次のコメントを外してください。
-// #define USE_MEMMGR
-
 #if defined(DMALLOC)
 
 #	include "dmalloc.h"
@@ -63,7 +60,7 @@
 	void* aCalloc_( size_t num, size_t size, const char *file, int line, const char *func );
 	void* aRealloc_( void *p, size_t size, const char *file, int line, const char *func );
 	void  aFree_( void *p, const char *file, int line, const char *func );
-	char* aStrdup_( const void *p, const char *file, int line, const char *func );
+	char* aStrdup_( const char *p, const char *file, int line, const char *func );
 
 #	define aMalloc(n) aMalloc_(n,ALC_MARK)
 #	define aMallocA(n) aMalloc_(n,ALC_MARK)
@@ -75,10 +72,6 @@
 
 #endif// neither GCOLLECT or BCHECK
 
-#ifndef USE_MEMMGR
-	#define do_init_memmgr(file)
-#else
-	int do_init_memmgr(const char* file);
-#endif
-
+int memmgr_init(const char* file);
+void memmgr_final();
 #endif

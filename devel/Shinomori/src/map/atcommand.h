@@ -145,6 +145,7 @@ enum AtCommandType {
 	AtCommand_PartyRecall, // by Yor
 	AtCommand_Nuke,	// [Valaris]
 	AtCommand_Enablenpc,
+	AtCommand_Hidenpc,
 	AtCommand_Disablenpc,
 	AtCommand_ServerTime, // by Yor
 	AtCommand_CharDelItem, // by Yor
@@ -179,7 +180,9 @@ enum AtCommandType {
 	AtCommand_Rain,
 	AtCommand_Snow,
 	AtCommand_Sakura,
+	AtCommand_Clouds,
 	AtCommand_Fog,
+	AtCommand_Fireworks,
 	AtCommand_Leaves,
 	AtCommand_AdjGmLvl, // MouseJstr
 	AtCommand_AdjCmdLvl, // MouseJstr
@@ -246,6 +249,11 @@ enum AtCommandType {
 	AtCommand_AutoLoot, //by Upa-Kun
 	AtCommand_MobInfo, //by Lupus
         AtCommand_Adopt, // by Veider
+        AtCommand_Version, // by Ancyker
+
+        AtCommand_MuteArea, // MouseJstr
+        AtCommand_Shuffle, // MouseJstr
+        AtCommand_Rates, // MouseJstr
 
 	// end
 	AtCommand_Unknown,
@@ -286,6 +294,9 @@ void do_final_msg();
 char *estr_lower(char *str);
 
 char * job_name(int class_);
+
+#define MAX_MSG 1000
+extern char *msg_table[MAX_MSG];
 
 #endif
 

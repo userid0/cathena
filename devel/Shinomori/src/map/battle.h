@@ -79,9 +79,6 @@ int battle_check_range(struct block_list *src,struct block_list *bl,int range);
 
 
 // ê›íË
-
-int battle_config_switch(const char *str); // [Valaris]
-
 extern struct Battle_Config {
 	int warp_point_debug;
 	int enemy_critical;
@@ -313,6 +310,9 @@ extern struct Battle_Config {
 	int rainy_waterball; // [Shinomori]
 	int require_glory_guild;
 	int idle_no_share;
+	int delay_battle_damage;
+	int display_version;
+	int who_display_aid;
 
 #ifndef TXT_ONLY /* SQL-only options */
 	int mail_system; // [Valaris]

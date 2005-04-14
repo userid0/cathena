@@ -15,7 +15,7 @@
 #define CHECK_BOUNDS		// enables boundary check for arrays and lists
 #define CHECK_LOCKS			// enables check of locking/unlocking sync objects
 #define SINGLETHREAD		// builds without multithread guards
-//#define CHECK_EXCEPTIONS	// use exceptions for "exception" handling
+#define CHECK_EXCEPTIONS	// use exceptions for "exception" handling
 #define _USE_32BIT_TIME_T	// use 32 bit time variables on windows
 
 
@@ -325,6 +325,7 @@ extern inline unsigned long GetTickCount() {
 //////////////////////////////
 #endif////////////////////////
 //////////////////////////////
+
 
 
 
@@ -646,6 +647,56 @@ public:
 
 
 
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// a simple fixed size buffer
+// need size argument at compile time
+///////////////////////////////////////////////////////////////////////////////
+template <class T, size_t SZ> class TBuffer
+{
+private:
+	T	cField[SZ];
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// access a c style array
+	operator T*()	{ return cField; }
+
+	///////////////////////////////////////////////////////////////////////////
+	// write access to field elements
+	T &operator[](size_t inx)
+	{
+#ifdef CHECK_BOUNDS
+		if(inx>SZ)
+		{
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TBuffer out of bound");
+#else
+			static T dummy;
+			return dummy;
+#endif
+		}
+#endif
+		return cField[inx];
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// read-only access to field elements
+	const T &operator[](size_t inx) const
+	{
+#ifdef CHECK_BOUNDS
+		if(inx>SZ)
+		{
+#ifdef CHECK_EXCEPTIONS
+			throw exception_bound("TBuffer out of bound");
+#else
+			return cField[0];
+#endif
+		}
+#endif
+		return cField[inx];
+	}
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // basic interface for arrays

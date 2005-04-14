@@ -409,10 +409,8 @@ public:
 				hist = hist2;
 			}
 		}
-		if (access_allow)
-			aFree(access_allow);
-		if (access_deny)
-			aFree(access_deny);
+		if(access_allow) aFree(access_allow);
+		if(access_deny)	 aFree(access_deny);
 	}
 
 
@@ -653,7 +651,7 @@ public:
 	}
 };
 
-static DDoS ddos;
+DDoS ddos;
 
 int connect_check_clear(int tid,unsigned long tick,int id,int data)
 {

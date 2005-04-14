@@ -28,14 +28,5 @@ struct mmo_account {
 	int version;	//Added by sirius for versioncheck
 };
 
-struct mmo_char_server {
-	char name[20];
-	unsigned long ip;
-	unsigned short port;
-	size_t users;
-	int maintenance;
-	int new_;
-};
-
 
 #endif

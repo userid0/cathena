@@ -281,7 +281,6 @@ void inter_final() {
 	inter_guild_final();
 	inter_storage_final();
 	inter_pet_final();
-
 	return;
 }
 

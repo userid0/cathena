@@ -17,11 +17,12 @@
 #include "memwatch.h"
 #endif
 
-static const int packet_len_table[0x20] = {
+static const int packet_len_table[0x28] = {
 	60, 3,-1,27,22,-1, 6,-1,	// 2af8-2aff
 	 6,-1,18, 7,-1,49,44, 0,	// 2b00-2b07
 	 6,30,-1,10,86, 7,44,34,	// 2b08-2b0f
 	-1,-1,10, 6,11,-1, 0, 0,	// 2b10-2b17
+	-1,-1,-1,-1,-1,-1,-1,-1,	// 2b18-2b1f
 };
 
 int chrif_connected;
@@ -124,7 +125,7 @@ int chrif_connect(int fd)
 	memcpy(WFIFOP(fd,26), passwd, 24);
 	WFIFOL(fd,50) = 0;
 	WFIFOLIP(fd,54) = clif_getip();
-	WFIFOW(fd,58) = clif_getport();	// [Valaris] thanks to fov
+	WFIFOW(fd,58)   = clif_getport();	// [Valaris] thanks to fov
 	WFIFOSET(fd,60);
 	return 0;
 }
@@ -873,6 +874,21 @@ int chrif_chardisconnect(struct map_session_data *sd)
 }
 
 /*==========================================
+ * Request to reload GM accounts and their levels: send to char-server by [Yor]
+ *------------------------------------------
+ */
+int chrif_reloadGMdb(void)
+{
+	if( char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+		return -1;
+
+	WFIFOW(char_fd,0) = 0x2af7;
+	WFIFOSET(char_fd, 2);
+
+	return 0;
+}
+
+/*==========================================
  * Receiving GM accounts and their levels from char-server by [Yor]
  *------------------------------------------
  */
@@ -883,17 +899,61 @@ int chrif_recvgmaccounts(int fd)
 }
 
 /*==========================================
- * Request to reload GM accounts and their levels: send to char-server by [Yor]
+ * Request/Receive top 10 Fame character list
  *------------------------------------------
  */
-int chrif_reloadGMdb(void)
+int chrif_reqfamelist(void)
 {
    	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
 		return -1;
 
-	WFIFOW(char_fd,0) = 0x2af7;
+	WFIFOW(char_fd,0) = 0x2b1a;
 	WFIFOSET(char_fd, 2);
 
+	return 0;
+}
+int chrif_recvfamelist(int fd)
+{
+	int id;
+	size_t fame;
+	size_t i, num, size;
+	size_t total = 0;
+
+	// response from 0x2b1b
+	memset (smith_fame_list, 0, sizeof(smith_fame_list));
+	memset (chemist_fame_list, 0, sizeof(chemist_fame_list));
+
+	size = RFIFOW(fd,4);
+	for (i=6, num=0; i<size; i+=8)
+	{
+		id = RFIFOL(fd,i);
+		fame = RFIFOL(fd,i+4);
+		if( id > 0 && fame > 0 && num < 10)
+		{
+			smith_fame_list[num].id = id;
+			smith_fame_list[num].fame = fame;
+			//ShowMessage("received id: %d fame:%d\n", id, fame);
+			num++;
+		}
+	}
+	total += num;
+
+	size = RFIFOW(fd,2);
+	for (num=0; i<size; i+=8)
+	{
+		id = RFIFOL(fd,i);
+		fame = RFIFOL(fd,i+4);
+		if( id > 0 && fame > 0 && num < 10)
+		{
+			chemist_fame_list[num].id = id;
+			chemist_fame_list[num].fame = fame;
+			//ShowMessage("received id: %d fame:%d\n", id, fame);
+			num++;
+		}
+	}
+	total += num;
+
+	ShowInfo("Receiving Fame List of '"CL_WHITE"%d"CL_RESET"' characters.\n", total);
 	return 0;
 }
 
@@ -1095,6 +1155,7 @@ int chrif_parse(int fd)
 		case 0x2b13: chrif_accountdeletion(fd); break;
 		case 0x2b14: chrif_accountban(fd); break;
 		case 0x2b15: chrif_recvgmaccounts(fd); break;
+		case 0x2b1b: chrif_recvfamelist(fd); break;
 
 		default:
 			if (battle_config.error_log)
@@ -1140,21 +1201,23 @@ int send_users_tochar(int tid, unsigned long tick, int id, int data) {
  * char鯖との接続を確認し、もし切れていたら再度接続する
  *------------------------------------------
  */
-int check_connect_char_server(int tid, unsigned long tick, int id, int data) {
+int check_connect_char_server(int tid, unsigned long tick, int id, int data)
+{
 	static int displayed = 0;
-	if (char_fd <= 0 || session[char_fd] == NULL) {
-		if (!displayed) {
+	if (char_fd <= 0 || session[char_fd] == NULL)
+	{
+		if (!displayed)
+		{
 			ShowStatus("Attempting to connect to Char Server. Please wait.\n");
 			displayed = 1;
 		}
 		clif_foreachclient(chrif_disconnect_sub);
 		chrif_state = 0;
-
+		
 		char_fd = make_connection(char_ip, char_port);
-
-		if(char_fd<0) 
+		if(char_fd<0)
 			return 0;
-
+		
 		session[char_fd]->func_parse = chrif_parse;
 		realloc_fifo(char_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
 
@@ -1184,7 +1247,8 @@ int do_final_chrif(void)
  *
  *------------------------------------------
  */
-int do_init_chrif(void) {
+int do_init_chrif(void)
+{
 	add_timer_func_list(check_connect_char_server, "check_connect_char_server");
 	add_timer_func_list(send_users_tochar, "send_users_tochar");
 	add_timer_interval(gettick() + 1000, 10 * 1000, check_connect_char_server, 0, 0);

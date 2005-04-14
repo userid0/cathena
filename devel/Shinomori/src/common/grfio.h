@@ -5,6 +5,7 @@
 #include "base.h"
 
 void grfio_init(const char*);			// GRFIO Initialize
+void grfio_final(void);
 int grfio_add(const char*);				// GRFIO Resource file add
 void* grfio_read(const char*);			// GRFIO data file read
 void* grfio_reads(const char*,int*);	// GRFIO data file read & size get

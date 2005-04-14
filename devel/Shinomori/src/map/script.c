@@ -1781,21 +1781,23 @@ int buildin_menu(struct script_state *st)
  */
 int buildin_rand(struct script_state *st)
 {
-	int range,min,max;
+	int range;
 
-	if(st->end>st->start+3){
-		min=conv_num(st,& (st->stack->stack_data[st->start+2]));
-		max=conv_num(st,& (st->stack->stack_data[st->start+3]));
-		if(max<min){
-			int tmp;
-			tmp=min;
-			min=max;
-			max=tmp;
+	if (st->end > st->start+3){
+		int min, max;
+		min = conv_num(st,& (st->stack->stack_data[st->start+2]));
+		max = conv_num(st,& (st->stack->stack_data[st->start+3]));
+		if (max < min){
+			int tmp = min;
+			min = max;
+			max = tmp;
 		}
-		range=max-min+1;
+		range = max - min + 1;
+		if (range == 0) range = 1;
 		push_val(st->stack,C_INT,rand()%range+min);
 	} else {
-		range=conv_num(st,& (st->stack->stack_data[st->start+2]));
+		range = conv_num(st,& (st->stack->stack_data[st->start+2]));
+		if (range == 0) range = 1;
 		push_val(st->stack,C_INT,rand()%range);
 	}
 	return 0;
@@ -3122,6 +3124,19 @@ int buildin_successrefitem(struct script_state *st)
 		clif_additem(sd,i,1,0);
 		pc_equipitem(sd,i,ep);
 		clif_misceffect(&sd->bl,3);
+		if(sd->status.inventory[i].refine == 10 && sd->status.inventory[i].card[0] == 0x00ff && sd->status.inventory[i].card[2] == sd->char_id){ // Fame point system [DracoRPG]
+	 		switch (sd->inventory_data[i]->wlv){
+	 	 		case 1:
+		 	  		 sd->status.fame += 1; // Success to refine to +10 a lv1 weapon you forged = +1 fame point
+		 	  		 break;
+	 	   		case 2:
+					 sd->status.fame += 25; // Success to refine to +10 a lv2 weapon you forged = +25 fame point
+					 break;
+				case 3:
+					 sd->status.fame += 1000; // Success to refine to +10 a lv3 weapon you forged = +1000 fame point
+					 break;
+	 	 	 }
+		}
 	}
 
 	return 0;
@@ -4825,9 +4840,36 @@ int buildin_isloggedin(struct script_state *st)
  *
  *------------------------------------------
  */
-enum {  MF_NOMEMO,MF_NOTELEPORT,MF_NOSAVE,MF_NOBRANCH,MF_NOPENALTY,MF_NOZENYPENALTY,
-	MF_PVP,MF_PVP_NOPARTY,MF_PVP_NOGUILD,MF_GVG,MF_GVG_NOPARTY,MF_NOTRADE,MF_NOSKILL,
-	MF_NOWARP,MF_NOPVP,MF_NOICEWALL,MF_SNOW,MF_FOG,MF_SAKURA,MF_LEAVES,MF_RAIN,MF_INDOORS,MF_NOGO };
+enum 
+{
+	MF_NOMEMO,			// 0
+	MF_NOTELEPORT,		// 1
+	MF_NOSAVE,			// 2
+	MF_NOBRANCH,		// 3
+	MF_NOPENALTY,		// 4
+	MF_NOZENYPENALTY,	// 5
+	MF_PVP,				// 6
+	MF_PVP_NOPARTY,		// 7
+	MF_PVP_NOGUILD,		// 8
+	MF_GVG,				// 9
+	MF_GVG_NOPARTY,		//10
+	MF_NOTRADE,			//11
+	MF_NOSKILL,			//12
+	MF_NOWARP,			//13
+	MF_NOPVP,			//14
+	MF_NOICEWALL,		//15
+	MF_SNOW,			//16
+	MF_FOG,				//17
+	MF_SAKURA,			//18
+	MF_LEAVES,			//19
+	MF_RAIN,			//20
+	MF_INDOORS,			//21
+	MF_NOGO,			//22
+	MF_CLOUDS,			//23
+	MF_FIREWORKS 		//24
+};
+
+
 
 int buildin_setmapflagnosave(struct script_state *st)
 {
@@ -4909,8 +4951,14 @@ int buildin_setmapflag(struct script_state *st)
 			case MF_SNOW: // [Valaris]
 				map[m].flag.snow=1;
 				break;
+			case MF_CLOUDS:
+				map[m].flag.clouds=1;
+				break;
 			case MF_FOG: // [Valaris]
 				map[m].flag.fog=1;
+				break;
+			case MF_FIREWORKS:
+				map[m].flag.fireworks=1;
 				break;
 			case MF_SAKURA: // [Valaris]
 				map[m].flag.sakura=1;
@@ -4991,8 +5039,14 @@ int buildin_removemapflag(struct script_state *st)
 			case MF_SNOW: // [Valaris]
 				map[m].flag.snow=0;
 				break;
+			case MF_CLOUDS:
+				map[m].flag.clouds=0;
+				break;
 			case MF_FOG: // [Valaris]
 				map[m].flag.fog=0;
+				break;
+			case MF_FIREWORKS:
+				map[m].flag.fireworks=0;
 				break;
 			case MF_SAKURA: // [Valaris]
 				map[m].flag.sakura=0;
@@ -6194,9 +6248,7 @@ int buildin_gmcommand(struct script_state *st)
 
 	sd = script_rid2sd(st);
 	cmd = conv_str(st,& (st->stack->stack_data[st->start+2]));
-
-        is_atcommand(sd->fd, sd, cmd, 99);
-
+	is_atcommand(sd->fd, sd, cmd, 99);
 	return 0;
 }
 
@@ -7753,25 +7805,25 @@ int script_config_read(const char *cfgName)
 			set_posword(w2);
 		}
 		else if(strcasecmp(w1,"warn_func_no_comma")==0) {
-			script_config.warn_func_no_comma = battle_config_switch(w2);
+			script_config.warn_func_no_comma = config_switch(w2);
 		}
 		else if(strcasecmp(w1,"warn_cmd_no_comma")==0) {
-			script_config.warn_cmd_no_comma = battle_config_switch(w2);
+			script_config.warn_cmd_no_comma = config_switch(w2);
 		}
 		else if(strcasecmp(w1,"warn_func_mismatch_paramnum")==0) {
-			script_config.warn_func_mismatch_paramnum = battle_config_switch(w2);
+			script_config.warn_func_mismatch_paramnum = config_switch(w2);
 		}
 		else if(strcasecmp(w1,"warn_cmd_mismatch_paramnum")==0) {
-			script_config.warn_cmd_mismatch_paramnum = battle_config_switch(w2);
+			script_config.warn_cmd_mismatch_paramnum = config_switch(w2);
 		}
 		else if(strcasecmp(w1,"check_cmdcount")==0) {
-			script_config.check_cmdcount = battle_config_switch(w2);
+			script_config.check_cmdcount = config_switch(w2);
 		}
 		else if(strcasecmp(w1,"check_gotocount")==0) {
-			script_config.check_gotocount = battle_config_switch(w2);
+			script_config.check_gotocount = config_switch(w2);
 		}
 		else if(strcasecmp(w1,"event_script_type")==0) {
-			script_config.event_script_type = battle_config_switch(w2);
+			script_config.event_script_type = config_switch(w2);
 		}
 		else if(strcasecmp(w1,"die_event_name")==0) {			
 			strcpy(script_config.die_event_name, w2);			
@@ -7786,7 +7838,7 @@ int script_config_read(const char *cfgName)
 			strcpy(script_config.logout_event_name, w2);
 		}
 		else if(strcasecmp(w1,"require_set_trigger")==0) {
-			script_config.event_requires_trigger = battle_config_switch(w2);
+			script_config.event_requires_trigger = config_switch(w2);
 		}
 		else if(strcasecmp(w1,"import")==0){
 			script_config_read(w2);
@@ -7864,6 +7916,7 @@ int do_init_script()
 	add_timer_interval(gettick()+MAPREG_AUTOSAVE_INTERVAL,MAPREG_AUTOSAVE_INTERVAL,
 		script_autosave_mapreg,0,0);
 
-	scriptlabel_db=strdb_init(50);
+	if (scriptlabel_db == NULL)
+	  scriptlabel_db=strdb_init(50);
 	return 0;
 }

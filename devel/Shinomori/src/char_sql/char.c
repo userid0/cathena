@@ -54,7 +54,6 @@ int lowest_gm_level = 1;
 char *SQL_CONF_NAME = "conf/inter_athena.conf";
 
 struct mmo_map_server server[MAX_MAP_SERVERS];
-int server_fd[MAX_MAP_SERVERS];
 
 int login_fd =-1;
 int char_fd = -1;
@@ -176,11 +175,11 @@ void set_all_offline(void) {
 	    while((sql_row = mysql_fetch_row(sql_res)))
 		{
 	        ShowMessage("send user offline: %d\n",atoi(sql_row[0]));
-	        WFIFOW(login_fd,0) = 0x272c;
-	        WFIFOL(login_fd,2) = atoi(sql_row[0]);
-	        WFIFOSET(login_fd,6);
-		}
-	}
+	            WFIFOW(login_fd,0) = 0x272c;
+	            WFIFOL(login_fd,2) = atoi(sql_row[0]);
+	            WFIFOSET(login_fd,6);
+            }
+       }
 
    	mysql_free_result(sql_res);
     sprintf(tmp_sql,"UPDATE `%s` SET `online`='0' WHERE `online`='1'", char_db);
@@ -195,18 +194,18 @@ void set_char_offline(int char_id, int account_id) {
 
     if ( char_id == 99 )
         sprintf(tmp_sql,"UPDATE `%s` SET `online`='0' WHERE `account_id`='%d'", char_db, account_id);
-    else {
-        cp = (struct mmo_charstatus*)numdb_search(char_db_,char_id);
-        if (cp != NULL) {
-            aFree(cp);
-            numdb_erase(char_db_,char_id);
-        }
+	else {
+		cp = (struct mmo_charstatus*)numdb_search(char_db_,char_id);
+		if (cp != NULL) {
+			aFree(cp);
+			numdb_erase(char_db_,char_id);
+		}
 
-        sprintf(tmp_sql,"UPDATE `%s` SET `online`='0' WHERE `char_id`='%d'", char_db, char_id);
+		sprintf(tmp_sql,"UPDATE `%s` SET `online`='0' WHERE `char_id`='%d'", char_db, char_id);
 
-	if (mysql_query(&mysql_handle, tmp_sql))
+		if (mysql_query(&mysql_handle, tmp_sql))
 		ShowMessage("DB server Error (set_char_offline)- %s\n", mysql_error(&mysql_handle));
-    }
+	}
 
    if( !session_isActive(login_fd) )
 	return;
@@ -260,12 +259,12 @@ int insert_friends(int char_id){
 
 	tmp_p += sprintf(tmp_p, "REPLACE INTO `%s` (`id`, `account_id`",friend_db);
 
-	for (i=0;i<20;i++)
+	for (i=0;i<MAX_FRIENDLIST;i++)
 		tmp_p += sprintf(tmp_p, ", `friend_id%d`, `name%d`", i, i);
 
 	tmp_p += sprintf(tmp_p, ") VALUES (NULL, '%d'", char_id);
 
-	for (i=0;i<20;i++)
+	for (i=0;i<MAX_FRIENDLIST;i++)
 		tmp_p += sprintf(tmp_p, ", '0', ''");
 
 	tmp_p += sprintf(tmp_p, ")");
@@ -399,17 +398,14 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 	    (p->clothes_color != cp->clothes_color) || (p->weapon != cp->weapon) ||
 	    (p->shield != cp->shield) || (p->head_top != cp->head_top) ||
 	    (p->head_mid != cp->head_mid) || (p->head_bottom != cp->head_bottom) ||
-	    (p->partner_id != cp->partner_id) || 
-		(p->father_id != cp->father_id) ||
-	    (p->mother_id != cp->mother_id) || 
-		(p->child_id != cp->child_id)) {
-
-//}//---------------------------test count------------------------------
-	//check party_exist
+	    (p->partner_id != cp->partner_id) || (p->father_id != cp->father_id) ||
+	    (p->mother_id != cp->mother_id) || (p->child_id != cp->child_id) || 
+		(p->fame != cp->fame)) 
+	{	//check party_exist
 	party_exist=0;
 	sprintf(tmp_sql, "SELECT count(*) FROM `%s` WHERE `party_id` = '%d'",party_db, p->party_id); // TBR
 	if (mysql_query(&mysql_handle, tmp_sql)) {
-		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 	}
 	sql_res = mysql_store_result(&mysql_handle);
 	sql_row = mysql_fetch_row(sql_res);
@@ -420,7 +416,7 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 	guild_exist=0;
 	sprintf(tmp_sql, "SELECT count(*) FROM `%s` WHERE `guild_id` = '%d'",guild_db, p->guild_id); // TBR
 	if (mysql_query(&mysql_handle, tmp_sql)) {
-		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 	}
 	sql_res = mysql_store_result(&mysql_handle);
 	sql_row = mysql_fetch_row(sql_res);
@@ -437,14 +433,16 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 	//`option`,`karma`,`manner`,`party_id`,`guild_id`,`pet_id`, //27
 	//`hair`,`hair_color`,`clothes_color`,`weapon`,`shield`,`head_top`,`head_mid`,`head_bottom`, //35
 	//`last_map`,`last_x`,`last_y`,`save_map`,`save_x`,`save_y`)
-	//ShowMessage("- Save char data to MySQL!\n");
+		//ShowMessage("- Save char data to MySQL!\n");
 	sprintf(tmp_sql ,"UPDATE `%s` SET `class`='%d', `base_level`='%d', `job_level`='%d',"
 		"`base_exp`='%d', `job_exp`='%d', `zeny`='%d',"
 		"`max_hp`='%d',`hp`='%d',`max_sp`='%d',`sp`='%d',`status_point`='%d',`skill_point`='%d',"
 		"`str`='%d',`agi`='%d',`vit`='%d',`int`='%d',`dex`='%d',`luk`='%d',"
 		"`option`='%d',`karma`='%d',`manner`='%d',`party_id`='%d',`guild_id`='%d',`pet_id`='%d',"
 		"`hair`='%d',`hair_color`='%d',`clothes_color`='%d',`weapon`='%d',`shield`='%d',`head_top`='%d',`head_mid`='%d',`head_bottom`='%d',"
-		"`last_map`='%s',`last_x`='%d',`last_y`='%d',`save_map`='%s',`save_x`='%d',`save_y`='%d',`partner_id`='%d', `father`='%d', `mother`='%d', `child`='%d' WHERE  `account_id`='%d' AND `char_id` = '%d'",
+		"`last_map`='%s',`last_x`='%d',`last_y`='%d',`save_map`='%s',`save_x`='%d',`save_y`='%d',"
+		"`partner_id`='%d', `father`='%d', `mother`='%d', `child`='%d', `fame`='%d'"
+		"WHERE  `account_id`='%d' AND `char_id` = '%d'",
 		char_db, p->class_, p->base_level, p->job_level,
 		p->base_exp, p->job_exp, p->zeny,
 		p->max_hp, p->hp, p->max_sp, p->sp, p->status_point, p->skill_point,
@@ -453,13 +451,14 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 		p->hair, p->hair_color, p->clothes_color,
 		p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
 		p->last_point.map, p->last_point.x, p->last_point.y,
-		p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id, 
-		p->father_id, p->mother_id, p->child_id, 
-		p->account_id, p->char_id
+			p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id, 
+			p->father_id, p->mother_id, p->child_id, 
+			p->fame, 
+			p->account_id, p->char_id
 	);
 
 	if(mysql_query(&mysql_handle, tmp_sql)) {
-			ShowMessage("DB server Error (update `char`)- %s\n", mysql_error(&mysql_handle));
+				ShowMessage("DB server Error (update `char`)- %s\n", mysql_error(&mysql_handle));
 	}
 
 	}
@@ -572,7 +571,7 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 
 		tmp_p += sprintf(tmp_p, ") VALUES (NULL, '%d'", char_id);
 
-		for (i=0;i<20;i++) {
+		for (i=0;i<MAX_FRIENDLIST;i++) {
 			tmp_p += sprintf(tmp_p, ", '%d', '%s'", p->friend_id[i], p->friend_name[i]);
 			if ((p->friend_id[i] != cp->friend_id[i]) ||
 				strcmp(p->friend_name[i], cp->friend_name[i]))
@@ -585,7 +584,7 @@ int mmo_char_tosql(int char_id, struct mmo_charstatus *p){
 
 		diff = 0;
 		
-		for (i=0;i<20;i++) {
+		for (i=0;i<MAX_FRIENDLIST;i++) {
 			if (i>0)
 				tmp_p += sprintf(tmp_p, ", ");
 
@@ -788,7 +787,8 @@ int mmo_char_fromsql(int char_id, struct mmo_charstatus *p, int online){
 
 	sprintf(tmp_sql, "SELECT `option`,`karma`,`manner`,`party_id`,`guild_id`,`pet_id`,`hair`,`hair_color`,"
 		"`clothes_color`,`weapon`,`shield`,`head_top`,`head_mid`,`head_bottom`,"
-		"`last_map`,`last_x`,`last_y`,`save_map`,`save_x`,`save_y`, `partner_id`, `father`, `mother`, `child` FROM `%s` WHERE `char_id` = '%d'",char_db, char_id); // TBR
+		"`last_map`,`last_x`,`last_y`,`save_map`,`save_x`,`save_y`, `partner_id`, `father`, `mother`, `child`, `fame`"
+		"FROM `%s` WHERE `char_id` = '%d'",char_db, char_id); // TBR
 	if (mysql_query(&mysql_handle, tmp_sql)) {
 		ShowMessage("DB server Error (select `char2`)- %s\n", mysql_error(&mysql_handle));
 	}
@@ -810,6 +810,7 @@ int mmo_char_fromsql(int char_id, struct mmo_charstatus *p, int online){
 		p->father_id = atoi(sql_row[21]); 
 		p->mother_id = atoi(sql_row[22]); 
 		p->child_id = atoi(sql_row[23]);
+		p->fame = atoi(sql_row[24]);
 
 		//free mysql result.
 		mysql_free_result(sql_res);
@@ -932,14 +933,14 @@ int mmo_char_fromsql(int char_id, struct mmo_charstatus *p, int online){
 
 	//Friends List Load
 
-	for(i=0;i<20;i++) {
+	for(i=0;i<MAX_FRIENDLIST;i++) {
 		p->friend_id[i] = 0;
 		p->friend_name[i][0] = '\0';
 	}
 
 	tmp_p += sprintf(tmp_p, "SELECT `id`, `account_id`");
 
-	for(i=0;i<20;i++)
+	for(i=0;i<MAX_FRIENDLIST;i++)
 		tmp_p += sprintf(tmp_p, ", `friend_id%d`, `name%d`", i, i);
 
 	tmp_p += sprintf(tmp_p, " FROM `%s` WHERE `account_id`='%d' ", friend_db, char_id); // TBR
@@ -957,35 +958,34 @@ int mmo_char_fromsql(int char_id, struct mmo_charstatus *p, int online){
 	//ShowMessage("mysql: %d\n",i);
 
 	// Create an entry for the character if it doesnt already have one
-	if(!i) {
-
+	if(!i)
+	{
 		insert_friends(char_id);
-
-	} else {
-
-		if (sql_res) {
-			for(i=0;i<20;i++) {
+	}
+	else
+	{
+		if (sql_res)
+		{
+			for(i=0;i<MAX_FRIENDLIST;i++)
+			{
 				p->friend_id[i] = atoi(sql_row[i*2 +2]);
 				sprintf(p->friend_name[i], "%s", sql_row[i*2 +3]);
 			}
 			mysql_free_result(sql_res);
 		}
 	}
-
 	ShowMessage("friends ");
-
 	//-- end friends list load --
 
-	if (online) {
+	if (online)
+	{
 		set_char_online(char_id,p->account_id);
 	}
-
 	ShowMessage("char data load success]\n");	//ok. all data load successfuly!
 
 	cp = (struct mmo_charstatus *) aMalloc(sizeof(struct mmo_charstatus));
     	memcpy(cp, p, sizeof(struct mmo_charstatus));
 	numdb_insert(char_db_, char_id,cp);
-
 	return 1;
 }
 //==========================================================================================================
@@ -1335,7 +1335,7 @@ int count_users(void) {
 		users = 0;
 		for(i = 0; i < MAX_MAP_SERVERS; i++)
 		{
-			if (server_fd[i] >= 0)
+			if (server[i].fd >= 0)
 			{
 				users += server[i].users;
 			}
@@ -1490,7 +1490,7 @@ int parse_tologin(int fd) {
                 set_all_offline();
 				// if no map-server already connected, display a message...
 				for(i = 0; i < MAX_MAP_SERVERS; i++)
-					if (server_fd[i] >= 0 && server[i].map[0][0]) // if map-server online and at least 1 map
+					if (server[i].fd >= 0 && server[i].map[0][0]) // if map-server online and at least 1 map
 						break;
 				if (i == MAX_MAP_SERVERS)
 					ShowMessage("Awaiting maps from map-server.\n");
@@ -1540,8 +1540,8 @@ int parse_tologin(int fd) {
 				{
 					if (sd->account_id == (int)RFIFOL(fd,2))
 					{
-						sd->connect_until_time = (time_t)RFIFOL(fd,46);
-						break;
+					sd->connect_until_time = (time_t)RFIFOL(fd,46);
+					break;
 					}
 				}
 			}
@@ -1552,7 +1552,6 @@ int parse_tologin(int fd) {
 		case 0x2718:
 			if (RFIFOREST(fd) < 2)
 				return 0;
-			// do whatever it's supposed to do here?
 	
 			RFIFOSKIP(fd,2);
 			break;
@@ -1770,8 +1769,8 @@ int parse_tologin(int fd) {
 						GM_num++;
 						if (GM_num >= 4000)
 							ShowMessage("***WARNING: 4000 GM accounts found. Next GM accounts are not readed.\n");
-						}
 					}
+				}
 				if (new_level == 1) {
 					ShowMessage("From login-server: receiving a GM account information (%ld: level %d).\n", RFIFOL(fd,2), (int)RFIFOB(fd,6));
 					mapif_send_gmaccounts();
@@ -1806,7 +1805,7 @@ int parse_frommap(int fd) {
 	}
 
 	for(id = 0; id < MAX_MAP_SERVERS; id++)
-		if (server_fd[id] == fd)
+		if (server[id].fd == fd)
 			break;
 	if(id == MAX_MAP_SERVERS)
 		session_Remove(fd);
@@ -1814,11 +1813,11 @@ int parse_frommap(int fd) {
 	if( !session_isActive(fd) ) {
 		
 		ShowMessage("Map-server %d (session #%d) has disconnected.\n", id, fd);
-			sprintf(tmp_sql, "DELETE FROM `ragsrvinfo` WHERE `index`='%d'", server_fd[id]);
+			sprintf(tmp_sql, "DELETE FROM `ragsrvinfo` WHERE `index`='%d'", server[id].fd);
 			if (mysql_query(&mysql_handle, tmp_sql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
-			server_fd[id] = -1;
+			server[id].fd = -1;
 		session_Remove(fd);
 		return 0;
 	}
@@ -1832,14 +1831,22 @@ int parse_frommap(int fd) {
 		case 0x2718:
 			if (RFIFOREST(fd) < 2)
 				return 0;
-			// do whatever it's supposed to do here?
-
 			RFIFOSKIP(fd,2);
 			break;
 
 		case 0x2af7:
 			RFIFOSKIP(fd,2);
 			read_gm_account();
+			break;
+
+		case 0x2af8: // login as map-server; update ip addresses
+			if (RFIFOREST(fd) < 60)
+				return 0;
+
+			server[id].lanip	= RFIFOLIP(fd,54);
+			server[id].lanport = RFIFOW(fd,58);
+
+			RFIFOSKIP(fd,60);
 			break;
 
 		// mapserver -> map names recv.
@@ -1853,11 +1860,11 @@ int parse_frommap(int fd) {
 //				ShowMessage("set map %d.%d : %s\n", id, j, server[id].map[j]);
 				j++;
 			}
-			i = server[id].ip;
+
 			{
-				unsigned char *p = (unsigned char *)&server[id].ip;
+				unsigned char *p = (unsigned char *)&server[id].lanip;
 				ShowMessage("Map-Server %d connected: %d maps, from IP %d.%d.%d.%d port %d.\n",
-				       id, j, p[0], p[1], p[2], p[3], server[id].port);
+				       id, j, p[0], p[1], p[2], p[3], server[id].lanport);
 				ShowMessage("Map-server %d loading complete.\n", id);
 				set_all_offline();
 			}
@@ -1874,17 +1881,17 @@ int parse_frommap(int fd) {
 				} else {
 					WBUFW(buf,0) = 0x2b04;
 					WBUFW(buf,2) = j * 16 + 10;
-					WBUFL(buf,4) = server[id].ip;
-					WBUFW(buf,8) = server[id].port;
+					WBUFL(buf,4) = server[id].lanip;
+					WBUFW(buf,8) = server[id].lanport;
 					memcpy(WBUFP(buf,10), RFIFOP(fd,4), j * 16);
 					mapif_sendallwos(fd, buf, WBUFW(buf,2));
 				}
 				// Transmitting the maps of the other map-servers to the new map-server
 				for(x = 0; x < MAX_MAP_SERVERS; x++) {
-					if (server_fd[x] >= 0 && x != id) {
+					if (server[x].fd >= 0 && x != id) {
 						WFIFOW(fd,0) = 0x2b04;
-						WFIFOLIP(fd,4) = server[x].ip;
-						WFIFOW(fd,8) = server[x].port;
+						WFIFOLIP(fd,4) = server[x].lanip;
+						WFIFOW(fd,8) = server[x].lanport;
 						j = 0;
 						for(i = 0; i < MAX_MAP_PER_SERVER; i++)
 							if (server[x].map[i][0])
@@ -2301,6 +2308,57 @@ int parse_frommap(int fd) {
 			RFIFOSKIP(fd,10);
 			break;
 
+		// Request sending of fame list
+		case 0x2b1a:
+			if (RFIFOREST(fd) < 2)
+				return 0;
+		{
+			int len = 6, num = 0;
+			unsigned char buf[32000];
+
+			WBUFW(buf,0) = 0x2b1b;
+			sprintf(tmp_sql, "SELECT `account_id`,`fame` FROM `%s` WHERE `class`='10' OR `class`='4011'"
+				"OR `class`='4033' ORDER BY `fame` DESC", char_db);
+			if (mysql_query(&mysql_handle, tmp_sql)) {
+				SendMessage("DB server Error (select fame)- %s\n", mysql_error(&mysql_handle));
+			}
+			sql_res = mysql_store_result(&mysql_handle);
+			if (sql_res) {
+				while((sql_row = mysql_fetch_row(sql_res))) {
+					WBUFL(buf, len) = atoi(sql_row[0]);
+					WBUFL(buf, len+4) = atoi(sql_row[1]);
+					len += 8;
+					if (++num == 10)
+						break;
+				}
+			}
+   			mysql_free_result(sql_res);
+			WBUFW(buf, 4) = len;
+
+			num = 0;
+			sprintf(tmp_sql, "SELECT `account_id`,`fame` FROM `%s` WHERE `class`='18' OR `class`='4019'"
+				"OR `class`='4041' ORDER BY `fame` DESC", char_db);
+			if (mysql_query(&mysql_handle, tmp_sql)) {
+				SendMessage("DB server Error (select fame)- %s\n", mysql_error(&mysql_handle));
+			}
+			sql_res = mysql_store_result(&mysql_handle);
+			if (sql_res) {
+				while((sql_row = mysql_fetch_row(sql_res))) {
+					WBUFL(buf, len) = atoi(sql_row[0]);
+					WBUFL(buf, len+4) = atoi(sql_row[1]);
+					len += 8;
+					if (++num == 10)
+						break;
+				}
+			}
+			mysql_free_result(sql_res);
+			WBUFW(buf, 2) = len;
+
+			mapif_sendall(buf, len);
+			RFIFOSKIP(fd,2);
+			break;
+		}
+
 		default:
 			// inter server - packet
 			{
@@ -2331,7 +2389,7 @@ int search_mapserver(char *map) {
 
 	temp_map_len = strlen(temp_map);
 	for(i = 0; i < MAX_MAP_SERVERS; i++)
-		if (server_fd[i] >= 0)
+		if (server[i].fd >= 0)
 			for (j = 0; server[i].map[j][0]; j++)
 				//ShowMessage("%s : %s = %d\n", server[i].map[j], map, strncmp(server[i].map[j], temp_map, temp_map_len));
 				if (strncmp(server[i].map[j], temp_map, temp_map_len) == 0) {
@@ -2556,13 +2614,15 @@ int parse_char(int fd) {
 					// get first online server
 					i = 0;
 					for(j = 0; j < MAX_MAP_SERVERS; j++)
-						if (server_fd[j] >= 0 && server[j].map[0][0])  {
+						if( server[j].fd >= 0 && server[j].map[0][0] )
+						{
 							i = j;
 							ShowMessage("Map-server #%d found with a map: '%s'.\n", j, server[j].map[0]);
 							break;
 						}
 					// if no map-servers are connected, we send: server closed
-					if (j == MAX_MAP_SERVERS) {
+					if (j == MAX_MAP_SERVERS)
+					{
 						WFIFOW(fd,0) = 0x81;
 						WFIFOL(fd,2) = 1; // 01 = Server closed
 						WFIFOSET(fd,3);
@@ -2578,8 +2638,8 @@ int parse_char(int fd) {
 			if (lan_ip_check(client_ip))
 				WFIFOLIP(fd, 22) = lan_map_ip;
 			else
-				WFIFOLIP(fd, 22) = server[i].ip;
-			WFIFOW(fd, 26) = server[i].port;
+				WFIFOLIP(fd, 22) = server[i].lanip;
+			WFIFOW(fd, 26) = server[i].lanport;
 			WFIFOSET(fd, 28);
 
 			if (auth_fifo_pos >= AUTH_FIFO_SIZE) {
@@ -2870,7 +2930,7 @@ int parse_char(int fd) {
 				return 0;
 			WFIFOW(fd, 0) = 0x2af9;
 			for(i = 0; i < MAX_MAP_SERVERS; i++) {
-				if (server_fd[i] < 0)
+				if(server[i].fd < 0)
 					break;
 			}
 			if (i == MAX_MAP_SERVERS || strcmp((const char*)RFIFOP(fd,2), userid) || strcmp((const char*)RFIFOP(fd,26), passwd)) {
@@ -2881,10 +2941,10 @@ int parse_char(int fd) {
 				WFIFOB(fd,2) = 0;
 				WFIFOSET(fd, 3);
 				session[fd]->func_parse = parse_frommap;
-				server_fd[i] = fd;
+				server[i].fd = fd;
 
-				server[i].ip = RFIFOL(fd, 54);
-				server[i].port = RFIFOW(fd, 58);
+				server[i].lanip = RFIFOL(fd, 54);
+				server[i].lanport = RFIFOW(fd, 58);
 				server[i].users = 0;
 				memset(server[i].map, 0, sizeof(server[i].map));
 				realloc_fifo(fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
@@ -2964,7 +3024,7 @@ int mapif_sendall(unsigned char *buf, unsigned int len) {
 
 	c = 0;
 	for(i = 0; i < MAX_MAP_SERVERS; i++) {
-		if ((fd = server_fd[i]) >= 0) {
+		if ((fd = server[i].fd) >= 0) {
 			memcpy(WFIFOP(fd,0), buf, len);
 			WFIFOSET(fd,len);
 			c++;
@@ -2980,7 +3040,7 @@ int mapif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
 
 	c = 0;
 	for(i=0, c=0;i<MAX_MAP_SERVERS;i++){
-		if ((fd = server_fd[i]) >= 0 && fd != sfd) {
+		if ((fd = server[i].fd) >= 0 && fd != sfd) {
 			memcpy(WFIFOP(fd,0), buf, len);
 			WFIFOSET(fd, len);
 			c++;
@@ -2995,7 +3055,7 @@ int mapif_send(int fd, unsigned char *buf, unsigned int len) {
 
 	if (fd >= 0) {
 		for(i = 0; i < MAX_MAP_SERVERS; i++) {
-			if (fd == server_fd[i]) {
+			if (fd == server[i].fd) {
 				memcpy(WFIFOP(fd,0), buf, len);
 				WFIFOSET(fd,len);
 				return 1;
@@ -3032,24 +3092,24 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		login_fd = make_connection(login_ip, login_port);
 		if ( session_isActive(login_fd) ) 
 		{
-			session[login_fd]->func_parse = parse_tologin;
-			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-			WFIFOW(login_fd,0) = 0x2710;
-			memset(WFIFOP(login_fd,2), 0, 24);
-			memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
-			memset(WFIFOP(login_fd,26), 0, 24);
-			memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
-			WFIFOL(login_fd,50) = 0;
-			WFIFOL(login_fd,54) = char_ip;
-			WFIFOL(login_fd,58) = char_port;
-			memset(WFIFOP(login_fd,60), 0, 20);
-			memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
-			WFIFOW(login_fd,80) = 0;
-			WFIFOW(login_fd,82) = char_maintenance;
-			WFIFOW(login_fd,84) = char_new;
-			WFIFOSET(login_fd,86);
-		}
+		session[login_fd]->func_parse = parse_tologin;
+		realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+		WFIFOW(login_fd,0) = 0x2710;
+		memset(WFIFOP(login_fd,2), 0, 24);
+		memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
+		memset(WFIFOP(login_fd,26), 0, 24);
+		memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
+		WFIFOL(login_fd,50) = 0;
+		WFIFOL(login_fd,54) = char_ip;
+		WFIFOL(login_fd,58) = char_port;
+		memset(WFIFOP(login_fd,60), 0, 20);
+		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
+		WFIFOW(login_fd,80) = 0;
+		WFIFOW(login_fd,82) = char_maintenance;
+		WFIFOW(login_fd,84) = char_new;
+		WFIFOSET(login_fd,86);
 	}
+}
 	return 0;
 }
 
@@ -3099,7 +3159,7 @@ int char_lan_config_read(const char *lancfgName){
 
 static int char_db_final(void *key,void *data,va_list ap)
 {
-	struct mmo_charstatus *p = (struct mmo_charstatus *)data;
+	struct mmo_charstatus *p = (struct mmo_charstatus *) data;
 	if (p) aFree(p);
 	return 0;
 }
@@ -3113,8 +3173,9 @@ void do_final(void) {
 	//wait until save char complete
 
 	set_all_offline();
-
 	flush_fifos();
+
+        inter_final();
 
 	sprintf(tmp_sql,"DELETE FROM `ragsrvinfo");
 	if (mysql_query(&mysql_handle, tmp_sql))
@@ -3140,11 +3201,9 @@ void do_final(void) {
 	char_fd=-1;
 	///////////////////////////////////////////////////////////////////////////
 	numdb_final(char_db_, char_db_final);
-	exit_dbn();
 
 	mysql_close(&mysql_handle);
 	mysql_close(&lmysql_handle);
-	timer_final();
 
 	ShowMessage("ok! all done...\n");
 }
@@ -3396,7 +3455,7 @@ int do_init(int argc, char **argv){
 
 	for(i = 0; i < MAX_MAP_SERVERS; i++) {
 		memset(&server[i], 0, sizeof(struct mmo_map_server));
-		server_fd[i] = -1;
+		server[i].fd = -1;
 	}
 
 	char_config_read((argc < 2) ? CHAR_CONF_NAME : argv[1]);
@@ -3417,9 +3476,6 @@ int do_init(int argc, char **argv){
 
 	ShowMessage("set parser -> parse_char().....\n");
 	set_defaultparse(parse_char);
-
-	ShowMessage("set terminate function -> do_final().....\n");
-	set_termfunc(do_final);
 
 	if( naddr_ == 0 ) {
 		ShowMessage("\nUnable to automatically determine the IP address.\n");
@@ -3523,59 +3579,56 @@ int debug_mysql_query(char *file, int line, void *mysql, const char *q) {
 }
 
 int char_child(int parent_id, int child_id) {
-        int tmp_id = 0;
-        sprintf (tmp_sql, "SELECT `child` FROM `%s` WHERE `char_id` = '%d'", char_db, parent_id);
-        if (mysql_query (&mysql_handle, tmp_sql)) {
-                ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
-        }
-        sql_res = mysql_store_result (&mysql_handle);
-        if (sql_res) {
-                sql_row = mysql_fetch_row (sql_res);
-                tmp_id = atoi (sql_row[0]);
-                mysql_free_result (sql_res);
-        }
-        else
-                ShowMessage("CHAR: child Failed!\n");
-        if ( tmp_id == child_id )
-                return 1;
-        else
-                return 0;
+		int tmp_id = 0;
+		sprintf (tmp_sql, "SELECT `child` FROM `%s` WHERE `char_id` = '%d'", char_db, parent_id);
+		if (mysql_query (&mysql_handle, tmp_sql)) {
+			ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
+		}
+		sql_res = mysql_store_result (&mysql_handle);
+		if (sql_res && (sql_row = mysql_fetch_row (sql_res))) {
+			tmp_id = atoi (sql_row[0]);
+			mysql_free_result (sql_res);
+		}
+		else
+			ShowMessage("CHAR: child Failed!\n");
+		if ( tmp_id == child_id )
+			return 1;
+		else
+			return 0;
 }
 
 int char_married(int pl1,int pl2) {
-        int tmp_id = 0;
-        sprintf (tmp_sql, "SELECT `partner_id` FROM `%s` WHERE `char_id` = '%d'", char_db, pl1);
-        if (mysql_query (&mysql_handle, tmp_sql)) {
-                ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
-        }
-        sql_res = mysql_store_result (&mysql_handle);
-        if (sql_res) {
-                sql_row = mysql_fetch_row (sql_res);
-                tmp_id = atoi (sql_row[0]);
-                mysql_free_result (sql_res);
-        }
-        else
-                ShowMessage("CHAR: married Failed!\n");
-        if ( tmp_id == pl2 )
-                return 1;
-        else
-                return 0;
+		int tmp_id = 0;
+		sprintf (tmp_sql, "SELECT `partner_id` FROM `%s` WHERE `char_id` = '%d'", char_db, pl1);
+		if (mysql_query (&mysql_handle, tmp_sql)) {
+				ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
+		}
+		sql_res = mysql_store_result (&mysql_handle);
+		if (sql_res && (sql_row = mysql_fetch_row (sql_res))) {
+				tmp_id = atoi (sql_row[0]);
+				mysql_free_result (sql_res);
+		}
+		else
+				ShowMessage("CHAR: married Failed!\n");
+		if ( tmp_id == pl2 )
+				return 1;
+		else
+				return 0;
 }
 
 int char_nick2id (char *name) {
-        int char_id = 0;
-        sprintf (tmp_sql, "SELECT `char_id` FROM `%s` WHERE `name` = '%s'", char_db, name);
-        if (mysql_query (&mysql_handle, tmp_sql)) {
-                ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
-        }
-        sql_res = mysql_store_result (&mysql_handle);
-        if (sql_res) {
-                sql_row = mysql_fetch_row (sql_res);
-                char_id = atoi (sql_row[0]);
-                mysql_free_result (sql_res);
-        }
-        else
-                ShowMessage ("CHAR: nick2id Failed!\n");
-        return char_id;
+		int char_id = 0;
+		sprintf (tmp_sql, "SELECT `char_id` FROM `%s` WHERE `name` = '%s'", char_db, name);
+		if (mysql_query (&mysql_handle, tmp_sql)) {
+				ShowMessage ("DB server Error (select `char2`)- %s\n", mysql_error (&mysql_handle));
+		}
+		sql_res = mysql_store_result (&mysql_handle);
+		if (sql_res && (sql_row = mysql_fetch_row (sql_res))) {
+				char_id = atoi (sql_row[0]);
+				mysql_free_result (sql_res);
+		}
+		else
+				ShowMessage ("CHAR: nick2id Failed!\n");
+		return char_id;
 }
 

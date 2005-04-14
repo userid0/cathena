@@ -33,14 +33,15 @@
 #include "log.h"
 #include "showmsg.h"
 #include "utils.h"
+#include "mail.h"
+
 
 #ifdef MEMWATCH
 #include "memwatch.h"
 #endif
 
-#ifndef TXT_ONLY
 
-#include "mail.h" // mail system [Valaris]
+#ifndef TXT_ONLY
 
 MYSQL mmysql_handle;
 MYSQL_RES* 	sql_res ;
@@ -91,12 +92,7 @@ int read_gm_interval = 600000;
 
 char char_db[32] = "char";
 
-int online_timer(int tid,unsigned long tick,int id,int data);
-
-int CHECK_INTERVAL = 3600000; // [Valaris]
-int check_online_timer=0; // [Valaris]
-
-#endif /* not TXT_ONLY */
+#endif//TXT_OMLY
 
 char *INTER_CONF_NAME;
 char *LOG_CONF_NAME;
@@ -164,6 +160,8 @@ char wisp_server_name[24] = "Server"; // can be modified in char-server configur
 
 int console = 0;
 
+int CHECK_INTERVAL = 3600000; // [Valaris]
+
 /*==========================================
  * ‘SmapI?Œv‚Å‚ÌÚ??İ’è
  * (charI‚©‚ç‘—‚ç‚ê‚Ä‚­‚é)
@@ -211,7 +209,7 @@ int map_freeblock( void *bl )
 	return block_free_lock;
 }
 /*==========================================
- * block‚ÌaFree‚ğˆê“I‚É‹Ö~‚·‚é
+ * block‚Ìfree‚ğˆêsI‚É‹Ö~‚·‚é
  *------------------------------------------
  */
 int map_freeblock_lock(void) {
@@ -515,7 +513,7 @@ void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int 
 }
 
 /*==========================================
- * ‹éŒ`(x0,y0)-(x1,y1)‚ª(dx,dy)ˆÚ“®‚µ‚½‚Ì
+ * ‹éŒ`(x0,y0)-(x1,y1)‚ª(dx,dy)ˆÚ“®‚µ‚½bÌ
  * —ÌˆæŠO‚É‚È‚é—Ìˆæ(‹éŒ`‚©LšŒ`)?‚Ìobj‚É
  * ?‚µ‚Äfunc‚ğŒÄ‚Ô
  *
@@ -1265,7 +1263,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 
 /*==========================================
- * °ƒAƒCƒeƒ€‚âƒGƒtƒFƒNƒg—p‚ÌˆêobjŠ„‚è?‚Ä
+ * °ƒAƒCƒeƒ€‚âƒGƒtƒFƒNƒg—p‚ÌˆêObjŠ„‚è?‚Ä
  * object[]‚Ö‚Ì•Û‘¶‚Æid_db“o?‚Ü‚Å
  *
  * bl->id‚à‚±‚Ì’†‚Åİ’è‚µ‚Ä–â‘è–³‚¢?
@@ -1296,7 +1294,7 @@ int map_addobject(struct block_list *bl) {
 }
 
 /*==========================================
- * ˆêobject‚Ì‰ğ•ú
+ * ˆêObject‚Ì‰ğ•ú
  *	map_delobject‚ÌaFree‚µ‚È‚¢ƒo?ƒWƒ‡ƒ“
  *------------------------------------------
  */
@@ -1318,7 +1316,7 @@ int map_delobjectnofree(int id) {
 }
 
 /*==========================================
- * ˆêobject‚Ì‰ğ•ú
+ * ˆêObject‚Ì‰ğ•ú
  * block_list‚©‚ç‚ÌíœAid_db‚©‚ç‚Ìíœ
  * object data‚ÌaFreeAobject[]‚Ö‚ÌNULL‘ã“ü
  *
@@ -1338,7 +1336,7 @@ int map_delobject(int id) {
 }
 
 /*==========================================
- * ‘Sˆêobj‘Šè‚Éfunc‚ğŒÄ‚Ô
+ * ‘SˆêObj‘Šè‚Éfunc‚ğŒÄ‚Ô
  *
  *------------------------------------------
  */
@@ -1377,8 +1375,7 @@ void map_foreachobject(int (*func)(struct block_list*,va_list),int type,...) {
 /*==========================================
  * °ƒAƒCƒeƒ€‚ğÁ‚·
  *
- * data==0‚Ì‚Ítimer‚ÅÁ‚¦‚½
- * data!=0‚Ì‚ÍE‚¤“™‚ÅÁ‚¦‚½‚Æ‚µ‚Ä“®ì
+ * data==0‚ÌbÍtimer‚ÅÁ‚¦‚½ê * data!=0‚ÌbÍE‚¤“™‚ÅÁ‚¦‚½bÆ‚µ‚Ä“®ì
  *
  * ŒãÒ‚ÍAmap_clearflooritem(id)‚Ö
  * map.h?‚Å#define‚µ‚Ä‚ ‚é
@@ -1604,7 +1601,7 @@ int map_quit(struct map_session_data *sd)
 {
 	
 	nullpo_retr(0, sd);
-	
+
 	if (sd->state.event_disconnect) 
 	{
 		if (script_config.event_script_type == 0) 
@@ -1614,13 +1611,13 @@ int map_quit(struct map_session_data *sd)
 			{
 				run_script(npc->u.scr.ref->script,0,sd->bl.id,npc->bl.id); // PCLogoutNPC
 				ShowStatus ("Event '"CL_WHITE"%s"CL_RESET"' executed.\n", script_config.logout_event_name);
-			}
+				}
 		}
 		else 
 		{
 			ShowStatus("%d '"CL_WHITE"%s"CL_RESET"' events executed.\n",
-				npc_event_doall_id(script_config.logout_event_name, sd->bl.id), script_config.logout_event_name);
-		}
+					npc_event_doall_id(script_config.logout_event_name, sd->bl.id), script_config.logout_event_name);
+			}
 
 		if(sd->chatID)	// ƒ`ƒƒƒbƒg‚©‚ço‚é
 			chat_leavechat(sd);
@@ -1690,6 +1687,7 @@ int map_quit(struct map_session_data *sd)
 		if(pc_isdead(sd))
 			pc_setrestartvalue(sd,2);
 
+		pc_clean_skilltree(sd);
 		pc_makesavestatus(sd);
 		chrif_save(sd);
 		storage_storage_dirty(sd);
@@ -1703,9 +1701,7 @@ int map_quit(struct map_session_data *sd)
 		sd->npc_stackbuf = NULL;
 	}
 
-#ifndef TXT_ONLY
 	chrif_char_offline(sd);
-#endif
 
 	{
 		struct charid2nick *p = (struct charid2nick *)numdb_search(charid_db,sd->status.char_id);
@@ -1827,7 +1823,7 @@ struct map_session_data * map_nick2sd(char *nick) {
 
 /*==========================================
  * id”Ô?‚Ì•¨‚ğ’T‚·
- * ˆêobject‚Ìê‡‚Í”z—ñ‚ğˆø‚­‚Ì‚İ
+ * ˆêObject‚Ìê‡‚Í”z—ñ‚ğˆø‚­‚Ì‚İ
  *------------------------------------------
  */
 struct block_list * map_id2bl(int id)
@@ -1858,7 +1854,8 @@ int map_foreachiddb(int (*func)(void*,void*,va_list),...) {
  * map.npc‚Ö’Ç‰Á (warp“™‚Ì—Ìˆæ‚¿‚Ì‚İ)
  *------------------------------------------
  */
-int map_addnpc(int m,struct npc_data *nd) {
+int map_addnpc(int m,struct npc_data *nd)
+{
 	int i;
 	if(m<0 || m>=map_num)
 		return -1;
@@ -1883,7 +1880,8 @@ int map_addnpc(int m,struct npc_data *nd) {
 	return i;
 }
 
-void map_removenpc(void) {
+void map_removenpc(void)
+{
 	int i,m,n=0;
 
 	for(m=0;m<map_num;m++) {
@@ -1916,15 +1914,15 @@ int map_mapname2mapid(char *name) {
 
 	md = (struct map_data*)strdb_search(map_db,name);
 
-	#ifdef USE_AFM
-		// If we can't find the .gat map try .afm instead [celest]
+#ifdef USE_AFM
+	// If we can't find the .gat map try .afm instead [celest]
 		if( (md==NULL) && (NULL!=strstr(name,".gat")) ) {
 			char afm_name[50];
 			memcpy(afm_name, name, strlen(name) - 3);	// copy without extension including the point
 			memcpy(afm_name+strlen(name) - 3, "afm",4);	// add the extension including the eos
-			md = (struct map_data*)strdb_search(map_db,afm_name);
-		}
-	#endif
+	  md = (struct map_data*)strdb_search(map_db,afm_name);
+	}
+#endif
 
 	if(md==NULL || md->gat==NULL)
 		return -1;
@@ -2161,7 +2159,7 @@ int map_setipport(char *name, unsigned long ip, unsigned short port) {
 		strdb_insert(map_db,mdos->name,mdos);
 	} else if(md->gat){
 		if(ip!=clif_getip() || port!=clif_getport()){
-			// “Ç‚İ‚ñ‚Å‚¢‚½‚¯‚ÇA’S“–ŠO‚É‚È‚Á‚½ƒ}ƒbƒv
+			// “Ç‚İbñ‚Å‚¢‚½‚¯‚ÇA’S“–ŠO‚É‚È‚Á‚½ƒ}ƒbƒv
 			mdos=(struct map_data_other_server *)aCalloc(1,sizeof(struct map_data_other_server));
 			memcpy(mdos->name,name,24);
 			mdos->gat  = NULL;
@@ -2171,7 +2169,7 @@ int map_setipport(char *name, unsigned long ip, unsigned short port) {
 			strdb_insert(map_db,mdos->name,mdos);
 			// ShowMessage("from char server : %s -> %08lx:%d\n",name,ip,port);
 		} else {
-			// “Ç‚İ‚ñ‚Å‚¢‚ÄA’S“–‚É‚È‚Á‚½ƒ}ƒbƒvi‰½‚à‚µ‚È‚¢j
+			// “Ç‚İbñ‚Å‚¢‚ÄA’S“–‚É‚È‚Á‚½ƒ}ƒbƒvi‰½‚à‚µ‚È‚¢j
 			;
 		}
 	} else {
@@ -2179,11 +2177,11 @@ int map_setipport(char *name, unsigned long ip, unsigned short port) {
 		if(ip == clif_getip() && port == clif_getport()) {
 			// ©•ª‚Ì’S“–‚É‚È‚Á‚½ƒ}ƒbƒv
 			if(mdos->map == NULL) {
-				// “Ç‚İ‚ñ‚Å‚¢‚È‚¢‚Ì‚ÅI—¹‚·‚é
+				// “Ç‚İbñ‚Å‚¢‚È‚¢‚Ì‚ÅI—¹‚·‚é
 				ShowMessage("map_setipport : %s is not loaded.\n",name);
 				exit(1);
 			} else {
-				// “Ç‚İ‚ñ‚Å‚¢‚é‚Ì‚Å’u‚«Š·‚¦‚é
+				// “Ç‚İbñ‚Å‚¢‚é‚Ì‚Å’u‚«Š·‚¦‚é
 				md = mdos->map;
 				aFree(mdos);
 				strdb_insert(map_db,md->name,md);
@@ -2224,7 +2222,7 @@ int map_eraseipport(char *name,unsigned long ip,int port)
 	struct map_data *md;
 	struct map_data_other_server *mdos;
 
-	md = (struct map_data *)strdb_search(map_db,name);
+	md=(struct map_data *) strdb_search(map_db,name);
 	if(md){
 		if(md->gat) // local -> check data
 			return 0;
@@ -2232,7 +2230,7 @@ int map_eraseipport(char *name,unsigned long ip,int port)
 			mdos=(struct map_data_other_server *)md;
 			if(mdos->ip==ip && mdos->port == port) {
 				if(mdos->map) {
-					// ‚±‚Ìƒ}ƒbƒvI‚Å‚à“Ç‚İ‚ñ‚Å‚¢‚é‚Ì‚ÅˆÚ“®‚Å‚«‚é
+					// ‚±‚Ìƒ}ƒbƒvI‚Å‚à“Ç‚İbñ‚Å‚¢‚é‚Ì‚ÅˆÚ“®‚Å‚«‚é
 					return 1; // ŒÄ‚Ño‚µŒ³‚Å chrif_sendmap() ‚ğ‚·‚é
 				} else {
 					strdb_erase(map_db,name);
@@ -2338,7 +2336,6 @@ int map_cache_write(struct map_data *m);
 
 int map_cache_open(char *fn)
 {
-	atexit(map_cache_close);
 	if(map_cache.fp) {
 		map_cache_close();
 	}
@@ -2352,7 +2349,7 @@ int map_cache_open(char *fn)
 			map_cache.head.nmaps         == MAX_MAP_CACHE &&
 			map_cache.head.filesize      == ftell(map_cache.fp)
 		) {
-			// ƒLƒƒƒbƒVƒ…“Ç‚İ‚İ¬Œ÷
+			// ƒLƒƒƒbƒVƒ…“Ç‚İbİ¬Œ÷
 			map_cache.map = (struct map_cache_info *)aCalloc(map_cache.head.nmaps,sizeof(struct map_cache_info));
 			fseek(map_cache.fp,sizeof(struct map_cache_head),SEEK_SET);
 			fread(map_cache.map,sizeof(struct map_cache_info),map_cache.head.nmaps,map_cache.fp);
@@ -2360,7 +2357,7 @@ int map_cache_open(char *fn)
 		}
 		fclose(map_cache.fp);
 	}
-	// “Ç‚İ‚İ‚É¸”s‚µ‚½‚Ì‚ÅV‹K‚Éì¬‚·‚é
+	// “Ç‚İbİ‚É¸”s‚µ‚½‚Ì‚ÅV‹K‚Éì¬‚·‚é
 	map_cache.fp = savefopen(fn,"wb");
 	if(map_cache.fp) {
 		memset(&map_cache.head,0,sizeof(struct map_cache_head));
@@ -2549,7 +2546,7 @@ int map_cache_write(struct map_data *m)
 			}
 			return 0;
 		}
-	// ‘‚«‚ß‚È‚©‚Á‚½
+	// ‘‚«bß‚È‚©‚Á‚½
 	return 1;
 
 }
@@ -2674,14 +2671,14 @@ int map_readafm(int m,char *fn) {
 #endif
 
 /*==========================================
- * ƒ}ƒbƒv1–‡“Ç‚İ‚İ
+ * ƒ}ƒbƒv1–‡“Ç‚İbİ
  * ===================================================*/
 static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) {
 
 	size_t size;
 
 	if(map_cache_read(&map[m])) {
-		// ƒLƒƒƒbƒVƒ…‚©‚ç“Ç‚İ‚ß‚½
+		// ƒLƒƒƒbƒVƒ…‚©‚ç“Ç‚İbß‚½
 		(*map_cache)++;
 	} else {
 		int wh;
@@ -3089,7 +3086,7 @@ int inter_config_read(char *cfgName)
 			continue;
 
 		if(strcasecmp(w1,"import")==0){
-			//support the import command, just like any other config
+		//support the import command, just like any other config
 			inter_config_read(w2);
 		}
 	#ifndef TXT_ONLY
@@ -3154,7 +3151,7 @@ int inter_config_read(char *cfgName)
 			log_db_port = atoi(w2);
 		}
 	#endif
-	}
+		}
 	fclose(fp);
 
 	return 0;
@@ -3234,43 +3231,36 @@ int log_sql_init(void){
 
 	return 0;
 }
+#endif /* not TXT_ONLY */
 
-int online_timer(int tid,unsigned long tick,int id,int data)
-{
-	if(check_online_timer != tid)
-		return 0;
-
-	char_online_check();
-
-	check_online_timer=add_timer(gettick()+CHECK_INTERVAL,online_timer,0,0);
-
-	return 0;
-}
 
 void char_online_check(void)
 {
 	int i;
-	struct map_session_data *sd=NULL;
+	struct map_session_data *sd;
 
 	chrif_char_reset_offline();
 
-	for(i=0;i<fd_max;i++){
-		if (session[i] && (sd = (struct map_session_data*)session[i]->session_data) && sd && sd->state.auth &&
-		 !(battle_config.hide_GM_session && pc_isGM(sd)))
-			if(sd->status.char_id) {
-				 chrif_char_online(sd);
-			}
+	for(i=0;i<fd_max;i++)
+	{
+		if( session[i] && 
+			(sd = (struct map_session_data*)session[i]->session_data) && sd->state.auth &&
+			!(battle_config.hide_GM_session && 
+			pc_isGM(sd)) && 
+			sd->status.char_id)
+		{
+			chrif_char_online(sd);
+		}
 	}
-
-
-	if(check_online_timer && check_online_timer != -1) {
-		delete_timer(check_online_timer,online_timer);
-		add_timer(gettick()+CHECK_INTERVAL,online_timer,0,0);
-	}
-
 }
 
-#endif /* not TXT_ONLY */
+int online_timer(int tid,unsigned long tick,int id,int data)
+{
+	char_online_check();
+	return 0;
+}
+
+
 
 //-----------------------------------------------------
 //I'm Alive Alert
@@ -3301,28 +3291,28 @@ int map_db_final(void *k,void *d,va_list ap)
 }
 int nick_db_final(void *k,void *d,va_list ap)
 {
-	char *p = (char *)d;
+	char *p = (char *) d;
 	if (p) aFree(p);
 	return 0;
 }
 int charid_db_final(void *k,void *d,va_list ap)
 {
-	struct charid2nick *p = (struct charid2nick *)d;
+	struct charid2nick *p = (struct charid2nick *) d;
 	if (p) aFree(p);
 	return 0;
 }
-int cleanup_sub(struct block_list *bl, va_list ap) {
+int cleanup_sub(struct block_list *bl, va_list ap) 
+{
 	nullpo_retr(0, bl);
-
         switch(bl->type) {
         case BL_PC:
             map_quit((struct map_session_data *) bl);
             break;
         case BL_NPC:
-            npc_delete((struct npc_data *)bl);
+            npc_unload((struct npc_data *)bl);
             break;
         case BL_MOB:
-            mob_delete((struct mob_data *)bl);
+            mob_unload((struct mob_data *)bl);
             break;
         case BL_PET:
             pet_remove_map((struct map_session_data *)bl);
@@ -3334,18 +3324,19 @@ int cleanup_sub(struct block_list *bl, va_list ap) {
             skill_delunit((struct skill_unit *) bl);
             break;
         }
-
 	return 0;
 }
 
 /*==========================================
- * mapII—¹?—
+ * mapII—¹—
  *------------------------------------------
  */
 void do_final(void) {
     int i;
-	ShowStatus("Terminating...\n");
+    ShowStatus("Terminating...\n");
 	///////////////////////////////////////////////////////////////////////////
+
+    grfio_final();
 
     for (i = 0; i < map_num; i++)
 		if(map[i].m)
@@ -3360,7 +3351,6 @@ void do_final(void) {
     map_removenpc();
 	do_final_chrif(); // ‚±‚Ì“à•”‚ÅƒLƒƒƒ‰‚ğ‘S‚ÄØ’f‚·‚é
 	do_final_npc();
-//	map_removenpc();
 	do_final_script();
 	do_final_itemdb();
 	do_final_storage();
@@ -3370,7 +3360,7 @@ void do_final(void) {
 	do_final_pet();
 	do_final_msg();
 
-	for(i=0;i<map_num;i++){
+	for (i=0; i<map_num; i++) {
 		if(map[i].gat) {
 			aFree(map[i].gat);
 			map[i].gat=NULL;
@@ -3380,13 +3370,10 @@ void do_final(void) {
 		if(map[i].block_count) aFree(map[i].block_count);
 		if(map[i].block_mob_count) aFree(map[i].block_mob_count);
 	}
-//    do_final_timer(); (we used timer_final() instead)
-    timer_final();
     numdb_final(id_db, id_db_final);
 	strdb_final(map_db, map_db_final);
     strdb_final(nick_db, nick_db_final);
     numdb_final(charid_db, charid_db_final);
-	exit_dbn();
 
 //#endif
 
@@ -3537,8 +3524,6 @@ int do_init(int argc, char *argv[]) {
 	inter_config_read(INTER_CONF_NAME);
 	log_config_read(LOG_CONF_NAME);
 
-	atexit(do_final);
-
 	id_db = numdb_init();
 	map_db = strdb_init(24);
 	nick_db = strdb_init(24);
@@ -3575,15 +3560,14 @@ int do_init(int argc, char *argv[]) {
 	if (imalive_on)
 		add_timer_interval(gettick()+10, imalive_time*1000, imalive_timer,0,0);
 
-#ifndef TXT_ONLY // online status timer, checks every hour [Valaris]
+	// online status timer, checks every hour [Valaris]
 	add_timer_func_list(online_timer, "online_timer");
-	check_online_timer=add_timer(gettick()+CHECK_INTERVAL,online_timer,0,0);
-#endif /* not TXT_ONLY */
+	add_timer_interval(gettick()+10, CHECK_INTERVAL, online_timer, 0, 0);	
 
 	do_init_chrif();
 	do_init_clif();
 	do_init_itemdb();
-	do_init_mob();	// npc‚Ì‰Šú‰»?‚Åmob_spawn‚µ‚ÄAmob_db‚ğ?Æ‚·‚é‚Ì‚Åinit_npc‚æ‚èæ
+	do_init_mob();	// npc‚Ì‰Šú‰»‚Åmob_spawn‚µ‚ÄAmob_db‚ğ?Æ‚·‚é‚Ì‚Åinit_npc‚æ‚èæ
 	do_init_script();
 	do_init_pc();
 	do_init_status();
