@@ -194,6 +194,12 @@ int login_log(char *fmt, ...) {
 // Online User Database [Wizputer]
 //-----------------------------------------------------
 
+static int online_db_final(void *key,void *data,va_list ap)
+{
+	int *p = (int *) data;
+	if (p) aFree(p);
+	return 0;
+}
 void add_online_user (int account_id) {
 	int *p = (int*)numdb_search(online_db, account_id);
 	if (p == NULL) {
@@ -207,6 +213,10 @@ int is_user_online (int account_id) {
 	return (p != NULL);
 }
 void remove_online_user (int account_id) {
+	if (account_id == 99) {	// reset all to offline
+		numdb_final(online_db, online_db_final);	// purge db
+		online_db = numdb_init();	// reinitialise
+	}
 	int *p;
 	p = (int*)numdb_erase(online_db, account_id);
 	aFree(p);
@@ -3513,8 +3523,7 @@ int login_config_read(const char *cfgName) {
 			}else if(strcasecmp(w1, "client_version_to_connect") == 0){	//Added by Sirius for client version check
 				client_version_to_connect = atoi(w2);			//Added by Sirius for client version check
 			} else if (strcasecmp(w1, "console") == 0) {
-			    if(strcasecmp(w2,"on") == 0 || strcasecmp(w2,"yes") == 0 )
-			        console = 1;
+		        console = config_switch(w2);
             }
 		}
 	}
@@ -3843,12 +3852,6 @@ int flush_timer(int tid, unsigned long tick, int id, int data){
 //--------------------------------------
 // Function called at exit of the server
 //--------------------------------------
-static int online_db_final(void *key,void *data,va_list ap)
-{
-	int *p = (int *) data;
-	if (p) aFree(p);
-	return 0;
-}
 void do_final(void) {
 	int i;
 	ShowStatus("Terminating...\n");

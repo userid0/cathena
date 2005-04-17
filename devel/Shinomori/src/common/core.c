@@ -2,10 +2,12 @@
 // original : core.c 2003/02/26 18:03:12 Rev 1.7
 
 #ifdef DUMPSTACK
-	#ifndef CYGWIN	// HAVE_EXECINFO_H
+	#if !defined(CYGWIN) && !defined(WIN32) && !defined(__NETBSD__)	// HAVE_EXECINFO_H
 		#include <execinfo.h>
 	#endif
 #endif
+
+
 
 #include "mmo.h"
 #include "malloc.h"

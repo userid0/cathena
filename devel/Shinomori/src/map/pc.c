@@ -772,7 +772,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 			if(map[i].gat) 
 				break;
 		}
-		if( i>=map_num || !pc_setpos(sd, map[i].name, 100, 100, 0) ) {
+		if( i>=map_num || !pc_setpos(sd, map[i].mapname, 100, 100, 0) ) {
 			// if we fail again
 			clif_authfail_fd(sd->fd, 0);
 			return 1;
@@ -848,7 +848,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time, unsigned char *b
 
 	if (script_config.event_script_type == 0) {
 		struct npc_data *npc;
-		//SendMessage("pc: OnPCLogin event done. (%d events)\n", npc_event_doall("OnPCLogin") );
+		//ShowMessage("pc: OnPCLogin event done. (%d events)\n", npc_event_doall("OnPCLogin") );
 		if ((npc = npc_name2id(script_config.login_event_name))) {
 			if(npc && npc->u.scr.ref)
 			run_script(npc->u.scr.ref->script,0,sd->bl.id,npc->bl.id); // PCLoginNPC
@@ -3120,7 +3120,7 @@ bool pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clr
 				map_delblock(&sd->pd->bl);
 			}
 		}
-		clif_changemap(sd,map[m].name,x,y); // [MouseJstr]
+		clif_changemap(sd,map[m].mapname,x,y); // [MouseJstr]
 	}
 
 	if(disguise) // disguise teleport fix [Valaris]
@@ -3165,7 +3165,7 @@ int pc_randomwarp(struct map_session_data *sd, int type) {
 	}while(map_getcell(m,x,y,CELL_CHKNOPASS) && (i++)<1000 );
 
 	if (i < 1000)
-		pc_setpos(sd,map[m].name,x,y,type);
+		pc_setpos(sd,map[m].mapname,x,y,type);
 
 	return 0;
 }
@@ -3199,7 +3199,7 @@ int pc_memo(struct map_session_data *sd, int i) {
 	}
 
 	for(j = 0 ; j < 3; j++) {
-		if (strcmp(sd->status.memo_point[j].map, map[sd->bl.m].name) == 0) {
+		if (strcmp(sd->status.memo_point[j].map, map[sd->bl.m].mapname) == 0) {
 			i = j;
 			break;
 		}
@@ -3211,7 +3211,7 @@ int pc_memo(struct map_session_data *sd, int i) {
 		}
 		i = 0;
 	}
-	memcpy(sd->status.memo_point[i].map, map[sd->bl.m].name, 24);
+	memcpy(sd->status.memo_point[i].map, map[sd->bl.m].mapname, 24);
 	sd->status.memo_point[i].x = sd->bl.x;
 	sd->status.memo_point[i].y = sd->bl.y;
 

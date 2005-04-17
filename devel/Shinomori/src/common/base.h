@@ -208,6 +208,7 @@ typedef int bool;
 #ifndef __socklen_t_defined
 
 #ifdef WIN32
+//#if defined(WIN32) || defined(CYGWIN)
 typedef int socklen_t;
 #else
 typedef unsigned int socklen_t;

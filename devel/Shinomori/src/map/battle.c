@@ -411,7 +411,7 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 			damage=0;
 		if(src->type == BL_PC) {
 			struct guild *g=guild_search(((struct map_session_data *)src)->status.guild_id);
-			struct guild_castle *gc=guild_mapname2gc(map[bl->m].name);
+			struct guild_castle *gc=guild_mapname2gc(map[bl->m].mapname);
 			if(!((struct map_session_data *)src)->status.guild_id)
 				damage=0;
 			if(gc && agit_flag==0 && class_ != 1288)	// guardians cannot be damaged during non-woe [Valaris]
@@ -432,7 +432,7 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 
 	if(map[bl->m].flag.gvg && damage > 0) { //GvG
 		if(bl->type == BL_MOB){	//defenseがあればダメージが減るらしい？
-			struct guild_castle *gc=guild_mapname2gc(map[bl->m].name);
+			struct guild_castle *gc=guild_mapname2gc(map[bl->m].mapname);
 			if (gc) damage -= damage*(gc->defense/100)*(battle_config.castle_defense_rate/100);
 		}
 		if(flag&BF_WEAPON) {
@@ -3342,8 +3342,8 @@ struct Damage  battle_calc_misc_attack(
 		break;
 
 	case NPC_SELFDESTRUCTION:	// 自爆
-		damage=status_get_hp(bl)-(bl==target?1:0);
-		damagefix=0;
+		damage = status_get_hp(bl);
+		damagefix = 0;
 		break;
 
 	case NPC_SMOKING:	// タバコを吸う
@@ -3891,7 +3891,7 @@ int battle_check_target( struct block_list *src, struct block_list *target,int f
 			nullpo_retr (-1, sd);
 
 			if(md->class_ >= 1285 && md->class_ <= 1287){
-				struct guild_castle *gc = guild_mapname2gc (map[target->m].name);
+				struct guild_castle *gc = guild_mapname2gc (map[target->m].mapname);
 				if(gc && agit_flag==0)	// Guardians will not attack during non-woe time [Valaris]
 					return 1;  // end addition [Valaris]
 				if(gc && sd->status.guild_id > 0) {

@@ -1468,6 +1468,7 @@ extern inline bool session_isActive(int fd)
 {
 	return ( session_isValid(fd) && session[fd]->flag.connected );
 }
+
 extern inline bool session_isRemoved(int fd)
 {
 	return ( session_isValid(fd) && session[fd]->flag.remove );

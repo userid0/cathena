@@ -974,7 +974,7 @@ static int clif_mob0078(struct mob_data *md, unsigned char *buf)
 
 	if (md->class_ >= 1285 && md->class_ <= 1287 && md->guild_id) {	// Added guardian emblems [Valaris]
 		struct guild *g;
-		struct guild_castle *gc=guild_mapname2gc(map[md->bl.m].name);
+		struct guild_castle *gc=guild_mapname2gc(map[md->bl.m].mapname);
 		if (gc && gc->guild_id > 0) {
 			g=guild_search(gc->guild_id);
 			if (g) {
@@ -1028,7 +1028,7 @@ static int clif_mob007b(struct mob_data *md, unsigned char *buf) {
 
 		if(md->class_ >= 1285 && md->class_ <= 1287 && md->guild_id)	{	// Added guardian emblems [Valaris]
 			struct guild *g;
-			struct guild_castle *gc=guild_mapname2gc(map[md->bl.m].name);
+			struct guild_castle *gc=guild_mapname2gc(map[md->bl.m].mapname);
 			if(gc && gc->guild_id > 0){
 				g=guild_search(gc->guild_id);
 					if(g) {
@@ -1210,7 +1210,7 @@ static int clif_set0192(int fd, int m, int x, int y, int type) {
 	WFIFOW(fd,2) = x;
 	WFIFOW(fd,4) = y;
 	WFIFOW(fd,6) = type;
-	memcpy(WFIFOP(fd,8),map[m].name,16);
+	memcpy(WFIFOP(fd,8),map[m].mapname,16);
 	WFIFOSET(fd,packet_len_table[0x192]);
 
 	return 0;
@@ -6056,7 +6056,7 @@ int clif_party_move(struct party *p,struct map_session_data *sd,int online)
 	WBUFB(buf,14)=!online;
 	memcpy(WBUFP(buf,15),p->name,24);
 	memcpy(WBUFP(buf,39),sd->status.name,24);
-	memcpy(WBUFP(buf,63),map[sd->bl.m].name,16);
+	memcpy(WBUFP(buf,63),map[sd->bl.m].mapname,16);
 	return clif_send(buf,packet_len_table[0x104],&sd->bl,PARTY);
 }
 /*==========================================
@@ -6442,7 +6442,7 @@ int clif_changemapcell(int m,int x,int y,int cell_type,int type)
 	WBUFW(buf,2) = x;
 	WBUFW(buf,4) = y;
 	WBUFW(buf,6) = cell_type;
-	memcpy(WBUFP(buf,8),map[m].name,16);
+	memcpy(WBUFP(buf,8),map[m].mapname,16);
 	return clif_send(buf,packet_len_table[0x192],&bl, (!type)?AREA:ALL_SAMEMAP);
 }
 
@@ -7804,14 +7804,13 @@ int clif_parse_LoadEndAck(int fd,struct map_session_data *sd)
 
 
 		// Stop players from spawning inside castles [Valaris]
-                        {
-			struct guild_castle *gc=guild_mapname2gc(map[sd->bl.m].name);
+		{
+			struct guild_castle *gc=guild_mapname2gc(map[sd->bl.m].mapname);
 			if (gc)
 				pc_setpos(sd,sd->status.save_point.map,sd->status.save_point.x,sd->status.save_point.y,2);
-                        }
-		// End Addition [Valaris]
 		}
-
+		// End Addition [Valaris]
+	}
 	// view equipment item
 #if PACKETVER < 4
 	clif_changelook(&sd->bl,LOOK_WEAPON,sd->status.weapon);
@@ -8166,7 +8165,7 @@ int clif_parse_GetCharNameRequest(int fd, struct map_session_data *sd) {
 			memcpy(WFIFOP(fd,6), md->name, 24);
 			if (md->class_ >= 1285 && md->class_ <= 1288 && md->guild_id) {
 				struct guild *g;
-				struct guild_castle *gc = guild_mapname2gc(map[md->bl.m].name);
+				struct guild_castle *gc = guild_mapname2gc(map[md->bl.m].mapname);
 				if (gc && gc->guild_id > 0 && (g = guild_search(gc->guild_id)) != NULL) {
 					WFIFOW(fd, 0) = 0x195;
 					WFIFOB(fd,30) = 0;
@@ -8261,9 +8260,7 @@ int clif_parse_GlobalMessage(int fd, struct map_session_data *sd) { // S 008c <l
 	WFIFOW(fd,0) = 0x8e;
 	WFIFOSET(fd, WFIFOW(fd,2));
 
-#ifdef PCRE_SUPPORT
-        map_foreachinarea(npc_chat_sub, sd->bl.m, sd->bl.x-AREA_SIZE, sd->bl.y-AREA_SIZE, sd->bl.x+AREA_SIZE, sd->bl.y+AREA_SIZE, BL_NPC, RFIFOP(fd,4), strlen(RFIFOP(fd,4)), &sd->bl);
-#endif
+	map_foreachinarea(npc_chat_sub, sd->bl.m, sd->bl.x-AREA_SIZE, sd->bl.y-AREA_SIZE, sd->bl.x+AREA_SIZE, sd->bl.y+AREA_SIZE, BL_NPC, RFIFOP(fd,4), strlen((char*)RFIFOP(fd,4)), &sd->bl);
 
 	// Celest
 	if (pc_calc_base_job2 (sd->status.class_) == 23 ) {

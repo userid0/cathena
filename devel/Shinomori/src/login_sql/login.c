@@ -536,7 +536,7 @@ int mmo_auth( struct mmo_account* account , int fd){
 	}
 
 	if (register_users_online > 0 && is_user_online(atol(sql_row[0]))) {
-	        SendMessage("User [%s] is already online - Rejected.\n",sql_row[1]);
+	        ShowMessage("User [%s] is already online - Rejected.\n",sql_row[1]);
 #ifndef TWILIGHT
 		return 3; // Rejected
 #endif
@@ -1614,36 +1614,32 @@ int login_config_read(const char *cfgName){
 			ShowMessage ("Using MD5 Passwords: %s \n",w2);
 		}
         else if (strcasecmp(w1, "date_format") == 0) { // note: never have more than 19 char for the date!
-				switch (atoi(w2)) {
-				case 0:
-					strcpy(date_format, "%d-%m-%Y %H:%M:%S"); // 31-12-2004 23:59:59
-					break;
-				case 1:
-					strcpy(date_format, "%m-%d-%Y %H:%M:%S"); // 12-31-2004 23:59:59
-					break;
-				case 2:
-					strcpy(date_format, "%Y-%d-%m %H:%M:%S"); // 2004-31-12 23:59:59
-					break;
-				case 3:
-					strcpy(date_format, "%Y-%m-%d %H:%M:%S"); // 2004-12-31 23:59:59
-					break;
-				}
+			switch (atoi(w2)) {
+			case 0:
+				strcpy(date_format, "%d-%m-%Y %H:%M:%S"); // 31-12-2004 23:59:59
+				break;
+			case 1:
+				strcpy(date_format, "%m-%d-%Y %H:%M:%S"); // 12-31-2004 23:59:59
+				break;
+			case 2:
+				strcpy(date_format, "%Y-%d-%m %H:%M:%S"); // 2004-31-12 23:59:59
+				break;
+			case 3:
+				strcpy(date_format, "%Y-%m-%d %H:%M:%S"); // 2004-12-31 23:59:59
+				break;
+			}
 		}
         else if (strcasecmp(w1, "min_level_to_connect") == 0) {
-				min_level_to_connect = atoi(w2);
+			min_level_to_connect = atoi(w2);
 		}
         else if (strcasecmp(w1, "check_ip_flag") == 0) {
-                check_ip_flag = config_switch(w2);
+			check_ip_flag = config_switch(w2);
     	}
     	else if (strcasecmp(w1, "console") == 0) {
-			if(strcasecmp(w2,"on") == 0 || strcasecmp(w2,"yes") == 0 )
-			        console = 1;
+			console = config_switch(w2);
         }
     	else if (strcasecmp(w1, "case_sensitive") == 0) {
-			if(strcasecmp(w2,"on") == 0 || strcasecmp(w2,"yes") == 0 )
-			        case_sensitive = 1;
-			if(strcasecmp(w2,"off") == 0 || strcasecmp(w2,"no") == 0 )
-			        case_sensitive = 0;
+			case_sensitive = config_switch(w2);
         }
 		else if(strcasecmp(w1, "register_users_online") == 0) {
 			register_users_online = config_switch(w2);

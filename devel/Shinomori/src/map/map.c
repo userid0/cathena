@@ -3,6 +3,10 @@
 #include "base.h"
 #include "core.h"
 #include "timer.h"
+#include "socket.h"
+#include "showmsg.h"
+#include "utils.h"
+#include "nullpo.h"
 #include "db.h"
 #include "grfio.h"
 #include "malloc.h"
@@ -28,11 +32,7 @@
 #include "pet.h"
 #include "atcommand.h"
 #include "charcommand.h"
-#include "nullpo.h"
-#include "socket.h"
 #include "log.h"
-#include "showmsg.h"
-#include "utils.h"
 #include "mail.h"
 
 
@@ -1864,7 +1864,7 @@ int map_addnpc(int m,struct npc_data *nd)
 			break;
 	if(i==MAX_NPC_PER_MAP){
 		if(battle_config.error_log)
-			ShowMessage("too many NPCs in one map %s\n",map[m].name);
+			ShowMessage("too many NPCs in one map %s\n",map[m].mapname);
 		return -1;
 	}
 	if(i==map[m].npc_num){
@@ -2133,7 +2133,7 @@ void map_setcell(int m,int x,int y,int cellck)
 		// check the numbers from the gat and warn on an unknown type
 		if( (cellck != GAT_NONE) && (cellck != GAT_WALL) && (cellck != GAT_WATER) && 
 			(cellck != GAT_GROUND) && (cellck != GAT_HOLE) )
-			ShowWarning("Setting mapcell with improper value %i on %s (%i,%i)\n", cellck,map[m].name,x,y);
+			ShowWarning("Setting mapcell with improper value %i on %s (%i,%i)\n", cellck,map[m].mapname,x,y);
 		else
 			mg->type = cellck & CELL_MASK;
 			break;
@@ -2184,7 +2184,7 @@ int map_setipport(char *name, unsigned long ip, unsigned short port) {
 				// 読み甲ﾅいるので置き換える
 				md = mdos->map;
 				aFree(mdos);
-				strdb_insert(map_db,md->name,md);
+				strdb_insert(map_db,md->mapname,md);
 			}
 		} else {
 			// 他の鯖の担当マップなので置き換えるだけ
@@ -2336,9 +2336,9 @@ int map_cache_write(struct map_data *m);
 
 int map_cache_open(char *fn)
 {
-	if(map_cache.fp) {
+	if(map_cache.fp)
 		map_cache_close();
-	}
+
 	map_cache.fp = savefopen(fn,"r+b");
 	if(map_cache.fp) {
 		fread(&map_cache.head,1,sizeof(struct map_cache_head),map_cache.fp);
@@ -2347,8 +2347,8 @@ int map_cache_open(char *fn)
 			map_cache.head.sizeof_header == sizeof(struct map_cache_head) &&
 			map_cache.head.sizeof_map    == sizeof(struct map_cache_info) &&
 			map_cache.head.nmaps         == MAX_MAP_CACHE &&
-			map_cache.head.filesize      == ftell(map_cache.fp)
-		) {
+			map_cache.head.filesize      == ftell(map_cache.fp) )
+		{
 			// キャッシュ読み甲ﾝ成功
 			map_cache.map = (struct map_cache_info *)aCalloc(map_cache.head.nmaps,sizeof(struct map_cache_info));
 			fseek(map_cache.fp,sizeof(struct map_cache_head),SEEK_SET);
@@ -2395,13 +2395,13 @@ int map_cache_read(struct map_data *m)
 	size_t i;
 	if(!map_cache.fp) { return 0; }
 	for(i = 0;i < map_cache.head.nmaps ; i++) {
-		if(0==strcmp(m->name,map_cache.map[i].fn)) {
+		if(0==strcmp(m->mapname,map_cache.map[i].fn)) {
 			break;
 		}
 	}
 
 	if( i < map_cache.head.nmaps &&
-		map_cache.map[i].water_height == map_waterheight(m->name) )		// 水場の高さが違うので読み直し
+		map_cache.map[i].water_height == map_waterheight(m->mapname) )		// 水場の高さが違うので読み直し
 	{
 		if(map_cache.map[i].compressed == 0) {
 				// 非圧縮ファイル
@@ -2470,7 +2470,7 @@ int map_cache_write(struct map_data *m)
 
 	for(i = 0;i < map_cache.head.nmaps ; i++) 
 	{
-		if( (0==strcmp(m->name,map_cache.map[i].fn)) || (map_cache.map[i].fn[0] == 0) )
+		if( (0==strcmp(m->mapname,map_cache.map[i].fn)) || (map_cache.map[i].fn[0] == 0) )
 			break;
 			}
 
@@ -2504,7 +2504,7 @@ int map_cache_write(struct map_data *m)
 				fwrite(write_buf,1,len_new,map_cache.fp);
 
 			// prepare the data header
-			memcpy(map_cache.map[i].fn, m->name, sizeof(map_cache.map[i].fn));
+			memcpy(map_cache.map[i].fn, m->mapname, sizeof(map_cache.map[i].fn));
 			map_cache.map[i].fn[sizeof(map_cache.map[i].fn)-1]=0;			
 
 			// update file header
@@ -2532,27 +2532,27 @@ int map_cache_write(struct map_data *m)
 			}
 		}
 		// just make sure that everything gets updated
-			map_cache.map[i].xs  = m->xs;
-			map_cache.map[i].ys  = m->ys;
-			map_cache.map[i].water_height = map_waterheight(m->name);
+		map_cache.map[i].xs  = m->xs;
+		map_cache.map[i].ys  = m->ys;
+		map_cache.map[i].water_height = map_waterheight(m->mapname);
 		map_cache.map[i].compressed   = compress;
 		map_cache.map[i].datalen      = len_new;
-			map_cache.dirty = 1;
+		map_cache.dirty = 1;
 
 		if(compress == 1)	// zlib compress has alloced an additional buffer
 		{
-				aFree(write_buf);
+			aFree(write_buf);
 			write_buf = NULL;
-			}
-			return 0;
 		}
+		return 0;
+	}
 	// 書き甲ﾟなかった
 	return 1;
-
 }
 
 #ifdef USE_AFM
-int map_readafm(int m,char *fn) {
+int map_readafm(int m,char *fn)
+{
 
 	/*
 	Advanced Fusion Maps Support
@@ -2645,7 +2645,6 @@ int map_readafm(int m,char *fn) {
 			str=fgets(afm_line, sizeof(afm_line)-1, afm_file);
 			for (x = 0; x < xs; x++) {
 				// no direct access
-				//map[m].gat[x+y*xs].type = (str[x]-48) & CELL_MASK;
 				map_setcell(m,x,y, str[x] & CELL_MASK );
 			}
 		}
@@ -2660,13 +2659,42 @@ int map_readafm(int m,char *fn) {
 		map[m].block_count = (int *)aCalloc(size, sizeof(int));
 		map[m].block_mob_count = (int *)aCalloc(size, sizeof(int));
 
-		strdb_insert(map_db,map[m].name,&map[m]);
+		strdb_insert(map_db,map[m].mapname,&map[m]);
 
 		fclose(afm_file);
 
 	}
 
 	return 0;
+}
+
+bool map_readaf2(int m, const char *fn)
+{
+	FILE *af2_file, *dest;
+	char buf[256];
+	bool ret=false;
+
+	af2_file = savefopen(fn, "r");
+	if( af2_file != NULL )
+	{
+		memcpy(buf,              fn,     strlen(fn)-4);
+		memcpy(buf+strlen(fn)-4, ".out", 5);
+
+		dest = fopen(buf, "w");
+		if (dest == NULL)
+		{
+			printf ("can't open\n");
+			fclose(af2_file);
+			return 0;
+		}
+		ret = 0!=decode_file(af2_file, dest);
+		fclose(af2_file);
+		fclose(dest);
+
+		if(ret) map_readafm(m, buf);
+		remove(buf);
+	}
+	return ret;
 }
 #endif
 
@@ -2677,10 +2705,12 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 
 	size_t size;
 
-	if(map_cache_read(&map[m])) {
-		// キャッシュから読み甲ﾟた
+	if(map_cache_read(&map[m]))
+	{	// キャッシュから読み甲ﾟた
 		(*map_cache)++;
-	} else {
+	}
+	else
+	{
 		int wh;
 		int x,y;
 		struct gat_1cell {float high[4]; int type;};
@@ -2695,7 +2725,7 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 
 		map[m].gat = (struct mapgat *)aCalloc( (map[m].xs * map[m].ys), sizeof(struct mapgat));
 
-		wh=map_waterheight(map[m].name);
+		wh=map_waterheight(map[m].mapname);
 		
 		ShowMessage("\rLoading Maps [%d/%d]: %s, size (%ld %ld)(%i)%-10s",m,map_num,fn,map[m].xs,map[m].ys,wh,"");
 		
@@ -2716,17 +2746,18 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 				SwapFourBytes(((char*)(&pp)) + sizeof(unsigned long)*3);
 				SwapFourBytes(((char*)(&pp)) + sizeof(unsigned long)*4);
 			}
-			if(wh!=NO_WATER && pp.type==0){
-				// ﾉ倏揮ｩﾆ
+			if(wh!=NO_WATER && pp.type==0)
+			{	// ﾉ倏揮ｩﾆ
 				// no direct access
 				//map[m].gat[x+y*map[m].xs].type=(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0;
 				map_setcell(m,x,y,(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0);
-				} else {
-				// no direct access
+			}
+			else
+			{	// no direct access
 				//map[m].gat[x+y*map[m].xs].type=() & CELL_MASK;
 				map_setcell(m,x,y,pp.type);
-				}
 			}
+		}
 		map_cache_write(&map[m]);
 		aFree(gat);
 	}
@@ -2745,12 +2776,11 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 	map[m].block_mob = (struct block_list **)aCalloc(size, sizeof(struct block_list*));
 	map[m].block_count = (int *)aCalloc(size, sizeof(int));
 	map[m].block_mob_count=(int *)aCalloc(size, sizeof(int));
-	if (alias)
-           strdb_insert(map_db,alias,&map[m]);
-        else
-           strdb_insert(map_db,map[m].name,&map[m]);
 
-//	ShowMessage("%s read done\n",fn);
+	if (alias)
+		strdb_insert(map_db,alias,&map[m]);
+	else
+		strdb_insert(map_db,map[m].mapname,&map[m]);
 
 	return 0;
 }
@@ -2759,71 +2789,82 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
  * 全てのmapデ?タを?み?む
  *------------------------------------------
  */
-int map_readallmap(void) {
+int map_readallmap(void)
+{
 	int i,maps_removed=0;
 	char fn[256];
 	int map_cache = 0;
 
 	// マップキャッシュを開く
-	if(map_read_flag >= READ_FROM_BITMAP) {
+	if(map_read_flag >= READ_FROM_BITMAP)
+	{
 		map_cache_open(map_cache_file);
 	}
 
 	ShowStatus("Loading Maps%s...\n",
-		(map_read_flag == READ_FROM_BITMAP_COMPRESSED ? " (w/ Compressed Map Cache )" :
-		map_read_flag >= READ_FROM_BITMAP ? " (w/ Map Cache)" :
-		map_read_flag == READ_FROM_AFM ? " (w/ AFM)" : ""));
+		(map_read_flag == READ_FROM_BITMAP_COMPRESSED ? " (w/ Compressed Map Cache)" :
+		 map_read_flag >= READ_FROM_BITMAP            ? " (w/ Map Cache)" :
+		 map_read_flag == READ_FROM_AFM               ? " (w/ AFM)" : "") );
 
 	// 先に全部のャbプの存在を確認
-	for(i=0;i<map_num;i++){
-
+	for(i=0;i<map_num;i++)
+	{
 #ifdef USE_AFM
 		FILE *afm_file;
 		char afm_name[256] = "";
 
 		map[i].alias = NULL;
 
-		if(!strstr(map[i].name,".afm")) {
+		if(!strstr(map[i].mapname,".afm")) {
 		// check if it's necessary to replace the extension - speeds up loading abit
-			memcpy(afm_name, map[i].name, strlen(map[i].name) - 3);
-			memcpy(afm_name+strlen(map[i].name) - 3, "afm", 4); // copy with EOS
+			memcpy(afm_name, map[i].mapname, strlen(map[i].mapname) - 3);
+			memcpy(afm_name+strlen(map[i].mapname) - 3, "afm", 4); // copy with EOS
 		}
 		sprintf(fn,"%s%c%s",afm_dir,PATHSEP,afm_name);
 		afm_file = savefopen(fn, "r");
-		if (afm_file != NULL) {
+		if (afm_file != NULL)
+		{
 			fclose(afm_file);
 			// map_readafm open and closes the file anyway
 			map_readafm(i,fn);
+			continue;
 		}
-		else if(strstr(map[i].name,".gat")!=NULL) {
-#else
-		if(strstr(map[i].name,".gat")!=NULL) {
-#endif
-			char *p = strchr(map[i].name, '<'); // [MouseJstr]
-			if (p != NULL) 
-			{	// swap mapname and the stuff after the '<' 
-				// asuming following ('.' is EOS marker):
-				// buffer: aaaaaaaa<bbbbb. change to:
-				// buffer: bbbbb.aaaaaaaa.
-				// use bbbbb as mapname and aaaaaaaa as alias with pointer at map[i].alias
-				// so we do not need a strdup
-				char alias[64];
-				*p++ = '\0';
-				strcpy(alias, map[i].name);
-				strcpy(map[i].name, p);
-				p = map[i].name+strlen(map[i].name)+1; // the first position after the EOF of the new mapname
-				strcpy(p,alias);
-				map[i].alias = p;
-			}
-			else
-				map[i].alias = NULL;
 
-			sprintf(fn,"data\\%s",map[i].name);
-			if(map_readmap(i,fn, p, &map_cache, map_num) == -1) {
-				map_delmap(map[i].name);
-				maps_removed++;
-				i--;
-			}
+		// try with *.af2
+		fn[strlen(fn)-1] = '2';
+		afm_file = savefopen(fn, "r");
+		if (afm_file != NULL)
+		{
+			fclose(afm_file);
+			if (map_readaf2(i,fn) != 0)
+				continue;
+		}
+#endif
+		char *p = strchr(map[i].mapname, '<'); // [MouseJstr]
+		if (p != NULL) 
+		{	// swap mapname and the stuff after the '<' 
+			// asuming following ('.' is EOS marker):
+			// buffer: aaaaaaaa<bbbbb. change to:
+			// buffer: bbbbb.aaaaaaaa.
+			// use bbbbb as mapname and aaaaaaaa as alias with pointer at map[i].alias
+			// so we do not need a strdup
+			char alias[64];
+			*p++ = '\0';
+			strcpy(alias, map[i].mapname);
+			strcpy(map[i].mapname, p);
+			p = map[i].mapname+strlen(map[i].mapname)+1; // the first position after the EOF of the new mapname
+			strcpy(p,alias);
+			map[i].alias = p;
+		}
+		else
+			map[i].alias = NULL;
+
+		sprintf(fn,"data\\%s",map[i].mapname);
+		if(map_readmap(i,fn, p, &map_cache, map_num) == -1)
+		{
+			map_delmap(map[i].mapname);
+			maps_removed++;
+			i--;
 		}
 	}
 
@@ -2853,7 +2894,7 @@ int map_addmap(char *mapname) {
 		ShowError("Could not add map '"CL_WHITE"%s"CL_RESET"', the limit of maps has been reached.\n",mapname);
 		return 1;
 	}
-	memcpy(map[map_num].name, mapname, 24);
+	memcpy(map[map_num].mapname, mapname, 24);
 	map_num++;
 	return 0;
 }
@@ -2872,8 +2913,8 @@ int map_delmap(char *mapname) {
 	}
 
 	for(i = 0; i < map_num; i++) {
-		if (strcmp(map[i].name, mapname) == 0) {
-		    ShowMessage("Removing map [ %s ] from maplist\n",map[i].name);
+		if (strcmp(map[i].mapname, mapname) == 0) {
+		    ShowMessage("Removing map [ %s ] from maplist\n",map[i].mapname);
 			memmove(map+i, map+i+1, sizeof(map[0])*(map_num-i-1));
 			map_num--;
 		}
@@ -3046,10 +3087,7 @@ int map_config_read(const char *cfgName) {
 			} else if (strcasecmp(w1, "import") == 0) {
 				map_config_read(w2);
 			} else if (strcasecmp(w1, "console") == 0) {
-			    if(strcasecmp(w2,"on") == 0 || strcasecmp(w2,"yes") == 0 ) {
-			        console = 1;
-					ShowNotice("Console Commands is enabled.\n");
-				}
+				console = config_switch(w2);
             } else if(strcasecmp(w1,"imalive_on")==0){		//Added by Mugendai for I'm Alive mod
 				imalive_on = atoi(w2);					//Added by Mugendai for I'm Alive mod
 			} else if(strcasecmp(w1,"imalive_time")==0){	//Added by Mugendai for I'm Alive mod
@@ -3120,7 +3158,7 @@ int inter_config_read(char *cfgName)
 		} else if(strcasecmp(w1,"map_server_db")==0){
 			strcpy(map_server_db, w2);
 		} else if(strcasecmp(w1,"use_sql_db")==0){
-			db_use_sqldbs = battle_config_switch(w2);
+			db_use_sqldbs = config_switch(w2);
 			ShowMessage ("Using SQL dbs: %s\n",w2);
 		//Login Server SQL DB
 		} else if(strcasecmp(w1,"login_server_ip")==0){
@@ -3342,10 +3380,7 @@ void do_final(void) {
 		if(map[i].m)
 			map_foreachinarea(cleanup_sub, i, 0, 0, map[i].xs, map[i].ys, 0, 0);
 
-#ifndef TXT_ONLY
     chrif_char_reset_offline();
-#endif
-
     chrif_flush_fifo();
 
     map_removenpc();

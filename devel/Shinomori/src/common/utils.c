@@ -200,8 +200,11 @@ bool remove_control_chars(char *str)
 {
 	bool change = false;
 	if(str)
-	while( *str ) {
-		 if ( (*str<32) && (*str>0) ) {
+	while( *str )
+	{	// replace control chars 
+		// but skip chars >0x7F which are negative in char representations
+		if ( (*str<32) && (*str>0) )
+		{
 			*str = '_';
 			change = true;
 		}

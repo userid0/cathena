@@ -482,7 +482,7 @@ int party_send_message(struct map_session_data *sd,char *mes,int len)
 	if(sd->status.party_id==0)
 		return 0;
 	intif_party_message(sd->status.party_id,sd->status.account_id,mes,len);
-        party_recv_message(sd->status.party_id,sd->status.account_id,mes,len);
+	party_recv_message (sd->status.party_id,sd->status.account_id,mes,len);
 	return 0;
 }
 
@@ -514,8 +514,8 @@ int party_send_xyhp_timer_sub(void *key,void *data,va_list ap)
 	nullpo_retr(0, p);
 
 	for(i=0;i<MAX_PARTY;i++){
-		struct map_session_data *sd;
-		if((sd=p->member[i].sd)!=NULL){
+		struct map_session_data *sd=p->member[i].sd;
+		if(sd!=NULL){
 			// À•W’Ê’m
 			if(sd->party_x!=sd->bl.x || sd->party_y!=sd->bl.y){
 				clif_party_xy(p,sd);
@@ -527,7 +527,6 @@ int party_send_xyhp_timer_sub(void *key,void *data,va_list ap)
 				clif_party_hp(p,sd);
 				sd->party_hp=sd->status.hp;
 			}
-			
 		}
 	}
 	return 0;
@@ -543,12 +542,11 @@ int party_send_xyhp_timer(int tid,unsigned long tick,int id,int data)
 int party_send_xy_clear(struct party *p)
 {
 	int i;
-
 	nullpo_retr(0, p);
 
 	for(i=0;i<MAX_PARTY;i++){
-		struct map_session_data *sd;
-		if((sd=p->member[i].sd)!=NULL){
+		struct map_session_data *sd=p->member[i].sd;
+		if(sd!=NULL){
 			sd->party_x=-1;
 			sd->party_y=-1;
 			sd->party_hp=-1;
@@ -586,7 +584,7 @@ int party_exp_share(struct party *p,int map,int base_exp,int job_exp,int zeny)
 	nullpo_retr(0, p);
 	
 	for(i=c=0;i<MAX_PARTY;i++)
-	{
+	{	
 		if((sd=p->member[i].sd)!=NULL && p->member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
 		{
 			if (/* pc_issit(sd) || */ sd->chatID || (sd->idletime < (tick_ - 120)))

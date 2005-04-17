@@ -46,7 +46,7 @@ int CheckForCharServer() {
 int intif_create_pet(int account_id,int char_id,short pet_class,short pet_lv,short pet_egg_id,
 	short pet_equip,short intimate,short hungry,char rename_flag,char incuvate,char *pet_name)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3080;
 	WFIFOL(inter_fd,2) = account_id;
@@ -67,7 +67,7 @@ int intif_create_pet(int account_id,int char_id,short pet_class,short pet_lv,sho
 
 int intif_request_petdata(int account_id,int char_id,int pet_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3081;
 	WFIFOL(inter_fd,2) = account_id;
@@ -80,7 +80,7 @@ int intif_request_petdata(int account_id,int char_id,int pet_id)
 
 int intif_save_petdata(int account_id,struct s_pet *pet)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3082;
 	WFIFOW(inter_fd,2) = sizeof(struct s_pet) + 8;
@@ -96,7 +96,7 @@ int intif_save_petdata(int account_id,struct s_pet *pet)
 
 int intif_delete_petdata(int pet_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3083;
 	WFIFOL(inter_fd,2) = pet_id;
@@ -112,7 +112,7 @@ int intif_GMmessage(char* mes, int flag)
 	{
 		int lp = (flag&0x10) ? 8 : 4;
 		int len = strlen(mes)+1;
-		if (CheckForCharServer())
+		if( CheckForCharServer() )
 			return 0;
 		WFIFOW(inter_fd,0) = 0x3000;
 		WFIFOW(inter_fd,2) = lp + len;
@@ -129,7 +129,7 @@ int intif_GMmessage(char* mes, int flag)
 // The transmission of Wisp/Page to inter-server (player not found on this server)
 int intif_wis_message(struct map_session_data *sd, char *nick, char *mes, int mes_len) {
 	nullpo_retr(0, sd);
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 
 	WFIFOW(inter_fd,0) = 0x3001;
@@ -147,7 +147,7 @@ int intif_wis_message(struct map_session_data *sd, char *nick, char *mes, int me
 
 // The reply of Wisp/page
 int intif_wis_replay(int id, int flag) {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3002;
 	WFIFOL(inter_fd,2) = id;
@@ -163,7 +163,7 @@ int intif_wis_replay(int id, int flag) {
 // The transmission of GM only Wisp/Page from server to inter-server
 int intif_wis_message_to_gm(char *Wisp_name, int min_gm_level, char *mes) {
 	int mes_len;
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	mes_len = strlen(mes) + 1; // + null
 	WFIFOW(inter_fd,0) = 0x3003;
@@ -182,7 +182,7 @@ int intif_wis_message_to_gm(char *Wisp_name, int min_gm_level, char *mes) {
 // アカウント変数送信
 int intif_saveaccountreg(struct map_session_data *sd) {
 	int j,p;
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 
 	nullpo_retr(0, sd);
@@ -204,7 +204,7 @@ int intif_saveaccountreg(struct map_session_data *sd) {
 int intif_request_accountreg(struct map_session_data *sd)
 {
 	nullpo_retr(0, sd);
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 
 	WFIFOW(inter_fd,0) = 0x3005;
@@ -219,7 +219,7 @@ int intif_request_accountreg(struct map_session_data *sd)
 // 倉庫データ要求
 int intif_request_storage(int account_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3010;
 	WFIFOL(inter_fd,2) = account_id;
@@ -229,7 +229,7 @@ int intif_request_storage(int account_id)
 // 倉庫データ送信
 int intif_send_storage(struct pc_storage *stor)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	nullpo_retr(0, stor);
 	WFIFOW(inter_fd,0) = 0x3011;
@@ -245,7 +245,7 @@ int intif_send_storage(struct pc_storage *stor)
 
 int intif_request_guild_storage(int account_id,int guild_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3018;
 	WFIFOL(inter_fd,2) = account_id;
@@ -255,7 +255,7 @@ int intif_request_guild_storage(int account_id,int guild_id)
 }
 int intif_send_guild_storage(int account_id,struct guild_storage *gstor)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3019;
 	WFIFOW(inter_fd,2) = sizeof(struct guild_storage)+12;
@@ -272,7 +272,7 @@ int intif_send_guild_storage(int account_id,struct guild_storage *gstor)
 // パーティ作成要求
 int intif_create_party(struct map_session_data *sd,char *name,int item,int item2)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	nullpo_retr(0, sd);
 
@@ -280,7 +280,7 @@ int intif_create_party(struct map_session_data *sd,char *name,int item,int item2
 	WFIFOL(inter_fd,2) = sd->status.account_id;
 	memcpy(WFIFOP(inter_fd, 6),name,24);
 	memcpy(WFIFOP(inter_fd,30),sd->status.name,24);
-	memcpy(WFIFOP(inter_fd,54),map[sd->bl.m].name,16);
+	memcpy(WFIFOP(inter_fd,54),map[sd->bl.m].mapname,16);
 	WFIFOW(inter_fd,70)= sd->status.base_level;
 	WFIFOB(inter_fd,72)= item;
 	WFIFOB(inter_fd,73)= item2;
@@ -292,7 +292,7 @@ int intif_create_party(struct map_session_data *sd,char *name,int item,int item2
 // パーティ情報要求
 int intif_request_partyinfo(int party_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3021;
 	WFIFOL(inter_fd,2) = party_id;
@@ -305,7 +305,7 @@ int intif_request_partyinfo(int party_id)
 int intif_party_addmember(int party_id,int account_id)
 {
 	struct map_session_data *sd;
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	sd=map_id2sd(account_id);
 //	if(battle_config.etc_log)
@@ -315,7 +315,7 @@ int intif_party_addmember(int party_id,int account_id)
 		WFIFOL(inter_fd,2)=party_id;
 		WFIFOL(inter_fd,6)=account_id;
 		memcpy(WFIFOP(inter_fd,10),sd->status.name,24);
-		memcpy(WFIFOP(inter_fd,34),map[sd->bl.m].name,16);
+		memcpy(WFIFOP(inter_fd,34),map[sd->bl.m].mapname,16);
 		WFIFOW(inter_fd,50)=sd->status.base_level;
 		WFIFOSET(inter_fd,52);
 	}
@@ -324,7 +324,7 @@ int intif_party_addmember(int party_id,int account_id)
 // パーティ設定変更
 int intif_party_changeoption(int party_id,int account_id,int exp,int item)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0)=0x3023;
 	WFIFOL(inter_fd,2)=party_id;
@@ -337,7 +337,7 @@ int intif_party_changeoption(int party_id,int account_id,int exp,int item)
 // パーティ脱退要求
 int intif_party_leave(int party_id,int account_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 //	if(battle_config.etc_log)
 //		ShowMessage("intif: party leave %d %d\n",party_id,account_id);
@@ -350,13 +350,13 @@ int intif_party_leave(int party_id,int account_id)
 // パーティ移動要求
 int intif_party_changemap(struct map_session_data *sd,int online)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	if(sd!=NULL){
 	    WFIFOW(inter_fd,0)=0x3025;
 	    WFIFOL(inter_fd,2)=sd->status.party_id;
 	    WFIFOL(inter_fd,6)=sd->status.account_id;
-	    memcpy(WFIFOP(inter_fd,10),map[sd->bl.m].name,16);
+	    memcpy(WFIFOP(inter_fd,10),map[sd->bl.m].mapname,16);
 	    WFIFOB(inter_fd,26)=online;
 	    WFIFOW(inter_fd,27)=sd->status.base_level;
 	    WFIFOSET(inter_fd,29);
@@ -368,7 +368,7 @@ int intif_party_changemap(struct map_session_data *sd,int online)
 // パーティー解散要求
 int intif_break_party(int party_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0)=0x3026;
 	WFIFOL(inter_fd,2)=party_id;
@@ -378,25 +378,26 @@ int intif_break_party(int party_id)
 // パーティ会話送信
 int intif_party_message(int party_id,int account_id,char *mes,int len)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 //	if(battle_config.etc_log)
 //		ShowMessage("intif_party_message: %s\n",mes);
-	if ((party_id > 0) && (party_search(party_id) != NULL) && 
-		(mes != NULL) && (len > 0)) { 
-	WFIFOW(inter_fd,0)=0x3027;
-	WFIFOW(inter_fd,2)=len+12;
-	WFIFOL(inter_fd,4)=party_id;
-	WFIFOL(inter_fd,8)=account_id;
-	memcpy(WFIFOP(inter_fd,12),mes,len);
-	WFIFOSET(inter_fd,len+12);
+	if( (party_id > 0) && (party_search(party_id) != NULL) && 
+		(mes != NULL) && (len > 0) )
+	{ 
+		WFIFOW(inter_fd,0)=0x3027;
+		WFIFOW(inter_fd,2)=len+12;
+		WFIFOL(inter_fd,4)=party_id;
+		WFIFOL(inter_fd,8)=account_id;
+		memcpy(WFIFOP(inter_fd,12),mes,len);
+		WFIFOSET(inter_fd,len+12);
 	}
 	return 0;
 }
 // パーティ競合チェック要求
 int intif_party_checkconflict(int party_id,int account_id,char *nick)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0)=0x3028;
 	WFIFOL(inter_fd,2)=party_id;
@@ -409,7 +410,7 @@ int intif_party_checkconflict(int party_id,int account_id,char *nick)
 // ギルド作成要求
 int intif_guild_create(const char *name,const struct guild_member *master)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	nullpo_retr(0, master);
 
@@ -426,7 +427,7 @@ int intif_guild_create(const char *name,const struct guild_member *master)
 // ギルド情報要求
 int intif_guild_request_info(int guild_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3031;
 	WFIFOL(inter_fd,2) = guild_id;
@@ -436,7 +437,7 @@ int intif_guild_request_info(int guild_id)
 // ギルドメンバ追加要求
 int intif_guild_addmember(int guild_id,struct guild_member *m)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0) = 0x3032;
 	WFIFOW(inter_fd,2) = sizeof(struct guild_member)+8;
@@ -450,7 +451,7 @@ int intif_guild_addmember(int guild_id,struct guild_member *m)
 // ギルドメンバ脱退/追放要求
 int intif_guild_leave(int guild_id,int account_id,int char_id,int flag,const char *mes)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd, 0) = 0x3034;
 	WFIFOL(inter_fd, 2) = guild_id;
@@ -465,7 +466,7 @@ int intif_guild_leave(int guild_id,int account_id,int char_id,int flag,const cha
 int intif_guild_memberinfoshort(int guild_id,
 	int account_id,int char_id,int online,int lv,int class_)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd, 0) = 0x3035;
 	WFIFOL(inter_fd, 2) = guild_id;
@@ -480,7 +481,7 @@ int intif_guild_memberinfoshort(int guild_id,
 // ギルド解散通知
 int intif_guild_break(int guild_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd, 0) = 0x3036;
 	WFIFOL(inter_fd, 2) = guild_id;
@@ -490,7 +491,7 @@ int intif_guild_break(int guild_id)
 // ギルド会話送信
 int intif_guild_message(int guild_id,int account_id,char *mes,int len)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	if ((guild_search(guild_id) != NULL) && (mes != NULL) && (len > 0)) {
 	WFIFOW(inter_fd,0)=0x3037;
@@ -506,7 +507,7 @@ int intif_guild_message(int guild_id,int account_id,char *mes,int len)
 // ギルド競合チェック要求
 int intif_guild_checkconflict(int guild_id,int account_id,int char_id)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd, 0)=0x3038;
 	WFIFOL(inter_fd, 2)=guild_id;
@@ -518,7 +519,7 @@ int intif_guild_checkconflict(int guild_id,int account_id,int char_id)
 // ギルド基本情報変更要求
 int intif_guild_change_basicinfo(int guild_id,int type,const void *data,int len)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0)=0x3039;
 	WFIFOW(inter_fd,2)=len+10;
@@ -532,7 +533,7 @@ int intif_guild_change_basicinfo(int guild_id,int type,const void *data,int len)
 int intif_guild_change_memberinfo(int guild_id,int account_id,int char_id,
 	int type,const void *data,int len)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	if ((guild_search(guild_id) != NULL) && (map_id2sd(char_id) != NULL)) {	
 	WFIFOW(inter_fd, 0)=0x303a;
@@ -549,7 +550,7 @@ int intif_guild_change_memberinfo(int guild_id,int account_id,int char_id,
 // ギルド役職変更要求
 int intif_guild_position(int guild_id,int idx,struct guild_position *pos)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0)=0x303b;
 	WFIFOW(inter_fd,2)=sizeof(struct guild_position)+12;
@@ -564,7 +565,7 @@ int intif_guild_position(int guild_id,int idx,struct guild_position *pos)
 // ギルドスキルアップ要求
 int intif_guild_skillup(int guild_id,unsigned short skillid,int account_id,int flag)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd, 0)=0x303c;
 	WFIFOL(inter_fd, 2)=guild_id;
@@ -577,7 +578,7 @@ int intif_guild_skillup(int guild_id,unsigned short skillid,int account_id,int f
 // ギルド同盟/敵対要求
 int intif_guild_alliance(int guild_id1,int guild_id2,int account_id1,int account_id2,int flag)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd, 0)=0x303d;
 	WFIFOL(inter_fd, 2)=guild_id1;
@@ -591,7 +592,7 @@ int intif_guild_alliance(int guild_id1,int guild_id2,int account_id1,int account
 // ギルド告知変更要求
 int intif_guild_notice(int guild_id,const char *mes1,const char *mes2)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0)=0x303e;
 	WFIFOL(inter_fd,2)=guild_id;
@@ -603,7 +604,7 @@ int intif_guild_notice(int guild_id,const char *mes1,const char *mes2)
 // ギルドエンブレム変更要求
 int intif_guild_emblem(int guild_id,int len,const char *data)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	if(guild_id<=0 || len<0 || len>2000)
 		return 0;
@@ -618,7 +619,7 @@ int intif_guild_emblem(int guild_id,int len,const char *data)
 //現在のギルド城占領ギルドを調べる
 int intif_guild_castle_dataload(int castle_id,int index)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0)=0x3040;
 	WFIFOW(inter_fd,2)=castle_id;
@@ -630,7 +631,7 @@ int intif_guild_castle_dataload(int castle_id,int index)
 //ギルド城占領ギルド変更要求
 int intif_guild_castle_datasave(int castle_id,int index, int value)
 {
-	if (CheckForCharServer())
+	if( CheckForCharServer() )
 		return 0;
 	WFIFOW(inter_fd,0)=0x3041;
 	WFIFOW(inter_fd,2)=castle_id;

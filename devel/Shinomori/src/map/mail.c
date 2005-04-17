@@ -18,7 +18,6 @@
 #include "mail.h"
 #include "atcommand.h"
 
-
 char mail_db[32] = "mail";
 
 int MAIL_CHECK_TIME = 120000;
@@ -125,7 +124,6 @@ int mail_check(struct map_session_data *sd,int type)
 		//clif_displaymessage(sd->fd, "You have no new messages.");
 		clif_displaymessage(sd->fd, msg_txt(516));
 	}
-
 	return 0;
 }
 
@@ -155,7 +153,8 @@ int mail_read(struct map_session_data *sd, int message_id)
 
 		if ((mail_row = mysql_fetch_row(mail_res)))
 		{
-			if(!atoi(mail_row[6])) {
+			if(!atoi(mail_row[6]))
+			{
 				sprintf(tmp_msql,"UPDATE `%s` SET `check_flag`='1' WHERE `message_id`= \"%d\"", mail_db, atoi(mail_row[0]));
 				if(mysql_query(&mail_handle, tmp_msql) )
 				{
@@ -175,9 +174,7 @@ int mail_read(struct map_session_data *sd, int message_id)
 				ShowMessage("DB server Error (update Read `%s`)- %s\n", mail_db, mysql_error(&mail_handle) );
 			}
 		}
-
 		mysql_free_result(mail_res);
-
 	} 
 	else
 	{

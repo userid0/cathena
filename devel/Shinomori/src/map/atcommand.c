@@ -1428,11 +1428,11 @@ int atcommand_whomap(
 	}
 
 	if (count == 0)
-		sprintf(output, msg_table[54], map[map_id].name); // No player found in map '%s'.
+		sprintf(output, msg_table[54], map[map_id].mapname); // No player found in map '%s'.
 	else if (count == 1)
-		sprintf(output, msg_table[55], map[map_id].name); // 1 player found in map '%s'.
+		sprintf(output, msg_table[55], map[map_id].mapname); // 1 player found in map '%s'.
 	else {
-		sprintf(output, msg_table[56], count, map[map_id].name); // %d players found in map '%s'.
+		sprintf(output, msg_table[56], count, map[map_id].mapname); // %d players found in map '%s'.
 	}
 	clif_displaymessage(fd, output);
 
@@ -1485,11 +1485,11 @@ int atcommand_whomap2(
 	}
 
 	if (count == 0)
-		sprintf(output, msg_table[54], map[map_id].name); // No player found in map '%s'.
+		sprintf(output, msg_table[54], map[map_id].mapname); // No player found in map '%s'.
 	else if (count == 1)
-		sprintf(output, msg_table[55], map[map_id].name); // 1 player found in map '%s'.
+		sprintf(output, msg_table[55], map[map_id].mapname); // 1 player found in map '%s'.
 	else {
-		sprintf(output, msg_table[56], count, map[map_id].name); // %d players found in map '%s'.
+		sprintf(output, msg_table[56], count, map[map_id].mapname); // %d players found in map '%s'.
 	}
 	clif_displaymessage(fd, output);
 
@@ -1556,11 +1556,11 @@ int atcommand_whomap3(
 	}
 
 	if (count == 0)
-		sprintf(output, msg_table[54], map[map_id].name); // No player found in map '%s'.
+		sprintf(output, msg_table[54], map[map_id].mapname); // No player found in map '%s'.
 	else if (count == 1)
-		sprintf(output, msg_table[55], map[map_id].name); // 1 player found in map '%s'.
+		sprintf(output, msg_table[55], map[map_id].mapname); // 1 player found in map '%s'.
 	else {
-		sprintf(output, msg_table[56], count, map[map_id].name); // %d players found in map '%s'.
+		sprintf(output, msg_table[56], count, map[map_id].mapname); // %d players found in map '%s'.
 	}
 	clif_displaymessage(fd, output);
 
@@ -3599,7 +3599,7 @@ int atcommand_memo(
 				sprintf(output, msg_table[172], position, sd->status.memo_point[position].map, sd->status.memo_point[position].x, sd->status.memo_point[position].y); // You replace previous memo position %d - %s (%d,%d).
 				clif_displaymessage(fd, output);
 			}
-			memcpy(sd->status.memo_point[position].map, map[sd->bl.m].name, 24);
+			memcpy(sd->status.memo_point[position].map, map[sd->bl.m].mapname, 24);
 			sd->status.memo_point[position].x = sd->bl.x;
 			sd->status.memo_point[position].y = sd->bl.y;
 			clif_skill_memo(sd, 0);
@@ -3631,7 +3631,7 @@ int atcommand_gat(
 
 	for (y = 2; y >= -2; y--) {
 		sprintf(output, "%s (x= %d, y= %d) %02X %02X %02X %02X %02X",
-			map[sd->bl.m].name,   sd->bl.x - 2, sd->bl.y + y,
+			map[sd->bl.m].mapname,sd->bl.x - 2, sd->bl.y + y,
  			map_getcell(sd->bl.m, sd->bl.x - 2, sd->bl.y + y, CELL_GETTYPE),
  			map_getcell(sd->bl.m, sd->bl.x - 1, sd->bl.y + y, CELL_GETTYPE),
  			map_getcell(sd->bl.m, sd->bl.x,     sd->bl.y + y, CELL_GETTYPE),
@@ -7899,27 +7899,32 @@ atcommand_cleanmap(
  * NPC/PET‚É˜b‚³‚¹‚é
  *------------------------------------------
  */
-int
-atcommand_npctalk(
-	const int fd, struct map_session_data* sd,
-	const char* command, const char* message)
+int atcommand_npctalk(const int fd, struct map_session_data* sd,
+					  const char* command, const char* message)
 {
-	char name[128],mes[128];
+	char name[128],mes[128],output[256];
 	struct npc_data *nd;
 
-	if (sscanf(message, "%s %99[^\n]", name, mes) < 2)
+//	if (sscanf(message, "%s %99[^\n]", name, mes) < 2)
+//		return -1;
+	if( (sscanf(message, "\"%[^\"]\" %99[^\n]", name, mes) < 2) && //orn
+		(sscanf(message, "%99s %99[^\n]", name, mes) < 2))
 		return -1;
 
-	if (!(nd = npc_name2id(name)))
+	if( !(nd = npc_name2id(name)) )
 		return -1;
 	
-	clif_message(&nd->bl, mes);
+//	clif_message(&nd->bl, mes);
+	sscanf(name, "%[^#]#[^\n]", name);
+	sprintf(output, "%s: %s", name, mes);
+	clif_message(&nd->bl, output);
+
 	return 0;
 }
-int
-atcommand_pettalk(
-	const int fd, struct map_session_data* sd,
-	const char* command, const char* message)
+
+
+int atcommand_pettalk(const int fd, struct map_session_data* sd,
+					  const char* command, const char* message)
 {
 	char mes[128],temp[128];
 	struct pet_data *pd;

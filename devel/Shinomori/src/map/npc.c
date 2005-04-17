@@ -218,21 +218,6 @@ int npc_event_dequeue(struct map_session_data *sd)
 	return 0;
 }
 
-int npc_delete(struct npc_data *nd)
-{
-    nullpo_retr(1, nd);
-
-    if(nd->bl.prev == NULL)
-        return 1;
-
-#ifdef PCRE_SUPPORT
-    npc_chat_finalize(nd);
-#endif
-
-    clif_clearchar_area(&nd->bl,1);
-    map_delblock(&nd->bl);
-    return 0;
-}
 
 /*==========================================
  * イベントの遅延実行
@@ -1814,11 +1799,11 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 			for(i=0;i<ys;i++)
 			for(j=0;j<xs;j++) 
 			{
-					if(map_getcell(m,x-xs/2+j,y-ys/2+i,CELL_CHKNOPASS))
-						continue;
-					map_setcell(m,x-xs/2+j,y-ys/2+i,CELL_SETNPC);
-				}
+				if(map_getcell(m,x-xs/2+j,y-ys/2+i,CELL_CHKNOPASS))
+					continue;
+				map_setcell(m,x-xs/2+j,y-ys/2+i,CELL_SETNPC);
 			}
+		}
 		nd->u.scr.xs=xs;
 		nd->u.scr.ys=ys;
 	} 
@@ -1867,6 +1852,8 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	nd->opt2 = 0;
 	nd->opt3 = 0;
 	nd->walktimer=-1;
+	nd->u.scr.nexttimer=-1;
+	nd->u.scr.timerid=-1;
 
 	//ShowMessage("script npc %s %d %d read done\n",mapname,nd->bl.id,nd->class_);
 	if(!dummy_npc) npc_script++;
@@ -1905,10 +1892,6 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 	else
 	{
 		// duplicate
-//		nd->u.scr.label_list=aCalloc(label_dupnum, sizeof(struct npc_label_list));
-//		memcpy(nd->u.scr.label_list,label_dup,sizeof(struct npc_label_list)*label_dupnum);
-//		nd->u.scr.ref->label_list=label_dup;	// ラベルデータ共有
-//		nd->u.scr.ref->label_list_num=label_dupnum;
 		// labels placed in npc_reference
 		// get copied automatically
 	}
@@ -1983,8 +1966,6 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 			nd->u.scr.timeramount=k+1;
 		}
 	}
-	nd->u.scr.nexttimer=-1;
-	nd->u.scr.timerid=-1;
 
 	return 0;
 }
@@ -2440,7 +2421,6 @@ void npc_parsesrcfiles()
 				{
 					npc_parse_mapcell(w1,w2,w3,w4);
 				}
-
 			}
 			fclose(fp);
 		}
@@ -2576,9 +2556,6 @@ int npc_remove_map (struct npc_data *nd)
     if(!nd || nd->bl.prev == NULL)
 		return 1;
 
-#ifdef PCRE_SUPPORT
-    npc_chat_finalize(nd);
-#endif
     clif_clearchar_area(&nd->bl,2);
     map_delblock(&nd->bl);
 	map_deliddb(&nd->bl);
@@ -2586,19 +2563,18 @@ int npc_remove_map (struct npc_data *nd)
     return 0;
 }
 
-
 int npc_unload(struct npc_data *nd)
 {
 	if(!nd) return 0;
 
 	npc_remove_map(nd);
+    npc_chat_finalize(nd);
 
 	if (nd->chat_id)
 	{
 		struct chat_data *cd=(struct chat_data*)map_id2bl(nd->chat_id);
 		if(cd) aFree (cd);
 	}
-
 	if (nd->bl.subtype == SCRIPT)
 	{
 		if (nd->u.scr.timer_event)
@@ -2659,6 +2635,7 @@ int do_final_npc(void)
 			}
 			else if(bl->type == BL_PET && (pd = (struct pet_data *)bl))
 			{	// hmm, should never happen
+				// might miss to free the loot
 				aFree(pd);
 				pd = NULL;
 			}

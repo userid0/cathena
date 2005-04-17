@@ -6,7 +6,7 @@
 // a text based database with extra index
 // not much tested though and quite basic
 // but should be as fast as file access allows 
-// faster than sql anyway + threadsafe
+// faster than sql anyway + threadsafe (not shareable though)
 /////////////////////////////////////////////////////////////////////
 #define DB_OPCOUNTMAX 100	// # of db ops before forced cache flush
 
@@ -139,26 +139,32 @@ public:
 	}
 	/////////////////////////////////////////////////////////////////
 	// flushes cache to files
-	bool flush()
+	bool flush(bool force=false)
 	{	
 		ScopeLock sl(*this);
 		bool ret = true;
-		if(cDB) 
-		{
-			// nothing to flush here right now
-		}
-		if(cIX) 
-		{
-			// write index
-			fseek(cIX, 0, SEEK_SET);
-			fprintf(cIX,"%li\n", cIndex.size());
-			for(size_t i=0; i<cIndex.size(); i++)
+		// check if necessary
+		cOpCount++;
+		if( force || cOpCount > DB_OPCOUNTMAX )
+		{	// need to flush
+			if(cDB) 
 			{
-				fprintf(cIX,"%li,%li,%li\n", 
-					cIndex[i].cKey, cIndex[i].cPos, cIndex[i].cLen);
+				// nothing to flush here right now
 			}
-			fflush(cIX);
-
+			if(cIX) 
+			{
+				// write index
+				fseek(cIX, 0, SEEK_SET);
+				fprintf(cIX,"%li\n", cIndex.size());
+				for(size_t i=0; i<cIndex.size(); i++)
+				{
+					fprintf(cIX,"%li,%li,%li\n", 
+						cIndex[i].cKey, cIndex[i].cPos, cIndex[i].cLen);
+				}
+				fflush(cIX);
+			}
+			// reset op counter
+			cOpCount=0;
 		}
 		return ret;
 	}
@@ -192,14 +198,7 @@ public:
 		}
 		fwrite(data, 1, len, cDB);
 
-		// check for forcing a flush
-		cOpCount++;
-		if(cOpCount>DB_OPCOUNTMAX)
-		{	
-			this->flush();
-			cOpCount=0;
-		}
-
+		this->flush();
 		return true;
 	}
 	/////////////////////////////////////////////////////////////////
@@ -211,14 +210,7 @@ public:
 		if( cIndex.find( _key(key), 0, pos) )
 		{
 			cIndex.removeindex(pos);
-
-			// check for forcing a flush
-			cOpCount++;
-			if(cOpCount>DB_OPCOUNTMAX)
-			{	
-				this->flush();
-				cOpCount=0;
-			}
+			this->flush();
 			return true;
 		}
 		return false;
@@ -303,7 +295,6 @@ public:
 
 		// cut the file name back to default
 		*ip=0;
-				
 		return true;
 	}
 };

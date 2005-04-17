@@ -2320,7 +2320,7 @@ int parse_frommap(int fd) {
 			sprintf(tmp_sql, "SELECT `account_id`,`fame` FROM `%s` WHERE `class`='10' OR `class`='4011'"
 				"OR `class`='4033' ORDER BY `fame` DESC", char_db);
 			if (mysql_query(&mysql_handle, tmp_sql)) {
-				SendMessage("DB server Error (select fame)- %s\n", mysql_error(&mysql_handle));
+				ShowMessage("DB server Error (select fame)- %s\n", mysql_error(&mysql_handle));
 			}
 			sql_res = mysql_store_result(&mysql_handle);
 			if (sql_res) {
@@ -2339,7 +2339,7 @@ int parse_frommap(int fd) {
 			sprintf(tmp_sql, "SELECT `account_id`,`fame` FROM `%s` WHERE `class`='18' OR `class`='4019'"
 				"OR `class`='4041' ORDER BY `fame` DESC", char_db);
 			if (mysql_query(&mysql_handle, tmp_sql)) {
-				SendMessage("DB server Error (select fame)- %s\n", mysql_error(&mysql_handle));
+				ShowMessage("DB server Error (select fame)- %s\n", mysql_error(&mysql_handle));
 			}
 			sql_res = mysql_store_result(&mysql_handle);
 			if (sql_res) {
@@ -3417,13 +3417,12 @@ int char_config_read(const char *cfgName) {
 			strcpy(char_name_letters, w2);
 		} else if (strcasecmp(w1, "check_ip_flag") == 0) {
 			check_ip_flag = config_switch(w2);
-                } else if (strcasecmp(w1, "chars_per_account") == 0) { //maxchars per account [Sirius]
-                        char_per_account = atoi(w2);
+		} else if (strcasecmp(w1, "chars_per_account") == 0) { //maxchars per account [Sirius]
+			char_per_account = atoi(w2);
 		} else if (strcasecmp(w1, "import") == 0) {
 			char_config_read(w2);
 		} else if (strcasecmp(w1, "console") == 0) {
-			    if(strcasecmp(w2,"on") == 0 || strcasecmp(w2,"yes") == 0 )
-			        console = 1;
+			console = config_switch(w2);
         }
 	}
 	fclose(fp);

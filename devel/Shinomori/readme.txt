@@ -1,11 +1,16 @@
 my personal kingdom
 
-based on svn1522
+based on svn1535
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
 preparing the switch to my other class library
 and testing some new gimmicks
+///////////////////////////////////////////////////////////
+the memory leak at the end is not real; 
+memory manager is closed before the last free is called 
+because of I start changing to c++ objects with different
+allocation/deallocation order; 
 ///////////////////////////////////////////////////////////
 keep on updating with branch but do not copy any "enhancement"
 ///////////////////////////////////////////////////////////

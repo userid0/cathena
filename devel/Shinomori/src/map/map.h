@@ -562,11 +562,10 @@ struct npc_data {
 	} u;
 	// ‚±‚±‚Éƒƒ“ƒo‚ğ’Ç‰Á‚µ‚Ä‚Í‚È‚ç‚È‚¢(shop_item‚ª‰Â•Ï’·‚Ìˆ×)
 
-//	char eventqueue[MAX_EVENTQUEUE][50];
-//	int eventtimer[MAX_EVENTTIMER];
 	short arenaflag;
-
 	void *chatdb;
+
+	npc_data() : chatdb(NULL)	{} 
 };
 
 struct mob_data {
@@ -607,6 +606,7 @@ struct mob_data {
 	int hp;
 	int target_id;
 	int attacked_id;
+	short attacked_count;
 	short target_lv;
 	struct walkpath_data walkpath;
 	unsigned long next_walktime;
@@ -786,7 +786,7 @@ struct mapgat // values from .gat &
 
 
 struct map_data {
-	char name[24];
+	char mapname[24];
 	struct mapgat	*gat;	// NULL‚È‚ç‰º‚Ìmap_data_other_server‚Æ‚µ‚Äˆµ‚¤
 
 	char *alias; // [MouseJstr]

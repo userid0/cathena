@@ -228,7 +228,7 @@ void set_char_online(int char_id, int account_id) {
 	WFIFOL(login_fd,2) = account_id;
 	WFIFOSET(login_fd,6);
 
-	//SendMessage ("set online\n");
+	//ShowMessage ("set online\n");
 }
 void set_char_offline(int char_id, int account_id)
 {
@@ -238,22 +238,17 @@ void set_char_offline(int char_id, int account_id)
 	WFIFOL(login_fd,2) = account_id;
 	WFIFOSET(login_fd,6);
 
-	//SendMessage ("set offline\n");
+	//ShowMessage ("set offline\n");
 }
 void set_all_offline(void)
 {
 	if( !session_isActive(login_fd) )
 		return;
-	/*while some condition {
-		if (login_fd > 0) {
-			SendMessage("send user offline: %d\n",atoi(sql_row[0]));
-			WFIFOW(login_fd,0) = 0x272c;
-			WFIFOL(login_fd,2) = atoi(sql_row[0]);
-			WFIFOSET(login_fd,6);
-		}
-	}*/
+	WFIFOW(login_fd,0) = 0x272c;
+	WFIFOL(login_fd,2) = 99;
+	WFIFOSET(login_fd,6);
 
-	//SendMessage ("set all offline\n");
+	//ShowMessage ("set all offline\n");
 }
 
 /*---------------------------------------------------
@@ -459,11 +454,11 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		// Char structture of version 1363+
 		} else {
 			set++;
-			//SendMessage("char: new char data ver.4\n");
+			//ShowMessage("char: new char data ver.4\n");
 		}
 	// Char structture of version 1488+
 	} else {
-		//SendMessage("char: new char data ver.5\n");
+		//ShowMessage("char: new char data ver.5\n");
 	}
 	if (set != 47)
 		return 0;
@@ -2563,7 +2558,7 @@ int parse_frommap(int fd) {
 		case 0x2b17:
 			if (RFIFOREST(fd) < 6)
 				return 0;
-			//SendMessage("Setting %d char offline\n",RFIFOL(fd,2));
+			//ShowMessage("Setting %d char offline\n",RFIFOL(fd,2));
 			set_char_offline(RFIFOL(fd,2),RFIFOL(fd,6));
 			RFIFOSKIP(fd,10);
 			break;
@@ -2578,7 +2573,7 @@ int parse_frommap(int fd) {
 		case 0x2b19:
 			if (RFIFOREST(fd) < 6)
 				return 0;
-			//SendMessage("Setting %d char online\n",RFIFOL(fd,2));
+			//ShowMessage("Setting %d char online\n",RFIFOL(fd,2));
 			set_char_online(RFIFOL(fd,2),RFIFOL(fd,6));
 			RFIFOSKIP(fd,10);
 			break;
@@ -3512,8 +3507,7 @@ int char_config_read(const char *cfgName) {
 		} else if (strcasecmp(w1, "import") == 0) {
 			char_config_read(w2);
 		} else if (strcasecmp(w1, "console") == 0) {
-			    if(strcasecmp(w2,"on") == 0 || strcasecmp(w2,"yes") == 0 )
-			        console = 1;
+	        console = config_switch(w2);
         }
 	}
 	fclose(fp);

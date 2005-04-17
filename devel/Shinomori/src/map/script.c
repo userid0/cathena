@@ -326,12 +326,10 @@ int run_func(struct script_state *st);
 int mapreg_setreg(int num,int val);
 int mapreg_setregstr(int num,const char *str);
 
-#ifdef PCRE_SUPPORT
 int buildin_defpattern(struct script_state *st); // MouseJstr
 int buildin_activatepset(struct script_state *st); // MouseJstr
 int buildin_deactivatepset(struct script_state *st); // MouseJstr
 int buildin_deletepset(struct script_state *st); // MouseJstr
-#endif
 
 struct {
 	int (*func)(struct script_state *);
@@ -557,12 +555,12 @@ struct {
 	{buildin_isequippedcnt,"isequippedcnt","i*"}, // check how many items/cards are being equipped [Celest]
 	{buildin_cardscnt,"cardscnt","i*"}, // check how many items/cards are being equipped in the same arm [Lupus]
 	{buildin_getrefine,"getrefine",""}, // returns the refined number of the current item, or an item with index specified [celest]
-#ifdef PCRE_SUPPORT
-        {buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
-        {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
-        {buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
-        {buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
-#endif
+
+	{buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
+    {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
+    {buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
+    {buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
+
 	{buildin_dispbottom,"dispbottom","s"}, //added from jA [Lupus]
 	{buildin_getusersname,"getusersname","*"},
 	{buildin_recovery,"recovery",""},
@@ -5806,7 +5804,7 @@ int buildin_guardianinfo(struct script_state *st)
 {
 	int guardian=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	struct map_session_data *sd=script_rid2sd(st);
-	struct guild_castle *gc=guild_mapname2gc(map[sd->bl.m].name);
+	struct guild_castle *gc=guild_mapname2gc(map[sd->bl.m].mapname);
 
 	if(guardian==0 && gc->visibleG0 == 1) push_val(st->stack,C_INT,gc->Ghp0);
 	if(guardian==1 && gc->visibleG1 == 1) push_val(st->stack,C_INT,gc->Ghp1);
@@ -6697,131 +6695,136 @@ int buildin_getsavepoint(struct script_state *st)
   *                     -1       - some error, MapName$,MapX,MapY contains unknown value.
   *------------------------------------------
 */
-int buildin_getmapxy(struct script_state *st){
+int buildin_getmapxy(struct script_state *st)
+{
 	struct map_session_data *sd=NULL;
-        struct npc_data *nd;
-        struct pet_data *pd;
-
+	struct npc_data *nd;
+	struct pet_data *pd;
 	int num;
 	char *name;
 	char prefix;
-
 	int x,y,type;
-	char *mapname;
-
-        if( st->stack->stack_data[st->start+2].type!=C_NAME ){
+	char *mapname=NULL;
+	
+	if( st->stack->stack_data[st->start+2].type!=C_NAME )
+	{
 		ShowMessage("script: buildin_getmapxy: not mapname variable\n");
-                push_val(st->stack,C_INT,-1);
-                return 0;
-        }
-        if( st->stack->stack_data[st->start+3].type!=C_NAME ){
+		push_val(st->stack,C_INT,-1);
+		return 0;
+	}
+	if( st->stack->stack_data[st->start+3].type!=C_NAME )
+	{
 		ShowMessage("script: buildin_getmapxy: not mapx variable\n");
-                push_val(st->stack,C_INT,-1);
-                return 0;
-        }
-        if( st->stack->stack_data[st->start+4].type!=C_NAME ){
+		push_val(st->stack,C_INT,-1);
+		return 0;
+	}
+	if( st->stack->stack_data[st->start+4].type!=C_NAME )
+	{
 		ShowMessage("script: buildin_getmapxy: not mapy variable\n");
-                push_val(st->stack,C_INT,-1);
-                return 0;
-        }
-
+		push_val(st->stack,C_INT,-1);
+		return 0;
+	}
 //??????????? >>>  Possible needly check function parameters on C_STR,C_INT,C_INT <<< ???????????//
 	type=conv_num(st,& (st->stack->stack_data[st->start+5]));
-	mapname=(char*)aMalloc(24*sizeof(char));
-
-        switch (type){
-            case 0:                                             //Get Character Position
-                    if( st->end>st->start+6 )
-                        sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
-                    else
-                        sd=script_rid2sd(st);
-                    if ( sd==NULL ) {                   //wrong char name or char offline
-                        push_val(st->stack,C_INT,-1);
-                        return 0;
-                    }
-                    x=sd->bl.x;
-                    y=sd->bl.y;
+	
+	switch(type)
+	{
+	case 0:	//Get Character Position
+		if( st->end>st->start+6 )
+			sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
+		else
+			sd=script_rid2sd(st);
+		if( sd==NULL )
+		{	//wrong char name or char offline
+			push_val(st->stack,C_INT,-1);
+			return 0;
+		}
+		x=sd->bl.x;
+		y=sd->bl.y;
 		memcpy(mapname,sd->mapname,24);//EOS included
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-                    break;
-            case 1:                                             //Get NPC Position
-                    if( st->end > st->start+6 )
-                        nd=npc_name2id(conv_str(st,& (st->stack->stack_data[st->start+6])));
-                    else
-                        nd=(struct npc_data *)map_id2bl(st->oid);
-                    if ( nd==NULL ) {                   //wrong npc name or char offline
-                        push_val(st->stack,C_INT,-1);
-                        return 0;
-                    }
-                    x=nd->bl.x;
-                    y=nd->bl.y;
-		memcpy(mapname,map[nd->bl.m].name,24);//EOS incuded
+		break;
+	case 1:	//Get NPC Position
+		if( st->end > st->start+6 )
+			nd=npc_name2id(conv_str(st,& (st->stack->stack_data[st->start+6])));
+		else
+			nd=(struct npc_data *)map_id2bl(st->oid);
+		if( nd==NULL )
+		{	//wrong npc name or char offline
+			push_val(st->stack,C_INT,-1);
+			return 0;
+		}
+		x=nd->bl.x;
+		y=nd->bl.y;
+		mapname=map[nd->bl.m].mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-                    break;
-            case 2:                                             //Get Pet Position
-                    if( st->end>st->start+6 )
-                        sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
-                    else
-                        sd=script_rid2sd(st);
-
-                    if ( sd==NULL ) {                   //wrong char name or char offline
-                        push_val(st->stack,C_INT,-1);
-                        return 0;
-                    }
-                    pd=sd->pd;
-                    if(pd==NULL){                       //ped data not found
-                        push_val(st->stack,C_INT,-1);
-                        return 0;
-                    }
-                    x=pd->bl.x;
-                    y=pd->bl.y;
-		memcpy(mapname,map[pd->bl.m].name,24);//EOS included
+		break;
+	case 2:	//Get Pet Position
+		if( st->end>st->start+6 )
+			sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
+		else
+			sd=script_rid2sd(st);
+		if( sd==NULL )
+		{	//wrong char name or char offline
+			push_val(st->stack,C_INT,-1);
+			return 0;
+		}
+		pd=sd->pd;
+		if(pd==NULL)
+		{	//ped data not found
+			push_val(st->stack,C_INT,-1);
+			return 0;
+		}
+		x=pd->bl.x;
+		y=pd->bl.y;
+		mapname=map[pd->bl.m].mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-                    break;
-            case 3:                                             //Get Mob Position
-                        push_val(st->stack,C_INT,-1);
-                        return 0;
-            default:                                            //Wrong type parameter
-                        push_val(st->stack,C_INT,-1);
-                        return 0;
+		break;
+	case 3:	//Get Mob Position
+		push_val(st->stack,C_INT,-1);
+		return 0;
+	default:	//Wrong type parameter
+		push_val(st->stack,C_INT,-1);
+		return 0;
 	}//end switch
+	
+	//Set MapName$
+	num=st->stack->stack_data[st->start+2].u.num;
+	name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+	prefix=*name;
+	
+	if( prefix!='$' )
+		sd=script_rid2sd(st);
+	else
+		sd=NULL;
+	set_reg(sd,num,name,mapname);
 
-     //Set MapName$
-        num=st->stack->stack_data[st->start+2].u.num;
-        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-        prefix=*name;
-
-        if( prefix!='$' )
-            sd=script_rid2sd(st);
-        else
-            sd=NULL;
-        set_reg(sd,num,name,(void*)mapname);
-
-     //Set MapX
-        num=st->stack->stack_data[st->start+3].u.num;
-        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-        prefix=*name;
-
-        if( prefix!='$' )
-            sd=script_rid2sd(st);
-        else
-            sd=NULL;
-        set_reg(sd,num,name,(void*)x);
-
-     //Set MapY
-        num=st->stack->stack_data[st->start+4].u.num;
-        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-        prefix=*name;
-
-        if( prefix!='$' )
-            sd=script_rid2sd(st);
-        else
-            sd=NULL;
-        set_reg(sd,num,name,(void*)y);
-
-     //Return Success value
-        push_val(st->stack,C_INT,0);
-        return 0;
+	
+	//Set MapX
+	num=st->stack->stack_data[st->start+3].u.num;
+	name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+	prefix=*name;
+	
+	if( prefix!='$' )
+		sd=script_rid2sd(st);
+	else
+		sd=NULL;
+	set_reg(sd,num,name,(void*)x);
+	
+	//Set MapY
+	num=st->stack->stack_data[st->start+4].u.num;
+	name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+	prefix=*name;
+	
+	if( prefix!='$' )
+		sd=script_rid2sd(st);
+	else
+		sd=NULL;
+	set_reg(sd,num,name,(void*)y);
+	
+	//Return Success value
+	push_val(st->stack,C_INT,0);
+	return 0;
 }
 
 /*=====================================================
