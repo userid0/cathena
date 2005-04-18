@@ -1,0 +1,8 @@
+;you should put names of all functions here
+;which you want to export
+EXPORTS
+	Mod_Header
+	Mod_Test
+	Mod_Init
+	Mod_Load
+	Mod_Unload

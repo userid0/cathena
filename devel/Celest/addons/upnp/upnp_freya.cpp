@@ -1,29 +1,90 @@
+// $Id: upnp_freya.cpp 1 2005-3-10 3:17:17 PM Celestia $
+// Addon for Freya
 
-#include "upnp.h"
+#define __ADDON
 #include <stdio.h>
 #include <windows.h>
 #include <netfw.h>
 #include <natupnp.h>
 #include <comutil.h>
-#include <stdarg.h>
+#include <objbase.h>
 
-	INetFwProfile* profile = NULL;
-	IStaticPortMappingCollection *collection = NULL;
+#include "addons.h"
+#include "addons_exports.h"
 
-	int release_mappings = 1;
-	int upnpPort = 0;
+////// Functions ///////
+int Firewall_init ();
+int Firewall_finalize ();
+int Firewall_AddPort (char *, int);
+int UPNP_init ();
+int UPNP_finalize ();
+int UPNP_AddPort (char *, char *, int);
+int UPNP_RemovePort (int);
+int Config_Read ();
 
-	int close_ports = 1;
-	int firewallPort = 0;
+/////// Global variables //////
+INetFwProfile* profile = NULL;
+IStaticPortMappingCollection *collection = NULL;
 
-inline void ShowMessage (const char *msg, ...){
-#ifdef _DEBUG
-	va_list ap;
-	va_start(ap, msg);
-	vprintf (msg, ap);
-	va_end (ap);
-#endif
+int release_mappings = 1;
+int upnpPort = 0;
+int close_ports = 1;
+int firewallPort = 0;
+char lan_IP[16];
+char description[16];
+
+DLLFUNC ModuleHeader MOD_HEADER(upnp) = {
+	"UPnP Freya",
+	"$Id: upnp.c 0.1",
+	"Controls UPnP functions for Freya",
+	MOD_VERSION,
+	ADDONS_ALL
+};
+
+/////// Plugin Core ///////
+DLLFUNC int MOD_TEST(upnp)() {
+	OSVERSIONINFO vi;
+
+	vi.dwOSVersionInfoSize = sizeof(vi);
+	GetVersionEx(&vi);
+
+	if (vi.dwMajorVersion >=5 && vi.dwMinorVersion >= 1)
+		return MOD_SUCCESS;
+	return MOD_FAILED;
 }
+
+DLLFUNC int MOD_INIT(upnp)(void *ct) {
+	//call_table=ct;
+	/* load local symbols table */
+	//MFNC_LOCAL_TABLE(local_table);
+
+	CoInitializeEx(0, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+	UPNP_init();
+	Firewall_init();
+
+	if (Config_Read() != 0)
+		return MOD_SUCCESS;
+	return MOD_FAILED;
+}
+
+DLLFUNC int MOD_LOAD(upnp)() {
+	return MOD_SUCCESS;
+}
+
+DLLFUNC int MOD_UNLOAD(upnp)() {
+	UPNP_finalize ();
+	Firewall_finalize ();
+	CoUninitialize();
+
+	return MOD_SUCCESS;
+}
+
+/////// UPnP Functions ///////
+#ifdef _DEBUG
+#define ShowMessage(msg) printf(msg);
+#else
+	#define ShowMessage(msg)
+#endif
 
 int Firewall_init ()
 {
@@ -89,7 +150,7 @@ int Firewall_AddPort (char *desc, int portNum)
 
 	ports->Item(portNum, NET_FW_IP_PROTOCOL_TCP, &port);
 	if (port) {
-		ShowMessage("Port %d found\n", portNum);
+		ShowMessage("Port found\n");
 		port->get_Enabled(&enabled);
 		ShowMessage("Check... ");
 		if (enabled == VARIANT_TRUE) {
@@ -113,7 +174,7 @@ int Firewall_AddPort (char *desc, int portNum)
 	port->put_Name(name);
 	ports->Add(port);
 	firewallPort = portNum;
-	ShowMessage ("Add port %d done\n", portNum);
+	ShowMessage ("Add port done\n");
 
 	if (port) port->Release();
 	if (ports) ports->Release();
@@ -138,7 +199,7 @@ int Firewall_RemovePort (int portNum)
 int Firewall_finalize ()
 {
 	if (close_ports && firewallPort > 0) {
-		ShowMessage ("Reclosing firewall on port %d\n", firewallPort);
+		ShowMessage ("Closing firewall port\n");
 		Firewall_RemovePort (firewallPort);
 	}
 	if (profile) profile->Release();
@@ -167,7 +228,7 @@ int UPNP_init ()
 	}
 	ShowMessage ("\n");
 
-	if (nat) nat->Release();
+	if (nat) nat->Release();	
 	return 1;
 }
 int UPNP_AddPort (char *desc, char *ip, int portNum)
@@ -179,7 +240,7 @@ int UPNP_AddPort (char *desc, char *ip, int portNum)
 	if (!collection)
 		return 0;
 
-	ShowMessage ("Checking if mapping to %s:%d exists\n", ip, portNum);
+	ShowMessage ("Checking if mapping exists\n");
 	collection->get_Item(portNum, protocol, &mapping);
 	if (mapping != NULL) {
 		ShowMessage ("Removing old mapping\n");
@@ -210,49 +271,46 @@ int UPNP_RemovePort (int portNum)
 int UPNP_finalize ()
 {
 	if(release_mappings && upnpPort > 0) {
-		ShowMessage ("Releasing port mappings on %d\n", upnpPort);
+		ShowMessage ("Releasing port mappings\n");
 		UPNP_RemovePort (upnpPort);
 	}
 	if (collection) collection->Release();
 	return 1;
 }
+////// End UPnP Functions //////
 
-int CheckWindowsVersion ()
+////// Configuration Setting //////
+int Config_Read ()
 {
-	OSVERSIONINFO vi;
+	char line[1024], w1[1024], w2[1024];
+	FILE *fp;
+	int port;
 
-	vi.dwOSVersionInfoSize = sizeof(vi);
-	GetVersionEx(&vi);
-
-	if (vi.dwMajorVersion >=5 && vi.dwMinorVersion >= 1)
-		return 1;
-
-	return 0;
-}
-
-int do_init ()
-{
-	int ret = 0;
-	
-	if (CheckWindowsVersion() == 0)
+	fp = fopen("addons/upnp_athena.conf","r");
+	if (fp == NULL) {
+		printf("File not found: upnp_athena.conf\n");
 		return 0;
+	}
 
-	CoInitializeEx(0, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-	UPNP_init();
-	Firewall_init();
-	//profile->put_FirewallEnabled(VARIANT_TRUE);
-	
-	return 1;
-}
+	while(fgets(line, sizeof(line)-1, fp)){
+		if (line[0] == '/' && line[1] == '/')
+			continue;
+		if (sscanf(line, "%[^:]:%s", w1, w2) != 2)
+			continue;
+		if(strcmpi(w1,"lan_ip") == 0) {
+			memcpy (lan_IP, w2, 15);
+			lan_IP[15] = '\0';
+		} else if(strcmpi(w1,"description") == 0) {
+			memcpy (description, w2, 15);
+			description[15] = '\0';
+		} else if(strcmpi(w1,"port") == 0) {
+			port = atoi(w2);
+		}				
+	}
+	fclose(fp);
 
-int do_final ()
-{
-	if (CheckWindowsVersion() == 0)
-		return 0;
-
-	UPNP_finalize ();
-	Firewall_finalize ();
-	CoUninitialize();
+	Firewall_AddPort (description, port);
+	UPNP_AddPort (description, lan_IP, port);
 
 	return 1;
 }
