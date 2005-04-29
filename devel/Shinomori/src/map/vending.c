@@ -30,7 +30,7 @@ void vending_closevending(struct map_session_data *sd)
  * 露店アイテムリスト要求
  *------------------------------------------
  */
-void vending_vendinglistreq(struct map_session_data *sd,int id)
+void vending_vendinglistreq(struct map_session_data *sd,unsigned long id)
 {
 	struct map_session_data *vsd;
 
@@ -47,9 +47,10 @@ void vending_vendinglistreq(struct map_session_data *sd,int id)
  * 露店アイテム購入
  *------------------------------------------
  */
-void vending_purchasereq(struct map_session_data *sd,int len,int id,unsigned char *p)
+void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned long id,unsigned char *p)
 {
-	int i, j, w, z, new_ = 0, blank, vend_list[12];
+	size_t i;
+	int j, w, z, new_ = 0, blank, vend_list[12];
 	short amount, index;
 	struct map_session_data *vsd = map_id2sd(id);
 
@@ -138,7 +139,7 @@ void vending_purchasereq(struct map_session_data *sd,int len,int id,unsigned cha
  * 露店開設
  *------------------------------------------
  */
-void vending_openvending(struct map_session_data *sd,int len,char *message,int flag,unsigned char *p)
+void vending_openvending(struct map_session_data *sd,unsigned short len,char *message,int flag,unsigned char *p)
 {
 	int i;
 
@@ -154,8 +155,8 @@ void vending_openvending(struct map_session_data *sd,int len,char *message,int f
 			sd->vending[i].index = RBUFW(p,8*i) - 2;
 			sd->vending[i].amount= RBUFW(p,2+8*i);
 			sd->vending[i].value = RBUFL(p,4+8*i);
-			if(sd->vending[i].value>(unsigned int)battle_config.vending_max_value)
-				sd->vending[i].value=(unsigned int)battle_config.vending_max_value;
+			if(sd->vending[i].value>(unsigned long)battle_config.vending_max_value)
+				sd->vending[i].value=(unsigned long)battle_config.vending_max_value;
 			else if(sd->vending[i].value == 0)
 				sd->vending[i].value = 1000000;	// auto set to 1 million [celest]
 			// カート内のアイテム数と販売するアイテム数に相違があったら中止

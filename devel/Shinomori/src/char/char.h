@@ -12,7 +12,7 @@
 
 
 int search_character_index(char* character_name);
-char * search_character_name(int index);
+char * search_character_name(size_t index);
 
 int mapif_sendall(unsigned char *buf, unsigned int len);
 int mapif_sendallwos(int fd,unsigned char *buf, unsigned int len);

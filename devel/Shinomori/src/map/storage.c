@@ -87,7 +87,7 @@ void do_final_storage(void) // by [MC Cameri]
 		numdb_final(guild_storage_db,guild_storage_db_final);
 }
 
-struct pc_storage *account2storage(int account_id)
+struct pc_storage *account2storage(unsigned long account_id)
 {
 	struct pc_storage *stor;
 	stor = (struct pc_storage *)numdb_search(storage_db,account_id);
@@ -100,11 +100,11 @@ struct pc_storage *account2storage(int account_id)
 }
 
 // Just to ask storage, without creation
-struct pc_storage *account2storage2(int account_id) {
+struct pc_storage *account2storage2(unsigned long account_id) {
 	return (struct pc_storage *)numdb_search(storage_db, account_id);
 }
 
-int storage_delete(int account_id)
+int storage_delete(unsigned long account_id)
 {
 	struct pc_storage *stor = (struct pc_storage *)numdb_search(storage_db,account_id);
 	if(stor) {

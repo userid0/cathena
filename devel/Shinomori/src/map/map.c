@@ -113,7 +113,7 @@ static struct dbt * map_db=NULL;
 static struct dbt * nick_db=NULL;
 static struct dbt * charid_db=NULL;
 
-static int users=0;
+static size_t users=0;
 static struct block_list *objects[MAX_FLOORITEM];
 static int first_free_object_id=0,last_object_id=0;
 
@@ -128,7 +128,7 @@ static int bl_list_count = 0;
 static char afm_dir[1024] = ""; // [Valaris]
 
 struct map_data map[MAX_MAP_PER_SERVER];
-int map_num = 0;
+size_t map_num = 0;
 
 //int map_port=0;
 
@@ -278,7 +278,7 @@ static struct block_list bl_head;
  */
 int map_addblock(struct block_list *bl)
 {
-	int m,x,y;
+	size_t m,x,y;
 
 	nullpo_retr(0, bl);
 
@@ -1521,7 +1521,7 @@ int map_addflooritem(struct item *item_data,int amount,int m,int x,int y,struct 
  * charid_db‚Ö’Ç‰Á(•ÔM‘Ò‚¿‚ª‚ ‚ê‚Î•ÔM)
  *------------------------------------------
  */
-void map_addchariddb(int charid, char *name) {
+void map_addchariddb(unsigned long charid, char *name) {
 	struct charid2nick *p=NULL;
 	int req=0;
 
@@ -1547,7 +1547,7 @@ void map_addchariddb(int charid, char *name) {
  * charid_db‚Ö’Ç‰Ái•ÔM—v‹‚Ì‚İj
  *------------------------------------------
  */
-int map_reqchariddb(struct map_session_data * sd,int charid) 
+int map_reqchariddb(struct map_session_data * sd, unsigned long charid) 
 {
 	struct charid2nick *p=NULL;
 	nullpo_retr(0, sd);
@@ -1670,7 +1670,8 @@ int map_quit(struct map_session_data *sd)
 		if (sd->state.auth)
 			status_calc_pc(sd,4);
 
-		clif_clearchar_area(&sd->bl,2);
+		if (!(sd->status.option & OPTION_HIDE))
+			clif_clearchar_area(&sd->bl,2);
 
 		if(sd->status.pet_id && sd->pd) {
 			pet_lootitem_drop(sd->pd,sd);
@@ -1733,7 +1734,7 @@ int map_quit(struct map_session_data *sd)
  * id”Ô?‚ÌPC‚ğ’T‚·B‹‚È‚¯‚ê‚ÎNULL
  *------------------------------------------
  */
-struct map_session_data * map_id2sd(int id) {
+struct map_session_data * map_id2sd(unsigned long id) {
 // remove search from db, because:
 // 1 - all players, npc, items and mob are in this db (to search, it's not speed, and search in session is more sure)
 // 2 - DB seems not always correct. Sometimes, when a player disconnects, its id (account value) is not removed and structure
@@ -1748,7 +1749,7 @@ struct map_session_data * map_id2sd(int id) {
 		return (struct map_session_data*)bl;
 	return NULL;
 */
-	int i;
+	size_t i;
 	struct map_session_data *sd;
 
 	if(id) // skip if zero id's are searched
@@ -1772,8 +1773,8 @@ char * map_charid2nick(int id) {
 	return p->nick;
 }
 
-struct map_session_data * map_charid2sd(int id) {
-	int i;
+struct map_session_data * map_charid2sd(unsigned long id) {
+	size_t i;
 	struct map_session_data *sd;
 
 	if (id <= 0) return 0;
@@ -1792,7 +1793,8 @@ struct map_session_data * map_charid2sd(int id) {
  *------------------------------------------
  */
 struct map_session_data * map_nick2sd(char *nick) {
-	int i, quantity=0, nicklen;
+	size_t i;
+	int quantity=0, nicklen;
 	struct map_session_data *sd = NULL;
 	struct map_session_data *pl_sd = NULL;
 
@@ -1826,7 +1828,7 @@ struct map_session_data * map_nick2sd(char *nick) {
  * ˆêObject‚Ìê‡‚Í”z—ñ‚ğˆø‚­‚Ì‚İ
  *------------------------------------------
  */
-struct block_list * map_id2bl(int id)
+struct block_list * map_id2bl(unsigned long id)
 {
 	struct block_list *bl=NULL;
 	if((size_t)id<sizeof(objects)/sizeof(objects[0]))
@@ -1854,9 +1856,9 @@ int map_foreachiddb(int (*func)(void*,void*,va_list),...) {
  * map.npc‚Ö’Ç‰Á (warp“™‚Ì—Ìˆæ‚¿‚Ì‚İ)
  *------------------------------------------
  */
-int map_addnpc(int m,struct npc_data *nd)
+int map_addnpc(size_t m, struct npc_data *nd)
 {
-	int i;
+	size_t i;
 	if(m<0 || m>=map_num)
 		return -1;
 	for(i=0;i<map[m].npc_num && i<MAX_NPC_PER_MAP;i++)
@@ -1882,7 +1884,7 @@ int map_addnpc(int m,struct npc_data *nd)
 
 void map_removenpc(void)
 {
-	int i,m,n=0;
+	size_t i, m,n=0;
 
 	for(m=0;m<map_num;m++) {
 		for(i=0;i<map[m].npc_num && i<MAX_NPC_PER_MAP;i++) {
@@ -2791,7 +2793,7 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
  */
 int map_readallmap(void)
 {
-	int i,maps_removed=0;
+	size_t i,maps_removed=0;
 	char fn[256];
 	int map_cache = 0;
 
@@ -2905,7 +2907,7 @@ int map_addmap(char *mapname) {
  */
 int map_delmap(char *mapname) {
 
-	int i;
+	size_t i;
 
 	if (strcasecmp(mapname, "all") == 0) {
 		map_num = 0;
@@ -2978,7 +2980,7 @@ int parse_console(char *buf) {
 			ShowConsole(CL_BOLD"no valid atcommand\n"CL_NORM);
     } else if ( strcasecmp("server",type) == 0 && n == 2 ) {
         if ( strcasecmp("shutdown", command) == 0 || strcasecmp("exit",command) == 0 || strcasecmp("quit",command) == 0 ) {
-            exit(0);
+            runflag = 0;
         }
     } else if ( strcasecmp("help",type) == 0 ) {
         ShowMessage("To use GM commands:\n");
@@ -3026,7 +3028,7 @@ int map_config_read(const char *cfgName) {
 			} else if (strcasecmp(w1, "passwd") == 0) {
 				chrif_setpasswd(w2);
 			} else if (strcasecmp(w1, "char_ip") == 0) {
-				h = gethostbyname (w2);
+				h = gethostbyname(w2);
 				if(h != NULL) {
 					ShowInfo("Char Server IP Address : '"CL_WHITE"%s"CL_RESET"' -> '"CL_WHITE"%d.%d.%d.%d"CL_RESET"'.\n", w2, (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 					sprintf(w2,"%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
@@ -3036,7 +3038,7 @@ int map_config_read(const char *cfgName) {
 			} else if (strcasecmp(w1, "char_port") == 0) {
 				chrif_setport(atoi(w2));
 			} else if (strcasecmp(w1, "map_ip") == 0) {
-				h = gethostbyname (w2);
+				h = gethostbyname(w2);
 				if (h != NULL) {
 					ShowInfo("Map Server IP Address : '"CL_WHITE"%s"CL_RESET"' -> '"CL_WHITE"%d.%d.%d.%d"CL_RESET"'.\n", w2, (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 					sprintf(w2, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
@@ -3274,7 +3276,7 @@ int log_sql_init(void){
 
 void char_online_check(void)
 {
-	int i;
+	size_t i;
 	struct map_session_data *sd;
 
 	chrif_char_reset_offline();
@@ -3369,8 +3371,9 @@ int cleanup_sub(struct block_list *bl, va_list ap)
  * mapII—¹—
  *------------------------------------------
  */
-void do_final(void) {
-    int i;
+void do_final(void)
+{
+    size_t i;
     ShowStatus("Terminating...\n");
 	///////////////////////////////////////////////////////////////////////////
 

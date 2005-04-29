@@ -149,7 +149,7 @@ int inter_pet_delete(int pet_id){
 	return 0;
 }
 //------------------------------------------------------
-int mapif_pet_created(int fd, int account_id, struct s_pet *p)
+int mapif_pet_created(int fd, unsigned long account_id, struct s_pet *p)
 {
 	WFIFOW(fd, 0) =0x3880;
 	WFIFOL(fd, 2) =account_id;
@@ -166,7 +166,7 @@ int mapif_pet_created(int fd, int account_id, struct s_pet *p)
 	return 0;
 }
 
-int mapif_pet_info(int fd, int account_id, struct s_pet *p){
+int mapif_pet_info(int fd, unsigned long account_id, struct s_pet *p){
 	WFIFOW(fd, 0) =0x3881;
 	WFIFOW(fd, 2) =sizeof(struct s_pet) + 9;
 	WFIFOL(fd, 4) =account_id;
@@ -178,7 +178,7 @@ int mapif_pet_info(int fd, int account_id, struct s_pet *p){
 	return 0;
 }
 
-int mapif_pet_noinfo(int fd, int account_id){
+int mapif_pet_noinfo(int fd, unsigned long account_id){
 	WFIFOW(fd, 0) =0x3881;
 	WFIFOW(fd, 2) =sizeof(struct s_pet) + 9;
 	WFIFOL(fd, 4) =account_id;
@@ -189,7 +189,7 @@ int mapif_pet_noinfo(int fd, int account_id){
 	return 0;
 }
 
-int mapif_save_pet_ack(int fd, int account_id, int flag){
+int mapif_save_pet_ack(int fd, unsigned long account_id, int flag){
 	WFIFOW(fd, 0) =0x3882;
 	WFIFOL(fd, 2) =account_id;
 	WFIFOB(fd, 6) =flag;
@@ -206,7 +206,7 @@ int mapif_delete_pet_ack(int fd, int flag){
 	return 0;
 }
 
-int mapif_create_pet(int fd, int account_id, int char_id, short pet_class, short pet_lv, short pet_egg_id,
+int mapif_create_pet(int fd, unsigned long account_id, unsigned long char_id, short pet_class, short pet_lv, short pet_egg_id,
 	short pet_equip, short intimate, short hungry, char rename_flag, char incuvate, char *pet_name){
 
 	memset(pet_pt, 0, sizeof(struct s_pet));
@@ -243,7 +243,7 @@ int mapif_create_pet(int fd, int account_id, int char_id, short pet_class, short
 	return 0;
 }
 
-int mapif_load_pet(int fd, int account_id, int char_id, int pet_id){
+int mapif_load_pet(int fd, unsigned long account_id, unsigned long char_id, unsigned long pet_id){
 	memset(pet_pt, 0, sizeof(struct s_pet));
 
 	inter_pet_fromsql(pet_id, pet_pt);
@@ -264,7 +264,7 @@ int mapif_load_pet(int fd, int account_id, int char_id, int pet_id){
 	return 0;
 }
 
-int mapif_save_pet(int fd, int account_id, unsigned char* buf) {
+int mapif_save_pet(int fd, unsigned long account_id, unsigned char* buf) {
 	//here process pet save request.
 	struct s_pet pet;
 

@@ -1961,17 +1961,7 @@ int idaccount(char* param) {
 //----------------------------------------------------------------------------
 // Sub-function: Asking to displaying information about an account (by its id)
 //----------------------------------------------------------------------------
-int infoaccount(int account_id) {
-	if (account_id < 0) {
-		if (defaultlanguage == 'F') {
-			ShowMessage("Entrez un id ayant une valeur positive svp.\n");
-			ladmin_log("Une valeur négative a été donné pour trouver le compte." RETCODE);
-		} else {
-			ShowMessage("Please input a positive value for the id.\n");
-			ladmin_log("Negative value was given to found the account." RETCODE);
-		}
-		return 136;
-	}
+int infoaccount(unsigned long account_id) {
 
 	if (defaultlanguage == 'F') {
 		ladmin_log("Envoi d'un requête au serveur de logins pour obtenir le information d'un compte (par l'id)." RETCODE);
@@ -3404,9 +3394,9 @@ int parse_fromlogin(int fd) {
 			break;
 
 		case 0x7931:	// Answer of login-server about an account creation
-			if (RFIFOREST(fd) < 30)
+			if( RFIFOREST(fd) < 30 )
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec à la création du compte [%s]. Un compte identique existe déjà.\n", RFIFOP(fd,6));
 					ladmin_log("Echec à la création du compte [%s]. Un compte identique existe déjà." RETCODE, RFIFOP(fd,6));
@@ -3430,7 +3420,7 @@ int parse_fromlogin(int fd) {
 		case 0x7933:	// Answer of login-server about an account deletion
 			if (RFIFOREST(fd) < 30)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec de la suppression du compte [%s]. Le compte n'existe pas.\n", RFIFOP(fd,6));
 					ladmin_log("Echec de la suppression du compte [%s]. Le compte n'existe pas." RETCODE, RFIFOP(fd,6));
@@ -3454,7 +3444,7 @@ int parse_fromlogin(int fd) {
 		case 0x7935:	// answer of the change of an account password
 			if (RFIFOREST(fd) < 30)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec de la modification du mot de passe du compte [%s].\n", RFIFOP(fd,6));
 					ShowMessage("Le compte [%s] n'existe pas.\n", RFIFOP(fd,6));
@@ -3480,7 +3470,7 @@ int parse_fromlogin(int fd) {
 		case 0x7937:	// answer of the change of an account state
 			if (RFIFOREST(fd) < 34)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec du changement du statut du compte [%s]. Le compte n'existe pas.\n", RFIFOP(fd,6));
 					ladmin_log("Echec du changement du statut du compte [%s]. Le compte n'existe pas." RETCODE, RFIFOP(fd,6));
@@ -3535,7 +3525,7 @@ int parse_fromlogin(int fd) {
 				}
 				strcat(tmpstr, "]");
 				ShowMessage("%s\n", tmpstr);
-				ladmin_log("%s%s", tmpstr, RETCODE);
+				ladmin_log("%s"RETCODE, tmpstr);
 			}
 			bytes_to_read = 0;
 			RFIFOSKIP(fd,34);
@@ -3581,7 +3571,7 @@ int parse_fromlogin(int fd) {
 		case 0x793b:	// answer of the check of a password
 			if (RFIFOREST(fd) < 30)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Le compte [%s] n'existe pas ou le mot de passe est incorrect.\n", RFIFOP(fd,6));
 					ladmin_log("Le compte [%s] n'existe pas ou le mot de passe est incorrect." RETCODE, RFIFOP(fd,6));
@@ -3605,7 +3595,7 @@ int parse_fromlogin(int fd) {
 		case 0x793d:	// answer of the change of an account sex
 			if (RFIFOREST(fd) < 30)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec de la modification du sexe du compte [%s].\n", RFIFOP(fd,6));
 					ShowMessage("Le compte [%s] n'existe pas ou le sexe est déjà celui demandé.\n", RFIFOP(fd,6));
@@ -3631,7 +3621,7 @@ int parse_fromlogin(int fd) {
 		case 0x793f:	// answer of the change of an account GM level
 			if (RFIFOREST(fd) < 30)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec de la modification du niveau de GM du compte [%s].\n", RFIFOP(fd,6));
 					ShowMessage("Le compte [%s] n'existe pas, le niveau de GM est déjà celui demandé\n", RFIFOP(fd,6));
@@ -3659,7 +3649,7 @@ int parse_fromlogin(int fd) {
 		case 0x7941:	// answer of the change of an account email
 			if (RFIFOREST(fd) < 30)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec de la modification de l'e-mail du compte [%s].\n", RFIFOP(fd,6));
 					ShowMessage("Le compte [%s] n'existe pas.\n", RFIFOP(fd,6));
@@ -3685,7 +3675,7 @@ int parse_fromlogin(int fd) {
 		case 0x7943:	// answer of the change of an account memo
 			if (RFIFOREST(fd) < 30)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec du changement du mémo du compte [%s]. Le compte n'existe pas.\n", RFIFOP(fd,6));
 					ladmin_log("Echec du changement du mémo du compte [%s]. Le compte n'existe pas." RETCODE, RFIFOP(fd,6));
@@ -3709,7 +3699,7 @@ int parse_fromlogin(int fd) {
 		case 0x7945:	// answer of an account id search
 			if (RFIFOREST(fd) < 30)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Impossible de trouver l'id du compte [%s]. Le compte n'existe pas.\n", RFIFOP(fd,6));
 					ladmin_log("Impossible de trouver l'id du compte [%s]. Le compte n'existe pas." RETCODE, RFIFOP(fd,6));
@@ -3757,7 +3747,7 @@ int parse_fromlogin(int fd) {
 		case 0x7949:	// answer of an account validity limit set
 			if (RFIFOREST(fd) < 34)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec du changement de la validité du compte [%s]. Le compte n'existe pas.\n", RFIFOP(fd,6));
 					ladmin_log("Echec du changement de la validité du compte [%s]. Le compte n'existe pas." RETCODE, RFIFOP(fd,6));
@@ -3794,7 +3784,7 @@ int parse_fromlogin(int fd) {
 		case 0x794b:	// answer of an account ban set
 			if (RFIFOREST(fd) < 34)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec du changement de la date finale de banissement du compte [%s]. Le compte n'existe pas.\n", RFIFOP(fd,6));
 					ladmin_log("Echec du changement de la date finale de banissement du compte [%s]. Le compte n'existe pas." RETCODE, RFIFOP(fd,6));
@@ -3831,7 +3821,7 @@ int parse_fromlogin(int fd) {
 		case 0x794d:	// answer of an account ban date/time changing
 			if (RFIFOREST(fd) < 34)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec du changement de la date finale de banissement du compte [%s]. Le compte n'existe pas.\n", RFIFOP(fd,6));
 					ladmin_log("Echec du changement de la date finale de banissement du compte [%s]. Le compte n'existe pas." RETCODE, RFIFOP(fd,6));
@@ -3892,7 +3882,7 @@ int parse_fromlogin(int fd) {
 		case 0x7951:	// answer of an account validity limit changing
 			if (RFIFOREST(fd) < 34)
 				return 0;
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Echec du changement de la validité du compte [%s]. Le compte n'existe pas.\n", RFIFOP(fd,6));
 					ladmin_log("Echec du changement de la validité du compte [%s]. Le compte n'existe pas." RETCODE, RFIFOP(fd,6));
@@ -3951,7 +3941,7 @@ int parse_fromlogin(int fd) {
 			ban_until_time = (time_t)RFIFOL(fd,144);
 			memset(memo, '\0', sizeof(memo));
 			strncpy(memo, (char*)RFIFOP(fd,150), RFIFOW(fd,148));
-			if ((int)RFIFOL(fd,2) == -1) {
+			if( (int)RFIFOL(fd,2) == -1 ) {
 				if (defaultlanguage == 'F') {
 					ShowMessage("Impossible de trouver le compte [%s]. Le compte n'existe pas.\n", parameters);
 					ladmin_log("Impossible de trouver le compte [%s]. Le compte n'existe pas." RETCODE, parameters);
@@ -4246,15 +4236,15 @@ int ladmin_config_read(const char *cfgName) {
 // Function called at exit of the server
 //--------------------------------------
 void do_final(void) {
-	int i;
+	size_t i;
 	///////////////////////////////////////////////////////////////////////////
-		if (defaultlanguage == 'F') {
+	if (defaultlanguage == 'F') {
 		ShowStatus(CL_NORM"----Fin de Ladmin (fin normale avec fermeture de tous les fichiers).\n");
-			ladmin_log("----Fin de Ladmin (fin normale avec fermeture de tous les fichiers)." RETCODE);
-		} else {
+		ladmin_log("----Fin de Ladmin (fin normale avec fermeture de tous les fichiers)." RETCODE);
+	} else {
 		ShowStatus(CL_NORM"----End of Ladmin (normal end with closing of all files).\n");
-			ladmin_log("----End of Ladmin (normal end with closing of all files)." RETCODE);
-		}
+		ladmin_log("----End of Ladmin (normal end with closing of all files)." RETCODE);
+	}
 	///////////////////////////////////////////////////////////////////////////
 	// delete sessions
 	for(i = 0; i < fd_max; i++)

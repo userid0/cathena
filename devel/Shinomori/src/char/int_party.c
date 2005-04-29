@@ -15,20 +15,20 @@
 char party_txt[1024] = "save/party.txt";
 
 static struct dbt *party_db;
-static int party_newid = 100;
+static unsigned long party_newid = 100;
 
-int mapif_party_broken(int party_id, int flag);
+int mapif_party_broken(unsigned long party_id, int flag);
 int party_check_empty(struct party *p);
-int mapif_parse_PartyLeave(int fd, int party_id, int account_id);
+int mapif_parse_PartyLeave(int fd, unsigned long party_id, unsigned long account_id);
 
 // パーティデータの文字列への変換
 int inter_party_tostr(char *str, struct party *p) {
 	int i, len;
 
-	len = sprintf(str, "%d\t%s\t%d,%d\t", p->party_id, p->name, p->exp, p->item);
+	len = sprintf(str, "%ld\t%s\t%d,%d\t", p->party_id, p->name, p->exp, p->item);
 	for(i = 0; i < MAX_PARTY; i++) {
 		struct party_member *m = &p->member[i];
-		len += sprintf(str + len, "%d,%d\t%s\t", m->account_id, m->leader, ((m->account_id > 0) ? m->name : "NoMember"));
+		len += sprintf(str + len, "%ld,%ld\t%s\t", m->account_id, m->leader, ((m->account_id > 0) ? m->name : "NoMember"));
 	}
 
 	return 0;
@@ -82,7 +82,7 @@ int inter_party_init() {
 	struct party *p;
 	FILE *fp;
 	int c = 0;
-	int i, j;
+	size_t i, j;
 
 	party_db = numdb_init();
 
@@ -176,35 +176,39 @@ struct party* search_partyname(char *str) {
 }
 
 // EXP公平分配できるかチェック
-int party_check_exp_share(struct party *p) {
-	int i, dudes=0;
-	int pl1=0,pl2=0,pl3=0;
-	int maxlv = 0, minlv = 0x7fffffff;
+bool party_check_exp_share(struct party *p)
+{
+	size_t i, cnt_lo=0, cnt_hi=0;
+	size_t pl1=0,pl2=0,pl3=0;
+	unsigned long maxlv = 0, minlv = ~0;
 
 	for(i = 0; i < MAX_PARTY; i++) {
-		int lv = p->member[i].lv;
-		if (p->member[i].online) {
-			if (lv < minlv)
-				minlv = lv;
-			if (maxlv < lv)
-				maxlv = lv;
-			if( lv >= 70 ) dudes+=1000;
-				dudes++;
+		unsigned short lv = p->member[i].lv;
+		if (p->member[i].online)
+		{
+			if (lv < minlv)			minlv = lv;
+			else if (maxlv < lv)	maxlv = lv;
+			cnt_lo++;
+			if( lv >= 70 )			cnt_hi++;
 		}
 	}
-	if((dudes/1000 >= 2) && (dudes%1000 == 3) && (!strcmp(p->member[0].map,p->member[1].map)) && (!strcmp(p->member[1].map,p->member[2].map))) {
-                pl1=search_character_index(p->member[0].name);
-                pl2=search_character_index(p->member[1].name);
-                pl3=search_character_index(p->member[2].name);
-                ShowMessage("PARTY: group of 3 Id1 %d lv %d name %s Id2 %d lv %d name %s Id3 %d lv %d name %s\n",pl1,p->member[0].lv,p->member[0].name,pl2,p->member[1].lv,p->member[1].name,pl3,p->member[2].lv,p->member[2].name);
-                if (char_married(pl1,pl2) && char_child(pl1,pl3))
-                        return 1;
-                if (char_married(pl1,pl3) && char_child(pl1,pl2))
-                        return 1;
-                if (char_married(pl2,pl3) && char_child(pl2,pl1))
-                        return 1;
-        }
-        return (maxlv==0 || maxlv-minlv<=party_share_level);
+	// check for party with parents with child
+	if( (cnt_hi >= 2) && (cnt_lo == 3) && 
+		(!strcmp(p->member[0].map,p->member[1].map)) && 
+		(!strcmp(p->member[1].map,p->member[2].map)) )
+	{
+		pl1=search_character_index(p->member[0].name);
+		pl2=search_character_index(p->member[1].name);
+		pl3=search_character_index(p->member[2].name);
+		ShowMessage("PARTY: group of 3 Id1 %d lv %d name %s Id2 %d lv %d name %s Id3 %d lv %d name %s\n",pl1,p->member[0].lv,p->member[0].name,pl2,p->member[1].lv,p->member[1].name,pl3,p->member[2].lv,p->member[2].name);
+		if( char_married(pl1,pl2) && char_child(pl1,pl3) )
+			return true;
+		if( char_married(pl1,pl3) && char_child(pl1,pl2) )
+			return true;
+		if( char_married(pl2,pl3) && char_child(pl2,pl1) )
+			return true;
+	}
+	return (maxlv==0 || maxlv<=minlv+party_share_level);
 }
 
 // パーティが空かどうかチェック
@@ -230,7 +234,8 @@ int party_check_empty(struct party *p)
 // キャラの競合がないかチェック用
 int party_check_conflict_sub(void *key, void *data, va_list ap) {
 	struct party *p = (struct party *)data;
-	int party_id, account_id, i;
+	unsigned long party_id, account_id;
+	size_t i;
 	char *nick;
 
 	party_id=va_arg(ap, int);
@@ -252,7 +257,7 @@ int party_check_conflict_sub(void *key, void *data, va_list ap) {
 }
 
 // キャラの競合がないかチェック
-int party_check_conflict(int party_id, int account_id, char *nick) {
+int party_check_conflict(unsigned long party_id, unsigned long account_id, char *nick) {
 	numdb_foreach(party_db, party_check_conflict_sub, party_id, account_id, nick);
 
 	return 0;
@@ -262,7 +267,7 @@ int party_check_conflict(int party_id, int account_id, char *nick) {
 // map serverへの通信
 
 // パーティ作成可否
-int mapif_party_created(int fd,int account_id, struct party *p) {
+int mapif_party_created(int fd,unsigned long account_id, struct party *p) {
 	WFIFOW(fd,0) = 0x3820;
 	WFIFOL(fd,2) = account_id;
 	if (p != NULL) {
@@ -310,7 +315,7 @@ int mapif_party_info(int fd, struct party *pparty) {
 }
 
 // パーティメンバ追加可否
-int mapif_party_memberadded(int fd, int party_id, int account_id, int flag) {
+int mapif_party_memberadded(int fd, unsigned long party_id, unsigned long account_id, int flag) {
 	WFIFOW(fd,0) = 0x3822;
 	WFIFOL(fd,2) = party_id;
 	WFIFOL(fd,6) = account_id;
@@ -321,7 +326,7 @@ int mapif_party_memberadded(int fd, int party_id, int account_id, int flag) {
 }
 
 // パーティ設定変更通知
-int mapif_party_optionchanged(int fd,struct party *p, int account_id, int flag) {
+int mapif_party_optionchanged(int fd,struct party *p, unsigned long account_id, int flag) {
 	unsigned char buf[15];
 
 	WBUFW(buf,0) = 0x3823;
@@ -340,7 +345,7 @@ int mapif_party_optionchanged(int fd,struct party *p, int account_id, int flag) 
 }
 
 // パーティ脱退通知
-int mapif_party_leaved(int party_id,int account_id, char *name) {
+int mapif_party_leaved(unsigned long party_id,unsigned long account_id, char *name) {
 	unsigned char buf[34];
 
 	WBUFW(buf,0) = 0x3824;
@@ -369,7 +374,7 @@ int mapif_party_membermoved(struct party *p, int idx) {
 }
 
 // パーティ解散通知
-int mapif_party_broken(int party_id, int flag) {
+int mapif_party_broken(unsigned long party_id, int flag) {
 	unsigned char buf[7];
 	WBUFW(buf,0) = 0x3826;
 	WBUFL(buf,2) = party_id;
@@ -381,7 +386,7 @@ int mapif_party_broken(int party_id, int flag) {
 }
 
 // パーティ内発言
-int mapif_party_message(int party_id, int account_id, char *mes, int len, int sfd) {
+int mapif_party_message(unsigned long party_id, unsigned long account_id, char *mes, size_t len, int sfd) {
 	CREATE_BUFFER(buf,unsigned char,len+12);
 
 	WBUFW(buf,0) = 0x3827;
@@ -401,7 +406,7 @@ int mapif_party_message(int party_id, int account_id, char *mes, int len, int sf
 
 
 // パーティ
-int mapif_parse_CreateParty(int fd, int account_id, char *name, char *nick, char *map, int lv) {
+int mapif_parse_CreateParty(int fd, unsigned long account_id, char *name, char *nick, char *map, int lv) {
 	struct party *p;
 	int i;
 
@@ -452,7 +457,7 @@ int mapif_parse_PartyInfo(int fd, int party_id) {
 }
 
 // パーティ追加要求
-int mapif_parse_PartyAddMember(int fd, int party_id, int account_id, char *nick, char *map, int lv) {
+int mapif_parse_PartyAddMember(int fd, unsigned long party_id, unsigned long account_id, char *nick, char *map, int lv) {
 	struct party *p;
 	int i;
 
@@ -490,7 +495,7 @@ int mapif_parse_PartyAddMember(int fd, int party_id, int account_id, char *nick,
 }
 
 // パーティー設定変更要求
-int mapif_parse_PartyChangeOption(int fd, int party_id, int account_id, int exp, int item) {
+int mapif_parse_PartyChangeOption(int fd, unsigned long party_id, unsigned long account_id, int exp, int item) {
 	struct party *p;
 	int flag = 0;
 
@@ -511,7 +516,7 @@ int mapif_parse_PartyChangeOption(int fd, int party_id, int account_id, int exp,
 }
 
 // パーティ脱退要求
-int mapif_parse_PartyLeave(int fd, int party_id, int account_id) {
+int mapif_parse_PartyLeave(int fd, unsigned long party_id, unsigned long account_id) {
 	struct party *p;
 	int i;
 
@@ -532,7 +537,7 @@ int mapif_parse_PartyLeave(int fd, int party_id, int account_id) {
 }
 
 // パーティマップ更新要求
-int mapif_parse_PartyChangeMap(int fd, int party_id, int account_id, char *map, int online, int lv) {
+int mapif_parse_PartyChangeMap(int fd, unsigned long party_id, unsigned long account_id, char *map, int online, int lv) {
 	struct party *p;
 	int i;
 
@@ -577,11 +582,11 @@ int mapif_parse_BreakParty(int fd, int party_id) {
 }
 
 // パーティメッセージ送信
-int mapif_parse_PartyMessage(int fd, int party_id, int account_id, char *mes, int len) {
+int mapif_parse_PartyMessage(int fd, unsigned long party_id, unsigned long account_id, char *mes, size_t len) {
 	return mapif_party_message(party_id, account_id, mes, len, fd);
 }
 // パーティチェック要求
-int mapif_parse_PartyCheck(int fd, int party_id, int account_id, char *nick) {
+int mapif_parse_PartyCheck(int fd, unsigned long party_id, unsigned long account_id, char *nick) {
 	return party_check_conflict(party_id, account_id, nick);
 }
 
@@ -609,7 +614,7 @@ int inter_party_parse_frommap(int fd) {
 }
 
 // サーバーから脱退要求（キャラ削除用）
-int inter_party_leave(int party_id, int account_id) {
+int inter_party_leave(unsigned long party_id, unsigned long account_id) {
 	return mapif_parse_PartyLeave(-1, party_id, account_id);
 }
 

@@ -136,8 +136,7 @@ int chrif_connect(int fd)
  */
 int chrif_sendmap(int fd)
 {
-	int i;
-
+	size_t i;
 	WFIFOW(fd,0) = 0x2afa;
 	for(i = 0; i < map_num; i++) {
 		if (map[i].alias != '\0') // [MouseJstr] map aliasing
@@ -184,12 +183,12 @@ int chrif_recvmap(int fd)
  */
 int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y, unsigned long ip, unsigned short port) 
 {
-	int i;
+	size_t i;
 	unsigned long s_ip;
 
 	nullpo_retr(-1, sd);
 
-	if (!sd)
+	if( !sd)
 		return -1;
 	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
 		return -1;
@@ -226,11 +225,12 @@ int chrif_changemapserverack(int fd)
 {
 	struct map_session_data *sd = map_id2sd(RFIFOL(fd,2));
 
-	if (sd == NULL || sd->status.char_id != (int)RFIFOL(fd,14))
+	if( sd == NULL || RFIFOL(fd,14) != sd->status.char_id )
 		return -1;
 
-	if (RFIFOL(fd,6) == 1) {
-		if (battle_config.error_log)
+	if( RFIFOL(fd,6) == 1 )
+	{
+		if( battle_config.error_log )
 			ShowMessage("map server change failed.\n");
 		pc_authfail(sd->fd);
 		return 0;
@@ -294,11 +294,11 @@ int chrif_sendmapack(int fd)
  */
 int chrif_authreq(struct map_session_data *sd)
 {
-	int i;
+	size_t i;
 
 	nullpo_retr(-1, sd);
 
-	if (!sd || !sd->bl.id || !sd->login_id1)
+	if( !sd || !sd->bl.id || !sd->login_id1)
 		return -1;
 
 	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
@@ -325,7 +325,7 @@ int chrif_authreq(struct map_session_data *sd)
  */
 int chrif_charselectreq(struct map_session_data *sd)
 {
-	int i; 
+	size_t i; 
 	unsigned long s_ip;
 
 	nullpo_retr(-1, sd);
@@ -361,7 +361,7 @@ int chrif_charselectreq(struct map_session_data *sd)
  */
 int chrif_searchcharid(int char_id)
 {
-	if (!char_id )
+	if( !char_id )
 		return -1;
 	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
 		return -1;
@@ -685,7 +685,8 @@ int chrif_changedsex(int fd)
  */
 int chrif_saveaccountreg2(struct map_session_data *sd)
 {
-	int p, j;
+	unsigned short p;
+	unsigned long j;
 	nullpo_retr(-1, sd);
 
 	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
@@ -717,7 +718,7 @@ int chrif_accountreg2(int fd)
 	int j, p;
 	struct map_session_data *sd;
 
-	if ((sd = map_id2sd(RFIFOL(fd,4))) == NULL)
+	if( (sd = map_id2sd(RFIFOL(fd,4))) == NULL)
 		return 1;
 
 	for(p = 8, j = 0; p < RFIFOW(fd,2) && j < ACCOUNT_REG2_NUM; p += 36, j++) {
@@ -734,11 +735,11 @@ int chrif_accountreg2(int fd)
  * —£¥î•ñ“¯Šú—v‹
  *------------------------------------------
  */
-int chrif_divorce(int char_id, int partner_id)
+int chrif_divorce(unsigned long char_id, unsigned long partner_id)
 {
 	struct map_session_data *sd = NULL;
 
-	if (!char_id || !partner_id)
+	if( !char_id || !partner_id)
 		return 0;
 
 	nullpo_retr(0, sd = map_nick2sd(map_charid2nick(partner_id)));
@@ -975,7 +976,7 @@ int chrif_recvfamelist(int fd)
 	WFIFOW(char_fd,4) = job_rate;
 	WFIFOW(char_fd,6) = drop_rate;
 
-	if ((fp = savefopen(motd_txt, "r")) != NULL) {
+	if( (fp = savefopen(motd_txt, "r")) != NULL) {
 		if (fgets(buf, 250, fp) != NULL) {
 			for(i = 0; buf[i]; i++) {
 				if (buf[i] == '\r' || buf[i] == '\n') {
@@ -1100,7 +1101,7 @@ int chrif_parse(int fd)
 	// else it is the char_fd
 	if( !session_isActive(fd) ) {
 		// char server is disconnecting
-		if ( chrif_isconnect() ) {
+		if(  chrif_isconnect() ) {
 			ShowWarning("Map Server disconnected from Char Server.\n\n");
 			clif_foreachclient(chrif_disconnect_sub);
 			chrif_state=0;
@@ -1175,7 +1176,8 @@ int chrif_parse(int fd)
  *------------------------------------------
  */
 int send_users_tochar(int tid, unsigned long tick, int id, int data) {
-	int users = 0, i;
+	size_t i;
+	unsigned short users = 0;
 	struct map_session_data *sd;
 
 	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect()) // Thanks to Toster
@@ -1206,7 +1208,7 @@ int check_connect_char_server(int tid, unsigned long tick, int id, int data)
 	static int displayed = 0;
 	if (char_fd <= 0 || session[char_fd] == NULL)
 	{
-		if (!displayed)
+		if( !displayed)
 		{
 			ShowStatus("Attempting to connect to Char Server. Please wait.\n");
 			displayed = 1;

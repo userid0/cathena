@@ -120,7 +120,7 @@ struct socket_data *session[FD_SETSIZE];
 
 fd_set readfds;		// in WIN32 this contains a sorted list of the sockets
 
-int fd_max=0;		// greatest used session fd in the field
+size_t fd_max=0;	// greatest used session fd in the field
 					// it is also used for the select call on Berkeley sockets
 					// but it could be replaced with FD_SETSIZE there
 ///////////////////////////////////////////////////////////////////////////////
@@ -296,7 +296,7 @@ int SessionInsertSocket(const SOCKET elem)
 		FD_SET(elem,&readfds);
 		// need for select
 		// we reduce this on building the writefds when necessary
-		if(fd_max<=elem) fd_max = elem+1; 
+		if((SOCKET)fd_max<=elem) fd_max = elem+1; 
 	}
 	return elem;
 }
@@ -783,7 +783,8 @@ void flush_fifos()
 */
 
 	// more complex method which might be faster in the end
-	int fd, len, c;
+	size_t fd;
+	int len, c;
 	fd_set wfd;
 	
 	while(1)
@@ -794,7 +795,6 @@ void flush_fifos()
 		{
 			if( session_isActive(fd) && session[fd]->func_send == send_from_fifo && session[fd]->wdata_size > 0)
 			{
-
 				// try to write the data nonblocking
 				len=write(SessionGetSocket(fd),(char*)(session[fd]->wdata),session[fd]->wdata_size);
 				//ShowMessage (":::SEND:::\n");
@@ -1754,7 +1754,7 @@ void socket_init(void)
 
 void socket_final(void)
 {
-	int fd;
+	size_t fd;
 	for(fd=0;fd<fd_max;fd++){
 		// don't unse session_Delete here
 		// just force deletion of the sessions
@@ -1955,11 +1955,16 @@ public:
 	
 	
 
+	virtual size_t BufferSize() const
+	{
+		return 0;
+	}
+
 	virtual bool toBuffer(buffer_iterator& bi) const
 	{
 		return false;
 	}
-	virtual bool fromBuffer(buffer_iterator& bi)
+	virtual bool fromBuffer(const buffer_iterator& bi)
 	{
 		return false;
 	}

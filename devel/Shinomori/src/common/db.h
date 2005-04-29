@@ -41,14 +41,14 @@ struct dbt {
 	int free_lock;
 };
 
-#define strdb_search(t,k)   db_search((t),(void*)(k))
-#define strdb_insert(t,k,d) db_insert((t),(void*)(k),(void*)(d))
-#define strdb_erase(t,k)    db_erase ((t),(void*)(k))
+#define strdb_search(t,k)   db_search((t),(void*)((int)(k)))
+#define strdb_insert(t,k,d) db_insert((t),(void*)((int)(k)),(void*)(d))
+#define strdb_erase(t,k)    db_erase ((t),(void*)((int)(k)))
 #define strdb_foreach       db_foreach
 #define strdb_final         db_final
-#define numdb_search(t,k)   db_search((t),(void*)(k))
-#define numdb_insert(t,k,d) db_insert((t),(void*)(k),(void*)(d))
-#define numdb_erase(t,k)    db_erase ((t),(void*)(k))
+#define numdb_search(t,k)   db_search((t),(void*)((int)(k)))
+#define numdb_insert(t,k,d) db_insert((t),(void*)((int)(k)),(void*)(d))
+#define numdb_erase(t,k)    db_erase ((t),(void*)((int)(k)))
 #define numdb_foreach       db_foreach
 #define numdb_final         db_final
 #define strdb_init(a)       strdb_init_(a,__FILE__,__LINE__)

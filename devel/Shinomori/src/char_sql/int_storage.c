@@ -18,7 +18,7 @@ struct guild_storage *guild_storage_pt=NULL;
 #define mysql_query(_x, _y)  debug_mysql_query(__FILE__, __LINE__, _x, _y)
 
 // storage data -> DB conversion
-int storage_tosql(int account_id,struct pc_storage *p){
+int storage_tosql(unsigned long account_id,struct pc_storage *p){
 	int i;
 //	int eqcount=1;
 //	int noteqcount=1;
@@ -49,7 +49,7 @@ int storage_tosql(int account_id,struct pc_storage *p){
 }
 
 // DB -> storage data conversion
-int storage_fromsql(int account_id, struct pc_storage *p){
+int storage_fromsql(unsigned long account_id, struct pc_storage *p){
 	int i=0;
 
 	memset(p,0,sizeof(struct pc_storage)); //clean up memory
@@ -177,7 +177,7 @@ void inter_storage_sql_final()
 	return;
 }
 // q?f[^?
-int inter_storage_delete(int account_id)
+int inter_storage_delete(unsigned long account_id)
 {
 		sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id`='%d'",storage_db, account_id);
 	if(mysql_query(&mysql_handle, tmp_sql) ) {
@@ -185,7 +185,7 @@ int inter_storage_delete(int account_id)
 	}
 	return 0;
 }
-int inter_guild_storage_delete(int guild_id)
+int inter_guild_storage_delete(unsigned long guild_id)
 {
 	sprintf(tmp_sql, "DELETE FROM `%s` WHERE `guild_id`='%d'",guild_storage_db, guild_id);
 	if(mysql_query(&mysql_handle, tmp_sql) ) {
@@ -198,7 +198,8 @@ int inter_guild_storage_delete(int guild_id)
 // packet from map server
 
 // recive packet about storage data
-int mapif_load_storage(int fd,int account_id){
+int mapif_load_storage(int fd,unsigned long account_id)
+{
 	//load from DB
 	storage_fromsql(account_id, storage_pt);
 	WFIFOW(fd,0)=0x3810;
@@ -210,7 +211,8 @@ int mapif_load_storage(int fd,int account_id){
 	return 0;
 }
 // send ack to map server which is "storage data save ok."
-int mapif_save_storage_ack(int fd,int account_id){
+int mapif_save_storage_ack(int fd,unsigned long account_id)
+{
 	WFIFOW(fd,0)=0x3811;
 	WFIFOL(fd,2)=account_id;
 	WFIFOB(fd,6)=0;
@@ -218,7 +220,7 @@ int mapif_save_storage_ack(int fd,int account_id){
 	return 0;
 }
 
-int mapif_load_guild_storage(int fd,int account_id,int guild_id)
+int mapif_load_guild_storage(int fd,unsigned long account_id,unsigned long guild_id)
 {
 	int guild_exist=0;
 	WFIFOW(fd,0)=0x3818;
@@ -254,7 +256,7 @@ int mapif_load_guild_storage(int fd,int account_id,int guild_id)
 
 	return 0;
 }
-int mapif_save_guild_storage_ack(int fd,int account_id,int guild_id,int fail)
+int mapif_save_guild_storage_ack(int fd,unsigned long account_id,unsigned long guild_id,int fail)
 {
 	WFIFOW(fd,0)=0x3819;
 	WFIFOL(fd,2)=account_id;
@@ -274,7 +276,7 @@ int mapif_parse_LoadStorage(int fd){
 }
 // storage data recive and save
 int mapif_parse_SaveStorage(int fd){
-	int account_id=RFIFOL(fd,4);
+	unsigned long account_id=RFIFOL(fd,4);
 	int len=RFIFOW(fd,2);
 
 	if(sizeof(struct pc_storage)!=len-8){

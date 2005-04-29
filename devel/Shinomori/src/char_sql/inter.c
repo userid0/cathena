@@ -28,18 +28,20 @@
 
 
 struct accreg {
-	int account_id,reg_num;
+	unsigned long account_id;
+	size_t reg_num;
 	struct global_reg reg[ACCOUNT_REG_NUM];
 };
 
 static struct accreg *accreg_pt;
 
 
-int party_share_level = 10;
+size_t party_share_level = 10;
 MYSQL mysql_handle;
 MYSQL_RES* 	sql_res ;
 MYSQL_ROW	sql_row ;
-int sql_fields, sql_cnt;
+size_t sql_fields;
+size_t sql_cnt;
 char tmp_sql[65535];
 
 MYSQL lmysql_handle;
@@ -47,13 +49,13 @@ char tmp_lsql[65535];
 MYSQL_RES* 	lsql_res ;
 MYSQL_ROW	lsql_row ;
 
-int char_server_port = 3306;
+unsigned short char_server_port = 3306;
 char char_server_ip[32] = "127.0.0.1";
 char char_server_id[32] = "ragnarok";
 char char_server_pw[32] = "ragnarok";
 char char_server_db[32] = "ragnarok";
 
-int login_server_port = 3306;
+unsigned short login_server_port = 3306;
 char login_server_ip[32] = "127.0.0.1";
 char login_server_id[32] = "ragnarok";
 char login_server_pw[32] = "ragnarok";
@@ -96,9 +98,9 @@ int inter_sql_test (void);
 
 //--------------------------------------------------------
 // Save account_reg to sql (type=2)
-int inter_accreg_tosql(int account_id,struct accreg *reg){
+int inter_accreg_tosql(unsigned long account_id,struct accreg *reg){
 
-	int j;
+	size_t j;
 	char temp_str[32];
 	if (account_id<=0) return 0;
 	reg->account_id=account_id;
@@ -124,7 +126,7 @@ int inter_accreg_tosql(int account_id,struct accreg *reg){
 }
 
 // Load account_reg from sql (type=2)
-int inter_accreg_fromsql(int account_id,struct accreg *reg)
+int inter_accreg_fromsql(unsigned long account_id,struct accreg *reg)
 {
 	int j=0;
 	if (reg==NULL) return 0;
@@ -420,7 +422,7 @@ int mapif_account_reg(int fd,unsigned char *src)
 }
 
 // Send the requested account_reg
-int mapif_account_reg_reply(int fd,int account_id)
+int mapif_account_reg_reply(int fd,unsigned long account_id)
 {
 	struct accreg *reg=accreg_pt;
 	inter_accreg_fromsql(account_id,reg);
@@ -430,7 +432,8 @@ int mapif_account_reg_reply(int fd,int account_id)
 	if(reg->reg_num==0){
 		WFIFOW(fd,2)=8;
 	}else{
-		int j,p;
+		size_t j;
+		unsigned short p;
 		for(j=0,p=8;j<reg->reg_num;j++,p+=36){
 			memcpy(WFIFOP(fd,p),reg->reg[j].str,32);
 			WFIFOL(fd,p+32)=reg->reg[j].value;
@@ -443,7 +446,8 @@ int mapif_account_reg_reply(int fd,int account_id)
 
 int mapif_send_gmaccounts()
 {
-	int i, len = 4;
+	size_t i;
+	unsigned short len = 4;
 	unsigned char buf[32000];
 
 	// forward the gm accounts to the map server
@@ -596,7 +600,7 @@ int mapif_parse_AccReg(int fd)
 {
 	int j,p;
 	struct accreg *reg=accreg_pt;
-	int account_id = RFIFOL(fd,4);
+	unsigned long account_id = RFIFOL(fd,4);
 	memset(accreg_pt,0,sizeof(struct accreg));
 
 	for(j=0,p=8;j<ACCOUNT_REG_NUM && p<RFIFOW(fd,2);j++,p+=36){

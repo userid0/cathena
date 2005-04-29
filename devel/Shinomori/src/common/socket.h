@@ -772,10 +772,18 @@ public:
 */
 
 
+
+
+
+//////////////////////////////////////////////////////////////////////////
+// char buffer access
+//////////////////////////////////////////////////////////////////////////
+
 class streamable;
+
 class buffer_iterator
 {
-	unsigned char *ipp;
+	mutable unsigned char *ipp;
 	const unsigned char *start;
 	const unsigned char *end;
 public:
@@ -801,7 +809,6 @@ public:
 		if( ipp && ipp<end)
 			*ipp++ = (unsigned char)ch;
 		return ch;
-
 	}
 	///////////////////////////////////////////////////////////////////////////
 	unsigned short operator = (const unsigned short sr)
@@ -1036,10 +1043,11 @@ public:
 		if( c && ipp+sz < end )
 		{	
 			size_t cpsz=sz;
-			if( cpsz > strlen(c) )
-				cpsz = strlen(c);
+			if( cpsz > strlen(c)+1 )
+				cpsz = strlen(c)+1;
 			memcpy(ipp, c, cpsz);
 			ipp[cpsz-1] = 0;	// force an EOS
+
 			ipp+=sz;
 			return true;
 		}
@@ -1049,8 +1057,33 @@ public:
 	{
 		if( c && ipp+sz < end )
 		{	
-			memcpy(c,ipp, sz);
-			c[sz-1] = 0;	// force an EOS
+			memcpy(c, ipp, sz);
+			c[sz] = 0;	// force an EOS
+			ipp+=sz;
+			return true;
+		}
+		return false;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// read/write access for char array
+	///////////////////////////////////////////////////////////////////////////
+	bool write(const unsigned char *c, size_t sz)
+	{
+		if( c && ipp+sz < end )
+		{	
+			memcpy(ipp, c, sz);
+			ipp+=sz;
+			return true;
+		}
+		return false;
+	}
+
+	bool read(unsigned char *c, size_t sz)
+	{
+		if( c && ipp+sz < end )
+		{	
+			memcpy(c, ipp, sz);
 			ipp+=sz;
 			return true;
 		}
@@ -1066,7 +1099,7 @@ public:
 	unsigned char* operator()()	{ return ipp; }
 
 	bool step(int i)
-	{	// can go to backwards with negative offset
+	{	// can go backwards with negative offset
 		if(ipp+i <= end && ipp+i >= start)
 		{
 			ipp+=i;
@@ -1074,6 +1107,13 @@ public:
 		}
 		return false;
 	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// the next will combine the buffer_iterator with the 
+	// virtual streamable class allowing to derive
+	// classes that are auto-assignable to buffers
+	///////////////////////////////////////////////////////////////////////////
+	const streamable& operator = (const streamable& s);
 
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1153,19 +1193,6 @@ public:
 		}
 	}
 */
-
-
-
-
-
-	///////////////////////////////////////////////////////////////////////////
-	// the next will combine the buffer_iterator with the 
-	// virtual streamable class allowing to derive
-	// classes that are auto-assignable to buffers
-	///////////////////////////////////////////////////////////////////////////
-
-	const streamable& operator = (const streamable& s);
-
 };
 ///////////////////////////////////////////////////////////////////////////////
 // 
@@ -1184,9 +1211,15 @@ public:
 		return bi;
 	}
 
-
+	//////////////////////////////////////////////////////////////////////
+	// return necessary size of buffer
+	virtual size_t BufferSize() const =0;
+	//////////////////////////////////////////////////////////////////////
+	// writes content to buffer
 	virtual bool toBuffer(buffer_iterator& bi) const   = 0;
-	virtual bool fromBuffer(buffer_iterator& bi) = 0;
+	//////////////////////////////////////////////////////////////////////
+	// reads content from buffer
+	virtual bool fromBuffer(const buffer_iterator& bi) = 0;
 };
 
 
@@ -1195,8 +1228,6 @@ inline const streamable& buffer_iterator::operator = (const streamable& s)
 	s.toBuffer(*this);
 	return s;
 }
-
-
 
 
 
@@ -1229,7 +1260,7 @@ public:
 	objW& init(char* x,int pos)				{ip=(unsigned char*)(x+pos);return *this;}
 
 	operator unsigned short() const
-	{return this->operator()();
+	{	return this->operator()();
 	}
 	unsigned short operator()()	const
 	{
@@ -1241,6 +1272,7 @@ public:
 		}
 		return 0;
 	}
+
 	objW& operator=(const objW& objw)
 	{
 		if(ip && objw.ip)
@@ -1253,8 +1285,8 @@ public:
 	{	
 		if(ip)
 		{
-			ip[0] = ((valin & 0x00FF)          );
-			ip[1] = ((valin & 0xFF00)  >> 0x08 );
+			ip[0] = (unsigned char)((valin & 0x00FF)          );
+			ip[1] = (unsigned char)((valin & 0xFF00)  >> 0x08 );
 		}
 		return valin;
 	}
@@ -1278,7 +1310,7 @@ public:
 
 
 	operator unsigned long() const
-	{return this->operator()();
+	{	return this->operator()();
 	}
 	unsigned long operator()()	const
 	{
@@ -1456,7 +1488,7 @@ struct socket_data{
 #endif
 
 extern struct socket_data *session[FD_SETSIZE];
-extern int fd_max;
+extern size_t fd_max;
 
 
 

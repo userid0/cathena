@@ -15,7 +15,7 @@
 char pet_txt[1024]="save/pet.txt";
 
 static struct dbt *pet_db;
-static int pet_newid = 100;
+static unsigned long pet_newid = 100;
 
 int inter_pet_tostr(char *str,struct s_pet *p)
 {
@@ -30,7 +30,7 @@ int inter_pet_tostr(char *str,struct s_pet *p)
 	else if(p->intimate > 1000)
 		p->intimate = 1000;
 
-	len=sprintf(str,"%d,%d,%s\t%d,%d,%d,%d,%d,%d,%d,%d,%d",
+	len=sprintf(str,"%ld,%d,%s\t%ld,%ld,%d,%d,%d,%d,%d,%d,%d",
 		p->pet_id,p->class_,p->name,p->account_id,p->char_id,p->level,p->egg_id,
 		p->equip,p->intimate,p->hungry,p->rename_flag,p->incuvate);
 
@@ -153,7 +153,7 @@ int inter_pet_delete(int pet_id)
 	return 0;
 }
 
-int mapif_pet_created(int fd,int account_id,struct s_pet *p)
+int mapif_pet_created(int fd,unsigned long account_id,struct s_pet *p)
 {
 	WFIFOW(fd,0)=0x3880;
 	WFIFOL(fd,2)=account_id;
@@ -170,7 +170,7 @@ int mapif_pet_created(int fd,int account_id,struct s_pet *p)
 	return 0;
 }
 
-int mapif_pet_info(int fd,int account_id,struct s_pet *pet)
+int mapif_pet_info(int fd,unsigned long account_id,struct s_pet *pet)
 {
 	WFIFOW(fd,0)=0x3881;
 	WFIFOW(fd,2)=sizeof(struct s_pet) + 9;
@@ -184,7 +184,7 @@ int mapif_pet_info(int fd,int account_id,struct s_pet *pet)
 	return 0;
 }
 
-int mapif_pet_noinfo(int fd,int account_id)
+int mapif_pet_noinfo(int fd,unsigned long account_id)
 {
 	WFIFOW(fd,0)=0x3881;
 	WFIFOW(fd,2)=sizeof(struct s_pet) + 9;
@@ -196,7 +196,7 @@ int mapif_pet_noinfo(int fd,int account_id)
 	return 0;
 }
 
-int mapif_save_pet_ack(int fd,int account_id,int flag)
+int mapif_save_pet_ack(int fd,unsigned long account_id,int flag)
 {
 	WFIFOW(fd,0)=0x3882;
 	WFIFOL(fd,2)=account_id;
@@ -215,7 +215,7 @@ int mapif_delete_pet_ack(int fd,int flag)
 	return 0;
 }
 
-int mapif_create_pet(int fd,int account_id,int char_id,short pet_class,short pet_lv,short pet_egg_id,
+int mapif_create_pet(int fd,unsigned long account_id,unsigned long char_id,short pet_class,short pet_lv,short pet_egg_id,
 	short pet_equip,short intimate,short hungry,char rename_flag,char incuvate,char *pet_name)
 {
 	struct s_pet *p;
@@ -253,7 +253,7 @@ int mapif_create_pet(int fd,int account_id,int char_id,short pet_class,short pet
 	return 0;
 }
 
-int mapif_load_pet(int fd,int account_id,int char_id,int pet_id)
+int mapif_load_pet(int fd,unsigned long account_id,unsigned long char_id,unsigned long pet_id)
 {
 	struct s_pet *p;
 	p = (struct s_pet *)numdb_search(pet_db,pet_id);
@@ -273,7 +273,7 @@ int mapif_load_pet(int fd,int account_id,int char_id,int pet_id)
 	return 0;
 }
 
-int mapif_save_pet(int fd,int account_id, unsigned char* buf)
+int mapif_save_pet(int fd,unsigned long account_id, unsigned char* buf)
 {
 	struct s_pet *ppet, pet;
 	int len=RFIFOW(fd,2);

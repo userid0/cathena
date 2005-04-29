@@ -14,7 +14,7 @@ int inter_log(char *fmt,...);
 
 #define inter_cfgName "conf/inter_athena.conf"
 
-extern int party_share_level;
+extern size_t party_share_level;
 extern char inter_log_filename[1024];
 extern int log_inter;
 

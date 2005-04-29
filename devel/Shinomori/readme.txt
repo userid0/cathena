@@ -1,6 +1,6 @@
 my personal kingdom
 
-based on svn1535
+based on svn1613
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
@@ -10,9 +10,26 @@ and testing some new gimmicks
 the memory leak at the end is not real; 
 memory manager is closed before the last free is called 
 because of I start changing to c++ objects with different
-allocation/deallocation order; 
+allocation/deallocation order
 ///////////////////////////////////////////////////////////
 keep on updating with branch but do not copy any "enhancement"
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////
+now referencing builds to gcc 3.3.2
+slight changes to makefile; 
+nsl now needs be linked explicitely in my environment
+you might need to modify build options on your's
+///////////////////////////////////////////////////////////
+introduced slight changes the character file format (txt)
+so be sure to make a backup befor trying this versio,
+otherwise you might not be able to switch back to branch
+///////////////////////////////////////////////////////////
+start to change all data to real types for better type checking
+and preperation of automatic transfer buffers, 
+still much way to go, 
+somebody should outlaw the usage of int's and
+the type changes via pointer casting
 ///////////////////////////////////////////////////////////
 integrated the anti freeze system into the user count update messages
 (which are already send between chat,login and map)

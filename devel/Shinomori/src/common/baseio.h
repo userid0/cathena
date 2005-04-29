@@ -430,7 +430,7 @@ public:
 	{
 	}
 
-	int isGM(int account_id) {
+	int isGM(unsigned long account_id) {
 		int level;
 
 		MYSQL_RES* 	sql_res;

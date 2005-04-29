@@ -18,7 +18,7 @@
  * 取引要請を相手に送る
  *------------------------------------------
  */
-void trade_traderequest(struct map_session_data *sd, int target_id) {
+void trade_traderequest(struct map_session_data *sd, unsigned long target_id) {
 	struct map_session_data *target_sd;
 	int level;
 
@@ -31,13 +31,14 @@ void trade_traderequest(struct map_session_data *sd, int target_id) {
 				return;
 			}
 		}
-		if((level = pc_isGM(sd)) > 0 && level < battle_config.gm_can_drop_lv) {
+		level = pc_isGM(sd);
+		if(level > 0 && level < battle_config.gm_can_drop_lv) {
 			clif_displaymessage(sd->fd, msg_txt(246));
 			trade_tradecancel(sd); // GM is not allowed to trade
 		} else if ((target_sd->trade_partner != 0) || (sd->trade_partner != 0)) {
 			trade_tradecancel(sd); // person is in another trade
 		} else {
-			if (!pc_isGM(sd) && (sd->bl.m != target_sd->bl.m ||
+			if (!level && (sd->bl.m != target_sd->bl.m ||
 			    (sd->bl.x - target_sd->bl.x <= -5 || sd->bl.x - target_sd->bl.x >= 5) ||
 			    (sd->bl.y - target_sd->bl.y <= -5 || sd->bl.y - target_sd->bl.y >= 5))) {
 				clif_tradestart(sd, 0); // too far
@@ -102,49 +103,60 @@ int impossible_trade_check(struct map_session_data *sd) {
 	// get inventory of player
 	memcpy(&inventory, &sd->status.inventory, sizeof(struct item) * MAX_INVENTORY);
 
-/* remove this part: arrows can be trade and equiped
+	// remove this part: arrows can be trade and equiped
+	// re-added! [celest]
 	// remove equiped items (they can not be trade)
 	for (i = 0; i < MAX_INVENTORY; i++)
-		if (inventory[i].nameid > 0 && inventory[i].equip)
+		if (inventory[i].nameid > 0 && inventory[i].equip && !(inventory[i].equip & 0x8000))
 			memset(&inventory[i], 0, sizeof(struct item));
-*/
 
 	// check items in player inventory
 	for(i = 0; i < 10; i++)
-		if (sd->deal_item_amount[i] < 0) { // negativ? -> hack
+	{
+//		if(sd->deal_item_amount[i] < 0) { // negativ? -> hack
 //			ShowMessage("Negativ amount in trade, by hack!\n"); // normal client send cancel when we type negativ amount
-			return -1;
-		} else if (sd->deal_item_amount[i] > 0) {
+//			return -1;
+//		} else 
+		if(sd->deal_item_amount[i] > 0)
+		{
 			index = sd->deal_item_index[i] - 2;
-			inventory[index].amount -= sd->deal_item_amount[i]; // remove item from inventory
 //			ShowMessage("%d items left\n", inventory[index].amount);
-			if (inventory[index].amount < 0) { // if more than the player have -> hack
+			if( inventory[index].amount < sd->deal_item_amount[i] )
+			{	// if more than the player have -> hack
 //				ShowMessage("A player try to trade more items that he has: hack!\n");
 				sprintf(message_to_gm, msg_txt(538), sd->status.name, sd->status.account_id); // Hack on trade: character '%s' (account: %d) try to trade more items that he has.
 				intif_wis_message_to_gm(wisp_server_name, battle_config.hack_info_GM_level, message_to_gm);
 				sprintf(message_to_gm, msg_txt(539), sd->status.inventory[index].amount, sd->status.inventory[index].nameid, sd->status.inventory[index].amount - inventory[index].amount); // This player has %d of a kind of item (id: %d), and try to trade %d of them.
 				intif_wis_message_to_gm(wisp_server_name, battle_config.hack_info_GM_level, message_to_gm);
-				// if we block people
-				if (battle_config.ban_hack_trade < 0) {
+				
+				if(battle_config.ban_hack_trade < 0)
+				{	// if we block people
 					chrif_char_ask_name(-1, sd->status.name, 1, 0, 0, 0, 0, 0, 0); // type: 1 - block
 					session_Remove(sd->fd); // forced to disconnect because of the hack
 					// message about the ban
 					sprintf(message_to_gm, msg_txt(540), battle_config.ban_spoof_namer); //  This player has been definitivly blocked.
-				// if we ban people
-				} else if (battle_config.ban_hack_trade > 0) {
+				
+				}
+				else if(battle_config.ban_hack_trade > 0)
+				{	// if we ban people
 					chrif_char_ask_name(-1, sd->status.name, 2, 0, 0, 0, 0, battle_config.ban_hack_trade, 0); // type: 2 - ban (year, month, day, hour, minute, second)
 					session_Remove(sd->fd); // forced to disconnect because of the hack
 					// message about the ban
 					sprintf(message_to_gm, msg_txt(507), battle_config.ban_spoof_namer); //  This player has been banned for %d minute(s).
-				} else {
-					// message about the ban
+				}
+				else
+				{	// message about the ban
 					sprintf(message_to_gm, msg_txt(508)); //  This player hasn't been banned (Ban option is disabled).
 				}
 				intif_wis_message_to_gm(wisp_server_name, battle_config.hack_info_GM_level, message_to_gm);
 				return 1;
 			}
+			else
+			{	// remove item from inventory
+				inventory[index].amount -= sd->deal_item_amount[i]; 
 		}
-
+		}
+	}
 	return 0;
 }
 
@@ -152,18 +164,17 @@ int impossible_trade_check(struct map_session_data *sd) {
  * アイテム追加
  *------------------------------------------
  */
-void trade_tradeadditem(struct map_session_data *sd, int index, int amount) {
+void trade_tradeadditem(struct map_session_data *sd, unsigned long index, unsigned long amount) {
 	struct map_session_data *target_sd;
-	int trade_i;
-	int trade_weight = 0;
-	int c;
+	int trade_i, trade_weight = 0;
+	int c, level;
 
 	nullpo_retv(sd);
 
 	if (((target_sd = map_id2sd(sd->trade_partner)) != NULL) && (sd->deal_locked < 1)){
 		if (index < 2 || index >= MAX_INVENTORY + 2) {
 			if (index == 0) {
-				if (amount > 0 && amount <= MAX_ZENY && amount <= sd->status.zeny && // check amount
+				if(amount > 0 && amount <= MAX_ZENY && amount <= (unsigned long)sd->status.zeny && // check amount
 				    (target_sd->status.zeny + amount) <= MAX_ZENY) { // fix positiv overflow
 					sd->deal_zeny = amount;
 					clif_tradeadditem(sd, target_sd, 0, amount);
@@ -178,8 +189,9 @@ void trade_tradeadditem(struct map_session_data *sd, int index, int amount) {
 			for(trade_i = 0; trade_i < 10; trade_i++) {
 				if (sd->deal_item_amount[trade_i] == 0) {
 					trade_weight += sd->inventory_data[index-2]->weight * amount;
-					if (itemdb_isdropable(sd->inventory_data[index-2]->nameid) == 0 && pc_get_partner(sd) != target_sd) {
-						clif_displaymessage (sd->fd, "This item cannot be traded.");
+					level = pc_isGM(sd);
+					if (itemdb_isdropable(sd->inventory_data[index-2]->nameid) == 0 && pc_get_partner(sd) != target_sd && !level) {
+						clif_displaymessage (sd->fd, msg_txt(260));
 						amount = 0;
 					} else if (target_sd->weight + trade_weight > target_sd->max_weight){
 						clif_tradeitemok(sd, index, 1); // fail to add item -- the player was over weighted.
@@ -192,7 +204,7 @@ void trade_tradeadditem(struct map_session_data *sd, int index, int amount) {
 							}
 						}
 						sd->deal_item_index[trade_i] = index;
-						sd->deal_item_amount[trade_i] += amount;
+						sd->deal_item_amount[trade_i] += (unsigned short)amount;
 						if (impossible_trade_check(sd)) { // check exploit (trade more items that you have)
 							trade_tradecancel(sd);
 							return;
@@ -220,10 +232,13 @@ void trade_tradeok(struct map_session_data *sd) {
 	nullpo_retv(sd);
 
 	// check items
-	for(trade_i = 0; trade_i < 10; trade_i++) {
-		if ((((sd->deal_item_index[trade_i]-2) >= 0) &&
-		    (sd->deal_item_amount[trade_i] > sd->status.inventory[sd->deal_item_index[trade_i]-2].amount)) ||
-		    (sd->deal_item_amount[trade_i] < 0)) {
+	for(trade_i = 0; trade_i < 10; trade_i++)
+	{	
+		if( (sd->deal_item_index[trade_i] < 2) ||
+			(sd->deal_item_index[trade_i] > 2+MAX_INVENTORY) ||
+			//(sd->deal_item_amount[trade_i] < 0) ||
+		    (sd->deal_item_amount[trade_i] > sd->status.inventory[sd->deal_item_index[trade_i]-2].amount) ) 
+		{
 			trade_tradecancel(sd);
 			return;
 		}
@@ -236,7 +251,7 @@ void trade_tradeok(struct map_session_data *sd) {
 	}
 
 	// check zeny
-	if (sd->deal_zeny < 0 || sd->deal_zeny > MAX_ZENY || sd->deal_zeny > sd->status.zeny) { // check amount
+	if(sd->deal_zeny < 0 || sd->deal_zeny > MAX_ZENY || sd->deal_zeny > (unsigned long)sd->status.zeny) { // check amount
 		trade_tradecancel(sd);
 		return;
 	}
@@ -317,9 +332,9 @@ void trade_tradecommit(struct map_session_data *sd) {
 					return;
 				}
 				// check zenys value against hackers
-				if (sd->deal_zeny >= 0 && sd->deal_zeny <= MAX_ZENY && sd->deal_zeny <= sd->status.zeny && // check amount
+				if(sd->deal_zeny >= 0 && sd->deal_zeny <= MAX_ZENY && sd->deal_zeny <= (unsigned long)sd->status.zeny && // check amount
 				    (target_sd->status.zeny + sd->deal_zeny) <= MAX_ZENY && // fix positiv overflow
-				    target_sd->deal_zeny >= 0 && target_sd->deal_zeny <= MAX_ZENY && target_sd->deal_zeny <= target_sd->status.zeny && // check amount
+				    target_sd->deal_zeny >= 0 && target_sd->deal_zeny <= MAX_ZENY && target_sd->deal_zeny <= (unsigned long)target_sd->status.zeny && // check amount
 				    (sd->status.zeny + target_sd->deal_zeny) <= MAX_ZENY) { // fix positiv overflow
 
 					// trade is accepted

@@ -26,11 +26,11 @@ int storage_tostr(char *str,struct pc_storage *p)
 {
 	int i,f=0;
 	char *str_p = str;
-	str_p += sprintf(str_p,"%d,%d\t",p->account_id,p->storage_amount);
+	str_p += sprintf(str_p,"%ld,%d\t",p->account_id,p->storage_amount);
 
 	for(i=0;i<MAX_STORAGE;i++)
 		if( (p->storage[i].nameid) && (p->storage[i].amount) ){
-			str_p += sprintf(str_p,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d ",
+			str_p += sprintf(str_p,"%ld,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d ",
 				p->storage[i].id,p->storage[i].nameid,p->storage[i].amount,p->storage[i].equip,
 				p->storage[i].identify,p->storage[i].refine,p->storage[i].attribute,
 				p->storage[i].card[0],p->storage[i].card[1],p->storage[i].card[2],p->storage[i].card[3]);
@@ -109,11 +109,11 @@ int guild_storage_tostr(char *str,struct guild_storage *p)
 {
 	int i,f=0;
 	char *str_p = str;
-	str_p+=sprintf(str,"%d,%d\t",p->guild_id,p->storage_amount);
+	str_p+=sprintf(str,"%ld,%d\t",p->guild_id,p->storage_amount);
 
 	for(i=0;i<MAX_GUILD_STORAGE;i++)
 		if( (p->storage[i].nameid) && (p->storage[i].amount) ){
-			str_p += sprintf(str_p,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d ",
+			str_p += sprintf(str_p,"%ld,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d ",
 				p->storage[i].id,p->storage[i].nameid,p->storage[i].amount,p->storage[i].equip,
 				p->storage[i].identify,p->storage[i].refine,p->storage[i].attribute,
 				p->storage[i].card[0],p->storage[i].card[1],p->storage[i].card[2],p->storage[i].card[3]);
@@ -188,7 +188,7 @@ int guild_storage_fromstr(char *str,struct guild_storage *p)
 }
 
 // アカウントから倉庫データインデックスを得る（新規倉庫追加可能）
-struct pc_storage *account2storage(int account_id)
+struct pc_storage *account2storage(unsigned long account_id)
 {
 	struct pc_storage *s;
 	s = (struct pc_storage *)numdb_search(storage_db,account_id);
@@ -343,14 +343,14 @@ int inter_guild_storage_save()
 }
 
 // 倉庫データ削除
-int inter_storage_delete(int account_id)
+int inter_storage_delete(unsigned long account_id)
 {
 	struct pc_storage *s = (struct pc_storage *)numdb_search(storage_db,account_id);
 	if(s) {
 		int i;
 		for(i=0;i<s->storage_amount;i++){
 			if(s->storage[i].card[0] == (short)0xff00)
-				inter_pet_delete( MakeDWord(s->storage[i].card[2],s->storage[i].card[3]) );
+				inter_pet_delete( MakeDWord(s->storage[i].card[1],s->storage[i].card[2]) );
 		}
 		numdb_erase(storage_db,account_id);
 		aFree(s);
@@ -359,14 +359,14 @@ int inter_storage_delete(int account_id)
 }
 
 // ギルド倉庫データ削除
-int inter_guild_storage_delete(int guild_id)
+int inter_guild_storage_delete(unsigned long guild_id)
 {
 	struct guild_storage *gs = (struct guild_storage *)numdb_search(guild_storage_db,guild_id);
 	if(gs) {
 		int i;
 		for(i=0;i<gs->storage_amount;i++){
 			if(gs->storage[i].card[0] == (short)0xff00)
-				inter_pet_delete( MakeDWord(gs->storage[i].card[2],gs->storage[i].card[3]) );
+				inter_pet_delete( MakeDWord(gs->storage[i].card[1],gs->storage[i].card[2]) );
 		}
 		numdb_erase(guild_storage_db,guild_id);
 		aFree(gs);
@@ -378,7 +378,7 @@ int inter_guild_storage_delete(int guild_id)
 // map serverへの通信
 
 // 倉庫データの送信
-int mapif_load_storage(int fd,int account_id)
+int mapif_load_storage(int fd,unsigned long account_id)
 {
 	struct pc_storage *stor=account2storage(account_id);
 	WFIFOW(fd,0)=0x3810;
@@ -391,7 +391,7 @@ int mapif_load_storage(int fd,int account_id)
 	return 0;
 }
 // 倉庫データ保存完了送信
-int mapif_save_storage_ack(int fd,int account_id)
+int mapif_save_storage_ack(int fd,unsigned long account_id)
 {
 	WFIFOW(fd,0)=0x3811;
 	WFIFOL(fd,2)=account_id;
@@ -400,7 +400,7 @@ int mapif_save_storage_ack(int fd,int account_id)
 	return 0;
 }
 
-int mapif_load_guild_storage(int fd,int account_id,int guild_id)
+int mapif_load_guild_storage(int fd,unsigned long account_id,unsigned long guild_id)
 {
 	struct guild_storage *gs=guild2storage(guild_id);
 	WFIFOW(fd,0)=0x3818;
@@ -420,7 +420,7 @@ int mapif_load_guild_storage(int fd,int account_id,int guild_id)
 
 	return 0;
 }
-int mapif_save_guild_storage_ack(int fd,int account_id,int guild_id,int fail)
+int mapif_save_guild_storage_ack(int fd,unsigned long account_id,unsigned long guild_id,int fail)
 {
 	WFIFOW(fd,0)=0x3819;
 	WFIFOL(fd,2)=account_id;
@@ -443,8 +443,8 @@ int mapif_parse_LoadStorage(int fd)
 int mapif_parse_SaveStorage(int fd)
 {
 	struct pc_storage *stor;
-	int account_id=RFIFOL(fd,4);
-	int len=RFIFOW(fd,2);
+	unsigned long account_id=RFIFOL(fd,4);
+	unsigned short len=RFIFOW(fd,2);
 	if(sizeof(struct pc_storage)!=len-8){
 		ShowMessage("inter storage: data size error %d %d\n",sizeof(struct pc_storage),len-8);
 	}

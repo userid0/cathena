@@ -15,7 +15,7 @@ int inter_log(char *fmt,...);
 
 #define inter_cfgName "conf/inter_athena.conf"
 
-extern int party_share_level;
+extern size_t party_share_level;
 extern char inter_log_filename[1024];
 
 
@@ -23,20 +23,20 @@ extern MYSQL mysql_handle;
 extern char tmp_sql[65535];
 extern MYSQL_RES* 	sql_res ;
 extern MYSQL_ROW	sql_row ;
-extern int 	sql_cnt;
+extern size_t 	sql_cnt;
 
 extern MYSQL lmysql_handle;
 extern char tmp_lsql[65535];
 extern MYSQL_RES* 	lsql_res ;
 extern MYSQL_ROW	lsql_row ;
 
-extern int char_server_port;
+extern unsigned short char_server_port;
 extern char char_server_ip[32];
 extern char char_server_id[32];
 extern char char_server_pw[32];
 extern char char_server_db[32];
 
-extern int login_db_server_port;
+extern unsigned short login_db_server_port;
 extern char login_db_server_ip[32];
 extern char login_db_server_id[32];
 extern char login_db_server_pw[32];

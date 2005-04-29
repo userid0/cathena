@@ -18,9 +18,9 @@ int npc_event(struct map_session_data *sd,const char *npcname,int);
 int npc_timer_event(const char *eventname);				// Added by RoVeRT
 int npc_command(struct map_session_data *sd,char *npcname,char *command);
 int npc_touch_areanpc(struct map_session_data *,int,int,int);
-int npc_click(struct map_session_data *,int);
-int npc_scriptcont(struct map_session_data *,int);
-int npc_checknear(struct map_session_data *,int);
+int npc_click(struct map_session_data *sd,unsigned long id);
+int npc_scriptcont(struct map_session_data *sd,unsigned long id);
+int npc_checknear(struct map_session_data *sd,unsigned long id);
 int npc_buysellsel(struct map_session_data *,int,int);
 int npc_buylist(struct map_session_data *,int,unsigned char *);
 int npc_selllist(struct map_session_data *,int,unsigned char *);
@@ -37,10 +37,10 @@ int npc_changestate(struct npc_data *nd,int state,int type);
 
 int npc_get_new_npc_id(void);
 
-void npc_addsrcfile(char *);
-void npc_delsrcfile(char *);
+void npc_addsrcfile(const char *);
+void npc_delsrcfile(const char *);
 void npc_printsrcfile();
-	
+void npc_parsesrcfile(const char *);
 int do_final_npc(void);
 int do_init_npc(void);
 int npc_event_do_oninit(void);

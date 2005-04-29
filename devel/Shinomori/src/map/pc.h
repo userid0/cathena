@@ -33,9 +33,9 @@ int pc_getrefinebonus(int lv,int type);
 int pc_counttargeted(struct map_session_data *sd,struct block_list *src,int target_lv);
 int pc_setrestartvalue(struct map_session_data *sd,int type);
 int pc_makesavestatus(struct map_session_data *);
-int pc_setnewpc(struct map_session_data *sd, int account_id, int char_id, int login_id1, unsigned long client_tick, int sex, int fd);
-int pc_authok(int, int, time_t, unsigned char *);
-int pc_authfail(int);
+int pc_setnewpc(struct map_session_data *sd, unsigned long account_id, unsigned long char_id, unsigned long login_id1, unsigned long client_tick, unsigned long sex, int fd);
+int pc_authok(unsigned long id, unsigned long login_id2, time_t connect_until_time, unsigned char *buf);
+int pc_authfail(int fd);
 
 int pc_isequip(struct map_session_data *sd,int n);
 int pc_equippoint(struct map_session_data *sd,int n);
@@ -173,7 +173,7 @@ struct map_session_data *pc_get_father(struct map_session_data *sd);
 struct map_session_data *pc_get_mother(struct map_session_data *sd);
 struct map_session_data *pc_get_child(struct map_session_data *sd);
 
-int pc_set_gm_level(int account_id, int level);
+int pc_set_gm_level(unsigned long account_id, unsigned long level);
 void pc_setstand(struct map_session_data *sd);
 int pc_break_equip(struct map_session_data *sd, unsigned short where);
 int pc_candrop(struct map_session_data *sd,int item_id);

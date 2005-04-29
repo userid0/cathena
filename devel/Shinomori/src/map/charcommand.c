@@ -596,7 +596,7 @@ int charcommand_option(
 				}
 			} else {
 				if (pc_isriding(pl_sd)) { // pl_sd have the new value...
-					if (pl_sd->disguise > 0) { // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris] (code added by [Yor])
+					if (pl_sd->disguise_id > 0) { // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris] (code added by [Yor])
 						pl_sd->status.option &= ~0x0020;
 					} else {
 						if (pl_sd->status.class_ == 7)
@@ -686,8 +686,7 @@ int charcommand_save(
 int charcommand_stats_all(const int fd, struct map_session_data* sd, const char* command, const char* message)
 {
 	char output[1024], gmlevel[1024];
-	int i;
-	int count;
+	size_t i, count;
 	struct map_session_data *pl_sd;
 
 	memset(output, '\0', sizeof(output));
@@ -702,9 +701,9 @@ int charcommand_stats_all(const int fd, struct map_session_data* sd, const char*
 			else
 				sprintf(gmlevel, " ");
 
-			sprintf(output, "Name: %s | BLvl: %d | Job: %s (Lvl: %d) | HP: %d/%d | SP: %d/%d", pl_sd->status.name, pl_sd->status.base_level, job_name(pl_sd->status.class_), pl_sd->status.job_level, pl_sd->status.hp, pl_sd->status.max_hp, pl_sd->status.sp, pl_sd->status.max_sp);
+			sprintf(output, "Name: %s | BLvl: %d | Job: %s (Lvl: %d) | HP: %ld/%ld | SP: %ld/%ld", pl_sd->status.name, pl_sd->status.base_level, job_name(pl_sd->status.class_), pl_sd->status.job_level, pl_sd->status.hp, pl_sd->status.max_hp, pl_sd->status.sp, pl_sd->status.max_sp);
 			clif_displaymessage(fd, output);
-			sprintf(output, "STR: %d | AGI: %d | VIT: %d | INT: %d | DEX: %d | LUK: %d | Zeny: %d %s", pl_sd->status.str, pl_sd->status.agi, pl_sd->status.vit, pl_sd->status.int_, pl_sd->status.dex, pl_sd->status.luk, pl_sd->status.zeny, gmlevel);
+			sprintf(output, "STR: %d | AGI: %d | VIT: %d | INT: %d | DEX: %d | LUK: %d | Zeny: %ld %s", pl_sd->status.str, pl_sd->status.agi, pl_sd->status.vit, pl_sd->status.int_, pl_sd->status.dex, pl_sd->status.luk, pl_sd->status.zeny, gmlevel);
 			clif_displaymessage(fd, output);
 			clif_displaymessage(fd, "--------");
 			count++;
@@ -1031,7 +1030,8 @@ int charcommand_item(
 	int number = 0, item_id, flag;
 	struct item item_tmp;
 	struct item_data *item_data;
-	int get_count, i, pet_id;
+	int get_count, pet_id;
+	size_t i;
 	nullpo_retr(-1, sd);
 
 	memset(item_name, '\0', sizeof(item_name));
@@ -1059,7 +1059,7 @@ int charcommand_item(
 		}
 		if ((pl_sd = map_nick2sd(character)) != NULL) {
 			if (pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can look items only lower or same level
-				for (i = 0; i < number; i += get_count) {
+				for (i = 0; i < (size_t)number; i += get_count) {
 					// if pet egg
 					if (pet_id >= 0) {
 						sd->catch_target_class = pet_db[pet_id].class_;
@@ -1182,12 +1182,12 @@ int charcommand_zeny(
 {
 	struct map_session_data *pl_sd;
 	char character[100];
-	int zeny = 0, new_zeny;
+	long zeny = 0, new_zeny;
 	nullpo_retr(-1, sd);
 
 	memset(character, '\0', sizeof(character));
 
-	if (!message || !*message || sscanf(message, "%d %99[^\n]", &zeny, character) < 2 || zeny == 0) {
+	if (!message || !*message || sscanf(message, "%ld %99[^\n]", &zeny, character) < 2 || zeny == 0) {
 		clif_displaymessage(fd, "Please, enter a number and a player name (usage: #zeny <zeny> <name>).");
 		return -1;
 	}
@@ -1225,13 +1225,13 @@ int charcommand_showexp(
        const int fd, struct map_session_data* sd,
        const char* command, const char* message)
 {
-       if (sd->noexp) {
-               sd->noexp = 0;
+       if( sd->state.noexp ) {
+               sd->state.noexp = 0;
                clif_displaymessage(fd, "Gained exp is now shown");
                return 0;
        }
        else {
-               sd->noexp = 1;
+               sd->state.noexp = 1;
                clif_displaymessage(fd, "Gained exp is now NOT shown");
                return 0;
        }
@@ -1241,13 +1241,13 @@ int charcommand_showdelay(
        const int fd, struct map_session_data* sd,
        const char* command, const char* message)
 {
-       if (sd->nodelay) {
-               sd->nodelay = 0;
+       if( sd->state.nodelay ) {
+               sd->state.nodelay = 0;
                clif_displaymessage(fd, "Skill delay failure is now shown");
                return 0;
        }
        else {
-               sd->nodelay = 1;
+               sd->state.nodelay = 1;
                clif_displaymessage(fd, "Skill delay failure is NOT now shown");
                return 0;
        }

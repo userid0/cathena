@@ -30,9 +30,9 @@
 //-----------------------------------------------------
 // global variable
 //-----------------------------------------------------
-int account_id_count = START_ACCOUNT_NUM;
-int server_num;
-int new_account_flag = 0; //Set from config too XD [Sirius]
+unsigned long account_id_count = START_ACCOUNT_NUM;
+size_t server_num;
+size_t new_account_flag = 0; //Set from config too XD [Sirius]
 
 
 unsigned long  login_ip    = INADDR_ANY;
@@ -78,7 +78,7 @@ int dynamic_pass_failure_ban_how_long = 60;
 MYSQL mysql_handle;
 
 
-int login_server_port = 3306;
+unsigned short login_server_port = 3306;
 char login_server_ip[32] = "127.0.0.1";
 char login_server_id[32] = "ragnarok";
 char login_server_pw[32] = "ragnarok";
@@ -106,15 +106,14 @@ int case_sensitive = 1;
 
 #define AUTH_FIFO_SIZE 256
 struct {
-	int account_id;
-	int login_id1;
-	int login_id2;
+	unsigned long account_id;
+	unsigned long login_id1;
+	unsigned long login_id2;
 	unsigned long ip;
-	int sex;
+	unsigned char sex;
 	int delflag;
 } auth_fifo[AUTH_FIFO_SIZE];
-
-int auth_fifo_pos = 0;
+size_t auth_fifo_pos = 0;
 
 
 //-----------------------------------------------------
@@ -126,19 +125,20 @@ struct dbt *online_db = NULL;
 // Online User Database [Wizputer]
 //-----------------------------------------------------
 
-void add_online_user(int account_id) {
+void add_online_user(unsigned long account_id) {
 	int *p;
 	if(register_users_online <= 0)
 		return;
 	p = (int*)numdb_search(online_db, account_id);
-	if (p == NULL) {
-	p = (int*)aMalloc(sizeof(int));
-	*p = account_id;
-	numdb_insert(online_db, account_id, p);
-}
+	if (p == NULL)
+	{
+		p = (int*)aMalloc(sizeof(int));
+		*p = account_id;
+		numdb_insert(online_db, account_id, p);
+	}
 }
 
-int is_user_online(int account_id)
+int is_user_online(unsigned long account_id)
 {
 	int *p;
 	if(register_users_online <= 0)
@@ -152,7 +152,7 @@ int is_user_online(int account_id)
 	ShowMessage("Acccount %d\n",*p);
 	return 1;
 }
-void remove_online_user(int account_id)
+void remove_online_user(unsigned long account_id)
 {
 	int *p;
 	if(register_users_online <= 0)
@@ -164,7 +164,7 @@ void remove_online_user(int account_id)
 //-----------------------------------------------------
 // check user level
 //-----------------------------------------------------
-int isGM(int account_id) {
+int isGM(unsigned long account_id) {
 	int level;
 
 	MYSQL_RES* 	sql_res;
@@ -281,7 +281,7 @@ int mmo_auth_sqldb_new(struct mmo_account* account,const char *tmpstr, char sex)
 //-----------------------------------------------------
 // Make new account
 //-----------------------------------------------------
-int mmo_auth_new(struct mmo_account* account, char sex, char* email)
+int mmo_auth_new(struct mmo_account* account, unsigned char sex, char* email)
 {
 
 	return 0;
@@ -291,7 +291,8 @@ int mmo_auth_new(struct mmo_account* account, char sex, char* email)
 //-----------------------------------------------------
 // Auth
 //-----------------------------------------------------
-int mmo_auth( struct mmo_account* account , int fd){
+int mmo_auth( struct mmo_account* account , int fd)
+{
 	struct timeval tv;
 	time_t ban_until_time;
 	char tmpstr[256];
@@ -584,7 +585,7 @@ int charif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
 // char-server packet parse
 //-----------------------------------------------------
 int parse_fromchar(int fd){
-	int i, id;
+	size_t i, id;
 	MYSQL_RES* sql_res;
 	MYSQL_ROW  sql_row = NULL;
 
@@ -622,17 +623,17 @@ int parse_fromchar(int fd){
 		switch (RFIFOW(fd,0)) {
 		case 0x2712:
 		  {
-			int account_id;
+			unsigned long account_id;
 
 			if (RFIFOREST(fd) < 19)
 				return 0;
 
 			account_id = RFIFOL(fd,2);
 			for(i=0;i<AUTH_FIFO_SIZE;i++){
-				if (auth_fifo[i].account_id == account_id &&
-				    auth_fifo[i].login_id1 == (int)RFIFOL(fd,6) &&
+				if( auth_fifo[i].account_id == account_id &&
+				    auth_fifo[i].login_id1 == RFIFOL(fd,6) &&
 #if CMP_AUTHFIFO_LOGIN2 != 0
-				    auth_fifo[i].login_id2 == (int)RFIFOL(fd,10) && // relate to the versions higher than 18
+				    auth_fifo[i].login_id2 == RFIFOL(fd,10) && // relate to the versions higher than 18
 #endif
 				    auth_fifo[i].sex == RFIFOB(fd,14) &&
 #if CMP_AUTHFIFO_IP != 0
@@ -650,7 +651,7 @@ int parse_fromchar(int fd){
 				time_t connect_until_time = 0;
 				char email[40] = "";
 				account_id=RFIFOL(fd,2);
-				sprintf(tmpsql, "SELECT `email`,`connect_until` FROM `%s` WHERE `%s`='%d'", login_db, login_db_account_id, account_id);
+				sprintf(tmpsql, "SELECT `email`,`connect_until` FROM `%s` WHERE `%s`='%ld'", login_db, login_db_account_id, account_id);
 				if (mysql_query(&mysql_handle, tmpsql)) {
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
@@ -662,7 +663,7 @@ int parse_fromchar(int fd){
 				}
 				mysql_free_result(sql_res);
 				if (account_id > 0) {
-					sprintf(tmpsql, "SELECT `str`,`value` FROM `global_reg_value` WHERE `type`='1' AND `account_id`='%d'",account_id);
+					sprintf(tmpsql, "SELECT `str`,`value` FROM `global_reg_value` WHERE `type`='1' AND `account_id`='%ld'",account_id);
 					if (mysql_query(&mysql_handle, tmpsql)) {
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 					}
@@ -725,7 +726,7 @@ int parse_fromchar(int fd){
 			if (RFIFOREST(fd) < 6)
 				return 0;
 		  {
-			int account_id;
+			unsigned long account_id;
 			time_t connect_until_time = 0;
 			char email[40] = "";
 			account_id=RFIFOL(fd,2);
@@ -1552,7 +1553,7 @@ int login_config_read(const char *cfgName){
 			continue;
 
 		else if (strcasecmp(w1, "bind_ip") == 0) {
-			h = gethostbyname (w2);
+			h = gethostbyname(w2);
 			if (h != NULL) {
 				sprintf(ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 			} else

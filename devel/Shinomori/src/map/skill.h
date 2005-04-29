@@ -118,7 +118,7 @@ int	skill_get_unit_flag( int id );
 int	skill_tree_get_max( int id, int b_class );	// Celest
 
 // スキルの使用
-int skill_use_id( struct map_session_data *sd, int target_id,unsigned short skill_num, unsigned short skill_lv);
+int skill_use_id( struct map_session_data *sd, unsigned long target_id,unsigned short skill_num, unsigned short skill_lv);
 int skill_use_pos( struct map_session_data *sd,int skill_x, int skill_y, unsigned short skill_num, unsigned short skill_lv);
 
 int skill_castend_map( struct map_session_data *sd,int skill_num, const char *map);
@@ -164,10 +164,10 @@ int skill_check_moonlit (struct block_list *bl, int dx, int dy);
 void skill_brandishspear_first(struct square *tc,int dir,int x,int y);
 void skill_brandishspear_dir(struct square *tc,int dir,int are);
 int skill_autospell(struct map_session_data *md,int skillid);
-void skill_devotion(struct map_session_data *md,int target);
-void skill_devotion2(struct block_list *bl,int crusader);
-int skill_devotion3(struct block_list *bl,int target);
-void skill_devotion_end(struct map_session_data *md,struct map_session_data *sd,int target);
+void skill_devotion(struct map_session_data *md,unsigned long target);
+void skill_devotion2(struct block_list *bl,unsigned long crusader);
+int skill_devotion3(struct block_list *bl,unsigned long target);
+void skill_devotion_end(struct map_session_data *md,struct map_session_data *sd,unsigned long target);
 
 #define skill_calc_heal(bl,skill_lv) (( status_get_lv(bl)+status_get_int(bl) )/8 *(4+ skill_lv*8))
 

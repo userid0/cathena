@@ -278,7 +278,7 @@ char* checkpath(char *path, const char *srcpath)
 	return path;
 }
 
-void findfile(const char *p, const char *pat, void (func)(char*) )
+void findfile(const char *p, const char *pat, void (func)(const char*) )
 {	
 	WIN32_FIND_DATA FindFileData;
 	HANDLE hFind;
@@ -348,7 +348,7 @@ char* checkpath(char *path, const char*srcpath)
 }
 
 
-void findfile(const char *p, const char *pat, void (func)(char*) )
+void findfile(const char *p, const char *pat, void (func)(const char*) )
 {	
 	DIR* dir;					// pointer to the scanned directory.
 	struct dirent* entry;		// pointer to one directory entry.

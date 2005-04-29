@@ -28,11 +28,12 @@ char accreg_txt[1024] = "save/accreg.txt";
 static struct dbt *accreg_db = NULL;
 
 struct accreg {
-	int account_id, reg_num;
+	unsigned long account_id;
+	size_t reg_num;
 	struct global_reg reg[ACCOUNT_REG_NUM];
 };
 
-int party_share_level = 10;
+size_t party_share_level = 10;
 
 
 // 送信パケット長リスト
@@ -73,12 +74,12 @@ static int wis_dellist[WISDELLIST_MAX], wis_delnum;
 
 // アカウント変数を文字列へ変換
 int inter_accreg_tostr(char *str, struct accreg *reg) {
-	int j;
+	size_t j;
 	char *p = str;
 
 	p += sprintf(p, "%d\t", reg->account_id);
 	for(j = 0; j < reg->reg_num; j++) {
-		p += sprintf(p,"%s,%d ", reg->reg[j].str, reg->reg[j].value);
+		p += sprintf(p,"%s,%ld ", reg->reg[j].str, reg->reg[j].value);
 	}
 
 	return 0;
@@ -350,7 +351,7 @@ int mapif_account_reg(int fd, unsigned char *src) {
 }
 
 // アカウント変数要求返信
-int mapif_account_reg_reply(int fd,int account_id) {
+int mapif_account_reg_reply(int fd, unsigned long account_id) {
 	struct accreg *reg = (struct accreg *)numdb_search(accreg_db,account_id);
 
 	WFIFOW(fd,0) = 0x3804;
@@ -358,7 +359,8 @@ int mapif_account_reg_reply(int fd,int account_id) {
 	if (reg == NULL) {
 		WFIFOW(fd,2) = 8;
 	} else {
-		int j, p;
+		size_t j;
+		unsigned short p;
 		for(j = 0, p = 8; j < reg->reg_num; j++, p += 36) {
 			memcpy(WFIFOP(fd,p), reg->reg[j].str, 32);
 			WFIFOL(fd,p+32) = reg->reg[j].value;

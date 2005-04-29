@@ -178,7 +178,7 @@ static int pet_attack(struct pet_data *pd,unsigned long tick,int data)
 	md=(struct mob_data *)map_id2bl(pd->target_id);
 	if(md == NULL || md->bl.type != BL_MOB || pd->bl.m != md->bl.m || md->bl.prev == NULL ||
 		distance(pd->bl.x,pd->bl.y,md->bl.x,md->bl.y) > 13 || 
-		(!agit_flag && md->class_ >= 1285 && md->class_ <= 1288)) // Cannot attack Guardians outside of WoE
+		(md->class_ >= 1285 && md->class_ <= 1288)) // Cannot attack Guardians/Emperium
 	{
 		pd->target_id=0;
 		return 0;
@@ -799,7 +799,7 @@ int pet_birth_process(struct map_session_data *sd)
 	return 0;
 }
 
-int pet_recv_petdata(int account_id,struct s_pet *p,int flag)
+int pet_recv_petdata(unsigned long account_id,struct s_pet *p,int flag)
 {
 	struct map_session_data *sd;
 
@@ -907,7 +907,7 @@ int pet_catch_process2(struct map_session_data *sd,int target_id)
 	return 0;
 }
 
-int pet_get_egg(int account_id,int pet_id,int flag)
+int pet_get_egg(unsigned long account_id,unsigned long pet_id,int flag)
 {
 	struct map_session_data *sd;
 	struct item tmp_item;

@@ -208,7 +208,8 @@ enum {	// struct map_session_data ‚Ì status_change‚Ì”Ô?ƒe?ƒuƒ‹
 //<-- 193 = gloria
 
 	SC_INCDEF2			= 194,
-// <-- 201 = two hand quicken	
+	SC_INCSTR			= 195,
+// <-- 201 = two hand quicken
 };
 extern int SkillStatusChangeTable[];
 
@@ -246,8 +247,8 @@ int status_get_attack_element(struct block_list *bl);
 int status_get_attack_element2(struct block_list *bl);  //¶Žè•Ší‘®«Žæ“¾
 #define status_get_elem_type(bl)	(status_get_element(bl)%10)
 #define status_get_elem_level(bl)	(status_get_element(bl)/10/2)
-int status_get_party_id(struct block_list *bl);
-int status_get_guild_id(struct block_list *bl);
+unsigned long status_get_party_id(struct block_list *bl);
+unsigned long status_get_guild_id(struct block_list *bl);
 int status_get_race(struct block_list *bl);
 int status_get_size(struct block_list *bl);
 int status_get_mode(struct block_list *bl);

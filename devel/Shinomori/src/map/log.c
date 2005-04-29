@@ -41,8 +41,8 @@ int should_log_item(int filter, int nameid) {
 		(filter&32 && item_data->type == 5 ) ||	//armor
 		(filter&64 && item_data->type == 6 ) ||	//cards
 		(filter&128 && (item_data->type == 7 || item_data->type == 8) ) ||	//eggs+pet access
-		(filter&256 && item_data->value_buy >= log_config.price_items_log ) ||
-		(filter&512 && item_data->refine >= log_config.refine_items_log )
+		(filter&256 && item_data->value_buy >= log_config.price_items_log )
+		//|| (filter&512 && item_data->refine >= log_config.refine_items_log )
 	) return item_data->nameid;
 
 	return 0;
@@ -70,7 +70,7 @@ int log_branch(struct map_session_data *sd)
 		if((logfp=savefopen(log_config.log_branch,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d:%d]\t%s%s", timestring, sd->status.name, sd->status.account_id, sd->status.char_id, sd->mapname, RETCODE);
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%s"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, sd->mapname);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -106,7 +106,7 @@ int log_drop(struct map_session_data *sd, int monster_id, int *log_drop)
 			time_t curtime;
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d:%d]\t%d\t%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%s", timestring, sd->status.name, sd->status.account_id, sd->status.char_id, monster_id, log_drop[0], log_drop[1], log_drop[2], log_drop[3], log_drop[4], log_drop[5], log_drop[6], log_drop[7], log_drop[8], log_drop[9], RETCODE);
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d,%d,%d,%d,%d,%d,%d,%d,%d,%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, monster_id, log_drop[0], log_drop[1], log_drop[2], log_drop[3], log_drop[4], log_drop[5], log_drop[6], log_drop[7], log_drop[8], log_drop[9]);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -133,7 +133,7 @@ int log_mvpdrop(struct map_session_data *sd, int monster_id, int *log_mvp)
 		if((logfp=savefopen(log_config.log_mvpdrop,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d:%d]\t%d\t%d,%d%s", timestring, sd->status.name, sd->status.account_id, sd->status.char_id, monster_id, log_mvp[0], log_mvp[1], RETCODE);
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d,%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, monster_id, log_mvp[0], log_mvp[1]);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -165,7 +165,7 @@ int log_present(struct map_session_data *sd, int source_type, int nameid)
 		if((logfp=savefopen(log_config.log_present,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d:%d]\t%d\t%d%s", timestring, sd->status.name, sd->status.account_id, sd->status.char_id, source_type, nameid, RETCODE);
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, source_type, nameid);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -197,7 +197,7 @@ int log_produce(struct map_session_data *sd, int nameid, int slot1, int slot2, i
 		if((logfp=savefopen(log_config.log_produce,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d:%d]\t%d\t%d,%d,%d\t%d%s", timestring, sd->status.name, sd->status.account_id, sd->status.char_id, nameid, slot1, slot2, slot3, success, RETCODE);
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d,%d,%d\t%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, nameid, slot1, slot2, slot3, success);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -241,7 +241,7 @@ int log_refine(struct map_session_data *sd, int n, int success)
 		if((logfp=savefopen(log_config.log_refine,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d:%d]\t%d,%d\t%d%d%d%d\t%d,%d%s", timestring, sd->status.name, sd->status.account_id, sd->status.char_id, sd->status.inventory[n].nameid, sd->status.inventory[n].refine, log_card[0], log_card[1], log_card[2], log_card[3], success, item_level, RETCODE);
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%d,%d\t%d%d%d%d\t%d,%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, sd->status.inventory[n].nameid, sd->status.inventory[n].refine, log_card[0], log_card[1], log_card[2], log_card[3], success, item_level);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -252,63 +252,64 @@ int log_refine(struct map_session_data *sd, int n, int success)
 
 int log_tostorage(struct map_session_data *sd,int n, int guild) 
 {
-  FILE *logfp;
+	FILE *logfp;
+	nullpo_retr(0, sd);
 
-  if(log_config.enable_logs <= 0 || log_config.storage == 0 || log_config.log_storage[0] == '\0')
-    return 0;
+	if(log_config.enable_logs <= 0 || log_config.storage == 0 || log_config.log_storage[0] == '\0')
+		return 0;
+	if(sd->status.inventory[n].nameid==0 || sd->inventory_data[n] == NULL)
+		return 1;
 
-  nullpo_retr(0, sd);
-  if(sd->status.inventory[n].nameid==0 || sd->inventory_data[n] == NULL)
-    return 1;
+	if( sd->status.inventory[n].amount > MAX_AMOUNT )//sd->status.inventory[n].amount < 0 )
+		return 1;
 
-  if(sd->status.inventory[n].amount < 0)
-    return 1;
-
-  if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
-    time(&curtime);
-    strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-    fprintf(logfp,"%s - to %s: %s[%d:%d]\t%d\t%d\t%d\t%d,%d,%d,%d%s", timestring, guild ? "guild_storage": "storage", sd->status.name, sd->status.account_id, sd->status.char_id, 
-      sd->status.inventory[n].nameid,
-      sd->status.inventory[n].amount,
-      sd->status.inventory[n].refine,
-      sd->status.inventory[n].card[0],
-      sd->status.inventory[n].card[1],
-      sd->status.inventory[n].card[2],
-      sd->status.inventory[n].card[3], RETCODE);
-    fclose(logfp);
-  }
-  return 0;
+	if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
+		time(&curtime);
+		strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+		fprintf(logfp,"%s - to %s: %s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d"RETCODE, 
+			timestring, guild ? "guild_storage": "storage", 
+			sd->status.name, sd->status.account_id, sd->status.char_id, 
+			sd->status.inventory[n].nameid,
+			sd->status.inventory[n].amount,
+			sd->status.inventory[n].refine,
+			sd->status.inventory[n].card[0],
+			sd->status.inventory[n].card[1],
+			sd->status.inventory[n].card[2],
+			sd->status.inventory[n].card[3] );
+		fclose(logfp);
+	}
+	return 0;
 }
 
 int log_fromstorage(struct map_session_data *sd,int n, int guild) 
 {
-  FILE *logfp;
+	FILE *logfp;
 
-  if(log_config.enable_logs <= 0 || log_config.storage == 0 || log_config.log_storage[0] == '\0')
-    return 0;
+	nullpo_retr(0, sd);
+	if(log_config.enable_logs <= 0 || log_config.storage == 0 || log_config.log_storage[0] == '\0')
+		return 0;
+	if(sd->status.inventory[n].nameid==0 || sd->inventory_data[n] == NULL)
+		return 1;
 
-  nullpo_retr(0, sd);
-
-  if(sd->status.inventory[n].nameid==0 || sd->inventory_data[n] == NULL)
-    return 1;
-
-  if(sd->status.inventory[n].amount < 0)
-    return 1;
-
-  if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
-    time(&curtime);
-    strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-    fprintf(logfp,"%s - from %s: %s[%d:%d]\t%d\t%d\t%d\t%d,%d,%d,%d%s", timestring, guild ? "guild_storage": "storage", sd->status.name, sd->status.account_id, sd->status.char_id, 
-      sd->status.inventory[n].nameid,
-      sd->status.inventory[n].amount,
-      sd->status.inventory[n].refine,
-      sd->status.inventory[n].card[0],
-      sd->status.inventory[n].card[1],
-      sd->status.inventory[n].card[2],
-      sd->status.inventory[n].card[3], RETCODE);
-    fclose(logfp);
-  }
-  return 0;
+	if( sd->status.inventory[n].amount > MAX_AMOUNT )//sd->status.inventory[n].amount < 0 )
+		return 1;
+	
+	if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
+		time(&curtime);
+		strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+		fprintf(logfp,"%s - from %s: %s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d"RETCODE, 
+			timestring, guild ? "guild_storage": "storage", 
+			sd->status.name, sd->status.account_id, sd->status.char_id, 
+			sd->status.inventory[n].nameid,
+			sd->status.inventory[n].amount,
+			sd->status.inventory[n].refine,
+			sd->status.inventory[n].card[0],
+			sd->status.inventory[n].card[1],
+			sd->status.inventory[n].card[2],
+			sd->status.inventory[n].card[3]);
+		fclose(logfp);
+	}
+	return 0;
 }
 
 int log_trade(struct map_session_data *sd, struct map_session_data *target_sd, int n,int amount)
@@ -319,7 +320,6 @@ int log_trade(struct map_session_data *sd, struct map_session_data *target_sd, i
 #ifndef TXT_ONLY
 		char t_name[100],t_name2[100];
 #endif
-
 	if(log_config.enable_logs <= 0)
 		return 0;
 
@@ -328,7 +328,7 @@ int log_trade(struct map_session_data *sd, struct map_session_data *target_sd, i
 	if(sd->status.inventory[n].nameid==0 || amount <= 0 || sd->status.inventory[n].amount<amount || sd->inventory_data[n] == NULL)
 		return 1;
 
-	if(sd->status.inventory[n].amount < 0)
+	if( sd->status.inventory[n].amount > MAX_AMOUNT )//sd->status.inventory[n].amount < 0 )
 		return 1;
 	if(!should_log_item(log_config.trade,sd->status.inventory[n].nameid)) return 0;	//filter [Lupus]
 	log_nameid = sd->status.inventory[n].nameid;
@@ -350,7 +350,7 @@ int log_trade(struct map_session_data *sd, struct map_session_data *target_sd, i
 		if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d:%d]\t%s[%d:%d]\t%d\t%d\t%d\t%d,%d,%d,%d%s", timestring, sd->status.name, sd->status.account_id, sd->status.char_id, target_sd->status.name, target_sd->status.account_id, target_sd->status.char_id, log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], RETCODE);
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, target_sd->status.name, target_sd->status.account_id, target_sd->status.char_id, log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3]);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -374,7 +374,7 @@ int log_vend(struct map_session_data *sd,struct map_session_data *vsd,int n,int 
 
 	if(sd->status.inventory[n].nameid==0 || amount <= 0 || sd->status.inventory[n].amount<amount || sd->inventory_data[n] == NULL)
 		return 1;
-	if(sd->status.inventory[n].amount< 0)
+	if( sd->status.inventory[n].amount > MAX_AMOUNT )//sd->status.inventory[n].amount < 0 )
 		return 1;
 	if(!should_log_item(log_config.vend,sd->status.inventory[n].nameid)) return 0;	//filter [Lupus]
 	log_nameid = sd->status.inventory[n].nameid;
@@ -395,7 +395,7 @@ int log_vend(struct map_session_data *sd,struct map_session_data *vsd,int n,int 
 		if((logfp=savefopen(log_config.log_vend,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d:%d]\t%s[%d:%d]\t%d\t%d\t%d\t%d,%d,%d,%d\t%d%s", timestring, sd->status.name, sd->status.account_id, sd->status.char_id, vsd->status.name, vsd->status.account_id, vsd->status.char_id, log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], zeny, RETCODE);
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d\t%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, vsd->status.name, vsd->status.account_id, vsd->status.char_id, log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], zeny);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -426,7 +426,7 @@ int log_zeny(struct map_session_data *sd, struct map_session_data *target_sd,int
 		if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d]\t%s[%d]\t%d\t%s", timestring, sd->status.name, sd->status.account_id, target_sd->status.name, target_sd->status.account_id, sd->deal_zeny, RETCODE);
+			fprintf(logfp,"%s - %s[%ld]\t%s[%ld]\t%ld"RETCODE, timestring, sd->status.name, sd->status.account_id, target_sd->status.name, target_sd->status.account_id, sd->deal_zeny);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -440,6 +440,7 @@ int log_atcommand(struct map_session_data *sd, const char *message)
 	FILE *logfp;
 #ifndef TXT_ONLY
 		char t_name[100];
+		char t_msg[100];
 #endif
 
 	if(log_config.enable_logs <= 0)
@@ -449,7 +450,7 @@ int log_atcommand(struct map_session_data *sd, const char *message)
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`atcommand_date`, `account_id`, `char_id`, `char_name`, `map`, `command`) VALUES(NOW(), '%d', '%d', '%s', '%s', '%s') ",
-			log_config.log_gm_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), sd->mapname, message);
+			log_config.log_gm_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), sd->mapname, jstrescapecpy(t_msg, (char *)message));
 		if(mysql_query(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
@@ -457,7 +458,7 @@ int log_atcommand(struct map_session_data *sd, const char *message)
 		if((logfp=savefopen(log_config.log_gm,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d]: %s%s",timestring,sd->status.name,sd->status.account_id,message,RETCODE);
+			fprintf(logfp,"%s - %s[%ld]: %s"RETCODE,timestring,sd->status.name,sd->status.account_id,message);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -488,7 +489,7 @@ int log_npc(struct map_session_data *sd, const char *message)
 		if((logfp=savefopen(log_config.log_npc,"a+")) != NULL) {
 			time(&curtime);
 			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%d]: %s%s",timestring,sd->status.name,sd->status.account_id,message,RETCODE);
+			fprintf(logfp,"%s - %s[%ld]: %s"RETCODE,timestring,sd->status.name,sd->status.account_id,message);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -497,25 +498,32 @@ int log_npc(struct map_session_data *sd, const char *message)
 	return 0;
 }
 
+void log_set_defaults(void)
+{
+	memset(&log_config, 0, sizeof(log_config));
+
+	//LOG FILTER Default values
+	log_config.refine_items_log = 7; //log refined items, with refine >= +7
+	log_config.rare_items_log = 100; //log rare items. drop chance <= 1%
+	log_config.price_items_log = 1000; //1000z
+	log_config.amount_items_log = 100;	
+}
+
 int log_config_read(const char *cfgName)
 {
+	static int count = 0;
 	char line[1024], w1[1024], w2[1024];
 	FILE *fp;
 
-        memset(&log_config, 0, sizeof(log_config));
+	if ((count++) == 0)
+		log_set_defaults();		
 
 	if((fp = savefopen(cfgName, "r")) == NULL)
 	{
 		ShowMessage("Log configuration file not found at: %s\n", cfgName);
 		return 1;
 	}
-
-	//LOG FILTER Default values
-	log_config.refine_items_log = 7; //log refined items, with refine >= +7
-	log_config.rare_items_log = 100; //log rare items. drop chance <= 1%
-	log_config.price_items_log = 1000; //1000z
-	log_config.amount_items_log = 100;
-
+	
 	while(fgets(line, sizeof(line) -1, fp))
 	{
 		if(line[0] == '/' && line[1] == '/')

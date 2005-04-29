@@ -33,13 +33,13 @@
 
 //////////////////////////////////////////////////////////////////////////
 // system independend threadsafe strerror
-const char* strerror(int errno, char* buf, size_t size)
+const char* strerror(int err, char* buf, size_t size)
 {
 	static Mutex mx;
 	ScopeLock sl(mx);
 	if(buf)
 	{
-		char*p = ::strerror(errno);
+		char*p = ::strerror(err);
 		if(p)
 		{
 			if( strlen(p)+1 < size ) size = strlen(p)+1;

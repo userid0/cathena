@@ -9,6 +9,7 @@
 #include "malloc.h"
 #include "lock.h"
 #include "db.h"
+#include <math.h>
 
 #include "map.h"
 #include "clif.h"
@@ -304,6 +305,9 @@ int buildin_isequipped(struct script_state *st); // [celest]
 int buildin_isequippedcnt(struct script_state *st); // [celest]
 int buildin_cardscnt(struct script_state *st); // [Lupus]
 int buildin_getrefine(struct script_state *st); // [celest]
+int buildin_adopt(struct script_state *st);
+int buildin_night(struct script_state *st);
+int buildin_day(struct script_state *st);
 int buildin_getusersname(struct script_state *st); //jA commands added [Lupus]
 int buildin_dispbottom(struct script_state *st);
 int buildin_recovery(struct script_state *st);
@@ -555,11 +559,13 @@ struct {
 	{buildin_isequippedcnt,"isequippedcnt","i*"}, // check how many items/cards are being equipped [Celest]
 	{buildin_cardscnt,"cardscnt","i*"}, // check how many items/cards are being equipped in the same arm [Lupus]
 	{buildin_getrefine,"getrefine",""}, // returns the refined number of the current item, or an item with index specified [celest]
-
-	{buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
-    {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
-    {buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
-    {buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
+	{buildin_adopt,"adopt","sss"}, // allows 2 parents to adopt a child
+	{buildin_night,"night",""}, // sets the server to night time
+	{buildin_day,"day",""}, // sets the server to day time
+        {buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
+        {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
+        {buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
+        {buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
 
 	{buildin_dispbottom,"dispbottom","s"}, //added from jA [Lupus]
 	{buildin_getusersname,"getusersname","*"},
@@ -1319,7 +1325,7 @@ char* parse_script(unsigned char *src,int line)
 	ShowMessage("\n");
 #endif
 
-	return (char*)script_buf;
+	return (char *) script_buf;
 }
 
 //
@@ -1596,7 +1602,8 @@ int buildin_goto(struct script_state *st)
 	int pos;
 
 	if( st->stack->stack_data[st->start+2].type!=C_POS ){
-		ShowMessage("script: goto: not label!\n");
+		int func = st->stack->stack_data[st->start+2].u.num;
+		ShowMessage("script: goto '"CL_WHITE"%s"CL_RESET"': not label!\n", str_buf + str_data[func].str);
 		st->state=END;
 		return 0;
 	}
@@ -1616,7 +1623,7 @@ int buildin_callfunc(struct script_state *st)
 	char *scr;
 	char *str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 
-	if( (scr=(char*)strdb_search(script_get_userfunc_db(),str)) ){
+	if( (scr=(char *) strdb_search(script_get_userfunc_db(),str)) ){
 		int i,j;
 		for(i=st->start+3,j=0;i<st->end;i++,j++)
 			push_copy(st->stack,i);
@@ -2186,7 +2193,7 @@ int buildin_deletearray(struct script_state *st)
 	}
 	for(;i<(128-(num>>24));i++){
 		if( postfix!='$' ) set_reg(sd,num+(i<<24),name, 0);
-		if( postfix=='$' ) set_reg(sd,num+(i<<24),name, (void*)"");
+		if( postfix=='$' ) set_reg(sd,num+(i<<24),name, (void *) "");
 	}
 	return 0;
 }
@@ -2680,7 +2687,7 @@ int buildin_getcharid(struct script_state *st)
  *指定IDのPT名取得
  *------------------------------------------
  */
-char *buildin_getpartyname_sub(int party_id)
+char *buildin_getpartyname_sub(unsigned long party_id)
 {
 	struct party *p;
 
@@ -3122,7 +3129,10 @@ int buildin_successrefitem(struct script_state *st)
 		clif_additem(sd,i,1,0);
 		pc_equipitem(sd,i,ep);
 		clif_misceffect(&sd->bl,3);
-		if(sd->status.inventory[i].refine == 10 && sd->status.inventory[i].card[0] == 0x00ff && sd->status.inventory[i].card[2] == sd->char_id){ // Fame point system [DracoRPG]
+		if( sd->status.inventory[i].refine == 10 && 
+			sd->status.inventory[i].card[0] == 0x00ff && 
+			MakeDWord(sd->status.inventory[i].card[2],sd->status.inventory[i].card[3]) == sd->char_id )
+		{	// Fame point system [DracoRPG]
 	 		switch (sd->inventory_data[i]->wlv){
 	 	 		case 1:
 		 	  		 sd->status.fame += 1; // Success to refine to +10 a lv1 weapon you forged = +1 fame point
@@ -3334,7 +3344,7 @@ int buildin_getskilllv(struct script_state *st)
 /*==========================================
  * getgdskilllv(Guild_ID, Skill_ID);
  * skill_id = 10000 : GD_APPROVAL
- *            10001 : GD_KAFRACONTACT
+ *            10001 : GD_KAFRACONTRACT
  *            10002 : GD_GUARDIANRESEARCH
  *            10003 : GD_GUARDUP
  *            10004 : GD_EXTENSION
@@ -4193,10 +4203,10 @@ int buildin_getusers(struct script_state *st)
 int buildin_getusersname(struct script_state *st)
 {
 	struct map_session_data *pl_sd = NULL;
-	int i=0,disp_num=1;
+	size_t i=0,disp_num=1;
 	
 	for (i=0;i<fd_max;i++)
-		if(session[i] && (pl_sd=(struct map_session_data *)session[i]->session_data) && pl_sd->state.auth){
+		if(session[i] && (pl_sd=(struct map_session_data *) session[i]->session_data) && pl_sd->state.auth){
 			if( !(battle_config.hide_GM_session && pc_isGM(pl_sd)) ){
 				if((disp_num++)%10==0)
 					clif_scriptnext(script_rid2sd(st),st->oid);
@@ -4864,7 +4874,8 @@ enum
 	MF_INDOORS,			//21
 	MF_NOGO,			//22
 	MF_CLOUDS,			//23
-	MF_FIREWORKS 		//24
+	MF_FIREWORKS, 		//24
+	MF_GVG_DUNGEON		//25
 };
 
 
@@ -4930,6 +4941,9 @@ int buildin_setmapflag(struct script_state *st)
 				break;
 			case MF_GVG_NOPARTY:
 				map[m].flag.gvg_noparty=1;
+				break;
+			case MF_GVG_DUNGEON:
+				map[m].flag.gvg_dungeon=1;
 				break;
 			case MF_NOTRADE:
 				map[m].flag.notrade=1;
@@ -5019,6 +5033,9 @@ int buildin_removemapflag(struct script_state *st)
 			case MF_GVG_NOPARTY:
 				map[m].flag.gvg_noparty=0;
 				break;
+			case MF_GVG_DUNGEON:
+				map[m].flag.gvg_dungeon=0;
+				break;
 			case MF_NOZENYPENALTY:
 				map[m].flag.nozenypenalty=0;
 				break;
@@ -5069,7 +5086,8 @@ int buildin_removemapflag(struct script_state *st)
 
 int buildin_pvpon(struct script_state *st)
 {
-	int m,i;
+	size_t i;
+	short m;
 	char *str;
 	struct map_session_data *pl_sd=NULL;
 
@@ -5084,12 +5102,14 @@ int buildin_pvpon(struct script_state *st)
 			return 0;
 
 		for(i=0;i<fd_max;i++){	//人数分ループ
-			if(session[i] && (pl_sd=(struct map_session_data *)session[i]->session_data) && pl_sd->state.auth){
+			if(session[i] && (pl_sd=(struct map_session_data *) session[i]->session_data) && pl_sd->state.auth){
 				if(m == pl_sd->bl.m && pl_sd->pvp_timer == -1) {
 					pl_sd->pvp_timer=add_timer(gettick()+200,pc_calc_pvprank_timer,pl_sd->bl.id,0);
 					pl_sd->pvp_rank=0;
 					pl_sd->pvp_lastusers=0;
 					pl_sd->pvp_point=5;
+					pl_sd->pvp_won = 0;
+					pl_sd->pvp_lost = 0;
 				}
 			}
 		}
@@ -5100,7 +5120,8 @@ int buildin_pvpon(struct script_state *st)
 
 int buildin_pvpoff(struct script_state *st)
 {
-	int m,i;
+	size_t i;
+	short m;
 	char *str;
 	struct map_session_data *pl_sd=NULL;
 
@@ -5115,7 +5136,7 @@ int buildin_pvpoff(struct script_state *st)
 			return 0;
 
 		for(i=0;i<fd_max;i++){	//人数分ループ
-			if(session[i] && (pl_sd=(struct map_session_data *)session[i]->session_data) && pl_sd->state.auth){
+			if(session[i] && (pl_sd=(struct map_session_data *) session[i]->session_data) && pl_sd->state.auth){
 				if(m == pl_sd->bl.m) {
 					clif_pvpset(pl_sd,0,0,2);
 					if(pl_sd->pvp_timer != -1) {
@@ -5177,7 +5198,7 @@ int buildin_emotion(struct script_state *st)
 
 int buildin_maprespawnguildid_sub(struct block_list *bl,va_list ap)
 {
-	int g_id=va_arg(ap,int);
+	unsigned long g_id=va_arg(ap,unsigned long);
 	int flag=va_arg(ap,int);
 	struct map_session_data *sd=NULL;
 	struct mob_data *md=NULL;
@@ -6246,7 +6267,7 @@ int buildin_gmcommand(struct script_state *st)
 
 	sd = script_rid2sd(st);
 	cmd = conv_str(st,& (st->stack->stack_data[st->start+2]));
-	is_atcommand(sd->fd, sd, cmd, 99);
+        is_atcommand(sd->fd, sd, cmd, 99);
 	return 0;
 }
 
@@ -6271,10 +6292,10 @@ int buildin_dispbottom(struct script_state *st)
  */
 int buildin_recovery(struct script_state *st)
 {
-	int i = 0;
+	size_t i;
 	for (i = 0; i < fd_max; i++) {
 		if (session[i]){
-			struct map_session_data *sd = (struct map_session_data *)session[i]->session_data;
+			struct map_session_data *sd = (struct map_session_data *) session[i]->session_data;
 			if (sd && sd->state.auth) {
 				sd->status.hp = sd->status.max_hp;
 				sd->status.sp = sd->status.max_sp;
@@ -6698,133 +6719,133 @@ int buildin_getsavepoint(struct script_state *st)
 int buildin_getmapxy(struct script_state *st)
 {
 	struct map_session_data *sd=NULL;
-	struct npc_data *nd;
-	struct pet_data *pd;
+        struct npc_data *nd;
+        struct pet_data *pd;
 	int num;
 	char *name;
 	char prefix;
 	int x,y,type;
 	char *mapname=NULL;
-	
+
 	if( st->stack->stack_data[st->start+2].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapname variable\n");
-		push_val(st->stack,C_INT,-1);
-		return 0;
-	}
+                push_val(st->stack,C_INT,-1);
+                return 0;
+        }
 	if( st->stack->stack_data[st->start+3].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapx variable\n");
-		push_val(st->stack,C_INT,-1);
-		return 0;
-	}
+                push_val(st->stack,C_INT,-1);
+                return 0;
+        }
 	if( st->stack->stack_data[st->start+4].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapy variable\n");
-		push_val(st->stack,C_INT,-1);
-		return 0;
-	}
+                push_val(st->stack,C_INT,-1);
+                return 0;
+        }
 //??????????? >>>  Possible needly check function parameters on C_STR,C_INT,C_INT <<< ???????????//
 	type=conv_num(st,& (st->stack->stack_data[st->start+5]));
-	
+
 	switch(type)
 	{
-	case 0:	//Get Character Position
-		if( st->end>st->start+6 )
-			sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
-		else
-			sd=script_rid2sd(st);
+            case 0:                                             //Get Character Position
+                    if( st->end>st->start+6 )
+                        sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
+                    else
+                        sd=script_rid2sd(st);
 		if( sd==NULL )
 		{	//wrong char name or char offline
-			push_val(st->stack,C_INT,-1);
-			return 0;
-		}
-		x=sd->bl.x;
-		y=sd->bl.y;
+                        push_val(st->stack,C_INT,-1);
+                        return 0;
+                    }
+                    x=sd->bl.x;
+                    y=sd->bl.y;
 		memcpy(mapname,sd->mapname,24);//EOS included
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-		break;
-	case 1:	//Get NPC Position
-		if( st->end > st->start+6 )
-			nd=npc_name2id(conv_str(st,& (st->stack->stack_data[st->start+6])));
-		else
-			nd=(struct npc_data *)map_id2bl(st->oid);
+                    break;
+            case 1:                                             //Get NPC Position
+                    if( st->end > st->start+6 )
+                        nd=npc_name2id(conv_str(st,& (st->stack->stack_data[st->start+6])));
+                    else
+                        nd=(struct npc_data *)map_id2bl(st->oid);
 		if( nd==NULL )
 		{	//wrong npc name or char offline
-			push_val(st->stack,C_INT,-1);
-			return 0;
-		}
-		x=nd->bl.x;
-		y=nd->bl.y;
+                        push_val(st->stack,C_INT,-1);
+                        return 0;
+                    }
+                    x=nd->bl.x;
+                    y=nd->bl.y;
 		mapname=map[nd->bl.m].mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-		break;
-	case 2:	//Get Pet Position
-		if( st->end>st->start+6 )
-			sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
-		else
-			sd=script_rid2sd(st);
+                    break;
+            case 2:                                             //Get Pet Position
+                    if( st->end>st->start+6 )
+                        sd=map_nick2sd(conv_str(st,& (st->stack->stack_data[st->start+6])));
+                    else
+                        sd=script_rid2sd(st);
 		if( sd==NULL )
 		{	//wrong char name or char offline
-			push_val(st->stack,C_INT,-1);
-			return 0;
-		}
-		pd=sd->pd;
+                        push_val(st->stack,C_INT,-1);
+                        return 0;
+                    }
+                    pd=sd->pd;
 		if(pd==NULL)
 		{	//ped data not found
-			push_val(st->stack,C_INT,-1);
-			return 0;
-		}
-		x=pd->bl.x;
-		y=pd->bl.y;
+                        push_val(st->stack,C_INT,-1);
+                        return 0;
+                    }
+                    x=pd->bl.x;
+                    y=pd->bl.y;
 		mapname=map[pd->bl.m].mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-		break;
-	case 3:	//Get Mob Position
-		push_val(st->stack,C_INT,-1);
-		return 0;
-	default:	//Wrong type parameter
-		push_val(st->stack,C_INT,-1);
-		return 0;
+                    break;
+            case 3:                                             //Get Mob Position
+                        push_val(st->stack,C_INT,-1);
+                        return 0;
+            default:                                            //Wrong type parameter
+                        push_val(st->stack,C_INT,-1);
+                        return 0;
 	}//end switch
-	
-	//Set MapName$
-	num=st->stack->stack_data[st->start+2].u.num;
-	name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-	prefix=*name;
-	
-	if( prefix!='$' )
-		sd=script_rid2sd(st);
-	else
-		sd=NULL;
+
+     //Set MapName$
+        num=st->stack->stack_data[st->start+2].u.num;
+        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+        prefix=*name;
+
+        if( prefix!='$' )
+            sd=script_rid2sd(st);
+        else
+            sd=NULL;
 	set_reg(sd,num,name,mapname);
 
-	
-	//Set MapX
-	num=st->stack->stack_data[st->start+3].u.num;
-	name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-	prefix=*name;
-	
-	if( prefix!='$' )
-		sd=script_rid2sd(st);
-	else
-		sd=NULL;
-	set_reg(sd,num,name,(void*)x);
-	
-	//Set MapY
-	num=st->stack->stack_data[st->start+4].u.num;
-	name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-	prefix=*name;
-	
-	if( prefix!='$' )
-		sd=script_rid2sd(st);
-	else
-		sd=NULL;
-	set_reg(sd,num,name,(void*)y);
-	
-	//Return Success value
-	push_val(st->stack,C_INT,0);
-	return 0;
+
+     //Set MapX
+        num=st->stack->stack_data[st->start+3].u.num;
+        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+        prefix=*name;
+
+        if( prefix!='$' )
+            sd=script_rid2sd(st);
+        else
+            sd=NULL;
+        set_reg(sd,num,name,(void*)x);
+
+     //Set MapY
+        num=st->stack->stack_data[st->start+4].u.num;
+        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+        prefix=*name;
+
+        if( prefix!='$' )
+            sd=script_rid2sd(st);
+        else
+            sd=NULL;
+        set_reg(sd,num,name,(void*)y);
+
+     //Return Success value
+        push_val(st->stack,C_INT,0);
+        return 0;
 }
 
 /*=====================================================
@@ -6900,6 +6921,10 @@ int buildin_summon(struct script_state *st)
 	return 0;
 }
 
+/*==========================================
+ * Checks whether it is daytime/nighttime
+ *------------------------------------------
+ */
 int buildin_isnight(struct script_state *st)
 {
 	push_val(st->stack,C_INT, (night_flag == 1));
@@ -6917,6 +6942,8 @@ int buildin_isday(struct script_state *st)
  * equipped - used for 2/15's cards patch [celest]
  *------------------------------------------------
  */
+// leave this here, just in case
+#if 0
 int buildin_isequipped(struct script_state *st)
 {
 	struct map_session_data *sd;
@@ -6973,6 +7000,7 @@ int buildin_isequipped(struct script_state *st)
 	push_val(st->stack,C_INT,ret);
 	return 0;
 }
+#endif
 
 /*================================================
  * Check how many items/cards in the list are
@@ -7022,6 +7050,99 @@ int buildin_isequippedcnt(struct script_state *st)
 				}				
 			}
 		}
+	}
+	push_val(st->stack,C_INT,ret);
+	return 0;
+}
+
+/*================================================
+ * Check whether another card has been
+ * equipped - used for 2/15's cards patch [celest]
+ * -- Items checked cannot be reused in another
+ * card set to prevent exploits
+ *------------------------------------------------
+ */
+int buildin_isequipped(struct script_state *st)
+{
+	struct map_session_data *sd;
+	int i, j, k, id = 1;
+	int ret = -1;
+
+	sd = script_rid2sd(st);
+	
+	for (i=0; id!=0; i++)
+	{
+		int flag = 0;
+
+		if(st->end>st->start+(i+2)) \
+			id=conv_num(st,&(st->stack->stack_data[st->start+(i+2)]));
+		else
+			id = 0;
+
+		if (id <= 0)
+			continue;
+		
+		for (j=0; j<10; j++) {
+			int index, type;
+			index = sd->equip_index[j];
+			if(index < 0) continue;
+			if(j == 9 && sd->equip_index[8] == index) continue;
+			if(j == 5 && sd->equip_index[4] == index) continue;
+			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+			type = itemdb_type(id);
+			
+			if(sd->inventory_data[index]) {
+				if (type == 4 || type == 5) {					
+					if (sd->inventory_data[index]->nameid == id)
+						flag = 1;
+				} else if (type == 6) {
+					// Item Hash format:
+					// 1111 1111 1111 1111 1111 1111 1111 1111
+					// [ left  ] [ right ] [ NA ] [  armor  ]
+					for (k = 0; k < sd->inventory_data[index]->slot; k++) {
+						// --- Calculate hash for current card ---
+						// Defense equipment
+						// They *usually* have only 1 slot, so we just assign 1 bit
+						int hash = 0;
+						if (sd->inventory_data[index]->type == 5) {
+							hash = sd->inventory_data[index]->equip;
+						}
+						// Weapons
+						// right hand: slot 1 - 0x10000 ... slot 4 - 0x80000
+						// left hand: slot 1 - 0x1000000 ... slot 4 - 0x8000000
+						// We can support up to 8 slots each, just in case
+						else if (sd->inventory_data[index]->type == 4) {
+							if (sd->inventory_data[index]->equip & 2)	// right hand
+								hash = 0x10000 * (int)pow(2,k);	// x slot number
+							else if (sd->inventory_data[index]->equip & 32)	// left hand
+								hash = 0x1000000 * (int)pow(2,k);	// x slot number
+						} else
+							continue;	// slotted item not armour nor weapon? we're not going to support it
+
+						if (sd->setitem_hash & hash)	// check if card is already used by another set
+							continue;	// this item is used, move on to next card
+
+						if (sd->status.inventory[index].card[0] != 0x00ff &&
+							sd->status.inventory[index].card[0] != 0x00fe &&
+							sd->status.inventory[index].card[0] != (short)0xff00 &&
+							sd->status.inventory[index].card[k] == id)
+						{
+							// We have found a match
+							flag = 1;
+							// Set hash so this card cannot be used by another
+							sd->setitem_hash |= hash;
+							break;
+						}
+					}
+				}
+				if (flag) break;
+			}
+		}
+		if (ret == -1)
+			ret = flag;
+		else
+			ret &= flag;
+		if (!ret) break;
 	}
 	
 	push_val(st->stack,C_INT,ret);
@@ -7086,6 +7207,48 @@ int buildin_getrefine(struct script_state *st)
 	struct map_session_data *sd;
 	if ((sd = script_rid2sd(st))!= NULL)
 		push_val(st->stack, C_INT, sd->status.inventory[current_equip_item_index].refine);
+	return 0;
+}
+
+/*=======================================================
+ * Allows 2 Parents to adopt a character as a Baby
+ *-------------------------------------------------------
+ */
+int buildin_adopt(struct script_state *st)
+{
+	int ret;
+	
+	char *parent1 = conv_str(st,& (st->stack->stack_data[st->start+2]));
+	char *parent2 = conv_str(st,& (st->stack->stack_data[st->start+3]));
+	char *child = conv_str(st,& (st->stack->stack_data[st->start+4]));
+
+	struct map_session_data *p1_sd = map_nick2sd(parent1);
+	struct map_session_data *p2_sd = map_nick2sd(parent2);
+	struct map_session_data *c_sd = map_nick2sd(child);
+
+	if (!p1_sd || !p2_sd || !c_sd ||
+		p1_sd->status.base_level < 70 ||
+		p2_sd->status.base_level < 70)
+		return -1;
+
+	ret = pc_adoption(p1_sd, p2_sd, c_sd);
+	push_val(st->stack, C_INT, ret);
+
+	return 0;
+}
+
+/*=======================================================
+ * Day/Night controls
+ *-------------------------------------------------------
+ */
+int buildin_night(struct script_state *st)
+{
+	if (night_flag != 1) map_night_timer(night_timer_tid, 0, 0, 1);
+	return 0;
+}
+int buildin_day(struct script_state *st)
+{
+	if (night_flag != 0) map_day_timer(day_timer_tid, 0, 0, 1);
 	return 0;
 }
 
@@ -7376,7 +7539,8 @@ int run_func(struct script_state *st)
 
 	func=st->stack->stack_data[st->start].u.num;
 	if( st->stack->stack_data[st->start].type!=C_NAME || str_data[func].type!=C_FUNC ){
-		ShowMessage("run_func: not function and command! \n");
+		ShowMessage ("run_func: '"CL_WHITE"%s"CL_RESET"' (type %d) is not function and command!\n",
+				str_buf + str_data[func].str, str_data[func].type);
 //		st->stack->sp=0;
 		st->state=END;
 		return 0;
@@ -7456,7 +7620,7 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 
 	rerun_pos=st->pos;
 	for(st->state=0;st->state==0;){
-		switch(c=get_com((unsigned char*)script,&st->pos)){
+		switch(c= get_com((unsigned char *) script,&st->pos)){
 		case C_EOL:
 			if(stack->sp!=st->defsp){
 				if(battle_config.error_log)
@@ -7466,7 +7630,7 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 			rerun_pos=st->pos;
 			break;
 		case C_INT:
-			push_val(stack,C_INT,get_num((unsigned char*)script,&st->pos));
+			push_val(stack,C_INT,get_num((unsigned char *) script,&st->pos));
 			break;
 		case C_POS:
 		case C_NAME:
@@ -7644,7 +7808,7 @@ int mapreg_setregstr(int num,const char *str)
 {
 	char *p;
 
-	if( (p=(char*)numdb_search(mapregstr_db,num))!=NULL )
+	if( (p=(char *) numdb_search(mapregstr_db,num))!=NULL )
 		aFree(p);
 
 	if( str==NULL || *str==0 ){

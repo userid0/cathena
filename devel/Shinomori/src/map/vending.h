@@ -5,8 +5,8 @@
 #include "map.h"
 
 void vending_closevending(struct map_session_data *sd);
-void vending_openvending(struct map_session_data *sd,int len,char *message,int flag,unsigned char *p);
-void vending_vendinglistreq(struct map_session_data *sd,int id);
-void vending_purchasereq(struct map_session_data *sd,int len,int id,unsigned char *p);
+void vending_openvending(struct map_session_data *sd,unsigned short len,char *message,int flag,unsigned char *p);
+void vending_vendinglistreq(struct map_session_data *sd,unsigned long id);
+void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned long id,unsigned char *p);
 
 #endif	// _VENDING_H_

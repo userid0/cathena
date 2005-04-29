@@ -353,7 +353,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 
 	nullpo_retr(0, sd);
 
-	//?生や養子の場合の元の職業を算出する
+	//Calculate Common Class and Baby/High/Common flags
 	s_class = pc_calc_base_job(sd->status.class_);
 
 	b_speed = sd->speed;
@@ -514,7 +514,9 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	sd->speed_add_rate = sd->aspd_add_rate = 100;
 	sd->double_add_rate = sd->perfect_hit_add = sd->get_zeny_add_num = 0;
 	sd->splash_range = sd->splash_add_range = 0;
-	sd->autospell_id = sd->autospell_lv = sd->autospell_rate = 0;
+	memset(sd->autospell_id,0,sizeof(sd->autospell_id));
+	memset(sd->autospell_lv,0,sizeof(sd->autospell_lv));
+	memset(sd->autospell_rate,0,sizeof(sd->autospell_rate));
 	sd->hp_drain_rate = sd->hp_drain_per = sd->sp_drain_rate = sd->sp_drain_per = 0;
 	sd->hp_drain_rate_ = sd->hp_drain_per_ = sd->sp_drain_rate_ = sd->sp_drain_per_ = 0;
 	sd->short_weapon_damage_return = sd->long_weapon_damage_return = 0;
@@ -528,7 +530,9 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	sd->crit_atk_rate = 0;
 	sd->no_regen = 0;
 	sd->unstripable_equip = 0;
-	sd->autospell2_id = sd->autospell2_lv = sd->autospell2_rate = 0;
+	memset(sd->autospell2_id,0,sizeof(sd->autospell2_id));
+	memset(sd->autospell2_lv,0,sizeof(sd->autospell2_lv));
+	memset(sd->autospell2_rate,0,sizeof(sd->autospell2_rate));
 	memset(sd->critaddrace,0,sizeof(sd->critaddrace));
 	memset(sd->addeff3,0,sizeof(sd->addeff3));
 	memset(sd->addeff3_type,0,sizeof(sd->addeff3_type));
@@ -551,6 +555,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	sd->sp_gain_value = 0;
 	sd->ignore_def_mob = sd->ignore_def_mob_ = 0;
 	sd->hp_loss_rate = sd->hp_loss_value = sd->hp_loss_type = 0;
+	sd->sp_loss_rate = sd->sp_loss_value = 0;
 	memset(sd->addrace2,0,sizeof(sd->addrace2));
 	memset(sd->addrace2_,0,sizeof(sd->addrace2_));
 	sd->hp_gain_value = sd->sp_drain_type = 0;
@@ -560,22 +565,12 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	memset(sd->subrace2,0,sizeof(sd->subrace2));
 	memset(sd->expaddrace,0,sizeof(sd->expaddrace));
 	memset(sd->sp_gain_race,0,sizeof(sd->sp_gain_race));
-
-	if(!sd->disguiseflag && sd->disguise) {
-		sd->disguise=0;
-		clif_changelook(&sd->bl,LOOK_WEAPON,sd->status.weapon);
-		clif_changelook(&sd->bl,LOOK_SHIELD,sd->status.shield);
-		clif_changelook(&sd->bl,LOOK_HEAD_BOTTOM,sd->status.head_bottom);
-		clif_changelook(&sd->bl,LOOK_HEAD_TOP,sd->status.head_top);
-		clif_changelook(&sd->bl,LOOK_HEAD_MID,sd->status.head_mid);
-		clif_clearchar(&sd->bl, 9);
-		pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
-	}
+	sd->setitem_hash = 0;
 
 	if (sd->status.guild_id > 0) {
 		struct guild *g = guild_search(sd->status.guild_id);
 		if (g && strcmp(sd->status.name,g->master)==0)
-			sd->gmaster_flag = (int)g;
+			sd->gmaster_flag = g;
 	}
 
 	for(i=0;i<10;i++) {
@@ -625,7 +620,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 			if(sd->status.pet_id > 0 && sd->petDB && sd->pet.intimate > 0 &&
 				pd->state.skillbonus == 1) {
 				pc_bonus(sd,pd->skillbonustype,pd->skillbonusval);
-//				run_script(sd->petDB->script,0,sd->bl.id,0);
+				run_script(sd->petDB->script,0,sd->bl.id,0);
 			}
 			pele = sd->atk_ele;
 			pdef_ele = sd->def_ele;
@@ -760,7 +755,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	}
 
 	// ステ?タス?化による基本パラメ?タ補正
-//!!	if(sd->sc_count)
+
 	{
 		if(sd->sc_data[SC_INCALLSTATUS].timer!=-1){
 			sd->paramb[0]+= sd->sc_data[SC_INCALLSTATUS].val1;
@@ -770,6 +765,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 			sd->paramb[4]+= sd->sc_data[SC_INCALLSTATUS].val1;
 			sd->paramb[5]+= sd->sc_data[SC_INCALLSTATUS].val1;
 		}
+		if(sd->sc_data[SC_INCSTR].timer!=-1)
+			sd->paramb[0] += sd->sc_data[SC_INCSTR].val1;
 		if(sd->sc_data[SC_CONCENTRATE].timer!=-1 && sd->sc_data[SC_QUAGMIRE].timer == -1){	// 集中力向上
 			sd->paramb[1]+= (sd->status.agi+sd->paramb[1]+sd->parame[1]-sd->paramcard[1])*(2+sd->sc_data[SC_CONCENTRATE].val1)/100;
 			sd->paramb[4]+= (sd->status.dex+sd->paramb[4]+sd->parame[4]-sd->paramcard[4])*(2+sd->sc_data[SC_CONCENTRATE].val1)/100;
@@ -786,11 +783,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 			sd->critical_rate += 100; // critical increases
 			sd->speed = sd->speed * (sd->sc_data[SC_CLOAKING].val3-sd->sc_data[SC_CLOAKING].val1*3) /100;
 		}
-		if(sd->sc_data[SC_CHASEWALK].timer!=-1) {
+		if(sd->sc_data[SC_CHASEWALK].timer!=-1)
 			sd->speed = sd->speed * sd->sc_data[SC_CHASEWALK].val3 /100; // slow down by chasewalk
-			if(sd->sc_data[SC_CHASEWALK].val4)
-				sd->paramb[0] += (1<<(sd->sc_data[SC_CHASEWALK].val1-1)); // increases strength after 10 seconds
-		}
 		if(sd->sc_data[SC_SLOWDOWN].timer!=-1)
 			sd->speed = sd->speed*150/100;
 		if(sd->sc_data[SC_SPEEDUP0].timer!=-1 && sd->sc_data[SC_INCREASEAGI].timer==-1)
@@ -805,10 +799,6 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		if(sd->sc_data[SC_LOUD].timer!=-1)	// ラウドボイス
 			sd->paramb[0]+= 4;
 		if(sd->sc_data[SC_QUAGMIRE].timer!=-1){	// クァグマイア
-			//int agib = (sd->status.agi+sd->paramb[1]+sd->parame[1])*(sd->sc_data[SC_QUAGMIRE].val1*10)/100;
-			//int dexb = (sd->status.dex+sd->paramb[4]+sd->parame[4])*(sd->sc_data[SC_QUAGMIRE].val1*10)/100;
-			//sd->paramb[1]-= agib > 50 ? 50 : agib;
-			//sd->paramb[4]-= dexb > 50 ? 50 : dexb;
 			sd->paramb[1]-= sd->sc_data[SC_QUAGMIRE].val1*5;
 			sd->paramb[4]-= sd->sc_data[SC_QUAGMIRE].val1*5;
 			sd->speed = sd->speed*3/2;
@@ -872,14 +862,14 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		}
 	}
 
-	//1度も死んでないJob70スパノビに+10
+	// If Super Novice / Super Baby Never Died till Job70 they get bonus: AllStats +10
 	if(s_class.job == 23 && sd->die_counter == 0 && sd->status.job_level >= 70){
-		sd->paramb[0]+= 15;
-		sd->paramb[1]+= 15;
-		sd->paramb[2]+= 15;
-		sd->paramb[3]+= 15;
-		sd->paramb[4]+= 15;
-		sd->paramb[5]+= 15;
+		sd->paramb[0]+= 10;
+		sd->paramb[1]+= 10;
+		sd->paramb[2]+= 10;
+		sd->paramb[3]+= 10;
+		sd->paramb[4]+= 10;
+		sd->paramb[5]+= 10;
 	}
 	sd->paramc[0]=sd->status.str+sd->paramb[0]+sd->parame[0];
 	sd->paramc[1]=sd->status.agi+sd->paramb[1]+sd->parame[1];
@@ -890,7 +880,6 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	for(i=0;i<6;i++)
 		if(sd->paramc[i] < 0) sd->paramc[i] = 0;
 
-//!!	if (sd->sc_count) 
 	{
 		if (sd->sc_data[SC_CURSE].timer!=-1)
 			sd->paramc[5] = 0;
@@ -915,8 +904,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	}
 	sd->hit += sd->paramc[4] + sd->status.base_level;
 	sd->flee += sd->paramc[1] + sd->status.base_level;
-	sd->def2 += sd->paramc[2];
-	sd->mdef2 += sd->paramc[3];
+	sd->def2 += (unsigned short)sd->paramc[2];
+	sd->mdef2 += (unsigned short)sd->paramc[3];
 	sd->flee2 += sd->paramc[5]+10;
 	sd->critical += (sd->paramc[5]*3)+10;
 
@@ -936,13 +925,13 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	if(sd->flee2 < 10) sd->flee2 = 10;
 	if(sd->def_rate != 100)
 		sd->def = (sd->def*sd->def_rate)/100;
-	if(sd->def < 0) sd->def = 0;
+//	if(sd->def < 0) sd->def = 0;
 	if(sd->def2_rate != 100)
 		sd->def2 = (sd->def2*sd->def2_rate)/100;
 	if(sd->def2 < 1) sd->def2 = 1;
 	if(sd->mdef_rate != 100)
 		sd->mdef = (sd->mdef*sd->mdef_rate)/100;
-	if(sd->mdef < 0) sd->mdef = 0;
+//	if(sd->mdef < 0) sd->mdef = 0;
 	if(sd->mdef2_rate != 100)
 		sd->mdef2 = (sd->mdef2*sd->mdef2_rate)/100;
 	if(sd->mdef2 < 1) sd->mdef2 = 1;
@@ -997,9 +986,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	else if (s_class.upper==2)
 		sd->status.max_hp = sd->status.max_hp * 70/100;
 
-//	if(sd->sc_count) 
 		{
-			if (sd->sc_data[SC_INCMHP2].timer!=-1)
+			if(sd->sc_data[SC_INCMHP2].timer!=-1)
 			sd->status.max_hp *= (100 + sd->sc_data[SC_INCMHP2].val1)/100;
 		if (sd->sc_data[SC_BERSERK].timer!=-1){	// バ?サ?ク
 			sd->status.max_hp = sd->status.max_hp * 3;			
@@ -1067,10 +1055,6 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		sd->nhealsp += (sd->nhealsp)*3*skill/100;
 		if(sd->nhealsp > 0x7fff) sd->nhealsp = 0x7fff;
 	}
-	/* if((skill=pc_checkskill(sd,HP_MEDITATIO)) > 0) {
-		sd->nhealsp += 3*skill*(sd->status.max_sp)/100;
-		if(sd->nhealsp > 0x7fff) sd->nhealsp = 0x7fff;
-		} Increase natural SP regen instead of colossal SP Recovery effect [DracoRPG]*/
 
 	if(sd->hprecov_rate != 100) {
 		sd->nhealhp = sd->nhealhp*sd->hprecov_rate/100;
@@ -1102,16 +1086,15 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	if( (skill=pc_checkskill(sd,MO_DODGE))>0 )	// 見切り
 		sd->flee += (skill*3)>>1;
 
-//	if (sd->sc_count) 
 	{
 		if( sd->sc_data[SC_INCFLEE].timer!=-1 )
-			sd->flee += sd->sc_data[SC_INCFLEE].val1;
+			sd->flee += (unsigned short)sd->sc_data[SC_INCFLEE].val1;
 		if( sd->sc_data[SC_INCFLEE2].timer!=-1 )
-			sd->flee += sd->sc_data[SC_INCFLEE2].val1;
+			sd->flee += (unsigned short)sd->sc_data[SC_INCFLEE2].val1;
 	}
 
 	// スキルやステ?タス異常による?りのパラメ?タ補正
-//!!	if(sd->sc_count)
+
 	{
 		// ATK/DEF?化形
 		if(sd->sc_data[SC_ANGELUS].timer!=-1)	// エンジェラス
@@ -1131,7 +1114,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 				sd->watk_ = sd->watk_*(100+2*sd->sc_data[SC_PROVOKE].val1)/100;
 		}
 		if(sd->sc_data[SC_ENDURE].timer!=-1)
-			sd->mdef2 += sd->sc_data[SC_ENDURE].val1;
+			sd->mdef2 += (unsigned short)sd->sc_data[SC_ENDURE].val1;
 		if(sd->sc_data[SC_MINDBREAKER].timer!=-1){	// プロボック
 			sd->mdef2 = sd->mdef2*(100-6*sd->sc_data[SC_MINDBREAKER].val1)/100;
 			sd->matk1 = sd->matk1*(100+2*sd->sc_data[SC_MINDBREAKER].val1)/100;
@@ -1151,29 +1134,23 @@ int status_calc_pc(struct map_session_data* sd,int first)
 				sd->watk_ = sd->watk_*75/100;
 		}
 		if(sd->sc_data[SC_DRUMBATTLE].timer!=-1){	// ?太鼓の響き
-			sd->watk += sd->sc_data[SC_DRUMBATTLE].val2;
-			sd->def  += sd->sc_data[SC_DRUMBATTLE].val3;
+			sd->watk += (unsigned short)sd->sc_data[SC_DRUMBATTLE].val2;
+			sd->def  += (unsigned short)sd->sc_data[SC_DRUMBATTLE].val3;
 			index = sd->equip_index[8];
 			if(index >= 0 && sd->inventory_data[index] && sd->inventory_data[index]->type == 4)
 				sd->watk_ += sd->sc_data[SC_DRUMBATTLE].val2;
 		}
 		if(sd->sc_data[SC_NIBELUNGEN].timer!=-1) {	// ニ?ベルングの指輪
 			index = sd->equip_index[9];
-			/*if(index >= 0 && sd->inventory_data[index] && sd->inventory_data[index]->wlv == 3)
-				sd->watk += sd->sc_data[SC_NIBELUNGEN].val3;
-			index = sd->equip_index[8];
-			if(index >= 0 && sd->inventory_data[index] && sd->inventory_data[index]->wlv == 3)
-				sd->watk_ += sd->sc_data[SC_NIBELUNGEN].val3;
-			index = sd->equip_index[9];*/
 			if(index >= 0 && sd->inventory_data[index] && sd->inventory_data[index]->wlv == 4)
-				sd->watk2 += sd->sc_data[SC_NIBELUNGEN].val3;
+				sd->watk2 += (unsigned short)sd->sc_data[SC_NIBELUNGEN].val3;
 			index = sd->equip_index[8];
 			if(index >= 0 && sd->inventory_data[index] && sd->inventory_data[index]->wlv == 4)
 				sd->watk_2 += sd->sc_data[SC_NIBELUNGEN].val3;
 		}
 
 		if(sd->sc_data[SC_VOLCANO].timer!=-1 && sd->def_ele==3){	// ボルケ?ノ
-			sd->watk += sd->sc_data[SC_VOLCANO].val3;
+			sd->watk += (unsigned short)sd->sc_data[SC_VOLCANO].val3;
 		}
 		if(sd->sc_data[SC_INCATK2].timer!=-1) {
 			sd->watk *= (100+sd->sc_data[SC_INCATK2].val1)/100;
@@ -1196,10 +1173,10 @@ int status_calc_pc(struct map_session_data* sd,int first)
 			sd->matk2 = sd->matk2*(100+5*sd->sc_data[SC_MAGICPOWER].val1)/100;
 		}
 		if(sd->sc_data[SC_ATKPOT].timer!=-1)
-			sd->watk += sd->sc_data[SC_ATKPOT].val1;
+			sd->watk += (unsigned short)sd->sc_data[SC_ATKPOT].val1;
 		if(sd->sc_data[SC_MATKPOT].timer!=-1){
-			sd->matk1 += sd->sc_data[SC_MATKPOT].val1;
-			sd->matk2 += sd->sc_data[SC_MATKPOT].val1;
+			sd->matk1 += (unsigned short)sd->sc_data[SC_MATKPOT].val1;
+			sd->matk2 += (unsigned short)sd->sc_data[SC_MATKPOT].val1;
 		}
 
 		// ASPD/移動速度?化系
@@ -1228,6 +1205,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 			sd->sc_data[i=SC_SPEEDPOTION1].timer!=-1 ||
 			sd->sc_data[i=SC_SPEEDPOTION0].timer!=-1)	// ? 速ポ?ション
 			aspd_rate -= sd->sc_data[i].val2;
+		if(sd->sc_data[SC_GRAVITATION].timer!=-1)
+			aspd_rate += sd->sc_data[SC_GRAVITATION].val2;
 		if(sd->sc_data[SC_WINDWALK].timer!=-1 && sd->sc_data[SC_INCREASEAGI].timer==-1)	//ウィンドウォ?ク暫ﾍLv*2%減算
 			sd->speed -= sd->speed *(sd->sc_data[SC_WINDWALK].val1*2)/100;
 		if(sd->sc_data[SC_CARTBOOST].timer!=-1)	// カ?トブ?スト
@@ -1258,13 +1237,13 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		if(sd->sc_data[SC_SPIDERWEB].timer!=-1) //スパイダ?ウェブ
 			sd->flee -= sd->flee*50/100;
 		if(sd->sc_data[SC_TRUESIGHT].timer!=-1) //トゥル?サイト
-			sd->hit += 3*(sd->sc_data[SC_TRUESIGHT].val1);
+			sd->hit += 3*((unsigned short)sd->sc_data[SC_TRUESIGHT].val1);
 		if(sd->sc_data[SC_CONCENTRATION].timer!=-1) //コンセントレ?ション
-			sd->hit += (10*(sd->sc_data[SC_CONCENTRATION].val1));
+			sd->hit += (10*((unsigned short)sd->sc_data[SC_CONCENTRATION].val1));
 		if(sd->sc_data[SC_INCHIT].timer!=-1)
-			sd->hit += sd->sc_data[SC_INCHIT].val1;
+			sd->hit += (unsigned short)sd->sc_data[SC_INCHIT].val1;
 		if(sd->sc_data[SC_INCHIT2].timer!=-1)
-			sd->hit *= (100+sd->sc_data[SC_INCHIT2].val1)/100;
+			sd->hit *= (100+(unsigned short)sd->sc_data[SC_INCHIT2].val1)/100;
 
 		// 耐性
 		if(sd->sc_data[SC_SIEGFRIED].timer!=-1){  // 不死身のジ?クフリ?ド
@@ -1350,17 +1329,11 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		if(sd->sc_data[SC_TRUESIGHT].timer!=-1) //トゥル?サイト
 			sd->critical += sd->critical*(sd->sc_data[SC_TRUESIGHT].val1)/100;
 
-/*		if(sd->sc_data[SC_VOLCANO].timer!=-1)	// エンチャントポイズン(?性はbattle.cで)
-			sd->addeff[2]+=sd->sc_data[SC_VOLCANO].val2;//% of granting
-		if(sd->sc_data[SC_DELUGE].timer!=-1)	// エンチャントポイズン(?性はbattle.cで)
-			sd->addeff[0]+=sd->sc_data[SC_DELUGE].val2;//% of granting
-		*/
 		if(sd->sc_data[SC_BERSERK].timer!=-1) {	//All Def/MDef reduced to 0 while in Berserk [DracoRPG]
 			sd->def = sd->def2 = 0;
 			sd->mdef = sd->mdef2 = 0;
 			sd->flee -= sd->flee*50/100;
 			aspd_rate -= 30;
-			//sd->base_atk *= 3;
 		}
 		if(sd->sc_data[SC_INCDEF2].timer!=-1) {
 			sd->def *= (100+sd->sc_data[SC_INCDEF2].val1)/100;
@@ -1449,10 +1422,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 				sd->flee += 10;
 			}
 		}
-		if (sd->sc_data[SC_GRAVITATION].timer != -1) {
-			sd->speed_rate += sd->sc_data[SC_GRAVITATION].val2;
-	}
-	}
+		}
 
 	if (sd->speed_rate <= 0)
 		sd->speed_rate = 1;
@@ -1507,9 +1477,9 @@ int status_calc_pc(struct map_session_data* sd,int first)
 
 	if(b_speed != sd->speed)
 		clif_updatestatus(sd,SP_SPEED);
-	if(b_weight != sd->weight)
+	if(b_weight != (int)sd->weight)
 		clif_updatestatus(sd,SP_WEIGHT);
-	if(b_max_weight != sd->max_weight) {
+	if(b_max_weight != (int)sd->max_weight) {
 		clif_updatestatus(sd,SP_MAXWEIGHT);
 		pc_checkweighticon(sd);
 	}
@@ -1582,7 +1552,6 @@ int status_calc_speed (struct map_session_data *sd)
 	b_speed = sd->speed;
 	sd->speed = DEFAULT_WALK_SPEED ;
 
-//!!	if(sd->sc_count)
 	{
 		if(sd->sc_data[SC_INCREASEAGI].timer!=-1 && sd->sc_data[SC_QUAGMIRE].timer == -1 && sd->sc_data[SC_DONTFORGETME].timer == -1){	// 速度?加
 			sd->speed -= sd->speed *25/100;
@@ -1632,8 +1601,6 @@ int status_calc_speed (struct map_session_data *sd)
 			sd->speed = sd->speed*150/100;
 		if(sd->sc_data[SC_SPEEDUP0].timer!=-1)
 			sd->speed -= sd->speed*25/100;
-		if (sd->sc_data[SC_GRAVITATION].timer != -1)
-			sd->speed = sd->speed * (100 + sd->sc_data[SC_GRAVITATION].val2) / 100;
 	}
 
 	if(sd->status.option&2 && (skill = pc_checkskill(sd,RG_TUNNELDRIVE))>0 )
@@ -1851,6 +1818,8 @@ int status_get_str(struct block_list *bl)
 				str += 5;
 			if(sc_data[SC_INCALLSTATUS].timer!=-1)
 				str += sc_data[SC_INCALLSTATUS].val1;
+			if(sc_data[SC_INCSTR].timer!=-1)
+				str += sc_data[SC_INCSTR].val1;
 		}
 	}
 	if(str < 0) str = 0;
@@ -2722,13 +2691,15 @@ int status_get_adelay(struct block_list *bl)
 			if(sc_data[SC_GOSPEL].timer!=-1 &&
 				sc_data[SC_GOSPEL].val4 == BCT_ENEMY &&
 				sc_data[SC_GOSPEL].val3 == 8)
-				aspd_rate = aspd_rate*125/100;
+				aspd_rate += 25;
 			if(sc_data[SC_JOINTBEAT].timer!=-1) {
 				if (sc_data[SC_JOINTBEAT].val2 == 1)
-					aspd_rate = aspd_rate*125/100;
+					aspd_rate += 25;
 				else if (sc_data[SC_JOINTBEAT].val2 == 2)
-					aspd_rate = aspd_rate*110/100;
+					aspd_rate += 10;
 			}
+			if(sc_data[SC_GRAVITATION].timer!=-1)
+				aspd_rate += sc_data[SC_GRAVITATION].val2;
 		}
 		if(aspd_rate != 100)
 			adelay = adelay*aspd_rate/100;
@@ -2776,6 +2747,8 @@ int status_get_amotion(struct block_list *bl)
 			if(sc_data[SC_DEFENDER].timer != -1)
 				aspd_rate += (25 - sc_data[SC_DEFENDER].val1*5);
 				//amotion += (550 - sc_data[SC_DEFENDER].val1*50);
+			if(sc_data[SC_GRAVITATION].timer!=-1)
+				aspd_rate += sc_data[SC_GRAVITATION].val2;
 		}
 		if(aspd_rate != 100)
 			amotion = amotion*aspd_rate/100;
@@ -2893,23 +2866,24 @@ int status_get_attack_element2(struct block_list *bl)
 	}
 	return 0;
 }
-int status_get_party_id(struct block_list *bl)
+
+unsigned long status_get_party_id(struct block_list *bl)
 {
 	nullpo_retr(0, bl);
-	if(bl->type==BL_PC && (struct map_session_data *)bl)
+	if(bl->type==BL_PC)
 		return ((struct map_session_data *)bl)->status.party_id;
-	else if(bl->type==BL_MOB && (struct mob_data *)bl){
+	else if(bl->type==BL_MOB){
 		struct mob_data *md=(struct mob_data *)bl;
 		if( md->master_id>0 )
-			return -md->master_id;
-		return -md->bl.id;
+			return md->master_id & 0x80000000;
+		return md->bl.id & 0x80000000;
 	}
 	else if(bl->type==BL_SKILL && (struct skill_unit *)bl)
 		return ((struct skill_unit *)bl)->group->party_id;
 	else
 		return 0;
 }
-int status_get_guild_id(struct block_list *bl)
+unsigned long status_get_guild_id(struct block_list *bl)
 {
 	nullpo_retr(0, bl);
 	if(bl->type==BL_PC && (struct map_session_data *)bl)
@@ -2994,7 +2968,7 @@ int status_isdead(struct block_list *bl)
 int status_isimmune(struct block_list *bl)
 {
 	struct map_session_data *sd = NULL;
-
+	
 	nullpo_retr(0, bl);
 	if (bl->type == BL_PC && (sd = (struct map_session_data *)bl)) {
 		if(sd->state.no_magic_damage)
@@ -3016,15 +2990,6 @@ struct status_change *status_get_sc_data(struct block_list *bl)
 	return NULL;
 }
 
-//short *status_get_sc_count(struct block_list *bl)
-//{
-//!!	nullpo_retr(NULL, bl);
-//!!	if(bl->type==BL_MOB && (struct mob_data *)bl)
-//!!		return &((struct mob_data*)bl)->sc_count;
-//!!	else if(bl->type==BL_PC && (struct map_session_data *)bl)
-//!!		return &((struct map_session_data*)bl)->sc_count;
-//	return NULL;
-//}
 short *status_get_opt1(struct block_list *bl)
 {
 	nullpo_retr(0, bl);
@@ -3153,7 +3118,6 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		if (status_isdead(bl)) return 0;
 
 	nullpo_retr(0, sc_data=status_get_sc_data(bl));
-//!!	nullpo_retr(0, sc_count=status_get_sc_count(bl));
 	nullpo_retr(0, option=status_get_option(bl));
 	nullpo_retr(0, opt1=status_get_opt1(bl));
 	nullpo_retr(0, opt2=status_get_opt2(bl));
@@ -3247,7 +3211,6 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		if ((type >=SC_STAN && type <= SC_BLIND) || type == SC_DPOISON)
 			return 0;/* ?ぎ足しができない?態異常である時は?態異常を行わない */
 
-//!!	(*sc_count)--;
 		delete_timer(sc_data[type].timer, status_change_timer);
 		sc_data[type].timer = -1;
 	}
@@ -3859,7 +3822,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 				val2 = tick;
 				tick = 1000;
 				status_change_clear_buffs(bl);
-				}
+			}
 			break;
 
 		case SC_MARIONETTE:		/* マリオネットコントロ?ル */
@@ -3906,7 +3869,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 					sd->canact_tick += tick;
 				} else calc_flag = 1;
 			}
-			//val2 = 10+val1*2;
+			//val2 = val1*5;
 			break;
 
 		case SC_HERMODE:
@@ -3933,6 +3896,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		case SC_INCHIT2:		/* HIT%上昇 */
 		case SC_INCFLEE2:		/* FLEE%上昇 */
 		case SC_INCDEF2:
+		case SC_INCSTR:
 			calc_flag = 1;
 			break;
 
@@ -3972,7 +3936,6 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 				int i;
 				for(i = SC_STONE; i <= SC_SLEEP; i++){
 					if(sc_data[i].timer != -1){
-//!!						(*sc_count)--;
 						delete_timer(sc_data[i].timer, status_change_timer);
 						sc_data[i].timer = -1;
 					}
@@ -4026,8 +3989,6 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 	if(opt_flag)	/* optionの?更 */
 		clif_changeoption(bl);
 
-//!!	(*sc_count)++;	/* ステ?タス異常の? */
-
 	sc_data[type].val1 = val1;
 	sc_data[type].val2 = val2;
 	sc_data[type].val3 = val3;
@@ -4053,26 +4014,21 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 int status_change_clear(struct block_list *bl,int type)
 {
 	struct status_change* sc_data;
-//!!	short *sc_count;
 	short *option, *opt1, *opt2, *opt3;
 	int i;
 
 	nullpo_retr(0, bl);
 	nullpo_retr(0, sc_data = status_get_sc_data(bl));
-//!!	nullpo_retr(0, sc_count = status_get_sc_count(bl));
 	nullpo_retr(0, option = status_get_option(bl));
 	nullpo_retr(0, opt1 = status_get_opt1(bl));
 	nullpo_retr(0, opt2 = status_get_opt2(bl));
 	nullpo_retr(0, opt3 = status_get_opt3(bl));
 
-//!!	if (*sc_count == 0)
-//!!		return 0;
 	for(i = 0; i < MAX_STATUSCHANGE; i++){
 		if(sc_data[i].timer != -1){	/* 異常があるならタイマ?を削除する */
 			status_change_end(bl, i, -1);
 		}
 	}
-//!!	*sc_count = 0;
 	*opt1 = 0;
 	*opt2 = 0;
 	*opt3 = 0;
@@ -4106,21 +4062,18 @@ int status_change_end( struct block_list* bl , int type,int tid )
 		return 0;
 	}
 	nullpo_retr(0, sc_data = status_get_sc_data(bl));
-//!!	nullpo_retr(0, sc_count = status_get_sc_count(bl));
 	nullpo_retr(0, option = status_get_option(bl));
 	nullpo_retr(0, opt1 = status_get_opt1(bl));
 	nullpo_retr(0, opt2 = status_get_opt2(bl));
 	nullpo_retr(0, opt3 = status_get_opt3(bl));
 
-	if (//!!(*sc_count) > 0 && 
-		sc_data[type].timer != -1 && (sc_data[type].timer == tid || tid == -1)) {
-
+	if( sc_data[type].timer != -1 && (sc_data[type].timer == tid || tid == -1))
+	{
 		if (tid == -1)	// タイマから呼ばれていないならタイマ削除をする
 			delete_timer(sc_data[type].timer,status_change_timer);
 
 		/* 該?の異常を正常に?す */
 		sc_data[type].timer=-1;
-		//!!(*sc_count)--;
 
 		switch(type){	/* 異常の種類ごとの?理 */
 			case SC_PROVOKE:			/* プロボック */
@@ -4191,6 +4144,7 @@ int status_change_end( struct block_list* bl , int type,int tid )
 			case SC_INCHIT2:
 			case SC_INCFLEE2:
 			case SC_INCDEF2:
+			case SC_INCSTR:
 			case SC_BATTLEORDERS:
 			case SC_REGENERATION:
 			case SC_GUILDAURA:
@@ -4256,7 +4210,7 @@ int status_change_end( struct block_list* bl , int type,int tid )
 if(sc_data[type].val2<0)
 printf("SC_SPLASHER negative skill trap 1\n");
 
-						skill_castend_damage_id(src, bl,sc_data[type].val2,sc_data[type].val1,gettick(),0 );
+						skill_castend_damage_id(src, bl,(unsigned short)sc_data[type].val2,(unsigned short)sc_data[type].val1,gettick(),0 );
 					}
 				}
 				break;
@@ -4268,7 +4222,7 @@ if(sc_data[type].val2<0)
 printf("SC_SELFDESTRUCTION negative skill trap 1\n");
 
 					if(bl->type == BL_MOB && (md=(struct mob_data*)bl))
-						skill_castend_damage_id(bl, bl,sc_data[type].val2,sc_data[type].val1,gettick(),0 );
+						skill_castend_damage_id(bl, bl,(unsigned short)sc_data[type].val2,(unsigned short)sc_data[type].val1,gettick(),0 );
 				}
 				break;
 		/* option1 */
@@ -4489,17 +4443,15 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 
 	case SC_CHASEWALK:
 		if(sd){
-			int sp = 10+sc_data[SC_CHASEWALK].val1*2;
+			long sp = 10+sc_data[SC_CHASEWALK].val1*2;
 			if (map[sd->bl.m].flag.gvg) sp *= 5;
-			if( sd->status.sp > sp){
+			if (sd->status.sp > sp){
 				sd->status.sp -= sp; // update sp cost [Celest]
 				clif_updatestatus(sd,SP_SP);
-
-				sc_data[SC_CHASEWALK].val4++;
-				if (sc_data[SC_CHASEWALK].val4 > 3)
-					sc_data[SC_CHASEWALK].val4 = 0;
-				status_calc_pc (sd, 0);
-
+				if ((++sc_data[SC_CHASEWALK].val4) == 1) {
+					status_change_start(bl, SC_INCSTR, 1<<(sc_data[SC_CHASEWALK].val1-1), 0, 0, 0, 30000, 0);
+					status_calc_pc (sd, 0);
+				}
 				/* タイマ?再設定 */
 				sc_data[type].timer=add_timer(sc_data[type].val2+tick, status_change_timer, bl->id, data);
 				return 0;
@@ -4569,17 +4521,13 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 		if( (--sc_data[type].val2)>0){
 			struct skill_unit *unit = (struct skill_unit *)sc_data[type].val4;
 			struct block_list *src;
-
-			nullpo_retb(unit);
-			nullpo_retb(unit->group);
-			nullpo_retb(src=map_id2bl(unit->group->src_id));
-			skill_attack(BF_MISC,src,&unit->bl,bl,unit->group->skill_id,sc_data[type].val1,tick,0);
-
-			if( ( md && (MS_DEAD==md->state.state) ) ||
-				( sd && pc_isdead(sd) )              )
-				break;
+			if (unit && unit->group && (src = map_id2bl(unit->group->src_id)) != NULL) {
+			skill_attack(BF_MISC,src,&unit->bl,bl,unit->group->skill_id,(unsigned short)sc_data[type].val1,tick,0);
+				if (status_isdead(bl))
+					break;
 
 			sc_data[type].timer=add_timer(skill_get_time2(unit->group->skill_id,unit->group->skill_lv)+tick,status_change_timer, bl->id, data );
+			}
 			return 0;
 		}
 		break;
@@ -4587,16 +4535,11 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 	case SC_LULLABY:	/* 子守唄 */
 		if( (--sc_data[type].val2)>0){
 			struct skill_unit *unit = (struct skill_unit *)sc_data[type].val4;
-			nullpo_retb(unit);
-			nullpo_retb(unit->group);
-			if(unit->group->src_id == bl->id)
-				break;
-			skill_additional_effect(bl,bl,unit->group->skill_id,sc_data[type].val1,BF_LONG|BF_SKILL|BF_MISC,tick);
-			if (unit->group != 0)
-			{
+			if (unit && unit->group && unit->group->src_id != bl->id) {
+			skill_additional_effect(bl,bl,unit->group->skill_id,(unsigned short)sc_data[type].val1,BF_LONG|BF_SKILL|BF_MISC,tick);
 				sc_data[type].timer=add_timer(skill_get_time(unit->group->skill_id,unit->group->skill_lv)/10+tick,status_change_timer, bl->id, data );
 				return 0;
-		}
+			}
 		}
 		break;
 
@@ -4651,10 +4594,6 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 	case SC_TENSIONRELAX:	/* テンションリラックス */
 		if(sd){		/* SPがあって、HPが?タンでなければ?? */
 			if( sd->status.sp > 12 && sd->status.max_hp > sd->status.hp ){
-/*				if(sc_data[type].val2 % (sc_data[type].val1+3) ==0 ){
-					sd->status.sp -= 12;
-					clif_updatestatus(sd,SP_SP);
-				}						*/
 				/* タイマ?再設定 */
 				sc_data[type].timer=add_timer(10000+tick, status_change_timer,bl->id, data);
 				return 0;
@@ -4709,58 +4648,56 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 		return 0;
 	case SC_DANCING: //ダンススキルの時間SP消費
 		{
-			int s=0;
-			int sp = 1;
+			int s = 0, sp = 1;
 			if(sd && (--sc_data[type].val3) > 0) {
-					switch(sc_data[type].val1){
-					case BD_RICHMANKIM:				/* ニヨルドの宴 3秒にSP1 */
-					case BD_DRUMBATTLEFIELD:		/* ?太鼓の響き 3秒にSP1 */
-					case BD_RINGNIBELUNGEN:			/* ニ?ベルングの指輪 3秒にSP1 */
-					case BD_SIEGFRIED:				/* 不死身のジ?クフリ?ド 3秒にSP1 */
-					case BA_DISSONANCE:				/* 不協和音 3秒でSP1 */
-					case BA_ASSASSINCROSS:			/* 夕陽のアサシンクロス 3秒でSP1 */
-					case DC_UGLYDANCE:				/* 自分勝手なダンス 3秒でSP1 */
-						s=3;
-						break;
-					case BD_LULLABY:				/* 子守歌 4秒にSP1 */
-					case BD_ETERNALCHAOS:			/* 永遠の混沌 4秒にSP1 */
-					case BD_ROKISWEIL:				/* ロキの叫び 4秒にSP1 */
-					case DC_FORTUNEKISS:			/* 幸運のキス 4秒でSP1 */
-						s=4;
-						break;
-					case BD_INTOABYSS:				/* 深淵の中に 5秒にSP1 */
-					case BA_WHISTLE:				/* 口笛 5秒でSP1 */
-					case DC_HUMMING:				/* ハミング 5秒でSP1 */
-					case BA_POEMBRAGI:				/* ブラギの詩 5秒でSP1 */
-					case DC_SERVICEFORYOU:			/* サ?ビスフォ?ユ? 5秒でSP1 */
+				switch(sc_data[type].val1){
+				case BD_RICHMANKIM:				/* ニヨルドの宴 3秒にSP1 */
+				case BD_DRUMBATTLEFIELD:		/* ?太鼓の響き 3秒にSP1 */
+				case BD_RINGNIBELUNGEN:			/* ニ?ベルングの指輪 3秒にSP1 */
+				case BD_SIEGFRIED:				/* 不死身のジ?クフリ?ド 3秒にSP1 */
+				case BA_DISSONANCE:				/* 不協和音 3秒でSP1 */
+				case BA_ASSASSINCROSS:			/* 夕陽のアサシンクロス 3秒でSP1 */
+				case DC_UGLYDANCE:				/* 自分勝手なダンス 3秒でSP1 */
+					s=3;
+					break;
+				case BD_LULLABY:				/* 子守歌 4秒にSP1 */
+				case BD_ETERNALCHAOS:			/* 永遠の混沌 4秒にSP1 */
+				case BD_ROKISWEIL:				/* ロキの叫び 4秒にSP1 */
+				case DC_FORTUNEKISS:			/* 幸運のキス 4秒でSP1 */
+					s=4;
+					break;
+				case BD_INTOABYSS:				/* 深淵の中に 5秒にSP1 */
+				case BA_WHISTLE:				/* 口笛 5秒でSP1 */
+				case DC_HUMMING:				/* ハミング 5秒でSP1 */
+				case BA_POEMBRAGI:				/* ブラギの詩 5秒でSP1 */
+				case DC_SERVICEFORYOU:			/* サ?ビスフォ?ユ? 5秒でSP1 */
 				case CG_HERMODE:				// Wand of Hermod
-						s=5;
-						break;
-					case BA_APPLEIDUN:				/* イドゥンの林檎 6秒でSP1 */
-						s=6;
-						break;
-					case DC_DONTFORGETME:			/* 私を忘れないで… 10秒でSP1 */
-					case CG_MOONLIT:				/* 月明りの泉に落ちる花びら 10秒でSP1？ */
-						s=10;
-						break;
-					}
-					if(s && ((sc_data[type].val3 % s) == 0)){
+					s=5;
+					break;
+				case BA_APPLEIDUN:				/* イドゥンの林檎 6秒でSP1 */
+					s=6;
+					break;
+				case DC_DONTFORGETME:			/* 私を忘れないで… 10秒でSP1 */
+				case CG_MOONLIT:				/* 月明りの泉に落ちる花びら 10秒でSP1？ */
+					s=10;
+					break;
+				}
+				if (s && ((sc_data[type].val3 % s) == 0)) {
 					if (sc_data[SC_LONGING].timer != -1 ||
 						sc_data[type].val1 == CG_HERMODE) {
 						sp = s;						
 					}
 					if (sp > sd->status.sp)
-						sp = sd->status.sp;
+						sd->status.sp  = 0;
+					else
 					sd->status.sp -= sp;
-						clif_updatestatus(sd,SP_SP);
-					if (sd->status.sp <= 0)
-						break;
-					}
-					/* タイマ?再設定 */
-					sc_data[type].timer=add_timer(1000+tick, status_change_timer,bl->id, data);
-					return 0;
+					clif_updatestatus(sd,SP_SP);
 				}
+				/* タイマ?再設定 */
+				sc_data[type].timer=add_timer(1000+tick, status_change_timer,bl->id, data);
+				return 0;
 			}
+		}
 		break;
 
 	case SC_BERSERK:		/* バ?サ?ク */
@@ -4810,7 +4747,7 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 	case SC_SPLASHER:
 		if (sc_data[type].val4 % 1000 == 0) {
 			char timer[2];
-			sprintf (timer, "%d", sc_data[type].val4/1000);
+			sprintf (timer, "%ld", sc_data[type].val4/1000);
 			clif_message(bl, timer);
 		}
 		if((sc_data[type].val4 -= 500) > 0) {
@@ -4823,7 +4760,7 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 	case SC_MARIONETTE2:
 		{
 			struct block_list *pbl = map_id2bl(sc_data[type].val3);
-			if (pbl && battle_check_range(bl, pbl, 7) && (sc_data[type].val2 -= 1000)>0) {
+			if(pbl && battle_check_range(bl, pbl, 7) && (sc_data[type].val2 -= 1000)>0) {
 				sc_data[type].timer = add_timer(1000 + tick, status_change_timer,bl->id, data);
 					return 0;
 			}
@@ -4834,12 +4771,12 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 	case SC_CONFUSION:
 		{
 			int i = 3000;
-			if (sd) 
+			if(sd) 
 			{
 				pc_randomwalk (sd, gettick());
 				sd->next_walktime = tick + (i=1000 + rand()%1000);
 			} 
-			else if (md && md->mode&1 && mob_can_move(md)) 
+			else if(md && md->mode&1 && mob_can_move(md)) 
 			{
 				md->state.state=MS_WALK;
 				if( DIFF_TICK(md->next_walktime,tick) > + 7000 &&
@@ -4847,7 +4784,7 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 					md->next_walktime = tick + 3000*rand()%2000;
 				mob_randomwalk(md,tick);
 			}
-			if ((sc_data[type].val2 -= 1000) > 0) 
+			if((sc_data[type].val2 -= 1000) > 0) 
 			{
 				sc_data[type].timer = add_timer(i + tick, status_change_timer,bl->id, data);
 					return 0;
@@ -4894,7 +4831,7 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 					break;
 				case 2: // end negative status
 					status_change_clear_debuffs (bl);
-								break;
+					break;
 				case 3:	// +25% resistance to negative status
 				case 4: // +25% max hp
 				case 5: // +25% max sp
@@ -5051,9 +4988,9 @@ int status_change_timer_sub(struct block_list *bl, va_list ap )
 				sc_data[SC_CLOAKING].timer != -1)) {
 				status_change_end( bl, SC_HIDING, -1);
 				status_change_end( bl, SC_CLOAKING, -1);
+				if(battle_check_target( src, bl, BCT_ENEMY ) > 0)
+					skill_attack(BF_MAGIC,src,src,bl,AL_RUWACH,1,tick,0);
 			}
-			if(battle_check_target( src,bl, BCT_ENEMY ) > 0)
-				skill_attack(BF_MAGIC,src,src,bl,AL_RUWACH,sc_data[type].val1,tick,0);
 		}
 		break;
 	}

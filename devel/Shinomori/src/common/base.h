@@ -16,7 +16,7 @@
 #define CHECK_LOCKS			// enables check of locking/unlocking sync objects
 #define SINGLETHREAD		// builds without multithread guards
 #define CHECK_EXCEPTIONS	// use exceptions for "exception" handling
-#define _USE_32BIT_TIME_T	// use 32 bit time variables on windows
+
 
 
 
@@ -57,9 +57,9 @@
 //////////////////////////////////////////////////////////////////////////
 #ifdef WIN32
 //////////////////////////////
-#define WIN32_LEAN_AND_MEAN
-#define _WINSOCKAPI_	// prevent inclusion of winsock.h
-#define _USE_32BIT_TIME_T
+#define WIN32_LEAN_AND_MEAN	// stuff
+#define _WINSOCKAPI_		// prevent inclusion of winsock.h
+#define _USE_32BIT_TIME_T	// use 32 bit time variables on 64bit windows
 //////////////////////////////
 #endif
 //////////////////////////////
@@ -189,12 +189,14 @@ typedef int bool;
 #define false	(1==0)
 #define true	(1==1)
 
-#ifndef swap
+#ifdef swap // just to be sure
+#undef swap
+#endif
 // hmm only ints?
 //#define swap(a,b) { int temp=a; a=b; b=temp;} 
-// if macros then something that is type independent
+// if using macros then something that is type independent
 #define swap(a,b) ((a == b) || ((a ^= b), (b ^= a), (a ^= b)))
-#endif swap
+
 
 //////////////////////////////
 #endif // not cplusplus
@@ -249,7 +251,7 @@ typedef unsigned int socklen_t;
 
 
 // abnormal function definitions
-// no inlining them because of varargs; those might not conlict in defines anyway
+// no inlining them because of varargs; those might not conflict in defines anyway
 #define vsnprintf			_vsnprintf
 #define snprintf			_snprintf
 

@@ -322,7 +322,7 @@ int mail_send(struct map_session_data *sd, char *name, char *message, int flag)
 int mail_check_timer(int tid,unsigned long tick,int id,int data)
 {
 	struct map_session_data *sd = NULL;
-	int i;
+	size_t i;
 	
 	if(mail_timer != tid)
 		return 0;
@@ -351,7 +351,7 @@ int mail_check_timer(int tid,unsigned long tick,int id,int data)
 				{
 					if(pc_isGM(sd) < 80 && sd->mail_counter > 0)
 						sd->mail_counter--;
-					if(sd->status.account_id==atoi(mail_row[0]))
+					if(sd->status.account_id == (unsigned long)atoi(mail_row[0]))
 						//clif_displaymessage(sd->fd, "You have new mail.");
 						clif_displaymessage(sd->fd, msg_txt(526));
 				}

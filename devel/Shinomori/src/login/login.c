@@ -26,9 +26,9 @@
 #include "login.h"
 
 
-int account_id_count = START_ACCOUNT_NUM;
-int server_num;
-int new_account_flag = 0;
+unsigned long account_id_count = START_ACCOUNT_NUM;
+unsigned short server_num;
+unsigned long new_account_flag = 0;
 
 unsigned long	login_ip	= INADDR_ANY;	// bind on all addresses by default
 unsigned short	login_port	= 6900;
@@ -101,9 +101,9 @@ struct login_session_data {
 
 #define AUTH_FIFO_SIZE 256
 struct {
-	int account_id;
-	int login_id1;
-	int login_id2;
+	unsigned long account_id;
+	unsigned long login_id1;
+	unsigned long login_id2;
 	unsigned long ip;
 	int sex;
 	int delflag;
@@ -111,20 +111,20 @@ struct {
 int auth_fifo_pos = 0;
 
 struct auth_dat {
-	int account_id;
+	unsigned long account_id;
 	int sex;
 	char userid[24];
 	char pass[33]; // 33 for 32 + NULL terminated
 	char lastlogin[24]; 
-	int logincount;
-	int state; // packet 0x006a value + 1 (0: compte OK)
+	unsigned long logincount;
+	unsigned long state; // packet 0x006a value + 1 (0: compte OK)
 	char email[40]; // e-mail (by default: a@a.com)
 	char error_message[20]; // Message of error code #6 = Your are Prohibited to log in until %s (packet 0x006a)
 	time_t ban_until_time; // # of seconds 1/1/1970 (timestamp): ban time limit of the account (0 = no ban)
 	time_t connect_until_time; // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
 	char last_ip[16]; // save of last IP of connection
 	char memo[255]; // a memo field
-	int account_reg2_num;
+	long account_reg2_num;
 	struct global_reg account_reg2[ACCOUNT_REG2_NUM];
 } *auth_dat = NULL;
 
@@ -196,29 +196,29 @@ int login_log(char *fmt, ...) {
 
 static int online_db_final(void *key,void *data,va_list ap)
 {
-	int *p = (int *) data;
+	unsigned long *p = (unsigned long *) data;
 	if (p) aFree(p);
 	return 0;
 }
-void add_online_user (int account_id) {
-	int *p = (int*)numdb_search(online_db, account_id);
+void add_online_user (unsigned long account_id) {
+	unsigned long *p = (unsigned long*)numdb_search(online_db, account_id);
 	if (p == NULL) {
-		p = (int *)aMalloc(sizeof(int));
+		p = (unsigned long *)aMalloc(sizeof(unsigned long));
 		*p = account_id;
 		numdb_insert(online_db, account_id, p);
 	}
 }
-int is_user_online (int account_id) {
-	int *p = (int*)numdb_search(online_db, account_id);
+int is_user_online (unsigned long account_id) {
+	unsigned long *p = (unsigned long*)numdb_search(online_db, account_id);
 	return (p != NULL);
 }
-void remove_online_user (int account_id) {
+void remove_online_user (unsigned long account_id) {
 	if (account_id == 99) {	// reset all to offline
 		numdb_final(online_db, online_db_final);	// purge db
 		online_db = numdb_init();	// reinitialise
 	}
-	int *p;
-	p = (int*)numdb_erase(online_db, account_id);
+	unsigned long *p;
+	p = (unsigned long*)numdb_erase(online_db, account_id);
 	aFree(p);
 }
 
@@ -226,7 +226,7 @@ void remove_online_user (int account_id) {
 // Determine if an account (id) is a GM account
 // and returns its level (or 0 if it isn't a GM account or if not found)
 //----------------------------------------------------------------------
-int isGM(int account_id) {
+int isGM(unsigned long account_id) {
 	int i;
 	for(i=0; i < GM_num; i++)
 		if(gm_account_db[i].account_id == account_id)
@@ -237,7 +237,7 @@ int isGM(int account_id) {
 //----------------------------------------------------------------------
 // Adds a new GM using acc id and level
 //----------------------------------------------------------------------
-void addGM(int account_id, int level) {
+void addGM(unsigned long account_id, unsigned long level) {
 	int i;
 	int do_add = 0;
 	for(i = 0; i < auth_num; i++) {
@@ -280,14 +280,15 @@ void addGM(int account_id, int level) {
 int read_gm_account(void) {
 	char line[512];
 	FILE *fp;
-	int account_id, level;
-	int line_counter;
+	unsigned long account_id;
+	unsigned char level;
+	size_t line_counter;
 	struct stat file_stat;
-	int start_range = 0, end_range = 0, is_range = 0, current_id = 0;
+	size_t start_range = 0, end_range = 0, is_range = 0, current_id = 0;
 
 	if(gm_account_db) aFree(gm_account_db);
 	GM_num = 0;
-	if(GM_max < 0)	GM_max = 256;
+	if(GM_max <= 0)	GM_max = 256;
 	gm_account_db = (struct gm_account*)aCalloc(GM_max, sizeof(struct gm_account));
 
 	// get last modify time/date
@@ -492,7 +493,7 @@ int mmo_auth_tostr(char *str, struct auth_dat *p) {
 	int i;
 	char *str_p = str;
 
-	str_p += sprintf(str_p, "%d\t%s\t%s\t%s\t%c\t%d\t%d\t"
+	str_p += sprintf(str_p, "%ld\t%s\t%s\t%s\t%c\t%ld\t%ld\t"
 	                 "%s\t%s\t%ld\t%s\t%s\t%ld\t",
 	                 p->account_id, p->userid, p->pass, p->lastlogin,
 	                 (p->sex == 2) ? 'S' : (p->sex ? 'M' : 'F'),
@@ -502,7 +503,7 @@ int mmo_auth_tostr(char *str, struct auth_dat *p) {
 
 	for(i = 0; i < p->account_reg2_num; i++)
 		if (p->account_reg2[i].str[0])
-			str_p += sprintf(str_p, "%s,%d ", p->account_reg2[i].str, p->account_reg2[i].value);
+			str_p += sprintf(str_p, "%s,%ld ", p->account_reg2[i].str, p->account_reg2[i].value);
 
 	return 0;
 }
@@ -512,7 +513,8 @@ int mmo_auth_tostr(char *str, struct auth_dat *p) {
 //---------------------------------
 int mmo_auth_init(void) {
 	FILE *fp;
-	int account_id, logincount, state, n, i, j, v;
+	unsigned long account_id;
+	int logincount, state, n, i, j, v;
 	char line[2048], *p, userid[2048], pass[2048], lastlogin[2048], sex, email[2048], error_message[2048], last_ip[2048], memo[2048];
 	time_t ban_until_time;
 	time_t connect_until_time;
@@ -547,11 +549,11 @@ int mmo_auth_init(void) {
 		memset(memo, 0, sizeof(memo));
 
 		// database version reading (v2)
-		if (((i = sscanf(line, "%d\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t"
+		if (((i = sscanf(line, "%ld\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t"
 		                 "%[^\t]\t%[^\t]\t%ld\t%[^\t]\t%[^\t]\t%ld%n",
 		    &account_id, userid, pass, lastlogin, &sex, &logincount, &state,
 		    email, error_message, &connect_until_time, last_ip, memo, &ban_until_time, &n)) == 13 && line[n] == '\t') ||
-		    ((i = sscanf(line, "%d\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t"
+		    ((i = sscanf(line, "%ld\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t"
 		                 "%[^\t]\t%[^\t]\t%ld\t%[^\t]\t%[^\t]%n",
 		    &account_id, userid, pass, lastlogin, &sex, &logincount, &state,
 		    email, error_message, &connect_until_time, last_ip, memo, &n)) == 12 && line[n] == '\t')) {
@@ -683,7 +685,7 @@ int mmo_auth_init(void) {
 				account_id_count = account_id + 1;
 
 		// Old athena database version reading (v1)
-		} else if ((i = sscanf(line, "%d\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t%n",
+		} else if ((i = sscanf(line, "%ld\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t%n",
 		           &account_id, userid, pass, lastlogin, &sex, &logincount, &state, &n)) >= 5) {
 			if (account_id > END_ACCOUNT_NUM) {
 				ShowMessage(CL_BT_RED"mmo_auth_init: ******Error: an account has an id higher than %d\n", END_ACCOUNT_NUM);
@@ -791,7 +793,7 @@ int mmo_auth_init(void) {
 
 		} else {
 			i = 0;
-			if (sscanf(line, "%d\t%%newid%%\n%n", &account_id, &i) == 1 &&
+			if (sscanf(line, "%ld\t%%newid%%\n%n", &account_id, &i) == 1 &&
 			    i > 0 && account_id > account_id_count)
 				account_id_count = account_id;
 		}
@@ -842,7 +844,7 @@ int mmo_auth_init(void) {
 void mmo_auth_sync(void) {
 	FILE *fp;
 	int i, j, k, lock;
-	int account_id;
+	unsigned long account_id;
 	char line[65536];
 	CREATE_BUFFER(id,int,auth_num);
 
@@ -885,7 +887,7 @@ void mmo_auth_sync(void) {
 		mmo_auth_tostr(line, &auth_dat[k]);
 		fprintf(fp, "%s" RETCODE, line);
 	}
-	fprintf(fp, "%d\t%%newid%%\n", account_id_count);
+	fprintf(fp, "%ld\t%%newid%%\n", account_id_count);
 
 	lock_fclose(fp, account_filename, &lock);
 
@@ -1261,7 +1263,7 @@ int mmo_auth(struct mmo_account* account, int fd) {
 //--------------------------------
 int parse_fromchar(int fd) {
 	int i, j, id;
-	int acc;
+	unsigned long acc;
 	char ip_str[16];
 	unsigned long client_ip = session[fd]->client_ip;
 	sprintf(ip_str, "%ld.%ld.%ld.%ld", (client_ip>>24)&0xFF, (client_ip>>16)&0xFF, (client_ip>>8)&0xFF, (client_ip)&0xFF);
@@ -1303,13 +1305,13 @@ int parse_fromchar(int fd) {
 			if (RFIFOREST(fd) < 19)
 				return 0;
 		  {
-			int acc = RFIFOL(fd,2);
+			unsigned long acc = RFIFOL(fd,2);
 			for(i = 0; i < AUTH_FIFO_SIZE; i++) 
 			{
 				if (auth_fifo[i].account_id == acc &&
-					auth_fifo[i].login_id1 == (int)RFIFOL(fd,6) &&
+					auth_fifo[i].login_id1 == RFIFOL(fd,6) &&
 #if CMP_AUTHFIFO_LOGIN2 != 0
-				    auth_fifo[i].login_id2 == (int)RFIFOL(fd,10) && // relate to the versions higher than 18
+				    auth_fifo[i].login_id2 == RFIFOL(fd,10) && // relate to the versions higher than 18
 #endif
 				    auth_fifo[i].sex == RFIFOB(fd,14) &&
 				    (!check_ip_flag || auth_fifo[i].ip == RFIFOLIP(fd,15)) &&
@@ -1412,10 +1414,10 @@ int parse_fromchar(int fd) {
 			//ShowMessage("parse_fromchar: E-mail/limited time request from '%s' server (concerned account: %ld)\n", server[id].name, (unsigned long)RFIFOL(fd,2));
 			for(i = 0; i < auth_num; i++)
 			{
-				if (auth_dat[i].account_id == (int)RFIFOL(fd,2))
+				if (auth_dat[i].account_id == RFIFOL(fd,2))
 				{
 					login_log("Char-server '%s': e-mail of the account %d found (ip: %s)." RETCODE,
-					          server[id].name, RFIFOL(fd,2), ip_str);
+					          server[id].name, (unsigned long)RFIFOL(fd,2), ip_str);
 					WFIFOW(fd,0) = 0x2717;
 					WFIFOL(fd,2) = RFIFOL(fd,2);
 					memcpy(WFIFOP(fd, 6), auth_dat[i].email, 40);
@@ -1426,7 +1428,7 @@ int parse_fromchar(int fd) {
 			}
 			if (i == auth_num)
 				login_log("Char-server '%s': e-mail of the account %d NOT found (ip: %s)." RETCODE,
-				          server[id].name, RFIFOL(fd,2), ip_str);
+				          server[id].name, (unsigned long)RFIFOL(fd,2), ip_str);
 			RFIFOSKIP(fd,6);
 			break;
 
@@ -1460,7 +1462,7 @@ int parse_fromchar(int fd) {
 								struct timeval tv;
 								gettimeofday(&tv, NULL);
 								strftime(tmpstr, 23, date_format, localtime((const time_t*)&(tv.tv_sec)));
-								fprintf(fp, RETCODE "// %s: @GM command on account %d" RETCODE "%d %d" RETCODE, tmpstr, acc, acc, level_new_gm);
+								fprintf(fp, RETCODE "// %s: @GM command on account %ld" RETCODE "%ld %d" RETCODE, tmpstr, acc, acc, level_new_gm);
 								fclose(fp);
 								WBUFL(buf,6) = level_new_gm;
 								read_gm_account();
@@ -1543,7 +1545,7 @@ int parse_fromchar(int fd) {
 			if (RFIFOREST(fd) < 10)
 				return 0;
 			{
-				int acc, statut;
+				unsigned long acc, statut;
 				acc = RFIFOL(fd,2);
 				statut = RFIFOL(fd,6);
 				for(i = 0; i < auth_num; i++) {
@@ -1889,8 +1891,9 @@ int parse_admin(int fd) {
 			if (RFIFOREST(fd) < 10)
 				return 0;
 			{
-				int st, ed, len;
-				CREATE_BUFFER(id, int, auth_num);
+				unsigned long st, ed;
+				size_t len;
+				CREATE_BUFFER(id, unsigned long, auth_num);
 
 				st = RFIFOL(fd,2);
 				ed = RFIFOL(fd,6);
@@ -1918,7 +1921,7 @@ int parse_admin(int fd) {
 				// Sending accounts information
 				len = 4;
 				for(i = 0; i < auth_num && len < 30000; i++) {
-					int account_id = auth_dat[id[i]].account_id; // use sorted index
+					unsigned long account_id = auth_dat[id[i]].account_id; // use sorted index
 					if (account_id >= st && account_id <= ed) {
 						j = id[i];
 						WFIFOL(fd,len) = account_id;
@@ -2018,7 +2021,7 @@ int parse_admin(int fd) {
 				login_log("%s" RETCODE, buf);
 				// delete account
 				memset(auth_dat[i].userid, '\0', sizeof(auth_dat[i].userid));
-				auth_dat[i].account_id = -1;
+				auth_dat[i].account_id = ~0;
 				mmo_auth_sync();
 			} else {
 				memcpy(WFIFOP(fd,6), account_name, 24);
@@ -2061,7 +2064,7 @@ int parse_admin(int fd) {
 				return 0;
 			{
 				char error_message[20];
-				int statut;
+				unsigned long statut;
 				WFIFOW(fd,0) = 0x7937;
 				WFIFOL(fd,2) = ~0;
 				account_name = (char*)RFIFOP(fd,2);
@@ -2409,7 +2412,7 @@ int parse_admin(int fd) {
 			WFIFOL(fd,2) = RFIFOL(fd,2);
 			memset(WFIFOP(fd,6), '\0', 24);
 			for(i = 0; i < auth_num; i++) {
-				if (auth_dat[i].account_id == (int)RFIFOL(fd,2)) {
+				if (auth_dat[i].account_id == RFIFOL(fd,2)) {
 					strncpy((char*)WFIFOP(fd,6), auth_dat[i].userid, 24);
 					login_log("'ladmin': Request (by id) of an account name (account: %s, id: %d, ip: %s)" RETCODE,
 					          auth_dat[i].userid, (unsigned long)RFIFOL(fd,2), ip_str);
@@ -2721,9 +2724,9 @@ int parse_admin(int fd) {
 			WFIFOL(fd,2) = RFIFOL(fd,2);
 			memset(WFIFOP(fd,7), '\0', 24);
 			for(i = 0; i < auth_num; i++) {
-				if (auth_dat[i].account_id == (int)RFIFOL(fd,2)) {
+				if (auth_dat[i].account_id == RFIFOL(fd,2)) {
 					login_log("'ladmin': Sending information of an account (request by the id; account: %s, id: %d, ip: %s)" RETCODE,
-					          auth_dat[i].userid, RFIFOL(fd,2), ip_str);
+					          auth_dat[i].userid, (unsigned long)RFIFOL(fd,2), ip_str);
 					WFIFOB(fd,6) = (unsigned char)isGM(auth_dat[i].account_id);
 					memcpy(WFIFOP(fd,7), auth_dat[i].userid, 24);
 					WFIFOB(fd,31) = auth_dat[i].sex;
@@ -2745,7 +2748,7 @@ int parse_admin(int fd) {
 			}
 			if (i == auth_num) {
 				login_log("'ladmin': Attempt to obtain information (by the id) of an unknown account (id: %d, ip: %s)" RETCODE,
-				          RFIFOL(fd,2), ip_str);
+				          (unsigned long)RFIFOL(fd,2), ip_str);
 				strncpy((char*)WFIFOP(fd,7), "", 24);
 				WFIFOW(fd,148) = 0;
 				WFIFOSET(fd,150);
@@ -3034,7 +3037,7 @@ int parse_login(int fd) {
 				server_name[19] = '\0';
 				remove_control_chars(server_name);
 				login_log("Connection request of the char-server '%s' @ %d.%d.%d.%d:%d (ip: %s)" RETCODE,
-				          server_name, RFIFOB(fd,54), RFIFOB(fd,55), RFIFOB(fd,56), RFIFOB(fd,57), RFIFOW(fd,58), ip_str);
+				          server_name, RFIFOB(fd,54), RFIFOB(fd,55), RFIFOB(fd,56), RFIFOB(fd,57), (unsigned short)RFIFOW(fd,58), ip_str);
 				result = mmo_auth(&account, fd);
 				if (result == -1 && account.sex == 2 && account.account_id < MAX_SERVERS && server[account.account_id].fd == -1)
 				{
@@ -3380,7 +3383,7 @@ int login_config_read(const char *cfgName) {
 				new_account_flag = config_switch(w2);
 			} else if (strcasecmp(w1, "login_ip") == 0) {
 				char login_ip_str[16];
-				h = gethostbyname (w2);
+				h = gethostbyname(w2);
 				if (h != NULL) {
 					ShowMessage("Login server binding IP address : %s -> %d.%d.%d.%d\n", w2, (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 					sprintf(login_ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
@@ -3570,7 +3573,7 @@ void display_conf_warnings(void) {
 		new_account_flag = 0;
 	}
 
-	if (login_port < 1024 || login_port > 65535) {
+	if (login_port < 1024) {
 		ShowMessage("***WARNING: Invalid value for login_port parameter -> set to 6900 (default).\n");
 		login_port = 6900;
 	}
@@ -3853,7 +3856,7 @@ int flush_timer(int tid, unsigned long tick, int id, int data){
 // Function called at exit of the server
 //--------------------------------------
 void do_final(void) {
-	int i;
+	size_t i;
 	ShowStatus("Terminating...\n");
 	///////////////////////////////////////////////////////////////////////////
 	mmo_auth_sync();

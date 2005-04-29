@@ -19,7 +19,7 @@ bool remove_control_chars(char *str);
 void dump(unsigned char *buffer, int num);
 
 char* checkpath(char *path, const char* src);
-void findfile(const char *p, const char *pat, void (func)(char*) );
+void findfile(const char *p, const char *pat, void (func)(const char*) );
 
 extern inline FILE* savefopen(const char*name, const char*option)
 {	// windows MAXPATH is 260, unix is longer
