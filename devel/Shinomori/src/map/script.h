@@ -33,8 +33,10 @@ struct script_stack {
 };
 struct script_state {
 	struct script_stack *stack;
-	int start,end;
-	int pos,state;
+	size_t start;
+	size_t end;
+	size_t pos;
+	int state;
 	unsigned long rid,oid;
 	char *script,*new_script;
 	int defsp,new_pos,new_defsp;

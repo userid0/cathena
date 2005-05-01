@@ -3,11 +3,11 @@ CC = g++ -pipe
 #CC = gcc -pipe -DDMALLOC -DDMALLOC_FUNC_CHECK
 #CC = /usr/local/bin/gcc -fbounds-checking -pipe -DBCHECK
 
-GCLIB = -lsocket
+GCLIB = -lsocket -lnsl
 # GCLIB = -lgc
 # GCLIB = -ldmalloc
 
-PACKETDEF = -DPACKETVER=6 -DNEW_006b -DSO_REUSEPORT
+PACKETDEF = -DPACKETVER=6 -DNEW_006b
 #PACKETDEF = -DPACKETVER=5 -DNEW_006b
 #PACKETDEF = -DPACKETVER=4 -DNEW_006b
 #PACKETDEF = -DPACKETVER=3 -DNEW_006b

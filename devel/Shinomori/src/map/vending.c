@@ -49,43 +49,46 @@ void vending_vendinglistreq(struct map_session_data *sd,unsigned long id)
  */
 void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned long id,unsigned char *p)
 {
-	size_t i;
-	int j, w, z, new_ = 0, blank, vend_list[12];
-	short amount, index;
+	size_t i, j, w;
+	long z, new_ = 0;
+	unsigned short blank, vend_list[12];
+	unsigned short amount, index;
 	struct map_session_data *vsd = map_id2sd(id);
 
 	nullpo_retv(sd);
+	if(vsd == NULL)
+		return;
+	if(vsd->vender_id == 0)
+		return;
+	if(vsd->vender_id == sd->bl.id)
+		return;
+	if( vsd->vend_num>MAX_VENDING )
+		vsd->vend_num=MAX_VENDING;
 
+	// number of blank entries in inventory
 	blank = pc_inventoryblank(sd);
 
-	if (vsd == NULL)
-		return;
-	if (vsd->vender_id == 0)
-		return;
-	if (vsd->vender_id == sd->bl.id)
-		return;
 	for(i = 0, w = z = 0; 8 + 4 * i < len; i++) {
 		amount = RBUFW(p, 4 * i);
 		index =  RBUFW(p, 2 + 4 * i) - 2;
 
-		if (amount < 0) return; // exploit
+		if(amount > MAX_AMOUNT) return; // exploit
 			
-//		for(j = 0; j < vsd->vend_num; j++)
-//			if (0 < vsd->vending[j].amount && amount <= vsd->vending[j].amount && vsd->vending[j].index == index)
-//				break;
-//ADD_start
 		for(j = 0; j < vsd->vend_num; j++) {
-			if (0 < vsd->vending[j].amount && vsd->vending[j].index == index) {
-				if (amount > vsd->vending[j].amount || amount <= 0) {
+			if( vsd->vending[j].amount>0 && vsd->vending[j].index == index )
+			{
+				if (amount > vsd->vending[j].amount)
+				{	
 					clif_buyvending(sd,index,vsd->vending[j].amount, 4);
 					return;
 				}
-				if (amount <= vsd->vending[j].amount) break;
+				else 
+					break;
 			}
 		}
-//ADD_end
 		if (j == vsd->vend_num)
 			return; // ”„‚èØ‚ê
+
 		vend_list[i] = j;
 		z += vsd->vending[j].value * amount;
 		if (z > sd->status.zeny){

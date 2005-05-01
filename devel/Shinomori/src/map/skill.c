@@ -2336,7 +2336,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 			else if (!(battle_check_undead(race, status_get_elem_type(bl)) || race == 6) && rand()%100 < 50 * sc_def_vit / 100)
 				status_change_start(bl, SC_BLEEDING, skilllv, 0, 0, 0, bleed_time, 0);
 			if (tsd) {
-				int sp = tsd->status.max_sp * (15 + 5 * skilllv) / 100;
+				long sp = tsd->status.max_sp * (15 + 5 * skilllv) / 100;
 				if (sp > tsd->status.sp) sp = tsd->status.sp;
 				tsd->status.sp -= sp;
 				clif_updatestatus(tsd,SP_SP);
@@ -6553,8 +6553,10 @@ static int skill_check_condition_hermod_sub(struct block_list *bl,va_list ap)
  */
 int skill_check_condition(struct map_session_data *sd,int type)
 {
-	int i,hp,sp,hp_rate,sp_rate,zeny,weapon,state,spiritball,skill,lv,mhp;
-	int	index[10],itemid[10],amount[10];
+	size_t i;
+	long hp,sp,hp_rate,sp_rate, zeny;
+	unsigned short weapon,state,spiritball,skill,lv,mhp;
+	int index[10],itemid[10],amount[10];
 	int arrow_flag = 0;
 	int force_gem_flag = 0;
 	int delitem_flag = 1;
@@ -6957,7 +6959,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 	}
 
 	for(i=0;i<10;i++) {
-		int x = lv%11 - 1;
+		unsigned short x = lv%11 - 1;
 		index[i] = -1;
 		if(itemid[i] <= 0)
 			continue;
@@ -8692,7 +8694,8 @@ int skill_clear_unitgroup(struct block_list *src)
  */
 struct skill_unit_group_tickset *skill_unitgrouptickset_search(struct block_list *bl,struct skill_unit_group *group,unsigned long tick)
 {
-	int i,j=-1,k,s,id;
+	int i,j=-1,k,s;
+	unsigned short id;
 	struct skill_unit_group_tickset *set;
 
 	nullpo_retr(0, bl);
@@ -8713,9 +8716,9 @@ struct skill_unit_group_tickset *skill_unitgrouptickset_search(struct block_list
 
 	for (i=0; i<MAX_SKILLUNITGROUPTICKSET; i++) {
 		k = (i+s) % MAX_SKILLUNITGROUPTICKSET;
-		if (set[k].id == id)
+		if (set[k].skill_id == id)
 			return &set[k];
-		else if (j==-1 && (DIFF_TICK(tick,set[k].tick)>0 || set[k].id==0))
+		else if (j==-1 && (DIFF_TICK(tick,set[k].tick)>0 || set[k].skill_id==0))
 			j=k;
 	}
 
@@ -8726,7 +8729,7 @@ struct skill_unit_group_tickset *skill_unitgrouptickset_search(struct block_list
 		j = id % MAX_SKILLUNITGROUPTICKSET;
 	}
 
-	set[j].id = id;
+	set[j].skill_id = id;
 	set[j].tick = tick;
 	return &set[j];
 }
@@ -9041,7 +9044,7 @@ int skill_unit_move_unit_group( struct skill_unit_group *group, int m,int dx,int
  * アイテム合成可能判定
  *------------------------------------------
  */
-int skill_can_produce_mix( struct map_session_data *sd, int nameid, int trigger )
+int skill_can_produce_mix( struct map_session_data *sd, unsigned short nameid, int trigger )
 {
 	int i,j;
 
@@ -9095,7 +9098,7 @@ int skill_can_produce_mix( struct map_session_data *sd, int nameid, int trigger 
  *------------------------------------------
  */
 int skill_produce_mix( struct map_session_data *sd,
-	int nameid, int slot1, int slot2, int slot3 )
+	unsigned short nameid, int slot1, int slot2, int slot3 )
 {
 	int slot[3];
 	int i,sc,ele,idx,equip,make_per,flag;
@@ -9306,7 +9309,7 @@ int skill_produce_mix( struct map_session_data *sd,
 	return 0;
 }
 
-int skill_arrow_create( struct map_session_data *sd,int nameid)
+int skill_arrow_create( struct map_session_data *sd,unsigned short nameid)
 {
 	int i,j,flag,index=-1;
 	struct item tmp_item;

@@ -18,6 +18,7 @@
 
 #define MAX_MAP_PER_SERVER 512
 #define MAX_INVENTORY 100
+#define MAX_ITEMS 20000
 #define MAX_AMOUNT 30000
 #define MAX_ZENY 1000000000	// 1G zeny
 #define MAX_CART 100
@@ -223,14 +224,14 @@ struct map_session_data;
 /////////////////////////////////////////////////////////////////////////////
 struct item
 {
-	unsigned long id;
+	unsigned short id;
 	unsigned short nameid;
 	unsigned short amount;
 	unsigned short equip;
 	char identify;
 	char refine;
 	char attribute;
-	short card[4];
+	unsigned short card[4];
 };
 
 extern inline void _item_tobuffer(const struct item *p, unsigned char **buf)
@@ -439,29 +440,33 @@ struct mmo_charstatus
 	long job_exp;
 	long zeny;
 
-	short class_;
+	unsigned short class_;
 	short status_point;
 	short skill_point;
+
 	long hp;
 	long max_hp;
 	long sp;
 	long max_sp;
+
 	short option;
 	short karma;
 	short manner;
-	short hair;
-	short hair_color;
-	short clothes_color;
+
+	unsigned short hair;
+	unsigned short hair_color;
+	unsigned short clothes_color;
+
 	unsigned long party_id;
 	unsigned long guild_id;
 	unsigned long pet_id;
 	unsigned long fame;
 
-	short weapon;
-	short shield;
-	short head_top;
-	short head_mid;
-	short head_bottom;
+	unsigned short weapon;
+	unsigned short shield;
+	unsigned short head_top;
+	unsigned short head_mid;
+	unsigned short head_bottom;
 
 	char name[24];
 	unsigned short base_level;

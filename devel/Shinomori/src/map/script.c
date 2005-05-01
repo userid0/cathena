@@ -1624,7 +1624,7 @@ int buildin_callfunc(struct script_state *st)
 	char *str=conv_str(st,& (st->stack->stack_data[st->start+2]));
 
 	if( (scr=(char *) strdb_search(script_get_userfunc_db(),str)) ){
-		int i,j;
+		size_t i,j;
 		for(i=st->start+3,j=0;i<st->end;i++,j++)
 			push_copy(st->stack,i);
 
@@ -1650,7 +1650,7 @@ int buildin_callfunc(struct script_state *st)
 int buildin_callsub(struct script_state *st)
 {
 	int pos=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	int i,j;
+	size_t i,j;
 	for(i=st->start+3,j=0;i<st->end;i++,j++)
 		push_copy(st->stack,i);
 
@@ -1737,7 +1737,7 @@ int buildin_close2(struct script_state *st)
 int buildin_menu(struct script_state *st)
 {
 	char *buf;
-	int len,i;
+	size_t len,i;
 	struct map_session_data *sd;
 
 	sd=script_rid2sd(st);
@@ -1766,7 +1766,7 @@ int buildin_menu(struct script_state *st)
 		pc_setreg(sd,add_str("@menu"),sd->npc_menu);
 		sd->state.menu_or_input=0;
 		if(sd->npc_menu>0 && sd->npc_menu<(st->end-st->start)/2){
-			int pos;
+			size_t pos;
 			if( st->stack->stack_data[st->start+sd->npc_menu*2+1].type!=C_POS ){
 				ShowMessage("script: menu: not label !\n");
 				st->state=END;
@@ -1987,7 +1987,7 @@ int buildin_input(struct script_state *st)
  */
 int buildin_if(struct script_state *st)
 {
-	int sel,i;
+	size_t sel,i;
 
 	sel=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	if(!sel)
@@ -2050,7 +2050,7 @@ int buildin_setarray(struct script_state *st)
 	char *name=str_buf+str_data[num&0x00ffffff].str;
 	char prefix=*name;
 	char postfix=name[strlen(name)-1];
-	int i,j;
+	size_t i,j;
 
 	if( prefix!='$' && prefix!='@' ){
 		ShowMessage("buildin_setarray: illegal scope !\n");
@@ -2291,7 +2291,8 @@ int buildin_viewpoint(struct script_state *st)
  */
 int buildin_countitem(struct script_state *st)
 {
-	int nameid=0,count=0,i;
+	unsigned short nameid=0;
+	size_t count=0,i;
 	struct map_session_data *sd;
 
 	struct script_data *data;
@@ -2328,7 +2329,7 @@ int buildin_countitem(struct script_state *st)
  */
 int buildin_checkweight(struct script_state *st)
 {
-	int nameid=0,amount;
+	unsigned short nameid=0,amount;
 	struct map_session_data *sd;
 	struct script_data *data;
 
@@ -2345,15 +2346,18 @@ int buildin_checkweight(struct script_state *st)
 		nameid=conv_num(st,data);
 
 	amount=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	if ( amount<=0 || nameid<500 ) { //if get wrong item ID or amount<=0, don't count weight of non existing items
+	if( amount>MAX_AMOUNT || nameid<500 || nameid>MAX_ITEMS)
+	{	//if get wrong item ID or amount<=0, don't count weight of non existing items
 		push_val(st->stack,C_INT,0);
 	}
-
-	sd=script_rid2sd(st);
-	if(itemdb_weight(nameid)*amount + sd->weight > sd->max_weight){
-		push_val(st->stack,C_INT,0);
-	} else {
-		push_val(st->stack,C_INT,1);
+	else
+	{
+		sd=script_rid2sd(st);
+		if(itemdb_weight(nameid)*amount + sd->weight > sd->max_weight){
+			push_val(st->stack,C_INT,0);
+		} else {
+			push_val(st->stack,C_INT,1);
+		}
 	}
 
 	return 0;
@@ -2365,7 +2369,9 @@ int buildin_checkweight(struct script_state *st)
  */
 int buildin_getitem(struct script_state *st)
 {
-	int nameid,nameidsrc,amount,flag = 0;
+	//!! some stupid game with signs
+	short nameid,nameidsrc,amount;
+	int flag = 0;
 	struct item item_tmp;
 	struct map_session_data *sd;
 	struct script_data *data;
@@ -2387,16 +2393,18 @@ int buildin_getitem(struct script_state *st)
 		return 0; //return if amount <=0, skip the useles iteration
 	}
 	//Violet Box, Blue Box, etc - random item pick
-	if((nameidsrc = nameid)<0) { // Save real ID of the source Box [Lupus]
+	nameidsrc = nameid;
+	if( nameid<0 )
+	{	// Save real ID of the source Box [Lupus]
 		nameid=itemdb_searchrandomid(-nameid);
 
 		if(log_config.present > 0)
 			log_present(sd, -nameidsrc, nameid); //fixed missing ID by Lupus
-
 		flag = 1;
 	}
-
-	if(nameid > 0) {
+	
+	if(nameid > 0)
+	{
 		memset(&item_tmp,0,sizeof(item_tmp));
 		item_tmp.nameid=nameid;
 		if(!flag)
@@ -2423,7 +2431,9 @@ int buildin_getitem(struct script_state *st)
  */
 int buildin_getitem2(struct script_state *st)
 {
-	int nameid,amount,flag = 0;
+	//!! some stupid game with signs
+	short nameid,amount;
+	int flag = 0;
 	int iden,ref,attr,c1,c2,c3,c4;
 	struct item_data *item_data;
 	struct item item_tmp;
@@ -2501,7 +2511,9 @@ int buildin_getitem2(struct script_state *st)
  */
 int buildin_makeitem(struct script_state *st)
 {
-	int nameid,amount,flag = 0;
+	//!! some stupid game with signs
+	short nameid,amount;
+	int flag = 0;
 	int x,y,m;
 	char *mapname;
 	struct item item_tmp;
@@ -2535,7 +2547,7 @@ int buildin_makeitem(struct script_state *st)
 		nameid=itemdb_searchrandomid(-nameid);
 		flag = 1;
 	}
-
+	
 	if(nameid > 0) {
 		memset(&item_tmp,0,sizeof(item_tmp));
 		item_tmp.nameid=nameid;
@@ -2556,7 +2568,8 @@ int buildin_makeitem(struct script_state *st)
  */
 int buildin_delitem(struct script_state *st)
 {
-	int nameid=0,amount,i,important_item=0;
+	unsigned short nameid=0,amount;
+	int i,important_item=0;
 	struct map_session_data *sd;
 	struct script_data *data;
 
@@ -2575,20 +2588,22 @@ int buildin_delitem(struct script_state *st)
 
 	amount=conv_num(st,& (st->stack->stack_data[st->start+3]));
 
-	if (nameid<500 || amount<=0 ) {//by Lupus. Don't run FOR if u got wrong item ID or amount<=0
+	if (nameid<500 || nameid>20000 || amount>MAX_AMOUNT )
+	{	//by Lupus. Don't run FOR if u got wrong item ID or amount<=0
 		//ShowMessage("wrong item ID or amount<=0 : delitem %i,\n",nameid,amount);
 		return 0;
 	}
 	sd=script_rid2sd(st);
 	//1st pass
 	//here we won't delete items with CARDS, named items but we count them
-	for(i=0;i<MAX_INVENTORY;i++){
-		//we don't delete wrong item or equipped item
-		if(sd->status.inventory[i].nameid<=0 || sd->inventory_data[i] == NULL ||
-		   sd->status.inventory[i].amount<=0 ||	sd->status.inventory[i].nameid!=nameid )
+	for(i=0;i<MAX_INVENTORY;i++)
+	{	//we don't delete wrong item or equipped item
+		if( sd->status.inventory[i].nameid!=nameid || sd->inventory_data[i] == NULL ||
+			sd->status.inventory[i].nameid>=20000  || sd->status.inventory[i].amount>=MAX_AMOUNT )
 			continue;
 		//1 egg uses 1 cell in the inventory. so it's ok to delete 1 pet / per cycle
-		if(sd->inventory_data[i]->type==7 && sd->status.inventory[i].card[0] == (short)0xff00 && search_petDB_index(nameid, PET_EGG) >= 0 ){
+		if(sd->inventory_data[i]->type==7 && sd->status.inventory[i].card[0] == 0xff00 && search_petDB_index(nameid, PET_EGG) >= 0 )
+		{
 			intif_delete_petdata( MakeDWord(sd->status.inventory[i].card[1], sd->status.inventory[i].card[2]) );
 			//clear egg flag. so it won't be put in IMPORTANT items (eggs look like item with 2 cards ^_^)
 			sd->status.inventory[i].card[1] = sd->status.inventory[i].card[0] = 0;
@@ -2596,16 +2611,20 @@ int buildin_delitem(struct script_state *st)
 		}
 		//is this item important? does it have cards? or Player's name? or Refined/Upgraded
 		if( sd->status.inventory[i].card[0] || sd->status.inventory[i].card[1] ||
-			sd->status.inventory[i].card[2] || sd->status.inventory[i].card[3] || sd->status.inventory[i].refine) {
+			sd->status.inventory[i].card[2] || sd->status.inventory[i].card[3] || sd->status.inventory[i].refine)
+		{
 			//this is important item, count it
 			important_item++;
 			continue;
 		}
 
-		if(sd->status.inventory[i].amount>=amount){
+		if(sd->status.inventory[i].amount>=amount)
+		{
 			pc_delitem(sd,i,amount,0);
 			return 0; //we deleted exact amount of items. now exit
-		} else {
+		}
+		else
+		{
 			amount-=sd->status.inventory[i].amount;
 			pc_delitem(sd,i,sd->status.inventory[i].amount,0);
 		}
@@ -2613,21 +2632,26 @@ int buildin_delitem(struct script_state *st)
 	//2nd pass
 	//now if there WERE items with CARDs/REFINED/NAMED... and if we still have to delete some items. we'll delete them finally
 	if (important_item>0 && amount>0)
-		for(i=0;i<MAX_INVENTORY;i++){
+	{
+		for(i=0;i<MAX_INVENTORY;i++)
+		{
 			//we don't delete wrong item
-			if(sd->status.inventory[i].nameid<=0 || sd->inventory_data[i] == NULL ||
-				sd->status.inventory[i].amount<=0 || sd->status.inventory[i].nameid!=nameid )
-				continue;
+			if( sd->status.inventory[i].nameid!=nameid || sd->inventory_data[i] == NULL ||
+				sd->status.inventory[i].nameid>=20000  || sd->status.inventory[i].amount>=MAX_AMOUNT )
+					continue;
 
-			if(sd->status.inventory[i].amount>=amount){
+			if(sd->status.inventory[i].amount>=amount)
+			{
 				pc_delitem(sd,i,amount,0);
 				return 0; //we deleted exact amount of items. now exit
-			} else {
+			}
+			else
+			{
 				amount-=sd->status.inventory[i].amount;
 				pc_delitem(sd,i,sd->status.inventory[i].amount,0);
 			}
 		}
-
+	}
 	return 0;
 }
 
@@ -6408,7 +6432,7 @@ int buildin_jump_zero(struct script_state *st) {
 int buildin_select(struct script_state *st)
 {
 	char *buf;
-	int len,i;
+	size_t len,i;
 	struct map_session_data *sd;
 
 	sd=script_rid2sd(st);
@@ -6980,7 +7004,7 @@ int buildin_isequipped(struct script_state *st)
 					for(k=0; k<sd->inventory_data[index]->slot; k++) {
 						if (sd->status.inventory[index].card[0]!=0x00ff &&
 							sd->status.inventory[index].card[0]!=0x00fe &&
-							sd->status.inventory[index].card[0]!=(short)0xff00 &&
+							sd->status.inventory[index].card[0]!=0xff00 &&
 							sd->status.inventory[index].card[k] == id) {
 							flag = 1;
 							break;
@@ -7010,8 +7034,10 @@ int buildin_isequipped(struct script_state *st)
 int buildin_isequippedcnt(struct script_state *st)
 {
 	struct map_session_data *sd;
-	int i, j, k, id = 1;
+	size_t i, j, k;
+	unsigned long id = 1;
 	int ret = 0;
+	int index, type;
 
 	sd = script_rid2sd(st);
 	
@@ -7026,7 +7052,6 @@ int buildin_isequippedcnt(struct script_state *st)
 			continue;
 		
 		for (j=0; j<10; j++) {
-			int index, type;
 			index = sd->equip_index[j];
 			if(index < 0) continue;
 			if(j == 9 && sd->equip_index[8] == index) continue;
@@ -7036,13 +7061,13 @@ int buildin_isequippedcnt(struct script_state *st)
 			
 			if(sd->inventory_data[index]) {
 				if (type == 4 || type == 5) {
-					if (sd->inventory_data[index]->nameid == id)
+					if(sd->inventory_data[index]->nameid == id)
 						ret++; //[Lupus]
 				} else if (type == 6) {
-					for(k=0; k<sd->inventory_data[index]->slot; k++) {
+					for(k=0; k<sd->inventory_data[index]->flag.slot; k++) {
 						if (sd->status.inventory[index].card[0]!=0x00ff &&
 							sd->status.inventory[index].card[0]!=0x00fe &&
-							sd->status.inventory[index].card[0]!=(short)0xff00 &&
+							sd->status.inventory[index].card[0]!=0xff00 &&
 							sd->status.inventory[index].card[k] == id) {
 							ret++; //[Lupus]
 						}
@@ -7065,7 +7090,8 @@ int buildin_isequippedcnt(struct script_state *st)
 int buildin_isequipped(struct script_state *st)
 {
 	struct map_session_data *sd;
-	int i, j, k, id = 1;
+	size_t i, j, k;
+	unsigned short id = 1;
 	int ret = -1;
 
 	sd = script_rid2sd(st);
@@ -7099,7 +7125,7 @@ int buildin_isequipped(struct script_state *st)
 					// Item Hash format:
 					// 1111 1111 1111 1111 1111 1111 1111 1111
 					// [ left  ] [ right ] [ NA ] [  armor  ]
-					for (k = 0; k < sd->inventory_data[index]->slot; k++) {
+					for (k = 0; k < sd->inventory_data[index]->flag.slot; k++) {
 						// --- Calculate hash for current card ---
 						// Defense equipment
 						// They *usually* have only 1 slot, so we just assign 1 bit
@@ -7124,7 +7150,7 @@ int buildin_isequipped(struct script_state *st)
 
 						if (sd->status.inventory[index].card[0] != 0x00ff &&
 							sd->status.inventory[index].card[0] != 0x00fe &&
-							sd->status.inventory[index].card[0] != (short)0xff00 &&
+							sd->status.inventory[index].card[0] != 0xff00 &&
 							sd->status.inventory[index].card[k] == id)
 						{
 							// We have found a match
@@ -7157,7 +7183,8 @@ int buildin_isequipped(struct script_state *st)
 int buildin_cardscnt(struct script_state *st)
 {
 	struct map_session_data *sd;
-	int i, k, id = 1;
+	size_t i, k;
+	unsigned short id = 1;
 	int ret = 0;
 	int index, type;
 
@@ -7181,10 +7208,10 @@ int buildin_cardscnt(struct script_state *st)
 				if (sd->inventory_data[index]->nameid == id)
 					ret++;
 			} else if (type == 6) {
-				for(k=0; k<sd->inventory_data[index]->slot; k++) {
+				for(k=0; k<sd->inventory_data[index]->flag.slot; k++) {
 					if (sd->status.inventory[index].card[0]!=0x00ff &&
 						sd->status.inventory[index].card[0]!=0x00fe &&
-						sd->status.inventory[index].card[0]!=(short)0xff00 &&
+						sd->status.inventory[index].card[0]!=(unsigned short)0xff00 &&
 						sd->status.inventory[index].card[k] == id) {
 						ret++;
 					}
@@ -7620,7 +7647,7 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 
 	rerun_pos=st->pos;
 	for(st->state=0;st->state==0;){
-		switch(c= get_com((unsigned char *) script,&st->pos)){
+		switch(c= get_com((unsigned char *) script,(int*)&st->pos)){
 		case C_EOL:
 			if(stack->sp!=st->defsp){
 				if(battle_config.error_log)
@@ -7630,7 +7657,7 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 			rerun_pos=st->pos;
 			break;
 		case C_INT:
-			push_val(stack,C_INT,get_num((unsigned char *) script,&st->pos));
+			push_val(stack,C_INT,get_num((unsigned char *) script,(int*)&st->pos));
 			break;
 		case C_POS:
 		case C_NAME:
@@ -7715,7 +7742,7 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 	case END:
 		{
 			struct map_session_data *sd=map_id2sd(st->rid);
-			st->pos=-1;
+			st->pos = 0xFFFFFFFF;
 			if(sd && sd->npc_id==st->oid)
 				npc_event_dequeue(sd);
 		}

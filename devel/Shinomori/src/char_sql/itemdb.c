@@ -31,7 +31,7 @@ static struct dbt* item_db;
  * DB‚ÌŒŸõ
  *------------------------------------------
  */
-struct item_data* itemdb_search(int nameid)
+struct item_data* itemdb_search(unsigned short nameid)
 {
 	struct item_data *id;
 
@@ -71,7 +71,7 @@ struct item_data* itemdb_search(int nameid)
  *
  *------------------------------------------
  */
-int itemdb_isequip(int nameid)
+int itemdb_isequip(unsigned short nameid)
 {
 	int type=itemdb_type(nameid);
 	if(type==0 || type==2 || type==3 || type==6 || type==10)
@@ -105,7 +105,8 @@ static int itemdb_readdb(void)
 	FILE *fp;
 	char line[1024];
 	int ln=0;
-	int nameid,j;
+	unsigned short nameid;
+	size_t j;
 	char *str[32],*p,*np;
 	struct item_data *id;
 
@@ -127,7 +128,7 @@ static int itemdb_readdb(void)
 			continue;
 
 		nameid=atoi(str[0]);
-		if(nameid<=0 || nameid>=20000)
+		if(nameid>=MAX_ITEMS)
 			continue;
 		ln++;
 
@@ -145,7 +146,7 @@ static int itemdb_readdb(void)
 
 static int itemdb_read_sqldb(void) // sql item_db read, shortened version of map-server item_db read [Valaris]
 {
-	unsigned int nameid; 	// Type should be "unsigned short int", but currently isn't for compatibility with numdb_insert()
+	unsigned short nameid; 	// Type should be "unsigned short int", but currently isn't for compatibility with numdb_insert()
 	struct item_data *id;
 
 	// ----------
@@ -168,7 +169,7 @@ static int itemdb_read_sqldb(void) // sql item_db read, shortened version of map
 			nameid = atoi(sql_row[0]);
 
 			// If the identifier is not within the valid range, process the next row
-			if (nameid == 0 || nameid >= 20000)	{	// Should ">= 20000" be "> 20000"?
+			if (nameid >= MAX_ITEMS)	{	// Should ">= 20000" be "> 20000"?
 				continue;
 			}
 

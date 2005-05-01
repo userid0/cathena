@@ -160,6 +160,283 @@ int use_md5_passwds = 0;
 
 int console = 0;
 
+/*
+class Globals : public CConfig
+{
+public:
+
+	virtual bool ProcessConfig(const char*w1,const char*w2)
+	{
+		if (strcasecmp(w1, "admin_state") == 0)
+		{
+			admin_state = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "admin_pass") == 0)
+		{
+			memset(admin_pass, 0, sizeof(admin_pass));
+			strncpy(admin_pass, w2,sizeof(admin_pass));
+			gm_pass[sizeof(admin_pass)-1] = '\0';
+		}
+		else if (strcasecmp(w1, "ladminallowip") == 0)
+		{
+			if (strcasecmp(w2, "clear") == 0)
+			{
+				if (access_ladmin_allow)
+				{	// clear and initialize
+					aFree(access_ladmin_allow);
+					access_ladmin_allow = NULL;
+					access_ladmin_allownum = 0;
+				}
+			}
+			else if (strcasecmp(w2, "all") == 0)
+			{	// reset all previous values
+				if (access_ladmin_allow)
+					aFree(access_ladmin_allow);
+				// set to all
+				access_ladmin_allow = (char*)aCalloc(ACO_STRSIZE, sizeof(char));
+				access_ladmin_allownum = 1;
+				access_ladmin_allow[0] = '\0';
+			}
+			else if (w2[0] && !(access_ladmin_allownum == 1 && access_ladmin_allow[0] == '\0'))
+			{	// don't add IP if already 'all'
+				if (access_ladmin_allow)
+					access_ladmin_allow = (char*)aRealloc(access_ladmin_allow, (access_ladmin_allownum+1) * ACO_STRSIZE);
+				else
+					access_ladmin_allow = (char*)aMalloc(ACO_STRSIZE * sizeof(char));
+				strncpy(access_ladmin_allow + (access_ladmin_allownum++) * ACO_STRSIZE, w2, ACO_STRSIZE);
+				access_ladmin_allow[access_ladmin_allownum * ACO_STRSIZE - 1] = '\0';
+			}
+		}
+		else if (strcasecmp(w1, "gm_pass") == 0)
+		{
+			memset(gm_pass, 0, sizeof(gm_pass));
+			strncpy(gm_pass, w2, sizeof(gm_pass));
+			gm_pass[sizeof(gm_pass)-1] = '\0';
+		}
+		else if (strcasecmp(w1, "level_new_gm") == 0)
+		{
+			level_new_gm = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "new_account") == 0)
+		{
+			new_account_flag = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "login_ip") == 0)
+		{
+			login_ip = String2IP(w2);
+		}
+		else if (strcasecmp(w1, "login_port") == 0)
+		{
+			login_port = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "account_filename") == 0)
+		{
+			memset(account_filename, 0, sizeof(account_filename));
+			strncpy(account_filename, w2, sizeof(account_filename));
+			account_filename[sizeof(account_filename)-1] = '\0';
+		}
+		else if (strcasecmp(w1, "gm_account_filename") == 0)
+		{
+			memset(GM_account_filename, 0, sizeof(GM_account_filename));
+			strncpy(GM_account_filename, w2, sizeof(GM_account_filename));
+			GM_account_filename[sizeof(GM_account_filename)-1] = '\0';
+		}
+		else if (strcasecmp(w1, "gm_account_filename_check_timer") == 0)
+		{
+			gm_account_filename_check_timer = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "use_MD5_passwords") == 0)
+		{
+			use_md5_passwds = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "login_log_filename") == 0)
+		{
+			memset(login_log_filename, 0, sizeof(login_log_filename));
+			strncpy(login_log_filename, w2, sizeof(login_log_filename));
+			login_log_filename[sizeof(login_log_filename)-1] = '\0';
+		}
+		else if (strcasecmp(w1, "log_login") == 0)
+		{
+			log_login = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "login_log_unknown_packets_filename") == 0)
+		{
+			memset(login_log_unknown_packets_filename, 0, sizeof(login_log_unknown_packets_filename));
+			strncpy(login_log_unknown_packets_filename, w2, sizeof(login_log_unknown_packets_filename));
+			login_log_unknown_packets_filename[sizeof(login_log_unknown_packets_filename)-1] = '\0';
+		}
+		else if (strcasecmp(w1, "save_unknown_packets") == 0)
+		{
+			save_unknown_packets = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "display_parse_login") == 0)
+		{
+			display_parse_login = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "display_parse_admin") == 0)
+		{
+			display_parse_admin = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "display_parse_fromchar") == 0)
+		{	// 0: no, 1: yes (without packet 0x2714), 2: all packets
+			display_parse_fromchar = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "date_format") == 0)
+		{	// note: never have more than 19 char for the date!
+			memset(date_format, 0, sizeof(date_format));
+			switch ( isSwitchValue(w2) )
+			{
+			case 0:
+				strcpy(date_format, "%d-%m-%Y %H:%M:%S"); // 31-12-2004 23:59:59
+				break;
+			case 1:
+				strcpy(date_format, "%m-%d-%Y %H:%M:%S"); // 12-31-2004 23:59:59
+				break;
+			case 2:
+				strcpy(date_format, "%Y-%d-%m %H:%M:%S"); // 2004-31-12 23:59:59
+				break;
+			case 3:
+				strcpy(date_format, "%Y-%m-%d %H:%M:%S"); // 2004-12-31 23:59:59
+				break;
+			}
+		}
+		else if (strcasecmp(w1, "min_level_to_connect") == 0)
+		{
+			min_level_to_connect = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "add_to_unlimited_account") == 0)
+		{
+			add_to_unlimited_account = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "start_limited_time") == 0)
+		{
+			start_limited_time = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "check_ip_flag") == 0)
+		{
+			check_ip_flag = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "order") == 0)
+		{
+			if( strcasecmp(w2, "deny,allow") == 0 || strcasecmp(w2, "deny, allow") == 0)
+				access_order = ACO_DENY_ALLOW;
+			else if( strcasecmp(w2, "allow,deny") == 0 || strcasecmp(w2, "allow, deny") == 0)
+				access_order = ACO_ALLOW_DENY;
+			else if( strcasecmp(w2, "mutual-failture") == 0 || strcasecmp(w2, "mutual-failure") == 0)
+				access_order = ACO_MUTUAL_FAILTURE;
+			else
+				access_order = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "allow") == 0)
+		{
+			if (strcasecmp(w2, "clear") == 0)
+			{
+				if (access_allow)
+				{
+					aFree(access_allow);
+					access_allow = NULL;
+					access_allownum = 0;
+				}
+			}
+			else if (strcasecmp(w2, "all") == 0)
+			{	// reset all previous values
+				if (access_allow)
+					aFree(access_allow);
+				// set to all
+				access_allow = (char*)aCalloc(ACO_STRSIZE, sizeof(char));
+				access_allownum = 1;
+				access_allow[0] = '\0';
+			}
+			else if( w2[0] && !(access_allownum == 1 && access_allow[0] == '\0') )
+			{	// don't add IP if already 'all'
+				if (access_allow)
+					access_allow = (char*)aRealloc(access_allow, (access_allownum+1) * ACO_STRSIZE);
+				else
+					access_allow = (char*)aMalloc(ACO_STRSIZE * sizeof(char));
+				strncpy(access_allow + (access_allownum++) * ACO_STRSIZE, w2, ACO_STRSIZE);
+				access_allow[access_allownum * ACO_STRSIZE - 1] = '\0';
+			}
+		}
+		else if (strcasecmp(w1, "deny") == 0)
+		{
+			if (strcasecmp(w2, "clear") == 0)
+			{
+				if (access_deny)
+				{
+					aFree(access_deny);
+					access_deny = NULL;
+					access_denynum = 0;
+				}
+			}
+			else if (strcasecmp(w2, "all") == 0)
+			{	// reset all previous values
+				if (access_deny)
+					aFree(access_deny);
+				// set to all
+				access_deny = (char*)aCalloc(ACO_STRSIZE, sizeof(char));
+				access_denynum = 1;
+				access_deny[0] = '\0';
+			}
+			else if( w2[0] && !(access_denynum == 1 && access_deny[0] == '\0') )
+			{	// don't add IP if already 'all'
+				if (access_deny)
+					access_deny = (char*)aRealloc(access_deny, (access_denynum+1) * ACO_STRSIZE);
+				else
+					access_deny = (char*)aCalloc(ACO_STRSIZE, sizeof(char));
+				strncpy(access_deny + (access_denynum++) * ACO_STRSIZE, w2, ACO_STRSIZE);
+				access_deny[access_denynum * ACO_STRSIZE - 1] = '\0';
+			}
+		}
+		else if (strcasecmp(w1, "dynamic_pass_failure_ban") == 0)
+		{	// dynamic password error ban
+			dynamic_pass_failure_ban = isSwitch(w2);
+		}
+		else if (strcasecmp(w1, "dynamic_pass_failure_ban_time") == 0)
+		{
+			dynamic_pass_failure_ban_time = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "dynamic_pass_failure_ban_how_many") == 0)
+		{
+			dynamic_pass_failure_ban_how_many = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "dynamic_pass_failure_ban_how_long") == 0)
+		{
+			dynamic_pass_failure_ban_how_long = isSwitchValue(w2);
+		}
+		else if(strcasecmp(w1,"imalive_on")==0)
+		{	//Added by Mugendai for I'm Alive mod
+			imalive_on = isSwitchValue(w2);
+		}
+		else if(strcasecmp(w1,"imalive_time")==0)
+		{	//Added by Mugendai for I'm Alive mod
+			imalive_time = isSwitchValue(w2);
+		}
+		else if(strcasecmp(w1,"flush_on")==0)
+		{	//Added by Mugendai for GUI
+			flush_on = isSwitchValue(w2);
+		}
+		else if(strcasecmp(w1,"flush_time")==0)
+		{	//Added by Mugendai for GUI
+			flush_time = isSwitchValue(w2);
+		}
+		else if(strcasecmp(w1, "check_client_version") == 0)
+		{	//Added by Sirius for client version check
+			check_client_version = isSwitch(w2);
+		}
+		else if(strcasecmp(w1, "client_version_to_connect") == 0)
+		{	//Added by Sirius for client version check
+			client_version_to_connect = isSwitchValue(w2);
+		}
+		else if (strcasecmp(w1, "console") == 0)
+		{
+			console = isSwitch(w2);
+		}
+		return 0;
+	}
+};
+*/
+
+
 //------------------------------
 // Writing function of logs file
 //------------------------------
@@ -280,8 +557,8 @@ void addGM(unsigned long account_id, unsigned long level) {
 int read_gm_account(void) {
 	char line[512];
 	FILE *fp;
-	unsigned long account_id;
-	unsigned char level;
+	int account_id;
+	int level;
 	size_t line_counter;
 	struct stat file_stat;
 	size_t start_range = 0, end_range = 0, is_range = 0, current_id = 0;
@@ -3226,7 +3503,7 @@ int parse_console(char *buf) {
 	    strcasecmp("exit", command) == 0 ||
 	    strcasecmp("quit", command) == 0 ||
 	    strcasecmp("end", command) == 0)
-		exit(0);
+		runflag = 0;
 	else if(strcasecmp("alive", command) == 0 ||
 	         strcasecmp("status", command) == 0)
 		ShowConsole(CL_BOLD"I'm Alive.\n"CL_NORM);
@@ -3352,9 +3629,11 @@ int login_config_read(const char *cfgName) {
 			} else if (strcasecmp(w1, "ladminallowip") == 0) {
 				if (strcasecmp(w2, "clear") == 0) {
 					if (access_ladmin_allow)
+					{
 						aFree(access_ladmin_allow);
-					access_ladmin_allow = NULL;
-					access_ladmin_allownum = 0;
+						access_ladmin_allow = NULL;
+						access_ladmin_allownum = 0;
+					}
 				} else {
 					if (strcasecmp(w2, "all") == 0) {
 						// reset all previous values
@@ -3481,9 +3760,11 @@ int login_config_read(const char *cfgName) {
 			} else if (strcasecmp(w1, "deny") == 0) {
 				if (strcasecmp(w2, "clear") == 0) {
 					if (access_deny)
+					{
 						aFree(access_deny);
-					access_deny = NULL;
-					access_denynum = 0;
+						access_deny = NULL;
+						access_denynum = 0;
+					}
 				} else {
 					if (strcasecmp(w2, "all") == 0) {
 						// reset all previous values

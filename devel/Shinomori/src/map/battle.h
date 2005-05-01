@@ -4,9 +4,12 @@
 
 // ダメージ
 struct Damage {
-	int damage,damage2;
-	int type,div_;
-	int amotion,dmotion;
+	int damage;
+	int damage2;
+	int type;
+	int div_;
+	int amotion;
+	int dmotion;
 	int blewcount;
 	int flag;
 	int dmg_lv;	//囲まれ減算計算用　0:スキル攻撃 ATK_LUCKY,ATK_FLEE,ATK_DEF

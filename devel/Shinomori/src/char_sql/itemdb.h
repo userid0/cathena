@@ -2,7 +2,7 @@
 #define _ITEMDB_H_
 
 struct item_data {
-	int nameid;
+	unsigned short nameid;
 	char name[24],jname[24];
 	int value_buy,value_sell,value_notdc,value_notoc;
 	int type;
@@ -22,10 +22,10 @@ struct item_data {
 	char available;
 };
 
-struct item_data* itemdb_search(int nameid);
+struct item_data* itemdb_search(unsigned short nameid);
 #define itemdb_type(n) itemdb_search(n)->type
 
-int itemdb_isequip(int);
+int itemdb_isequip(unsigned short nameid);
 int itemdb_isequip2(struct item_data *);
 
 void do_final_itemdb(void);

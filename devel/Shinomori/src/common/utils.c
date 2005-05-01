@@ -3,103 +3,38 @@
 #include "malloc.h"
 #include "mmo.h"
 
-void dump(unsigned char *buffer, int num)
+void dump(unsigned char *buffer, size_t num)
 {
-   int     icnt,jcnt;
-
+	size_t icnt,jcnt;
 	ShowMessage("         Hex                                                  ASCII\n");
 	ShowMessage("         -----------------------------------------------      ----------------");
-
-   for (icnt=0;icnt<num;icnt+=16) {
+	
+	for (icnt=0;icnt<num;icnt+=16)
+	{
 		ShowMessage("\n%p ",&buffer[icnt]);
-    for (jcnt=icnt;jcnt<icnt+16;++jcnt) {
-	    if (jcnt < num) {
+		for (jcnt=icnt;jcnt<icnt+16;++jcnt)
+		{
+			if (jcnt < num)
 				ShowMessage("%02hX ",buffer[jcnt]);
-		}  else
+			else
 				ShowMessage("   ");
-    }
-
+		}
 		ShowMessage("  |  ");
-
-	for (jcnt=icnt;jcnt<icnt+16;++jcnt) {
-        if (jcnt < num) {
-            if (buffer[jcnt] > 31 && buffer[jcnt] < 127)
+		for (jcnt=icnt;jcnt<icnt+16;++jcnt)
+		{
+			if (jcnt < num)
+			{
+				if (buffer[jcnt] > 31 && buffer[jcnt] < 127)
 					ShowMessage("%c",buffer[jcnt]);
-               else
+				else
 					ShowMessage(".");
-           }  else
+			}
+			else
 				ShowMessage(" ");
-       }
-   }
+		}
+	}
 	ShowMessage("\n");
 }
-
-
-#ifdef WIN32
-
-// replace with strrchr
-char *rindex(char *str, char c)
-{
-        char *sptr;
-        sptr = str;
-        while(*sptr)
-                ++sptr;
-        if (c == '\0')
-                return(sptr);
-        while(str != sptr)
-                if (*sptr-- == c)
-                        return(++sptr);
-        return(NULL);
-}
-
-int strcasecmp(const char *arg1, const char *arg2)
-{
-  int chk, i;
-  if (arg1 == NULL || arg2 == NULL) {
-		ShowError("SYSERR: strcasecmp() passed a NULL pointer, %p or %p.\n", arg1, arg2);
-    return (0);
-  }
-  for (i = 0; arg1[i] || arg2[i]; i++)
-    if ((chk = LOWER(arg1[i]) - LOWER(arg2[i])) != 0)
-      return (chk);	/* not equal */
-  return (0);
-}
-
-int strncasecmp(const char *arg1, const char *arg2, int n)
-{
-  int chk, i;
-  if (arg1 == NULL || arg2 == NULL) {
-		ShowError("SYSERR: strn_cmp() passed a NULL pointer, %p or %p.\n", arg1, arg2);
-    return (0);
-  }
-  for (i = 0; (arg1[i] || arg2[i]) && (n > 0); i++, n--)
-    if ((chk = LOWER(arg1[i]) - LOWER(arg2[i])) != 0)
-      return (chk);	/* not equal */
-  return (0);
-}
-
-void str_upper(char *name)
-{
-  int len = strlen(name);
-  while (len--) {
-	if (*name >= 'a' && *name <= 'z')
-    	*name -= ('a' - 'A');
-     name++;
-  }
-}
-
-void str_lower(char *name)
-{
-  int len = strlen(name);
-  while (len--) {
-	if (*name >= 'A' && *name <= 'Z')
-    	*name += ('a' - 'A');
-    name++;
-  }
-}
-
-#endif
-
 
 // Allocate a StringBuf  [MouseJstr]
 struct StringBuf * StringBuf_Malloc() 
@@ -393,3 +328,87 @@ void findfile(const char *p, const char *pat, void (func)(const char*) )
 	}//end while
 }
 #endif
+
+
+
+
+
+
+
+
+/*
+#ifdef WIN32
+	int	strcasecmp(const char *arg1, const char *arg2);
+	int	strncasecmp(const char *arg1, const char *arg2, int n);
+	void str_upper(char *name);
+	void str_lower(char *name);
+//    char *rindex(char *str, char c);
+#endif
+
+
+#ifdef WIN32
+
+// replace with strrchr
+char *rindex(char *str, char c)
+{
+        char *sptr;
+        sptr = str;
+        while(*sptr)
+                ++sptr;
+        if (c == '\0')
+                return(sptr);
+        while(str != sptr)
+                if (*sptr-- == c)
+                        return(++sptr);
+        return(NULL);
+}
+
+int strcasecmp(const char *arg1, const char *arg2)
+{
+  int chk, i;
+  if (arg1 == NULL || arg2 == NULL) {
+		ShowError("SYSERR: strcasecmp() passed a NULL pointer, %p or %p.\n", arg1, arg2);
+    return (0);
+  }
+  for (i = 0; arg1[i] || arg2[i]; i++)
+    if ((chk = LOWER(arg1[i]) - LOWER(arg2[i])) != 0)
+      return (chk);	// not equal
+  return (0);
+}
+
+int strncasecmp(const char *arg1, const char *arg2, int n)
+{
+  int chk, i;
+  if (arg1 == NULL || arg2 == NULL) {
+		ShowError("SYSERR: strn_cmp() passed a NULL pointer, %p or %p.\n", arg1, arg2);
+    return (0);
+  }
+  for (i = 0; (arg1[i] || arg2[i]) && (n > 0); i++, n--)
+    if ((chk = LOWER(arg1[i]) - LOWER(arg2[i])) != 0)
+      return (chk);	// not equal
+  return (0);
+}
+
+void str_upper(char *name)
+{
+  int len = strlen(name);
+  while (len--) {
+	if (*name >= 'a' && *name <= 'z')
+    	*name -= ('a' - 'A');
+     name++;
+  }
+}
+
+void str_lower(char *name)
+{
+  int len = strlen(name);
+  while (len--) {
+	if (*name >= 'A' && *name <= 'Z')
+    	*name += ('a' - 'A');
+    name++;
+  }
+}
+
+#endif
+
+*/

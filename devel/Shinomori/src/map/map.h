@@ -41,12 +41,14 @@
 enum { BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_CHAT, BL_SKILL , BL_PET };
 enum { WARP, SHOP, SCRIPT, MONS };
 
-struct block_list {
-	struct block_list *next,*prev;
+struct block_list
+{
+	struct block_list *next;
+	struct block_list *prev;
 	unsigned long id;
-	short m;
-	short x;
-	short y;
+	unsigned short m;
+	unsigned short x;
+	unsigned short y;
 	unsigned char type;
 	unsigned char subtype;
 };
@@ -58,9 +60,11 @@ struct walkpath_data {
 	unsigned char path[MAX_WALKPATH];
 };
 struct shootpath_data {
-	int rx,ry,len;
-	int x[MAX_WALKPATH];
-	int y[MAX_WALKPATH];
+	unsigned short rx;
+	unsigned short ry;
+	unsigned short len;
+	unsigned short x[MAX_WALKPATH];
+	unsigned short y[MAX_WALKPATH];
 };
 
 struct script_reg {
@@ -79,15 +83,16 @@ struct status_change {
 	long val4;
 };
 struct vending {
-	short index;
+	unsigned short index;
 	unsigned short amount;
 	unsigned long value;
 };
 
 struct skill_unit_group;
-struct skill_unit {
-	struct block_list bl;
 
+struct skill_unit
+{
+	struct block_list bl;
 	struct skill_unit_group *group;
 
 	long limit;
@@ -96,7 +101,8 @@ struct skill_unit {
 	short alive;
 	short range;
 };
-struct skill_unit_group {
+struct skill_unit_group
+{
 	unsigned long src_id;
 	unsigned long party_id;
 	unsigned long guild_id;
@@ -117,12 +123,13 @@ struct skill_unit_group {
 	long unit_count,alive_count;
 	struct skill_unit *unit;
 };
-struct skill_unit_group_tickset {
+struct skill_unit_group_tickset
+{
+	unsigned short skill_id;
 	unsigned long tick;
-	long id;
 };
-struct skill_timerskill {
-	int timer;
+struct skill_timerskill
+{
 	unsigned long src_id;
 	unsigned long target_id;
 	unsigned short map;
@@ -130,6 +137,7 @@ struct skill_timerskill {
 	unsigned short y;
 	unsigned short skill_id;
 	unsigned short skill_lv;
+	int timer;
 	long type;
 	long flag;
 };
@@ -139,7 +147,8 @@ struct pet_db;
 struct item_data;
 struct square;
 
-struct map_session_data {
+struct map_session_data
+{
 	struct block_list bl;
 	struct {
 		unsigned auth : 1;							// 0
@@ -231,7 +240,7 @@ struct map_session_data {
 	unsigned long areanpc_id;
 	unsigned long npc_shopid;
 	unsigned long npc_pos;
-	long npc_menu;
+	unsigned long npc_menu;
 	unsigned long npc_amount;
 	unsigned long npc_stack;
 	unsigned long npc_stackmax;
@@ -486,7 +495,7 @@ struct map_session_data {
 	unsigned long partyspy; // [Syrus22]
 
 	unsigned long vender_id;
-	long vend_num;
+	unsigned short vend_num;
 	char message[80];
 	struct vending vending[MAX_VENDING];
 
@@ -509,7 +518,7 @@ struct map_session_data {
 	unsigned short change_level;	// [celest]
 
 #ifndef TXT_ONLY
-	long mail_counter;	// mail counter for mail system [Valaris]
+	unsigned long mail_counter;	// mail counter for mail system [Valaris]
 #endif
 };
 
@@ -522,8 +531,8 @@ struct npc_label_list {
 	int pos;
 };
 struct npc_item_list {
-	int nameid;
-	int value;
+	unsigned short nameid;
+	long value;
 };
 struct npc_reference{
 	char *script;
@@ -638,9 +647,10 @@ struct mob_data {
 	unsigned long last_thinktime;
 	unsigned long canmove_tick;
 	short move_fail_count;
-	struct mob_damage{
-		unsigned long id;
-		int dmg;
+	struct mob_damage
+	{
+		unsigned long fromid;
+		long dmg;
 	} dmglog[DAMAGELOG_SIZE];
 	struct item *lootitem;
 	short lootitem_count;
@@ -726,7 +736,7 @@ enum { MS_IDLE,MS_WALK,MS_ATTACK,MS_DEAD,MS_DELAY };
 
 enum { NONE_ATTACKABLE,ATTACKABLE };
 
-enum { ATK_LUCKY=1,ATK_FLEE,ATK_DEF};	// ˆÍ‚Ü‚êƒyƒiƒ‹ƒeƒBŒvZ—p
+enum { ATK_LUCKY=1,ATK_FLEE,ATK_DEF };	// ˆÍ‚Ü‚êƒyƒiƒ‹ƒeƒBŒvZ—p
 
 // ‘•”õƒR[ƒh
 enum {
@@ -823,7 +833,7 @@ struct map_data {
 	size_t npc_num;
 	size_t users;
 	struct {
-		unsigned alias : 1;
+//		unsigned alias : 1;
 		unsigned nomemo : 1;
 		unsigned noteleport : 1;
 		unsigned noreturn : 1;
@@ -967,9 +977,9 @@ extern int agit_flag;
 extern int night_flag; // 0=day, 1=night [Yor]
 
 // gat?Ö§
-int map_getcell(int,int,int,cell_t);
-int map_getcellp(struct map_data*,int,int,cell_t);
-void map_setcell(int,int,int,int);
+int map_getcell(unsigned short m,unsigned short x, unsigned short y,cell_t cellchk);
+int map_getcellp(struct map_data* m,unsigned short x, unsigned short y,cell_t cellchk);
+void map_setcell(unsigned short m,unsigned short x, unsigned short y,int cellck);
 
 
 extern int map_read_flag; // 0: grf«Õ«¡«¤«ë 1: «­«ã«Ã«·«å 2: «­«ã«Ã«·«å(?õê)
@@ -1049,7 +1059,7 @@ int map_calc_dir( struct block_list *src,int x,int y);
 
 // path.c‚æ‚è
 int path_search(struct walkpath_data*,int,int,int,int,int,int);
-int path_search_long(struct shootpath_data *,int,int,int,int,int);
+int path_search_long(struct shootpath_data *spd,unsigned short m,unsigned short x0,unsigned short y0,unsigned short x1,unsigned short y1);
 int path_blownpos(int m,int x0,int y0,int dx,int dy,int count);
 
 int map_who(int fd);

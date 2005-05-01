@@ -1392,9 +1392,9 @@ int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data) {
 	}
 	if(data)
 		delete_timer(fitem->cleartimer,map_clearflooritem_timer);
-	else if(fitem->item_data.card[0] == (short)0xff00)
+	else if(fitem->item_data.card[0] == 0xff00)
 		intif_delete_petdata( MakeDWord(fitem->item_data.card[1],fitem->item_data.card[2]) );
-	clif_clearflooritem(fitem,0);
+	clif_clearflooritem(fitem);
 	map_delobject(fitem->bl.id);
 
 	return 0;
@@ -2043,17 +2043,17 @@ int map_calc_dir( struct block_list *src,int x,int y) {
 // instead of using an unsigned char have it merged with other usages
 /////////////////////////////////////////////////////////////////////
 
-int map_getcell(int m,int x,int y,cell_t cellchk)
+int map_getcell(unsigned short m,unsigned short x, unsigned short y,cell_t cellchk)
 {
-	return (m < 0 || m > MAX_MAP_PER_SERVER) ? 0 : map_getcellp(&map[m],x,y,cellchk);
+	return (m >= MAX_MAP_PER_SERVER) ? 0 : map_getcellp(&map[m],x,y,cellchk);
 }
 
-int map_getcellp(struct map_data* m,int x,int y,cell_t cellchk)
+int map_getcellp(struct map_data* m,unsigned short x, unsigned short y,cell_t cellchk)
 {
 	struct mapgat *mg;
 	nullpo_ret(m);
 
-	if(x<0 || x>=m->xs-1 || y<0 || y>=m->ys-1)
+	if(x>=m->xs || y>=m->ys)
 	{
 		if(cellchk==CELL_CHKNOPASS) return 1;
 		return 0;
@@ -2092,10 +2092,10 @@ int map_getcellp(struct map_data* m,int x,int y,cell_t cellchk)
  * (m,x,y)の状態を設定する
  *------------------------------------------
  */
-void map_setcell(int m,int x,int y,int cellck)
+void map_setcell(unsigned short m,unsigned short x, unsigned short y, int cellck)
 {
 	struct mapgat *mg;
-	if(x<0 || x>=map[m].xs || y<0 || y>=map[m].ys)
+	if(m >= MAX_MAP_PER_SERVER || x>=map[m].xs || y>=map[m].ys)
 		return;
 
 	mg = map[m].gat+x+y*map[m].xs;
@@ -2201,7 +2201,8 @@ int map_setipport(char *name, unsigned long ip, unsigned short port) {
  * 他鯖管理のマップを全て削除
  *------------------------------------------
  */
-int map_eraseallipport_sub(void *key,void *data,va_list va) {
+int map_eraseallipport_sub(void *key,void *data,va_list va)
+{
 	struct map_data_other_server *mdos = (struct map_data_other_server*)data;
 	if(mdos->gat == NULL && mdos->map == NULL) {
 		strdb_erase(map_db,key);
@@ -2210,7 +2211,8 @@ int map_eraseallipport_sub(void *key,void *data,va_list va) {
 	return 0;
 }
 
-int map_eraseallipport(void) {
+int map_eraseallipport(void)
+{
 	strdb_foreach(map_db,map_eraseallipport_sub);
 	return 1;
 }
@@ -2715,7 +2717,7 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 	{
 		int wh;
 		int x,y;
-		struct gat_1cell {float high[4]; int type;};
+		struct gat_1cell {float high[4]; long type;};
 		unsigned char *gat, *p;
 
 		// read & convert fn
@@ -2729,7 +2731,7 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 
 		wh=map_waterheight(map[m].mapname);
 		
-		ShowMessage("\rLoading Maps [%d/%d]: %s, size (%ld %ld)(%i)%-10s",m,map_num,fn,map[m].xs,map[m].ys,wh,"");
+		ShowMessage("\rLoading Maps [%d/%d]: %s, size (%d %d)(%i)%-10s",m,map_num,fn,map[m].xs,map[m].ys,wh,"");
 		
 		p = gat+14;
 		for(y=0;y<map[m].ys;y++)
@@ -2740,14 +2742,15 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 
 			if(MSB_FIRST==CheckByteOrder()) // little/big endian
 			{	// need to correct the whole struct since we have no suitable buffer assigns
-				// gat_1cell contains 4 floats and one int (4byte each) so swapping these is enough
+				// gat_1cell contains 4 floats and one long (4byte each) so swapping these is enough
 				// the structure is memory alligned so it is safe to use just the pointers
-				SwapFourBytes(((char*)(&pp)) + sizeof(unsigned long)*0);
-				SwapFourBytes(((char*)(&pp)) + sizeof(unsigned long)*1);
-				SwapFourBytes(((char*)(&pp)) + sizeof(unsigned long)*2);
-				SwapFourBytes(((char*)(&pp)) + sizeof(unsigned long)*3);
-				SwapFourBytes(((char*)(&pp)) + sizeof(unsigned long)*4);
+				SwapFourBytes(((char*)(&pp)) + sizeof(long)*0);
+				SwapFourBytes(((char*)(&pp)) + sizeof(long)*1);
+				SwapFourBytes(((char*)(&pp)) + sizeof(long)*2);
+				SwapFourBytes(((char*)(&pp)) + sizeof(long)*3);
+				SwapFourBytes(((char*)(&pp)) + sizeof(long)*4);
 			}
+
 			if(wh!=NO_WATER && pp.type==0)
 			{	// ﾉ倏揮ｩﾆ
 				// no direct access
@@ -3403,10 +3406,10 @@ void do_final(void)
 			aFree(map[i].gat);
 			map[i].gat=NULL;
 		}
-		if(map[i].block) aFree(map[i].block);
-		if(map[i].block_mob) aFree(map[i].block_mob);
-		if(map[i].block_count) aFree(map[i].block_count);
-		if(map[i].block_mob_count) aFree(map[i].block_mob_count);
+		if(map[i].block)			{ aFree(map[i].block); map[i].block=NULL; }
+		if(map[i].block_mob)		{ aFree(map[i].block_mob); map[i].block_mob=NULL; }
+		if(map[i].block_count)		{ aFree(map[i].block_count); map[i].block_count=NULL; }
+		if(map[i].block_mob_count)	{ aFree(map[i].block_mob_count); map[i].block_mob_count=NULL; }
 	}
     numdb_final(id_db, id_db_final);
 	strdb_final(map_db, map_db_final);
@@ -3425,7 +3428,7 @@ void do_final(void)
 		if(session[i] != NULL) 
 			session_Delete(i);
 	// clear externaly stored fd's
-	//char_fd = -1;
+
 	///////////////////////////////////////////////////////////////////////////
 }
 

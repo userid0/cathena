@@ -157,7 +157,7 @@ int mob_once_spawn (struct map_session_data *sd, char *mapname,
 		}
 	} else if (x <= 0 || y <= 0) {
 		i = j = 0;
-		ShowMessage("mob_once_spawn: ?? %i %i %p\n", x,y,sd);
+		ShowMessage("mob_once_spawn: ?? %i %i %p (%s,%s)\n", x,y,sd,mapname,event);
 		do {
 			x = rand() % (map[m].xs - 2) + 1;
 			y = rand() % (map[m].ys - 2) + 1;
@@ -1851,7 +1851,7 @@ static int mob_ai_sub_hard(struct block_list *bl,va_list ap)
 						mob_unlocktarget(md,tick);
 						return 0;
 					} else {
-						if (md->lootitem[0].card[0] == (short)0xff00)
+						if (md->lootitem[0].card[0] == 0xff00)
 							intif_delete_petdata( MakeDWord(md->lootitem[0].card[1],md->lootitem[0].card[2]) );
 						for (i = 0; i < LOOTITEM_SIZE - 1; i++)
 							memcpy (&md->lootitem[i], &md->lootitem[i+1], sizeof(md->lootitem[0]));
@@ -2016,8 +2016,11 @@ static int mob_ai_lazy(int tid,unsigned long tick,int id,int data)
  *------------------------------------------
  */
 struct delay_item_drop {
-	int m,x,y;
-	int nameid,amount;
+	unsigned short m;
+	unsigned short x;
+	unsigned short y;
+	unsigned short nameid;
+	unsigned short amount;
 	struct map_session_data *first_sd,*second_sd,*third_sd;
 };
 
@@ -2075,8 +2078,8 @@ static int mob_delay_item_drop(int tid,unsigned long tick,int id,int data)
 				clif_additem(ditem->first_sd,0,0,flag);
 				drop_flag = 1;
 			}
-		aFree(ditem);
-		return 0;
+			aFree(ditem);
+			return 0;
 		}
 	}
 
@@ -2294,9 +2297,9 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 		if(sd!=NULL){
 			for(i=0,minpos=0,mindmg=0x7fffffff;i<DAMAGELOG_SIZE;i++){
 				//if(md->dmglog[i].id==sd->bl.id)
-				if(md->dmglog[i].id==sd->status.char_id)
+				if(md->dmglog[i].fromid==sd->status.char_id)
 					break;
-				if(md->dmglog[i].id==0){
+				if(md->dmglog[i].fromid==0){
 					minpos=i;
 					mindmg=0;
 				}
@@ -2309,7 +2312,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 				md->dmglog[i].dmg+=damage;
 			else {
 				//md->dmglog[minpos].id=sd->bl.id;
-				md->dmglog[minpos].id=sd->status.char_id;
+				md->dmglog[minpos].fromid=sd->status.char_id;
 				md->dmglog[minpos].dmg=damage;
 			}
 
@@ -2321,9 +2324,9 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			nullpo_retr(0, pd);
 			for(i=0,minpos=0,mindmg=0x7fffffff;i<DAMAGELOG_SIZE;i++){
 				//if(md->dmglog[i].id==pd->msd->bl.id)
-				if(md->dmglog[i].id==pd->msd->status.char_id)
+				if(md->dmglog[i].fromid==pd->msd->status.char_id)
 					break;
-				if(md->dmglog[i].id==0){
+				if(md->dmglog[i].fromid==0){
 					minpos=i;
 					mindmg=0;
 				}
@@ -2336,7 +2339,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 				md->dmglog[i].dmg+=(damage*battle_config.pet_attack_exp_rate)/100;
 			else {
 				//md->dmglog[minpos].id=pd->msd->bl.id;
-				md->dmglog[minpos].id=pd->msd->status.char_id;
+				md->dmglog[minpos].fromid=pd->msd->status.char_id;
 				md->dmglog[minpos].dmg=(damage*battle_config.pet_attack_exp_rate)/100;
 			}
 		}
@@ -2344,9 +2347,9 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			struct mob_data *md2 = (struct mob_data *)src;
 			nullpo_retr(0, md2);
 			for(i=0,minpos=0,mindmg=0x7fffffff;i<DAMAGELOG_SIZE;i++){
-				if(md->dmglog[i].id==md2->master_id)
+				if(md->dmglog[i].fromid==md2->master_id)
 					break;
-				if(md->dmglog[i].id==0){
+				if(md->dmglog[i].fromid==0){
 					minpos=i;
 					mindmg=0;
 				}
@@ -2358,7 +2361,7 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 			if(i<DAMAGELOG_SIZE)
 				md->dmglog[i].dmg+=damage;
 			else {
-				md->dmglog[minpos].id=md2->master_id;
+				md->dmglog[minpos].fromid=md2->master_id;
 				md->dmglog[minpos].dmg=damage;
 
 			if(md->attacked_id <= 0 && md->state.special_mob_ai==0)
@@ -2501,13 +2504,13 @@ int mob_damage(struct block_list *src,struct mob_data *md,int damage,int type)
 
 	tdmg = 0;
 	for(i=0,count=0,mvp_damage=0;i<DAMAGELOG_SIZE;i++){
-		if(md->dmglog[i].id==0)
+		if(md->dmglog[i].fromid==0)
 			continue;
 		// Will this slow things down too much?
-		tmpsd[i] = map_charid2sd(md->dmglog[i].id);
+		tmpsd[i] = map_charid2sd(md->dmglog[i].fromid);
 		// try finding again
 		if(tmpsd[i] == NULL)
-			tmpsd[i] = map_id2sd(md->dmglog[i].id);
+			tmpsd[i] = map_id2sd(md->dmglog[i].fromid);
 		// if we still can't find the player
 		if(tmpsd[i] == NULL)
 			continue;

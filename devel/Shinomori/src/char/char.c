@@ -1655,10 +1655,10 @@ static int char_delete(struct mmo_charstatus *cs) {
 	if(cs->pet_id)
 		inter_pet_delete(cs->pet_id);
 	for (j = 0; j < MAX_INVENTORY; j++)
-		if(cs->inventory[j].card[0] == (short)0xff00)
+		if(cs->inventory[j].card[0] == (unsigned short)0xff00)
 			inter_pet_delete(MakeDWord(cs->inventory[j].card[1],cs->inventory[j].card[2]));
 	for (j = 0; j < MAX_CART; j++)
-		if(cs->cart[j].card[0] == (short)0xff00)
+		if(cs->cart[j].card[0] == (unsigned short)0xff00)
 			inter_pet_delete( MakeDWord(cs->cart[j].card[1],cs->cart[j].card[2]) );
 	// ƒMƒ‹ƒh’E‘Þ
 	if(cs->guild_id)
@@ -3628,8 +3628,16 @@ void do_final(void) {
 
 	inter_final();
 
-	if(gm_account) aFree(gm_account);
-	if(char_dat) aFree(char_dat);
+	if(gm_account)
+	{
+		aFree(gm_account);
+		gm_account = NULL;
+	}
+	if(char_dat)
+	{	
+		aFree(char_dat);
+		char_dat=NULL;
+	}
 
 
 	///////////////////////////////////////////////////////////////////////////

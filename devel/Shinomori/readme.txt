@@ -1,6 +1,6 @@
 my personal kingdom
 
-based on svn1613
+based on svn1619
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
@@ -22,14 +22,15 @@ nsl now needs be linked explicitely in my environment
 you might need to modify build options on your's
 ///////////////////////////////////////////////////////////
 introduced slight changes the character file format (txt)
-so be sure to make a backup befor trying this versio,
+so be sure to make a backup befor trying this version
 otherwise you might not be able to switch back to branch
 ///////////////////////////////////////////////////////////
 start to change all data to real types for better type checking
 and preperation of automatic transfer buffers, 
-still much way to go, 
+still much way to go
 somebody should outlaw the usage of int's and
 the type changes via pointer casting
+*keep on changing types
 ///////////////////////////////////////////////////////////
 integrated the anti freeze system into the user count update messages
 (which are already send between chat,login and map)

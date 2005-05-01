@@ -26,8 +26,6 @@
 #endif
 
 
-
-
 struct npc_src_list {
 	struct npc_src_list * next;
 	char name[4];
@@ -82,7 +80,7 @@ int npc_event_doall_attached_sub(void *key,void *data,va_list ap)
 	nad=va_arg(ap,struct npc_att_data *);
 
 	if( (p=strchr(p,':')) && p && strcasecmp(nad->buf,p)==0 )
-	if(ev && ev->nd && ev->nd->u.scr.ref)
+	if(c && ev && ev->nd && ev->nd->u.scr.ref)
 	{
 		run_script(ev->nd->u.scr.ref->script,ev->pos,nad->sd->bl.id,ev->nd->bl.id);
 		(*c)++;
@@ -177,9 +175,15 @@ struct npc_data* npc_name2id(const char *name)
 void ev_release(struct dbn *db, int which)
 {
     if (which & 0x1)
+	{
         aFree(db->key);
+		db->key = NULL;
+	}
     if (which & 0x2)
+	{
         aFree(db->data);
+		db->data=NULL;
+	}
 }
 
 /*==========================================
@@ -236,9 +240,7 @@ int npc_event_timer(int tid,unsigned long tick,int id,int data)
 		if(battle_config.error_log)
 			ShowWarning("npc_event: event not found [%s]\n",eventname);
 	}	
-	else
-		
-		if(sd)
+	else if(sd)
 	{
 		for(i=0;i<MAX_EVENTTIMER;i++) {
 			if( sd->eventtimer[i]==tid ) {
@@ -777,8 +779,6 @@ int npc_touch_areanpc(struct map_session_data *sd,int m,int x,int y)
 			break;
 		case SCRIPT:
 		{
-			// this one is "ouch"
-			//char *name=(char *)aMalloc((strlen(map[m].npc[i]->name)+1)*sizeof(char));
 			char name[50]; // npc->name is 24 max + 9 for a possible ::OnTouch attachment
 
 			if(sd->areanpc_id == map[m].npc[i]->bl.id)
@@ -789,7 +789,6 @@ int npc_touch_areanpc(struct map_session_data *sd,int m,int x,int y)
 
 			if( npc_event(sd,name,0)>0 )
 				npc_click(sd,map[m].npc[i]->bl.id);
-			//aFree(name);
 			break;
 		}
 	}
@@ -1048,7 +1047,7 @@ int npc_selllist(struct map_session_data *sd,int n,unsigned char *itemlist)
 {
 	long z;
 	int i,skill,itemamount=0;
-	short amount,itemid;
+	unsigned short amount,itemid,nameid;
 
 	nullpo_retr(1, sd);
 	nullpo_retr(1, itemlist);
@@ -1056,18 +1055,16 @@ int npc_selllist(struct map_session_data *sd,int n,unsigned char *itemlist)
 	if (npc_checknear(sd,sd->npc_shopid))
 		return 1;
 	
-	for(i=0,z=0;i<n;i++) {
-		int nameid;
-		
+	for(i=0,z=0;i<n;i++)
+	{
 		// amount fix
 		if( RBUFW(itemlist,2*(i*2+1)) > battle_config.vending_max_value )
 			RBUFW(itemlist,2*(i*2+1)) = 0;	// clear the amount
 		
 		amount = RBUFW(itemlist,2*(i*2+1));
 		itemid = RBUFW(itemlist,2*(i*2))-2;
-		
-		
-		if (itemid <0 || itemid >=MAX_INVENTORY)
+				
+		if(itemid >=MAX_INVENTORY)
 			return 1;
 		nameid=sd->status.inventory[itemid].nameid;
 		if (nameid == 0 ||
@@ -1087,7 +1084,7 @@ int npc_selllist(struct map_session_data *sd,int n,unsigned char *itemlist)
 		itemid = RBUFW(itemlist,2*(i*2))-2;
 		if(	sd->status.inventory[itemid].nameid>0 && sd->inventory_data[itemid] != NULL &&
 			sd->inventory_data[itemid]->type==7 && sd->status.inventory[itemid].amount>0 &&
-			sd->status.inventory[itemid].card[0] == (short)0xff00)
+			sd->status.inventory[itemid].card[0] == 0xff00)
 				if(search_petDB_index(sd->status.inventory[itemid].nameid, PET_EGG) >= 0)
 					intif_delete_petdata(MakeDWord(sd->status.inventory[itemid].card[1],sd->status.inventory[itemid].card[2]));
 
@@ -1393,12 +1390,11 @@ int npc_stop_walking(struct npc_data *nd,int type)
  */
 void npc_clearsrcfile()
 {
-	struct npc_src_list *p=npc_src_first;
-
+	struct npc_src_list *p=npc_src_first, *pnext;
 	while( p ) {
-		struct npc_src_list *p2=p;
-		p=p->next;
-		aFree(p2);
+		pnext=p->next;
+		aFree(p);
+		p=pnext;
 	}
 	npc_src_first=NULL;
 	npc_src_last=NULL;
@@ -1568,7 +1564,7 @@ static int npc_parse_shop(char *w1,char *w2,char *w3,char *w4)
 	p = strchr(w4, ',');
 
 	while (p && pos < max) {
-		int nameid,value;
+		int nameid, value;
 		struct item_data *id;
 		p++;
 		if (sscanf(p, "%d:%d", &nameid, &value) != 2)

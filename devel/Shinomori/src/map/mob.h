@@ -33,8 +33,16 @@ struct mob_db {
 	short race2;	// celest
 	int speed,adelay,amotion,dmotion;
 	int mexp,mexpper;
-	struct { int nameid,p; } dropitem[10]; //8 -> 10 Lupus
-	struct { int nameid,p; } mvpitem[3];
+	struct 
+	{
+		unsigned short nameid;
+		unsigned short p;
+	} dropitem[10]; //8 -> 10 Lupus
+	struct 
+	{
+		unsigned short nameid;
+		unsigned short p;
+	} mvpitem[3];
 	int view_class,sex;
 	short hair,hair_color,weapon,shield,head_top,head_mid,head_buttom,option,clothes_color; // [Valaris]
 	int equip; // [Valaris]

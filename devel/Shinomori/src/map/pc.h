@@ -67,7 +67,7 @@ int pc_randomwarp(struct map_session_data *sd,int type);
 int pc_memo(struct map_session_data *sd,int i);
 int pc_randomwalk(struct map_session_data *sd,unsigned long tick);
 
-int pc_checkadditem(struct map_session_data*,int,int);
+int pc_checkadditem(struct map_session_data *sd,unsigned short nameid,unsigned short amount);
 int pc_inventoryblank(struct map_session_data*);
 int pc_search_inventory(struct map_session_data *sd,int item_id);
 int pc_payzeny(struct map_session_data*,int);

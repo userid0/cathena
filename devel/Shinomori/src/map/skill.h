@@ -61,24 +61,29 @@ enum {
 
 // アイテム作成デ?タベ?ス
 struct skill_produce_db {
-	int nameid, trigger;
-	int req_skill,itemlv;
-	int mat_id[MAX_PRODUCE_RESOURCE],mat_amount[MAX_PRODUCE_RESOURCE];
+	unsigned short nameid;
+	int trigger;
+	int req_skill;
+	int itemlv;
+	int mat_id[MAX_PRODUCE_RESOURCE];
+	int mat_amount[MAX_PRODUCE_RESOURCE];
 };
 extern struct skill_produce_db skill_produce_db[MAX_SKILL_PRODUCE_DB];
 
 // 矢作成デ?タベ?ス
 struct skill_arrow_db {
-	int nameid, trigger;
-	int cre_id[5],cre_amount[5];
+	unsigned short nameid;
+	int trigger;
+	int cre_id[5];
+	int cre_amount[5];
 };
 extern struct skill_arrow_db skill_arrow_db[MAX_SKILL_ARROW_DB];
 
 // アブラカダブラデ?タベ?ス
 struct skill_abra_db {
-	int nameid;
-	int req_lv;
-	int per;
+	unsigned short nameid;
+	unsigned short req_lv;
+	unsigned short per;
 };
 extern struct skill_abra_db skill_abra_db[MAX_SKILL_ABRA_DB];
 
@@ -179,11 +184,10 @@ int skill_enchant_elemental_end(struct block_list *bl, int type);
 int skillnotok(int skillid, struct map_session_data *sd);
 
 // アイテム作成
-int skill_can_produce_mix( struct map_session_data *sd, int nameid, int trigger );
-int skill_produce_mix( struct map_session_data *sd,
-	int nameid, int slot1, int slot2, int slot3 );
+int skill_can_produce_mix( struct map_session_data *sd, unsigned short nameid, int trigger );
+int skill_produce_mix( struct map_session_data *sd, unsigned short nameid, int slot1, int slot2, int slot3 );
 
-int skill_arrow_create( struct map_session_data *sd,int nameid);
+int skill_arrow_create( struct map_session_data *sd,unsigned short nameid);
 
 // mobスキルのため
 int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag );

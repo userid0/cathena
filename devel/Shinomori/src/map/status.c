@@ -345,7 +345,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 	int b_aspd,b_watk,b_def,b_watk2,b_def2,b_flee2,b_critical,b_attackrange,b_matk1,b_matk2,b_mdef,b_mdef2,b_class;
 	int b_base_atk;
 	struct skill b_skill[MAX_SKILL];
-	int i,bl,index;
+	size_t i,j;
+	int bl,index;
 	int skill,aspd_rate,wele,wele_,def_ele,refinedef=0;
 	int pele=0,pdef_ele=0;
 	int str,dstr,dex;
@@ -586,9 +587,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 
 		if(sd->inventory_data[index]) {
 			if(sd->inventory_data[index]->type == 4) {
-				if(sd->status.inventory[index].card[0]!=0x00ff && sd->status.inventory[index].card[0]!=0x00fe && sd->status.inventory[index].card[0]!=(short)0xff00) {
-					int j;
-					for(j=0;j<sd->inventory_data[index]->slot;j++){	// カ?ド
+				if(sd->status.inventory[index].card[0]!=0x00ff && sd->status.inventory[index].card[0]!=0x00fe && sd->status.inventory[index].card[0]!=(unsigned short)0xff00) {
+					for(j=0;j<sd->inventory_data[index]->flag.slot;j++){	// カ?ド
 						int c=sd->status.inventory[index].card[j];
 						if(c>0){
 							if(i == 8 && sd->status.inventory[index].equip == 0x20)
@@ -600,9 +600,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 				}
 			}
 			else if(sd->inventory_data[index]->type==5){ // 防具
-				if(sd->status.inventory[index].card[0]!=0x00ff && sd->status.inventory[index].card[0]!=0x00fe && sd->status.inventory[index].card[0]!=(short)0xff00) {
-					int j;
-					for(j=0;j<sd->inventory_data[index]->slot;j++){	// カ?ド
+				if(sd->status.inventory[index].card[0]!=0x00ff && sd->status.inventory[index].card[0]!=0x00fe && sd->status.inventory[index].card[0]!=(unsigned short)0xff00) {
+					for(j=0;j<sd->inventory_data[index]->flag.slot;j++){	// カ?ド
 						int c=sd->status.inventory[index].card[j];
 						if(c>0)
 							run_script(itemdb_equipscript(c),0,sd->bl.id,0);

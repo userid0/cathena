@@ -16,19 +16,19 @@
 
 
 //////////////////////////////////////////////////////////////////////////
-// basic interface for reading defaults from file
+// basic interface for reading configs from file
 //////////////////////////////////////////////////////////////////////////
-class Defaults
+class CConfig
 {
 public:
-	Defaults()
+	CConfig()
 	{}
-	virtual ~Defaults()
+	virtual ~CConfig()
 	{}
 
 	//////////////////////////////////////////////////////////////////////
-	// Loading a file, stripping lines 
-	// and splitting it to part1 : part2
+	// Loading a file, stripping lines, splitting it to part1 : part2
+	// calling the derived function for processing
 	//////////////////////////////////////////////////////////////////////
 	bool LoadConfig(const char* cfgName)
 	{
@@ -55,17 +55,25 @@ public:
 			
 			memset(w2, 0, sizeof(w2));
 			// format: "name:value"
-			if (sscanf(ip, "%[^:]: %[^\r\n]", w1, w2) == 2) {
-				remove_control_chars(w1);
-				remove_control_chars(w2);
+			if (sscanf(ip, "%[^:]: %[^\r\n]", w1, w2) == 2)
+			{
+				CleanControlChars(w1);
+				CleanControlChars(w2);
 
-				// calling derived function to process
-				ProcessConfig(w1,w2);
+				if( strcasecmp(w1, "import") == 0 )
+				{	// call recursive, prevent infinity loop
+					if( strcasecmp(cfgName,w2) !=0 )
+						LoadConfig(w2);
+				}
+				else
+				{	// calling derived function to process
+					ProcessConfig(w1,w2);
+				}
 			}
 		}
 		fclose(fp);
 
-		ShowMessage("---End reading of Login Server configuration file.\n");
+		ShowInfo("Reading configuration file '%s' finished\n", cfgName);
 	}
 	//////////////////////////////////////////////////////////////////////
 	// virtual function for processing/storing tokens
@@ -76,7 +84,7 @@ public:
 	//////////////////////////////////////////////////////////////////////
 	// some global data processings
 	//////////////////////////////////////////////////////////////////////
-	ulong String2IP(const char*str)
+	static ulong String2IP(const char* str)
 	{	// host byte order
 		struct hostent *h = gethostbyname(str);
 		if (h != NULL) 
@@ -89,7 +97,7 @@ public:
 		else
 			return ntohl(inet_addr(str));
 	}
-	const char* IP2String(ulong ip, char*buffer=NULL)
+	static const char* IP2String(ulong ip, char*buffer=NULL)
 	{	// host byte order
 		// usage of the static buffer here is not threadsave
 		static char temp[20], *pp= (buffer) ? buffer:temp;
@@ -98,23 +106,47 @@ public:
 		return pp;
 	}
 
-	int isSwitchVal(const char *str)
+	static int SwitchValue(const char *str, int defaultval=0)
 	{
-		if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0 || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0 || strcasecmp(str, "si") == 0)
-			return 1;
-		if (strcasecmp(str, "off") == 0 || strcasecmp(str, "no" ) == 0 || strcasecmp(str, "non") == 0 || strcasecmp(str, "nein") == 0)
-			return 0;
-		return atoi(str);
+		if( str )
+		{
+			if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0 || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0 || strcasecmp(str, "si") == 0)
+				return 1;
+			else if (strcasecmp(str, "off") == 0 || strcasecmp(str, "no" ) == 0 || strcasecmp(str, "non") == 0 || strcasecmp(str, "nein") == 0)
+				return 0;
+			else
+				return atoi(str);
+		}
+		else
+			return defaultval;
 	}
-	bool isSwitch(const char *str, bool defaultval=false)
+	static bool Switch(const char *str, bool defaultval=false)
 	{
-		if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0 || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0 || strcasecmp(str, "si") == 0)
-			return true;
-		if (strcasecmp(str, "off") == 0 || strcasecmp(str, "no" ) == 0 || strcasecmp(str, "non") == 0 || strcasecmp(str, "nein") == 0)
-			return false;
+		if( str )
+		{
+			if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0 || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0 || strcasecmp(str, "si") == 0)
+				return true;
+			else if (strcasecmp(str, "off") == 0 || strcasecmp(str, "no" ) == 0 || strcasecmp(str, "non") == 0 || strcasecmp(str, "nein") == 0)
+				return false;
+		}
 		return defaultval;
 	}
-
+	static bool CleanControlChars(char *str)
+	{
+		bool change = false;
+		if(str)
+		while( *str )
+		{	// replace control chars 
+			// but skip chars >0x7F which are negative in char representations
+			if ( (*str<32) && (*str>0) )
+			{
+				*str = '_';
+				change = true;
+			}
+			str++;
+		}
+		return change;
+	}
 
 };
 
@@ -202,7 +234,7 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 // defaults for a sql database
 //////////////////////////////////////////////////////////////////////////
-class DBDefaults : public Defaults
+class DBDefaults : public CConfig
 {
 protected:
 	const char *sql_conf_name;

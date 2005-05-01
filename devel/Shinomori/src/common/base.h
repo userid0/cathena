@@ -91,6 +91,13 @@
 //////////////////////////////
 #pragma warning(disable : 4996)	// disable deprecated warnings
 
+
+#pragma warning(disable : 4100) // unreferenced formal parameter
+#pragma warning(disable : 4244) // converting type on return will shorten
+#pragma warning(disable : 4310)	// converting constant will shorten
+#pragma warning(disable : 4706) // assignment within conditional
+#pragma warning(disable : 4127)	// constant assignment
+
 #include <windows.h>
 #include <winsock2.h>
 #include <conio.h>
@@ -256,8 +263,8 @@ typedef unsigned int socklen_t;
 #define snprintf			_snprintf
 
 
-//#define strcasecmp		in utils.h
-//#define strncasecmp		in utils.h
+#define strcasecmp			stricmp
+#define strncasecmp			strnicmp
 
 
 extern inline void sleep(unsigned long time)	
@@ -330,21 +337,6 @@ extern inline unsigned long GetTickCount() {
 //////////////////////////////
 
 
-
-
-//////////////////////////////
-#ifdef __GNUC__ // GCC has variable length arrays
-
-#define CREATE_BUFFER(name, type, size)		type name[size]
-#define DELETE_BUFFER(name)					
-
-#else			// others don't, so we emulate them
-
-#define CREATE_BUFFER(name, type, size)		type *name=(type*)aCalloc(size,sizeof(type))
-#define DELETE_BUFFER(name)					aFree(name);name=NULL
-
-#endif
-//////////////////////////////
 
 
 

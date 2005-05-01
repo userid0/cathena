@@ -775,7 +775,7 @@ charcommand_itemlist(
 {
 	struct map_session_data *pl_sd;
 	struct item_data *item_data, *item_temp;
-	int i, j, equip, count, counter, counter2;
+	size_t i, j, equip, count, counter, counter2;
 	char character[100], output[200], equipstr[100], outputtmp[200];
 	nullpo_retr(-1, sd);
 
@@ -842,7 +842,7 @@ charcommand_itemlist(
 					clif_displaymessage(fd, output);
 					memset(output, '\0', sizeof(output));
 					counter2 = 0;
-					for (j = 0; j < item_data->slot; j++) {
+					for (j = 0; j < item_data->flag.slot; j++) {
 						if (pl_sd->status.inventory[i].card[j]) {
 							if ((item_temp = itemdb_search(pl_sd->status.inventory[i].card[j])) != NULL) {
 								if (output[0] == '\0')
@@ -919,7 +919,7 @@ charcommand_storagelist(
 	struct pc_storage *stor;
 	struct map_session_data *pl_sd;
 	struct item_data *item_data, *item_temp;
-	int i, j, count, counter, counter2;
+	size_t i, j, count, counter, counter2;
 	char character[100], output[200], outputtmp[200];
 	nullpo_retr(-1, sd);
 
@@ -952,7 +952,7 @@ charcommand_storagelist(
 						clif_displaymessage(fd, output);
 						memset(output, '\0', sizeof(output));
 						counter2 = 0;
-						for (j = 0; j < item_data->slot; j++) {
+						for (j = 0; j < item_data->flag.slot; j++) {
 							if (stor->storage[i].card[j]) {
 								if ((item_temp = itemdb_search(stor->storage[i].card[j])) != NULL) {
 									if (output[0] == '\0')
@@ -1145,7 +1145,7 @@ int charcommand_warp(
 					clif_displaymessage(fd, "You are not authorised to warp someone to this map.");
 					return -1;
 				}
-				if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+				if (pl_sd->bl.m <map_num && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 					clif_displaymessage(fd, "You are not authorised to warp this player from its actual map.");
 					return -1;
 				}

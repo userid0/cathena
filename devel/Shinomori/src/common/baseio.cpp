@@ -96,7 +96,7 @@ public:
 		// structure is:
 		// <# of entries> \n <i>(0), <p>(0), <l>(0) \n ...
 		fseek(cIX, 0, SEEK_SET);
-		long sz, p, l;
+		unsigned long sz, p, l;
 		if( 1==fscanf(cIX,"%li\n", &sz) )
 		{
 			cIndex.realloc(sz);

@@ -617,8 +617,8 @@ int pet_remove_map(struct map_session_data *sd)
 	return 0;
 }
 struct delay_item_drop {
-	int m,x,y;
-	int nameid,amount;
+	unsigned short m,x,y;
+	unsigned short nameid,amount;
 	struct map_session_data *first_sd,*second_sd,*third_sd;
 };
 
@@ -667,7 +667,7 @@ int pet_return_egg(struct map_session_data *sd)
 		memset(&tmp_item,0,sizeof(tmp_item));
 		tmp_item.nameid = sd->petDB->EggID;
 		tmp_item.identify = 1;
-		tmp_item.card[0] = (short)(0xff00);
+		tmp_item.card[0] = 0xff00;
 		tmp_item.card[1] = GetWord(sd->pet.pet_id,0);
 		tmp_item.card[2] = GetWord(sd->pet.pet_id,1);
 		tmp_item.card[3] = sd->pet.rename_flag;
@@ -838,7 +838,7 @@ int pet_select_egg(struct map_session_data *sd,short egg_index)
 {
 	nullpo_retr(0, sd);
 
-	if(sd->status.inventory[egg_index].card[0] == (short)0xff00)
+	if(sd->status.inventory[egg_index].card[0] == 0xff00)
 	{
 		intif_request_petdata(sd->status.account_id, sd->status.char_id, MakeDWord(sd->status.inventory[egg_index].card[1], sd->status.inventory[egg_index].card[2]) );
 		pc_delitem(sd,egg_index,1,0);
@@ -923,7 +923,7 @@ int pet_get_egg(unsigned long account_id,unsigned long pet_id,int flag)
 			memset(&tmp_item,0,sizeof(tmp_item));
 			tmp_item.nameid = pet_db[i].EggID;
 			tmp_item.identify = 1;
-			tmp_item.card[0] = (short)(0xff00);
+			tmp_item.card[0] = 0xff00;
 			tmp_item.card[1] = GetWord(pet_id,0);
 			tmp_item.card[2] = GetWord(pet_id,1);
 			tmp_item.card[3] = sd->pet.rename_flag;
@@ -993,7 +993,7 @@ int pet_change_name(struct map_session_data *sd,char *name)
 
 int pet_equipitem(struct map_session_data *sd,int index)
 {
-	int nameid;
+	unsigned short nameid;
 
 	nullpo_retr(1, sd);
 
@@ -1017,7 +1017,8 @@ int pet_equipitem(struct map_session_data *sd,int index)
 int pet_unequipitem(struct map_session_data *sd)
 {
 	struct item tmp_item;
-	int nameid,flag;
+	unsigned short nameid;
+	int flag;
 
 	nullpo_retr(1, sd);
 
@@ -1284,7 +1285,7 @@ static int pet_ai_sub_hard(struct pet_data *pd,unsigned long tick)
 					return 0;
 				}
 				else {
-					if(pd->lootitem[0].card[0] == (short)0xff00)
+					if(pd->lootitem[0].card[0] == 0xff00)
 						intif_delete_petdata( MakeDWord(pd->lootitem[0].card[1],pd->lootitem[0].card[2]) );
 					for(i=0;i<PETLOOT_SIZE-1;i++)
 						memcpy(&pd->lootitem[i],&pd->lootitem[i+1],sizeof(pd->lootitem[0]));
@@ -1597,8 +1598,8 @@ int read_petdb()
 {
 	FILE *fp;
 	char line[1024];
-	int nameid,i,k; 
-	int j=0;
+	unsigned short nameid;
+	size_t i,k,j=0;
 	int lines;
 	char *filename[]={"db/pet_db.txt","db/pet_db2.txt"};
 	char *str[32],*p,*np;

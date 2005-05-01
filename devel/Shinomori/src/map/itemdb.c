@@ -98,11 +98,14 @@ struct item_data* itemdb_searchname(const char *str)
  */
 int itemdb_searchrandomid(int flags)
 {
-	int nameid=0,i,index,count;
+	unsigned short nameid=0;
+	size_t i,index,count;
 	struct random_item_data *list=NULL;
 
-	struct {
-		int nameid,count;
+	struct
+	{
+		unsigned short nameid;
+		size_t count;
 		struct random_item_data *list;
 	} data[7];
 
@@ -137,26 +140,27 @@ int itemdb_searchrandomid(int flags)
  *
  *------------------------------------------
  */
-int itemdb_group (int nameid)
+int itemdb_group (unsigned short nameid)
 {
 	int i, j;
 	for (i=0; i < MAX_ITEMGROUP; i++) {
-		for (j=0; j < 20 && itemgroup_db[i].id[j]; j++) {
-			if (itemgroup_db[i].id[j] == nameid)
+		for (j=0; j < 20 && itemgroup_db[i].nameid[j]; j++) {
+			if (itemgroup_db[i].nameid[j] == nameid)
 				return i;
 		}
 	}
 	return -1;
 }
-int itemdb_searchrandomgroup (int groupid)
+int itemdb_searchrandomgroup(unsigned short groupid)
 {
-	int nameid, i = 0;
+	unsigned short nameid;
+	size_t i = 0;
 
-	if (groupid < 0 || groupid >= MAX_ITEMGROUP ||
-		itemgroup_db[groupid].id[0] == 0)
+	if( groupid >= MAX_ITEMGROUP ||
+		itemgroup_db[groupid].nameid[0] == 0)
 		return 0;
 	do {
-		if ((nameid = itemgroup_db[groupid].id[ rand()%20 ]) > 0)
+		if ((nameid = itemgroup_db[groupid].nameid[ rand()%20 ]) > 0)
 			return nameid;		
 	} while ((i++) < 20);
 	return 0;
@@ -166,7 +170,7 @@ int itemdb_searchrandomgroup (int groupid)
  * DBの存在確認
  *------------------------------------------
  */
-struct item_data* itemdb_exists(int nameid)
+struct item_data* itemdb_exists(unsigned short nameid)
 {
 	return (struct item_data *) numdb_search(item_db,nameid);
 }
@@ -174,7 +178,7 @@ struct item_data* itemdb_exists(int nameid)
  * DBの検索
  *------------------------------------------
  */
-struct item_data* itemdb_search(int nameid)
+struct item_data* itemdb_search(unsigned short nameid)
 {
 	struct item_data *id;
 
@@ -188,9 +192,9 @@ struct item_data* itemdb_search(int nameid)
 	id->value_buy=10;
 	id->value_sell=id->value_buy/2;
 	id->weight=10;
-	id->sex=2;
+	id->flag.sex=2;
 	id->elv=0;
-	id->class_=0xffffffff;
+	id->class_=0xffff;
 	id->flag.available=0;
 	id->flag.value_notdc=0;  //一応・・・
 	id->flag.value_notoc=0;
@@ -226,7 +230,7 @@ struct item_data* itemdb_search(int nameid)
  *
  *------------------------------------------
  */
-int itemdb_isequip(int nameid)
+int itemdb_isequip(unsigned short nameid)
 {
 	int type=itemdb_type(nameid);
 	if(type==0 || type==2 || type==3 || type==6 || type==10)
@@ -252,7 +256,7 @@ int itemdb_isequip2(struct item_data *data)
  *
  *------------------------------------------
  */
-int itemdb_isequip3(int nameid)
+int itemdb_isequip3(unsigned short nameid)
 {
 	int type=itemdb_type(nameid);
 	if(type==4 || type==5 || type == 8)
@@ -264,7 +268,7 @@ int itemdb_isequip3(int nameid)
  * 捨てられるアイテムは1、そうでないアイテムは0
  *------------------------------------------
  */
-int itemdb_isdropable(int nameid)
+int itemdb_isdropable(unsigned short nameid)
 {
 	//結婚指輪は捨てられない
 	switch(nameid){
@@ -285,7 +289,7 @@ static int itemdb_read_randomitem()
 	FILE *fp;
 	char line[1024];
 	int ln=0;
-	int nameid;
+	unsigned short nameid;
 	size_t i,j;
 	char *str[10],*p;
 
@@ -328,7 +332,7 @@ static int itemdb_read_randomitem()
 				continue;
 
 			nameid=atoi(str[0]);
-			if(nameid<0 || nameid>=20000)
+			if(nameid>=MAX_ITEMS)
 				continue;
 			if(nameid == 0) {
 				if(str[2])
@@ -363,7 +367,8 @@ static int itemdb_read_itemavail(void)
 	FILE *fp;
 	char line[1024];
 	int ln=0;
-	int nameid,j,k;
+	unsigned short nameid;
+	size_t j,k;
 	char *str[10],*p;
 
 	if( (fp=savefopen("db/item_avail.txt","r"))==NULL ){
@@ -386,7 +391,7 @@ static int itemdb_read_itemavail(void)
 			continue;
 
 		nameid=atoi(str[0]);
-		if(nameid<0 || nameid>=20000 || !(id=itemdb_exists(nameid)) )
+		if(nameid>=MAX_ITEMS || !(id=itemdb_exists(nameid)) )
 			continue;
 		k=atoi(str[1]);
 		if(k > 0) {
@@ -412,7 +417,8 @@ static int itemdb_read_itemgroup(void)
 	FILE *fp;
 	char line[1024];
 	int ln=0;
-	int groupid,j,k;
+	unsigned short groupid,nameid;
+	size_t j;
 	char *str[31],*p;
 
 	if( (fp=fopen("db/item_group_db.txt","r"))==NULL ){
@@ -433,17 +439,17 @@ static int itemdb_read_itemgroup(void)
 			continue;
 
 		groupid = atoi(str[0]);
-		if (groupid < 0 || groupid >= MAX_ITEMGROUP)
+		if(groupid >= MAX_ITEMGROUP)
 			continue;
 
 		for (j=1; j<=30; j++) {
 			if (!str[j])
 				break;
-			k=atoi(str[j]);
-			if (k < 0 || k >= 20000 || !itemdb_exists(k))
+			nameid=atoi(str[j]);
+			if(nameid >= MAX_ITEMS || !itemdb_exists(nameid))
 				continue;
 			//printf ("%d[%d] = %d\n", groupid, j-1, k);
-			itemgroup_db[groupid].id[j-1] = k;
+			itemgroup_db[groupid].nameid[j-1] = nameid;
 		}		
 		ln++;
 	}
@@ -578,7 +584,7 @@ static int itemdb_read_itemslotcounttable(void)
 	for(p=buf;p-buf<s;){
 		int nameid,slot;
 		sscanf(p,"%d#%d#",&nameid,&slot);
-		itemdb_search(nameid)->slot=slot;
+		itemdb_search(nameid)->flag.slot=slot;
 		p=strchr(p,10);
 		if(!p) break;
 		p++;
@@ -617,17 +623,16 @@ static int itemdb_read_noequip(void)
 			p=strchr(p,',');
 			if(p) *p++=0;
 		}
-		if(str[0]==NULL)
+		if(str[0]==NULL || str[1]==NULL)
 			continue;
 
 		nameid=atoi(str[0]);
-		if(nameid<=0 || nameid>=20000 || !(id=itemdb_exists(nameid)))
+		if(nameid>=MAX_ITEMS || !(id=itemdb_exists(nameid)))
 			continue;
 
 		id->flag.no_equip=atoi(str[1]);
 
 		ln++;
-
 	}
 	fclose(fp);
 	if (ln > 0) {
@@ -662,7 +667,7 @@ static int itemdb_read_norefine(void)
 
 	for (i=0; i < (int)(sizeof(cant_refine) / sizeof(cant_refine[0])); i++) {
 		nameid = cant_refine[i];
-		if(nameid<=0 || nameid>=20000 || !(id=itemdb_exists(nameid)))
+		if(nameid>=MAX_ITEMS || !(id=itemdb_exists(nameid)))
 			continue;
 		id->flag.no_refine = 1;
 	}
@@ -706,7 +711,7 @@ static int itemdb_read_sqldb(void)
 				nameid = atoi(sql_row[0]);
 
 				// If the identifier is not within the valid range, process the next row
-				if (nameid == 0 || nameid >= 20000)
+				if(nameid == 0 || nameid >= MAX_ITEMS)
 				{
 					continue;
 				}
@@ -751,17 +756,16 @@ static int itemdb_read_sqldb(void)
 
 				id->weight	= atoi(sql_row[6]);
 
-				id->atk		= (sql_row[7] != NULL)		? atoi(sql_row[7])	: 0;
-				id->def		= (sql_row[8] != NULL)		? atoi(sql_row[8])	: 0;
-				id->range	= (sql_row[9] != NULL)		? atoi(sql_row[9])	: 0;
-				id->slot	= (sql_row[10] != NULL)		? atoi(sql_row[10])	: 0;
-				id->class_	= (sql_row[11] != NULL)		? atoi(sql_row[11])	: 0;
-				id->sex		= (sql_row[12] != NULL)		? atoi(sql_row[12])	: 0;
-				id->equip	= (sql_row[13] != NULL)		? atoi(sql_row[13])	: 0;
-				id->wlv		= (sql_row[14] != NULL)		? atoi(sql_row[14])	: 0;
-				id->elv		= (sql_row[15] != NULL)		? atoi(sql_row[15])	: 0;
-				id->look	= (sql_row[16] != NULL)		? atoi(sql_row[16])	: 0;
-
+				id->atk		 = (sql_row[7] != NULL)		? atoi(sql_row[7])	: 0;
+				id->def		 = (sql_row[8] != NULL)		? atoi(sql_row[8])	: 0;
+				id->range	 = (sql_row[9] != NULL)		? atoi(sql_row[9])	: 0;
+				id->flag.slot= (sql_row[10] != NULL)	? atoi(sql_row[10])	: 0;
+				id->class_	 = (sql_row[11] != NULL)	? atoi(sql_row[11])	: 0;
+				id->flag.sex = (sql_row[12] != NULL)	? atoi(sql_row[12])	: 0;
+				id->equip	 = (sql_row[13] != NULL)	? atoi(sql_row[13])	: 0;
+				id->wlv		 = (sql_row[14] != NULL)	? atoi(sql_row[14])	: 0;
+				id->elv		 = (sql_row[15] != NULL)	? atoi(sql_row[15])	: 0;
+				id->look	 = (sql_row[16] != NULL)	? atoi(sql_row[16])	: 0;
 				id->view_id	= 0;
 
 				// ----------
@@ -833,7 +837,8 @@ static int itemdb_readdb(void)
 	FILE *fp;
 	char line[1024];
 	int ln=0,lines=0;
-	int nameid,j;
+	unsigned short nameid;
+	size_t j;
 	char *str[32],*p,*np;
 	struct item_data *id;
 	int i=0;
@@ -860,11 +865,11 @@ static int itemdb_readdb(void)
 				p=strchr(p,',');
 				if(p){ *p++=0; np=p; }
 			}
-			if(str[0]==NULL)
+			if( j<17 )
 				continue;
 
 			nameid=atoi(str[0]);
-			if(nameid<=0 || nameid>=20000)
+			if(nameid>=MAX_ITEMS)
 				continue;
 			ln++;
 
@@ -900,9 +905,9 @@ static int itemdb_readdb(void)
 			id->atk=atoi(str[7]);
 			id->def=atoi(str[8]);
 			id->range=atoi(str[9]);
-			id->slot=atoi(str[10]);
+			id->flag.slot=atoi(str[10]);
 			id->class_=atoi(str[11]);
-			id->sex=atoi(str[12]);
+			id->flag.sex=atoi(str[12]);
 			if(id->equip != atoi(str[13])){
 				id->equip=atoi(str[13]);
 			}

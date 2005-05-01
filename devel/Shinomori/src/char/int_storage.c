@@ -349,7 +349,7 @@ int inter_storage_delete(unsigned long account_id)
 	if(s) {
 		int i;
 		for(i=0;i<s->storage_amount;i++){
-			if(s->storage[i].card[0] == (short)0xff00)
+			if(s->storage[i].card[0] == (unsigned short)0xff00)
 				inter_pet_delete( MakeDWord(s->storage[i].card[1],s->storage[i].card[2]) );
 		}
 		numdb_erase(storage_db,account_id);
@@ -365,7 +365,7 @@ int inter_guild_storage_delete(unsigned long guild_id)
 	if(gs) {
 		int i;
 		for(i=0;i<gs->storage_amount;i++){
-			if(gs->storage[i].card[0] == (short)0xff00)
+			if(gs->storage[i].card[0] == (unsigned short)0xff00)
 				inter_pet_delete( MakeDWord(gs->storage[i].card[1],gs->storage[i].card[2]) );
 		}
 		numdb_erase(guild_storage_db,guild_id);

@@ -277,7 +277,7 @@ int main(int argc,char **argv)
 
 	// Signal to create coredumps by system when necessary (crash)
 	compat_signal(SIGSEGV, SIG_DFL);
- #ifndef _WIN32
+ #ifndef WIN32
 	compat_signal(SIGBUS, SIG_DFL);
 	compat_signal(SIGTRAP, SIG_DFL); 
  #endif

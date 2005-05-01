@@ -542,7 +542,7 @@ int pc_isequip(struct map_session_data *sd,int n)
 
 	if(item == NULL)
 		return 0;
-	if(item->sex != 2 && sd->status.sex != item->sex)
+	if(item->flag.sex != 2 && sd->status.sex != item->flag.sex)
 		return 0;
 	if(item->elv > 0 && sd->status.base_level < item->elv)
 		return 0;
@@ -2224,10 +2224,10 @@ int pc_insert_card(struct map_session_data *sd,int idx_card,int idx_equip)
 	nullpo_retr(0, sd);
 
 	if(idx_card >= 0 && idx_card < MAX_INVENTORY && idx_equip >= 0 && idx_equip < MAX_INVENTORY && sd->inventory_data[idx_card]) {
-		int i;
-		int nameid=sd->status.inventory[idx_equip].nameid;
-		int cardid=sd->status.inventory[idx_card].nameid;
-		int ep=sd->inventory_data[idx_card]->equip;
+		size_t i;
+		unsigned long  nameid=sd->status.inventory[idx_equip].nameid;
+		unsigned short cardid=sd->status.inventory[idx_card].nameid;
+		unsigned short ep    =sd->inventory_data[idx_card]->equip;
 
 		if( nameid <= 0 || sd->inventory_data[idx_equip] == NULL ||
 			(sd->inventory_data[idx_equip]->type!=4 && sd->inventory_data[idx_equip]->type!=5)||	// ? 備じゃない
@@ -2237,12 +2237,12 @@ int pc_insert_card(struct map_session_data *sd,int idx_card,int idx_equip)
 			( sd->status.inventory[idx_equip].card[0]==0x00fe) ||
 			( (sd->inventory_data[idx_equip]->equip&ep)==0 ) ||					// ? 備個所違い
 			( sd->inventory_data[idx_equip]->type==4 && ep==32) ||			// ? 手武器と盾カ?ド
-			( sd->status.inventory[idx_equip].card[0]==(short)0xff00) || sd->status.inventory[idx_equip].equip){
+			( sd->status.inventory[idx_equip].card[0]==0xff00) || sd->status.inventory[idx_equip].equip){
 
 			clif_insert_card(sd,idx_equip,idx_card,1);
 			return 0;
 		}
-		for(i=0;i<sd->inventory_data[idx_equip]->slot;i++){
+		for(i=0;i<sd->inventory_data[idx_equip]->flag.slot;i++){
 			if( sd->status.inventory[idx_equip].card[i] == 0){
 			// 空きスロットがあったので差し?む
 				sd->status.inventory[idx_equip].card[i]=cardid;
@@ -2306,7 +2306,7 @@ int pc_modifysellvalue(struct map_session_data *sd,int orig_value)
  * 3万個制限にかかるか確認
  *------------------------------------------
  */
-int pc_checkadditem(struct map_session_data *sd,int nameid,int amount)
+int pc_checkadditem(struct map_session_data *sd,unsigned short nameid,unsigned short amount)
 {
 	int i;
 
@@ -2572,7 +2572,7 @@ int pc_takeitem(struct map_session_data *sd,struct flooritem_data *fitem)
 int pc_isUseitem(struct map_session_data *sd,int n)
 {
 	struct item_data *item;
-	int nameid;
+	unsigned short nameid;
 
 	nullpo_retr(0, sd);
 
@@ -2593,7 +2593,7 @@ int pc_isUseitem(struct map_session_data *sd,int n)
 		return 0;
 	if(nameid == 604 && (map[sd->bl.m].flag.nobranch || map[sd->bl.m].flag.gvg))
 		return 0;
-	if(item->sex != 2 && sd->status.sex != item->sex)
+	if(item->flag.sex != 2 && sd->status.sex != item->flag.sex)
 		return 0;
 	if(item->elv > 0 && sd->status.base_level < item->elv)
 		return 0;
@@ -3736,7 +3736,7 @@ int pc_checkskill(struct map_session_data *sd,unsigned short skill_id)
  * 武器?更によるスキルの??チェック
  * 引?：
  *   struct map_session_data *sd	セッションデ?タ
- *   int nameid						?備品ID
+ *   unsigned short nameid			?備品ID
  * 返り値：
  *   0		?更なし
  *   -1		スキルを解除

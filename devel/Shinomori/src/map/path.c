@@ -255,14 +255,14 @@ int path_blownpos(int m,int x0,int y0,int dx,int dy,int count)
  *------------------------------------------
  */
 
-int path_search_long(struct shootpath_data *spd,int m,int x0,int y0,int x1,int y1)
+int path_search_long(struct shootpath_data *spd,unsigned short m,unsigned short x0,unsigned short y0,unsigned short x1,unsigned short y1)
 {
 	int dx, dy;
 	int wx = 0, wy = 0;
 	int weight;
 	struct map_data *md;
 
-	if (m < 0 || m > MAX_MAP_PER_SERVER || !map[m].gat)
+	if(m >= map_num || !map[m].gat)
 		return 0;
 	md = &map[m];
 
@@ -528,9 +528,10 @@ int path_search(struct walkpath_data *wpd,int m,int x0,int y0,int x1,int y1,int 
 		return -1;
 
 	// easy
-	dx = (x1-x0<0) ? -1 : 1;
-	dy = (y1-y0<0) ? -1 : 1;
-	for(x=x0,y=y0,i=0;x!=x1 || y!=y1;){
+	dx = (x1<x0) ? -1 : 1;
+	dy = (y1<y0) ? -1 : 1;
+	for(x=x0,y=y0,i=0;x!=x1 || y!=y1;)
+	{
 		if(i>=sizeof(wpd->path))
 			return -1;
 		if(x!=x1 && y!=y1){

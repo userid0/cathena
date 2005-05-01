@@ -399,6 +399,11 @@ public:
 
 	~DDoS()
 	{
+		Clean();
+	}
+
+	void Clean()
+	{
 		struct _connect_history *hist , *hist2;
 		for(size_t i=0; i<0x10000; i++) 
 		{
@@ -409,8 +414,16 @@ public:
 				hist = hist2;
 			}
 		}
-		if(access_allow) aFree(access_allow);
-		if(access_deny)	 aFree(access_deny);
+		if(access_allow)
+		{
+			aFree(access_allow);
+			access_allow = NULL;
+		}
+		if(access_deny)
+		{	
+			aFree(access_deny);
+			access_deny = NULL;
+		}
 	}
 
 
@@ -1490,7 +1503,7 @@ int do_sendrecv(int next)
 #ifdef SOCKET_DEBUG_PRINT
 	printf("\r[%ld]",tick_);
 #endif
-	for(fd=0; fd<(size_t)fd_max; fd++)
+	for(fd=0; fd<fd_max; fd++)
 	{
 		if( session[fd] )
 		{
@@ -1532,7 +1545,7 @@ int do_sendrecv(int next)
 #ifdef SOCKET_DEBUG_PRINT
 	printf("\n");
 #endif
-	fd_max = (int)(cnt+1);
+	fd_max = cnt+1;
 
 	timeout.tv_sec  = next/1000;
 	timeout.tv_usec = next%1000*1000;
@@ -1756,7 +1769,7 @@ void socket_final(void)
 {
 	size_t fd;
 	for(fd=0;fd<fd_max;fd++){
-		// don't unse session_Delete here
+		// don't use session_Delete here
 		// just force deletion of the sessions
 		if( session_isValid(fd) )
 		{
@@ -1768,6 +1781,9 @@ void socket_final(void)
 			SessionRemoveIndex( fd );
 		}
 	}
+
+	// might remove that later when switching memory model
+	ddos.Clean();
 }
 
 

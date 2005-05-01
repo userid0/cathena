@@ -96,7 +96,7 @@ int chrif_save(struct map_session_data *sd)
 {
 	nullpo_retr(-1, sd);
 
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	pc_makesavestatus(sd);
@@ -120,6 +120,9 @@ int chrif_save(struct map_session_data *sd)
  */
 int chrif_connect(int fd)
 {
+	if( !session_isActive(fd) )
+		return -1;
+
 	WFIFOW(fd,0) = 0x2af8;
 	memcpy(WFIFOP(fd,2), userid, 24);
 	memcpy(WFIFOP(fd,26), passwd, 24);
@@ -137,6 +140,10 @@ int chrif_connect(int fd)
 int chrif_sendmap(int fd)
 {
 	size_t i;
+	
+	if( !session_isActive(fd) )
+		return -1;
+
 	WFIFOW(fd,0) = 0x2afa;
 	for(i = 0; i < map_num; i++) {
 		if (map[i].alias != '\0') // [MouseJstr] map aliasing
@@ -161,7 +168,10 @@ int chrif_recvmap(int fd)
 	unsigned short port;
 	unsigned char *p = (unsigned char *)&ip;
 
-	if (chrif_state < 2)	// ‚Ü‚¾€”õ’†
+	if( !session_isActive(fd) )
+		return -1;
+
+	if( !session_isActive(char_fd) || !chrif_isconnect() )	// ‚Ü‚¾€”õ’†
 		return -1;
 
 	ip = RFIFOLIP(fd,4);
@@ -190,7 +200,7 @@ int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y,
 
 	if( !sd)
 		return -1;
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	s_ip = 0;
@@ -223,6 +233,10 @@ int chrif_changemapserver(struct map_session_data *sd, char *name, int x, int y,
  */
 int chrif_changemapserverack(int fd)
 {
+
+	if( !session_isActive(fd)  )
+		return -1;
+
 	struct map_session_data *sd = map_id2sd(RFIFOL(fd,2));
 
 	if( sd == NULL || RFIFOL(fd,14) != sd->status.char_id )
@@ -247,6 +261,9 @@ int chrif_changemapserverack(int fd)
 int chrif_connectack(int fd)
 {
 	static int char_init_done=0;
+
+	if( !session_isActive(fd) )
+		return -1;
 
 	if (RFIFOB(fd,2)) {
 		ShowMessage("Connected to char-server failed %d.\n", RFIFOB(fd,2));
@@ -276,6 +293,10 @@ int chrif_connectack(int fd)
  */
 int chrif_sendmapack(int fd)
 {
+
+	if( !session_isActive(fd) )
+		return -1;
+
 	if (RFIFOB(fd,2)) {
 		ShowMessage("chrif : send map list to char server failed %d\n", RFIFOB(fd,2));
 		exit(1);
@@ -301,7 +322,7 @@ int chrif_authreq(struct map_session_data *sd)
 	if( !sd || !sd->bl.id || !sd->login_id1)
 		return -1;
 
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	for(i = 0; i < fd_max; i++)
@@ -332,10 +353,7 @@ int chrif_charselectreq(struct map_session_data *sd)
 
 	if(!sd || !sd->bl.id || !sd->login_id1)
 		return -1;
-	if( char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
-		return -1;
-
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	s_ip = 0;
@@ -363,7 +381,7 @@ int chrif_searchcharid(int char_id)
 {
 	if( !char_id )
 		return -1;
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b08;
@@ -377,12 +395,12 @@ int chrif_searchcharid(int char_id)
  * GM‚É•Ï‰»—v‹
  *------------------------------------------
  */
-int chrif_changegm(int id, const char *pass, int len)
+int chrif_changegm(unsigned long id, const char *pass, size_t len)
 {
 	if (battle_config.etc_log)
 		ShowMessage("chrif_changegm: account: %d, password: '%s'.\n", id, pass);
 
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b0a;
@@ -398,12 +416,12 @@ int chrif_changegm(int id, const char *pass, int len)
  * Change Email
  *------------------------------------------
  */
-int chrif_changeemail(int id, const char *actual_email, const char *new_email)
+int chrif_changeemail(unsigned long id, const char *actual_email, const char *new_email)
 {
 	if (battle_config.etc_log)
 		ShowMessage("chrif_changeemail: account: %d, actual_email: '%s', new_email: '%s'.\n", id, actual_email, new_email);
 
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b0c;
@@ -426,9 +444,9 @@ int chrif_changeemail(int id, const char *actual_email, const char *new_email)
  *   5: changesex
  *------------------------------------------
  */
-int chrif_char_ask_name(int id, char * character_name, short operation_type, int year, int month, int day, int hour, int minute, int second)
+int chrif_char_ask_name(long id, char * character_name, short operation_type, int year, int month, int day, int hour, int minute, int second)
 {
-   	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+   	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd, 0) = 0x2b0e;
@@ -453,8 +471,9 @@ int chrif_char_ask_name(int id, char * character_name, short operation_type, int
  * «•Ê•Ï‰»—v‹
  *------------------------------------------
  */
-int chrif_changesex(int id, int sex) {
-   	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+int chrif_changesex(unsigned long id, unsigned char sex)
+{
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b11;
@@ -488,6 +507,8 @@ int chrif_char_ask_name_answer(int fd)
 	struct map_session_data *sd;
 	char output[256];
 	char player_name[24];
+	if( !session_isActive(fd) )
+		return -1;
 
 	acc = RFIFOL(fd,2); // account_id of who has asked (-1 if nobody)
 	memcpy(player_name, RFIFOP(fd,6), sizeof(player_name));
@@ -590,6 +611,9 @@ int chrif_changedgm(int fd)
 	int acc, level;
 	struct map_session_data *sd = NULL;
 
+	if( !session_isActive(fd) )
+		return -1;
+
 	acc = RFIFOL(fd,2);
 	level = RFIFOL(fd,6);
 
@@ -616,6 +640,9 @@ int chrif_changedsex(int fd)
 	int acc, sex, i;
 	struct map_session_data *sd;
 	struct pc_base_job s_class;
+
+	if( !session_isActive(fd) )
+		return -1;
 
 	acc = RFIFOL(fd,2);
 	sex = RFIFOL(fd,6);
@@ -689,7 +716,7 @@ int chrif_saveaccountreg2(struct map_session_data *sd)
 	unsigned long j;
 	nullpo_retr(-1, sd);
 
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	p = 8;
@@ -717,6 +744,9 @@ int chrif_accountreg2(int fd)
 {
 	int j, p;
 	struct map_session_data *sd;
+
+	if( !session_isActive(fd) )
+		return -1;
 
 	if( (sd = map_id2sd(RFIFOL(fd,4))) == NULL)
 		return 1;
@@ -766,6 +796,9 @@ int chrif_accountdeletion(int fd)
 	int acc;
 	struct map_session_data *sd;
 
+	if( !session_isActive(fd) )
+		return -1;
+
 	acc = RFIFOL(fd,2);
 	if (battle_config.etc_log)
 		ShowMessage("chrif_accountdeletion %d.\n", acc);
@@ -792,6 +825,9 @@ int chrif_accountban(int fd)
 {
 	int acc;
 	struct map_session_data *sd;
+
+	if( !session_isActive(fd) )
+		return -1;
 
 	acc = RFIFOL(fd,2);
 	if (battle_config.etc_log)
@@ -862,7 +898,7 @@ int chrif_chardisconnect(struct map_session_data *sd)
 {
 	nullpo_retr(-1, sd);
 
-	if(char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0)=0x2b18;
@@ -880,7 +916,7 @@ int chrif_chardisconnect(struct map_session_data *sd)
  */
 int chrif_reloadGMdb(void)
 {
-	if( char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2af7;
@@ -905,7 +941,7 @@ int chrif_recvgmaccounts(int fd)
  */
 int chrif_reqfamelist(void)
 {
-   	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b1a;
@@ -919,6 +955,9 @@ int chrif_recvfamelist(int fd)
 	size_t fame;
 	size_t i, num, size;
 	size_t total = 0;
+
+	if( !session_isActive(fd) )
+		return -1;
 
 	// response from 0x2b1b
 	memset (smith_fame_list, 0, sizeof(smith_fame_list));
@@ -954,7 +993,8 @@ int chrif_recvfamelist(int fd)
 	}
 	total += num;
 
-	ShowInfo("Receiving Fame List of '"CL_WHITE"%d"CL_RESET"' characters.\n", total);
+	if(battle_config.etc_log)
+		ShowInfo("Receiving Fame List of '"CL_WHITE"%d"CL_RESET"' characters.\n", total);
 	return 0;
 }
 
@@ -968,7 +1008,7 @@ int chrif_recvfamelist(int fd)
 	FILE *fp;
 	int i;
 
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect() )
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b16;
@@ -1005,7 +1045,7 @@ int chrif_recvfamelist(int fd)
 
 int chrif_char_offline(struct map_session_data *sd)
 {
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b17;
@@ -1020,8 +1060,9 @@ int chrif_char_offline(struct map_session_data *sd)
  * Tell char-server to reset all chars offline [Wizputer]
  *-----------------------------------------
  */
-int chrif_flush_fifo(void) {
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+int chrif_flush_fifo(void)
+{
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	flush_fifos();
@@ -1033,8 +1074,9 @@ int chrif_flush_fifo(void) {
  * Tell char-server to reset all chars offline [Wizputer]
  *-----------------------------------------
  */
-int chrif_char_reset_offline(void) {
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+int chrif_char_reset_offline(void)
+{
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b18;
@@ -1050,7 +1092,7 @@ int chrif_char_reset_offline(void) {
 
 int chrif_char_online(struct map_session_data *sd)
 {
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect())
+	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
 
 	WFIFOW(char_fd,0) = 0x2b19;
@@ -1180,7 +1222,7 @@ int send_users_tochar(int tid, unsigned long tick, int id, int data) {
 	unsigned short users = 0;
 	struct map_session_data *sd;
 
-	if (char_fd < 1 || session[char_fd] == NULL || !chrif_isconnect()) // Thanks to Toster
+	if( !session_isActive(char_fd) || !chrif_isconnect() ) // Thanks to Toster
 		return 0;
 
 	WFIFOW(char_fd,0) = 0x2aff;

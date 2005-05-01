@@ -4,50 +4,57 @@
 
 #include "map.h"
 
-struct item_data {
-	int nameid;
-	char name[24],jname[24];
-	char prefix[24],suffix[24];
+struct item_data
+{
+	unsigned short nameid;
+	char name[24];
+	char jname[24];
+	char prefix[24];
+	char suffix[24];
 	char cardillustname[64];
-	int value_buy;
-	int value_sell;
-	int type;
-	int class_;
-	int sex;
-	int equip;
-	int weight;
-	int atk;
-	int def;
-	int range;
-	int slot;
-	int look;
-	int elv;
-	int wlv;
+	long value_buy;
+	long value_sell;
+	unsigned char type;
+	unsigned short class_;
+	unsigned short equip;
+
+	unsigned long weight;
+	unsigned long atk;
+	unsigned long def;
+
+	unsigned short range;
+	unsigned short look;
+	unsigned short elv;
+	unsigned short wlv;
+	unsigned short view_id;
+
+	struct {
+		unsigned available : 1;			// 0
+		unsigned value_notdc : 1;		// 1
+		unsigned value_notoc : 1;		// 2
+		unsigned no_equip : 3;			// 3,4,5
+		unsigned no_use : 1;			// 6
+		unsigned no_refine : 1;			// 7 [celest]
+		unsigned sex : 2;				// 8,9 // male=0, female=1, all=2
+		unsigned slot : 2;				// 10,11
+	} flag;
+
 	char *use_script;	// 回復とかも全部この中でやろうかなと
 	char *equip_script;	// 攻撃,防御の属性設定もこの中で可能かな?
-	struct {
-		unsigned available : 1;
-		unsigned value_notdc : 1;
-		unsigned value_notoc : 1;
-		unsigned no_equip : 3;
-		unsigned no_use : 1;
-		unsigned no_refine : 1;	// [celest]
-	} flag;
-	int view_id;
 };
 
 struct random_item_data {
-	int nameid;
-	int per;
+	unsigned short nameid;
+	unsigned short per;
 };
 
 struct item_group {
-	int id[30];	// 120 bytes
+	unsigned short nameid[30];	// 60 bytes
 };
 
 struct item_data* itemdb_searchname(const char *name);
-struct item_data* itemdb_search(int nameid);
-struct item_data* itemdb_exists(int nameid);
+struct item_data* itemdb_search(unsigned short nameid);
+struct item_data* itemdb_exists(unsigned short nameid);
 #define itemdb_type(n) itemdb_search(n)->type
 #define itemdb_atk(n) itemdb_search(n)->atk
 #define itemdb_def(n) itemdb_search(n)->def
@@ -61,10 +68,10 @@ struct item_data* itemdb_exists(int nameid);
 #define itemdb_slot(n) itemdb_search(n)->slot
 #define	itemdb_available(n) (itemdb_exists(n) && itemdb_search(n)->flag.available)
 #define	itemdb_viewid(n) (itemdb_search(n)->view_id)
-int itemdb_group(int nameid);
+int itemdb_group(unsigned short nameid);
 
 int itemdb_searchrandomid(int flags);
-int itemdb_searchrandomgroup(int groupid);
+int itemdb_searchrandomgroup(unsigned short groupid);
 
 #define itemdb_value_buy(n) itemdb_search(n)->value_buy
 #define itemdb_value_sell(n) itemdb_search(n)->value_sell
@@ -72,10 +79,10 @@ int itemdb_searchrandomgroup(int groupid);
 #define itemdb_value_notoc(n) itemdb_search(n)->flag.value_notoc
 #define itemdb_canrefine(n) itemdb_search(n)->flag.no_refine
 
-int itemdb_isequip(int);
+int itemdb_isequip(unsigned short nameid);
 int itemdb_isequip2(struct item_data *);
-int itemdb_isequip3(int);
-int itemdb_isdropable(int nameid);
+int itemdb_isequip3(unsigned short nameid);
+int itemdb_isdropable(unsigned short nameid);
 
 // itemdb_equipマクロとitemdb_equippointとの違いは
 // 前者が鯖側dbで定義された値そのものを返すのに対し

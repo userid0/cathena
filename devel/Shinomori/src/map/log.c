@@ -30,7 +30,7 @@ time_t curtime;
 //12 - Log rare items (if their drop chance <= rare_log )
 
 //check if this item should be logger according the settings
-int should_log_item(int filter, int nameid) {
+int should_log_item(int filter, unsigned short nameid) {
 	struct item_data *item_data;
 	if (nameid<512 || (item_data= itemdb_search(nameid)) == NULL) return 0;
 	if ( (filter&1) || // Filter = 1, we log any item
@@ -142,7 +142,7 @@ int log_mvpdrop(struct map_session_data *sd, int monster_id, int *log_mvp)
 	return 0;
 }
 
-int log_present(struct map_session_data *sd, int source_type, int nameid)
+int log_present(struct map_session_data *sd, int source_type, unsigned short nameid)
 {
 	FILE *logfp;
 #ifndef TXT_ONLY
@@ -174,7 +174,7 @@ int log_present(struct map_session_data *sd, int source_type, int nameid)
 	return 0;
 }
 
-int log_produce(struct map_session_data *sd, int nameid, int slot1, int slot2, int slot3, int success)
+int log_produce(struct map_session_data *sd, unsigned short nameid, int slot1, int slot2, int slot3, int success)
 {
 	FILE *logfp;
 #ifndef TXT_ONLY

@@ -785,7 +785,7 @@ AtCommandType atcommand(struct map_session_data* sd, const int level, const char
 
 	if (*p == command_symbol) { // check first char.
 		char command[101];
-		int i = 0;
+		size_t i = 0;
 		memset(info, 0, sizeof(AtCommandInfo));
 		sscanf(p, "%100s", command);
 		command[sizeof(command)-1] = '\0';
@@ -880,9 +880,9 @@ static int atcommand_cleanmap_sub(struct block_list *bl,va_list ap)
 		return 1;
 	}
 	delete_timer(fitem->cleartimer,map_clearflooritem_timer);
-	if(fitem->item_data.card[0] == (short)0xff00)
+	if(fitem->item_data.card[0] == 0xff00)
 		intif_delete_petdata( MakeDWord(fitem->item_data.card[1],fitem->item_data.card[2]) );
-	clif_clearflooritem(fitem,0);
+	clif_clearflooritem(fitem);
 	map_delobject(fitem->bl.id);
 
 	return 0;
@@ -938,7 +938,13 @@ int msg_config_read(const char *cfgName) {
 void do_final_msg () {
 	int i;
 	for (i = 0; i < MAX_MSG; i++)
-		if(msg_table[i]) aFree(msg_table[i]);
+	{
+		if(msg_table[i])
+		{
+			aFree(msg_table[i]);
+			msg_table[i] = NULL;
+		}
+	}
 	return;
 }
 
@@ -1077,7 +1083,7 @@ int atcommand_rura(
 			clif_displaymessage(fd, msg_table[247]);
 			return -1;
 		}
-		if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+		if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 			clif_displaymessage(fd, msg_table[248]);
 			return -1;
 		}
@@ -1156,11 +1162,11 @@ int atcommand_jumpto(
 		return -1;
 
 	if((pl_sd = map_nick2sd(player_name)) != NULL) {
-		if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+		if (pl_sd->bl.m <map_num  && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 			clif_displaymessage(fd, msg_table[247]);
 			return -1;
 		}
-		if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+		if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 			clif_displaymessage(fd, msg_table[248]);
 			return -1;
 		}
@@ -1194,7 +1200,7 @@ int atcommand_jump(
 	if (y <= 0)
 		y = rand() % 399 + 1;
 	if (x > 0 && x < 400 && y > 0 && y < 400) {
-		if (sd->bl.m >= 0 && (map[sd->bl.m].flag.nowarp || map[sd->bl.m].flag.nowarpto) && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+		if (sd->bl.m < map_num && (map[sd->bl.m].flag.nowarp || map[sd->bl.m].flag.nowarpto) && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 			clif_displaymessage(fd, msg_table[248]);
 			return -1;
 		}
@@ -1663,8 +1669,8 @@ int atcommand_whozeny(
 	char match_text[128]="";
 	char player_name[24];
 	char output[128];
-	CREATE_BUFFER(zeny, long,clif_countusers());
-	CREATE_BUFFER(counted, long,clif_countusers());
+	CREATE_BUFFER(zeny, long, clif_countusers());
+	CREATE_BUFFER(counted, size_t, clif_countusers());
 
 	nullpo_retr(-1, sd);
 
@@ -1781,7 +1787,7 @@ int atcommand_load(
 		clif_displaymessage(fd, msg_table[249]);
 		return -1;
 	}
-	if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+	if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 		clif_displaymessage(fd, msg_table[248]);
 		return -1;
 	}
@@ -2469,8 +2475,10 @@ int atcommand_baselevelup(const int fd, struct map_session_data* sd, const char*
 		if((size_t)(-level) > battle_config.maximum_level || sd->status.base_level < (size_t)(1 - level)) 
 			level = 1 - sd->status.base_level;
 		if (sd->status.status_point > 0) {
+
 			for (i = 0; i > level; i--)
 				sd->status.status_point -= (sd->status.base_level + i + 14) / 5;
+
 			if (sd->status.status_point < 0)
 				sd->status.status_point = 0;
 			clif_updatestatus(sd, SP_STATUSPOINT);
@@ -3016,7 +3024,7 @@ int atcommand_go(
 					clif_displaymessage(fd, msg_table[247]);
 					return -1;
 				}
-				if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+				if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 					clif_displaymessage(fd, msg_table[248]);
 					return -1;
 				}
@@ -3037,7 +3045,7 @@ int atcommand_go(
 				clif_displaymessage(fd, msg_table[247]);
 				return -1;
 			}
-			if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+			if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 				clif_displaymessage(fd, msg_table[248]);
 				return -1;
 			}
@@ -3606,7 +3614,7 @@ int atcommand_memo(
 		atcommand_memo_sub(sd);
 	else {
 		if (position >= MIN_PORTAL_MEMO && position <= MAX_PORTAL_MEMO) {
-			if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+			if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 				clif_displaymessage(fd, msg_table[253]);
 				return -1;
 			}
@@ -4162,11 +4170,11 @@ atcommand_recall(
 
 	if((pl_sd = map_nick2sd(player_name)) != NULL) {
 		if (pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can recall only lower or same level
-			if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+			if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 				clif_displaymessage(fd, "You are not authorised to warp somenone to your actual map.");
 				return -1;
 			}
-			if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+			if (pl_sd->bl.m < map_num && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 				clif_displaymessage(fd, "You are not authorised to warp this player from its actual map.");
 				return -1;
 			}
@@ -5160,8 +5168,8 @@ int atcommand_idsearch(
 	sprintf(output, msg_table[77], item_name); // The reference result of '%s' (name: id):
 	clif_displaymessage(fd, output);
 	match = 0;
-	for(i = 0; i < 20000; i++) {
-		if ((item = itemdb_exists(i)) != NULL && strstr(item->jname, item_name) != NULL) {
+	for(i=0; i < MAX_ITEMS; i++) {
+		if((item = itemdb_exists(i)) != NULL && strstr(item->jname, item_name) != NULL) {
 			match++;
 			sprintf(output, msg_table[78], item->jname, item->nameid); // %s: %d
 			clif_displaymessage(fd, output);
@@ -5395,7 +5403,7 @@ int atcommand_recallall(
 	nullpo_retr(-1, sd);
 
 
-	if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+	if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 		clif_displaymessage(fd, "You are not authorised to warp somenone to your actual map.");
 		return -1;
 	}
@@ -5404,7 +5412,7 @@ int atcommand_recallall(
 	for (i = 0; i < fd_max; i++) {
 		if (session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth && sd->status.account_id != pl_sd->status.account_id &&
 		    pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can recall only lower or same level
-			if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+			if (pl_sd->bl.m < map_num && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
 				count++;
 			else
 				pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
@@ -5441,7 +5449,7 @@ int atcommand_guildrecall(
 		return -1;
 	}
 
-	if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+	if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 		clif_displaymessage(fd, "You are not authorised to warp somenone to your actual map.");
 		return -1;
 	}
@@ -5453,7 +5461,7 @@ int atcommand_guildrecall(
 			if (session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
 			    sd->status.account_id != pl_sd->status.account_id &&
 			    pl_sd->status.guild_id == g->guild_id) {
-				if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+				if (pl_sd->bl.m < map_num && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
 					count++;
 				else
 					pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
@@ -5494,7 +5502,7 @@ int atcommand_partyrecall(
 		return -1;
 	}
 
-	if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+	if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 		clif_displaymessage(fd, "You are not authorised to warp somenone to your actual map.");
 		return -1;
 	}
@@ -5506,7 +5514,7 @@ int atcommand_partyrecall(
 			if (session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
 			    sd->status.account_id != pl_sd->status.account_id &&
 			    pl_sd->status.party_id == p->party_id) {
-				if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+				if (pl_sd->bl.m < map_num && map[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
 					count++;
 				else
 					pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
@@ -6820,7 +6828,7 @@ atcommand_character_storage_list(
 	struct pc_storage *stor;
 	struct map_session_data *pl_sd;
 	struct item_data *item_data, *item_temp;
-	int i, j, count, counter, counter2;
+	size_t i, j, count, counter, counter2;
 	char character[128]="";
 	char output[256];
 	char outputtmp[256];
@@ -6851,7 +6859,7 @@ atcommand_character_storage_list(
 						clif_displaymessage(fd, output);
 						*output = '\0';
 						counter2 = 0;
-						for (j = 0; j < item_data->slot; j++) {
+						for (j = 0; j < item_data->flag.slot; j++) {
 							if(stor->storage[i].card[j]) {
 								if((item_temp = itemdb_search(stor->storage[i].card[j])) != NULL) {
 									if( output[0] == '\0')
@@ -6906,7 +6914,7 @@ atcommand_character_cart_list(
 	char outputtmp[256];
 	struct map_session_data *pl_sd;
 	struct item_data *item_data, *item_temp;
-	int i, j, count, counter, counter2;
+	size_t i, j, count, counter, counter2;
 	nullpo_retr(-1, sd);
 
 
@@ -6934,7 +6942,7 @@ atcommand_character_cart_list(
 					clif_displaymessage(fd, output);
 					*output = '\0';
 					counter2 = 0;
-					for (j = 0; j < item_data->slot; j++) {
+					for (j = 0; j < item_data->flag.slot; j++) {
 						if (pl_sd->status.cart[i].card[j]) {
 							if ( (item_temp = itemdb_search(pl_sd->status.cart[i].card[j])) != NULL) {
 								if(output[0] == '\0')
@@ -8481,11 +8489,11 @@ int atcommand_jumptoid(const int fd, struct map_session_data* sd, const char* co
 
 	if((session_id=charid2sessionid(cid))!=0){
       if ((pl_sd = (struct map_session_data *) session[session_id]->session_data) != NULL) {
-         if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+         if (pl_sd->bl.m < map_num && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
             clif_displaymessage(fd, msg_table[247]);
             return -1;
          }
-         if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+         if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
             clif_displaymessage(fd, msg_table[248]);
             return -1;
          }
@@ -8525,11 +8533,11 @@ int atcommand_jumptoid2(const int fd, struct map_session_data* sd, const char* c
 
 	if((session_id=accountid2sessionid(aid))!=0) {
       if ((pl_sd = (struct map_session_data *) session[session_id]->session_data) != NULL) {
-         if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+         if (pl_sd->bl.m < map_num && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
             clif_displaymessage(fd, msg_table[247]);
             return -1;
          }
-         if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+         if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
             clif_displaymessage(fd, msg_table[248]);
             return -1;
          }
@@ -8570,11 +8578,11 @@ int atcommand_recallid(const int fd, struct map_session_data* sd, const char* co
 	if((session_id=charid2sessionid(cid))!=0){
       if ((pl_sd = (struct map_session_data *) session[session_id]->session_data) != NULL) {
          if (pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can recall only lower or same level
-            if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+            if (pl_sd->bl.m < map_num && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
                clif_displaymessage(fd, msg_table[247]);
                return -1;
             }
-            if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+            if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
                clif_displaymessage(fd, msg_table[248]);
                return -1;
             }
@@ -8619,11 +8627,11 @@ int atcommand_recallid2(const int fd, struct map_session_data* sd, const char* c
 	if((session_id=accountid2sessionid(aid))!=0) {
       if ((pl_sd = (struct map_session_data *) session[session_id]->session_data) != NULL) {
          if (pc_isGM(sd) >= pc_isGM(pl_sd)) { // you can recall only lower or same level
-            if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+            if (pl_sd->bl.m < map_num && map[pl_sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
 				clif_displaymessage(fd, msg_table[247]);
 				return -1;
             }
-            if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+            if (sd->bl.m < map_num && map[sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
                clif_displaymessage(fd, msg_table[248]);
                return -1;
             }
