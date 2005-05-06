@@ -12,16 +12,34 @@
 
 // スキルデ?タベ?ス
 struct skill_db {
-	int range[MAX_SKILL_LEVEL],hit,inf,pl,nk,max;
+	int range[MAX_SKILL_LEVEL];
+	int hit;
+	int inf;
+	int pl;
+	int nk;
+	int max;
 	int num[MAX_SKILL_LEVEL];
-	int cast[MAX_SKILL_LEVEL],delay[MAX_SKILL_LEVEL];
-	int upkeep_time[MAX_SKILL_LEVEL],upkeep_time2[MAX_SKILL_LEVEL];
-	int castcancel,cast_def_rate;
-	int inf2,maxcount,skill_type;
+	int cast[MAX_SKILL_LEVEL];
+	int delay[MAX_SKILL_LEVEL];
+	int upkeep_time[MAX_SKILL_LEVEL];
+	int upkeep_time2[MAX_SKILL_LEVEL];
+	int castcancel;
+	int cast_def_rate;
+	int inf2;
+	int maxcount;
+	int skill_type;
 	int blewcount[MAX_SKILL_LEVEL];
-	int hp[MAX_SKILL_LEVEL],sp[MAX_SKILL_LEVEL],mhp[MAX_SKILL_LEVEL],hp_rate[MAX_SKILL_LEVEL],sp_rate[MAX_SKILL_LEVEL],zeny[MAX_SKILL_LEVEL];
-	int weapon,state,spiritball[MAX_SKILL_LEVEL];
-	int itemid[10],amount[10];
+	int hp[MAX_SKILL_LEVEL];
+	int sp[MAX_SKILL_LEVEL];
+	int mhp[MAX_SKILL_LEVEL];
+	int hp_rate[MAX_SKILL_LEVEL];
+	int sp_rate[MAX_SKILL_LEVEL];
+	int zeny[MAX_SKILL_LEVEL];
+	int weapon;
+	int state;
+	int spiritball[MAX_SKILL_LEVEL];
+	int itemid[10];
+	int amount[10];
 	int castnodex[MAX_SKILL_LEVEL];
 	int delaynodex[MAX_SKILL_LEVEL];
 	int nocast;
@@ -35,7 +53,7 @@ struct skill_db {
 extern struct skill_db skill_db[MAX_SKILL_DB];
 
 struct skill_name_db { 
-        int id;     // skill id
+        unsigned short id;     // skill id
         char *name; // search strings
         char *desc; // description that shows up for search's
 };
@@ -63,7 +81,7 @@ enum {
 struct skill_produce_db {
 	unsigned short nameid;
 	int trigger;
-	int req_skill;
+	unsigned short req_skill;
 	int itemlv;
 	int mat_id[MAX_PRODUCE_RESOURCE];
 	int mat_amount[MAX_PRODUCE_RESOURCE];
@@ -559,30 +577,34 @@ enum {
 	DC_FORTUNEKISS,
 	DC_SERVICEFORYOU,
 
-	WE_MALE = 334,
+	NPC_RANDOMMOVE,
+	NPC_SPEEDUP,
+	NPC_REVENGE,
+
+	WE_MALE,
 	WE_FEMALE,
 	WE_CALLPARTNER,
 
-	NPC_SELFDESTRUCTION2 = 331,
 	ITM_TOMAHAWK = 337,
+
 	NPC_DARKCROSS = 338,
-	NPC_DARKGRANDCROSS,
-	NPC_DARKSOULSTRIKE,
-	NPC_DARKJUPITEL,
-	// temporary names for mob skills [Celest]
-	NPC_BIND,
+	NPC_GRANDDARKNESS,
+	NPC_DARKSTRIKE,
+	NPC_DARKTHUNDER,
+	NPC_STOP,
 	NPC_BREAKWEAPON,
 	NPC_BREAKARMOR,
 	NPC_BREAKHELM,
 	NPC_BREAKSHIELD,
 	NPC_UNDEADATTACK,
+	NPC_CHANGEUNDEAD,
+	NPC_POWERUP,
+	NPC_AGIUP,
+	NPC_SIEGEMODE,
+	NPC_CALLSLAVE,
+	NPC_INVISIBLE,
+	NPC_RUN,
 	
-	NPC_RUNAWAY = 348,
-	NPC_EXPLOSIONSPIRITS,
-	NPC_INCAGI,
-
-	NPC_RECALL = 354,
-
 	LK_AURABLADE = 355,
 	LK_PARRYING,
 	LK_CONCENTRATION,
@@ -720,6 +742,8 @@ enum {
 	CG_TAROTCARD,
 	CR_ACIDDEMONSTRATION,
 	CR_CULTIVATION,
+
+	NPC_SELFDESTRUCTION2 = 492,
 };
 
 #endif

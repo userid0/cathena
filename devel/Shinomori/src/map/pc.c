@@ -55,8 +55,8 @@ static int dirx[8]={0,-1,-1,-1,0,1,1,1};
 static int diry[8]={1,1,0,-1,-1,-1,0,1};
 
 #define CHECK_FAME_INTERVAL 600000
-struct Fame_list smith_fame_list[10];
-struct Fame_list chemist_fame_list[10];
+struct Fame_list smith_fame_list[MAX_FAMELIST];
+struct Fame_list chemist_fame_list[MAX_FAMELIST];
 
 
 static unsigned int equip_pos[11]={0x0080,0x0008,0x0040,0x0004,0x0001,0x0200,0x0100,0x0010,0x0020,0x0002,0x8000};
@@ -309,50 +309,6 @@ int pc_setrestartvalue(struct map_session_data *sd,int type) {
 	}
 
 	return 0;
-}
-
-/*==========================================
- * 自分をロックしているMOBの?を?える(foreachclient)
- *------------------------------------------
- */
-static int pc_counttargeted_sub(struct block_list *bl,va_list ap)
-{
-	unsigned long id;
-	int *c,target_lv;
-	struct block_list *src;
-
-	nullpo_retr(0, bl);
-	nullpo_retr(0, ap);
-
-	id=va_arg(ap,unsigned long);
-
-	nullpo_retr(0, c=va_arg(ap,int *));
-
-	src=va_arg(ap,struct block_list *);
-	target_lv=va_arg(ap,int);
-	if(id == bl->id || (src && id == src->id)) return 0;
-	if(bl->type == BL_PC) {
-		struct map_session_data *sd=(struct map_session_data *)bl;
-		if( sd && sd->attacktarget == id && sd->attacktimer != -1 && sd->attacktarget_lv >= target_lv)
-			(*c)++;
-	}
-	else if(bl->type == BL_MOB) {
-		struct mob_data *md = (struct mob_data *)bl;
-		if(md && md->target_id == id && md->timer != -1 && md->state.state == MS_ATTACK && md->target_lv >= target_lv)
-
-			(*c)++;
-		//ShowMessage("md->target_lv:%d, target_lv:%d\n",((struct mob_data *)bl)->target_lv,target_lv);
-	}
-	return 0;
-}
-
-int pc_counttargeted(struct map_session_data *sd,struct block_list *src,int target_lv)
-{
-	int c=0;
-	map_foreachinarea(pc_counttargeted_sub, sd->bl.m,
-		sd->bl.x-AREA_SIZE,sd->bl.y-AREA_SIZE,
-		sd->bl.x+AREA_SIZE,sd->bl.y+AREA_SIZE,0,sd->bl.id,&c,src,target_lv);
-	return c;
 }
 
 /*==========================================
@@ -2019,7 +1975,7 @@ int pc_bonus3(struct map_session_data *sd,int type,int type2,int type3,int val)
 		}
 		break;
 	case SP_AUTOSPELL:
-		if(sd->state.lr_flag != 2){
+		if(sd->state.lr_flag != 2) {
 			for (i = 0; i < 10; i++) {
 				if (sd->autospell_id[i] == 0 ||
 					(sd->autospell_id[i] == type2 && sd->autospell_lv[i] < type3) ||
@@ -2029,12 +1985,12 @@ int pc_bonus3(struct map_session_data *sd,int type,int type2,int type3,int val)
 					sd->autospell_lv[i] = type3;
 					sd->autospell_rate[i] = val;
 					break;
-		}
+				}
 			}
 		}
 		break;
 	case SP_AUTOSPELL_WHENHIT:
-		if(sd->state.lr_flag != 2){
+		if(sd->state.lr_flag != 2) {
 			for (i = 0; i < 10; i++) {
 				if (sd->autospell2_id[i] == 0 ||
 					(sd->autospell2_id[i] == type2 && sd->autospell2_lv[i] < type3) ||
@@ -2044,7 +2000,7 @@ int pc_bonus3(struct map_session_data *sd,int type,int type2,int type3,int val)
 					sd->autospell2_lv[i] = type3;
 					sd->autospell2_rate[i] = val;
 					break;
-		}
+				}
 			}
 		}
 		break;
@@ -2125,7 +2081,7 @@ int pc_bonus4(struct map_session_data *sd,int type,int type2,int type3,int type4
 					sd->autospell_lv[i] = type3;
 					sd->autospell_rate[i] = type4;
 					break;
-		}
+				}
 			}
 		}			
 		break;
@@ -2140,7 +2096,7 @@ int pc_bonus4(struct map_session_data *sd,int type,int type2,int type3,int type4
 					sd->autospell2_lv[i] = type3;
 					sd->autospell2_rate[i] = type4;
 					break;
-		}
+				}
 			}
 		}
 		break;
@@ -3160,24 +3116,24 @@ bool pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clr
 	{
 		unsigned long ip;
 		unsigned short port;
-		if(map_mapname2ipport(mapname,&ip,&port)==0){
-			if(sd->status.pet_id > 0 && sd->pd) {
-				if(sd->pd->bl.m != m && sd->pet.intimate <= 0) {
-					pet_remove_map(sd);
-					intif_delete_petdata(sd->status.pet_id);
-					sd->status.pet_id = 0;
-					sd->pd = NULL;
-					sd->petDB = NULL;
-					if(battle_config.pet_status_support)
-						status_calc_pc(sd,2);
+			if(map_mapname2ipport(mapname,&ip,&port)==0){
+				if(sd->status.pet_id > 0 && sd->pd) {
+					if(sd->pd->bl.m != m && sd->pet.intimate <= 0) {
+						pet_remove_map(sd);
+						intif_delete_petdata(sd->status.pet_id);
+						sd->status.pet_id = 0;
+						sd->pd = NULL;
+						sd->petDB = NULL;
+						if(battle_config.pet_status_support)
+							status_calc_pc(sd,2);
+					}
+					else if(sd->pet.intimate > 0) {
+						pet_stopattack(sd->pd);
+						pet_changestate(sd->pd,MS_IDLE,0);
+						clif_clearchar_area(&sd->pd->bl,clrtype&0xffff);
+						map_delblock(&sd->pd->bl);
+					}
 				}
-				else if(sd->pet.intimate > 0) {
-					pet_stopattack(sd->pd);
-					pet_changestate(sd->pd,MS_IDLE,0);
-					clif_clearchar_area(&sd->pd->bl,clrtype&0xffff);
-					map_delblock(&sd->pd->bl);
-				}
-			}
 
 			skill_unit_move(&sd->bl,gettick(),0);
 			clif_clearchar_area(&sd->bl,clrtype&0xffff);
@@ -3194,19 +3150,19 @@ bool pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clr
 			skill_cleartimerskill(&sd->bl);			// タイマースキルクリア
 			skill_clear_unitgroup(&sd->bl);			// スキルユニットグループの削除
 
-			memcpy(sd->mapname,mapname,24);
-			sd->bl.x=x;
-			sd->bl.y=y;
+				memcpy(sd->mapname,mapname,24);
+				sd->bl.x=x;
+				sd->bl.y=y;
 	
-			sd->state.waitingdisconnect=1;
-			pc_clean_skilltree(sd);
-			pc_makesavestatus(sd);
-			if(sd->status.pet_id > 0 && sd->pd)
-				intif_save_petdata(sd->status.account_id,&sd->pet);
-			chrif_save(sd);
-			storage_storage_save(sd);
-			storage_delete(sd->status.account_id);
-			chrif_changemapserver(sd, mapname, x, y, ip, port);
+				sd->state.waitingdisconnect=1;
+				pc_clean_skilltree(sd);
+				pc_makesavestatus(sd);
+				if(sd->status.pet_id > 0 && sd->pd)
+					intif_save_petdata(sd->status.account_id,&sd->pet);
+				chrif_save(sd);
+				storage_storage_save(sd);
+				storage_delete(sd->status.account_id);
+				chrif_changemapserver(sd, mapname, x, y, ip, port);
 			return true;
 			}
 		return false;
@@ -3269,8 +3225,8 @@ bool pc_setpos(struct map_session_data *sd,char *mapname_org,int x,int y,int clr
 
 	memcpy(sd->mapname,mapname,24);
 	sd->bl.m = m;
-	sd->bl.x = x;
-	sd->bl.y = y;
+	sd->bl.x =  x;
+	sd->bl.y =  y;
 
 	if(sd->status.pet_id > 0 && sd->pd && sd->pet.intimate > 0) {
 		sd->pd->bl.m = m;
@@ -4979,8 +4935,8 @@ int pc_damage(struct block_list *src,struct map_session_data *sd,int damage)
 			sd->state.snovice_flag = 4;
 	}
 
-	for(i=0;i<5;i++)
-		if(sd->dev.val1[i]){
+	for(i = 0; i < 5; i++)
+		if (sd->dev.val1[i]){
 			struct map_session_data *devsd = map_id2sd(sd->dev.val1[i]);
 			if (devsd) status_change_end(&devsd->bl,SC_DEVOTION,-1);
 			sd->dev.val1[i] = sd->dev.val2[i]=0;
@@ -5097,8 +5053,8 @@ int pc_damage(struct block_list *src,struct map_session_data *sd,int damage)
 	// pvp
 	if( map[sd->bl.m].flag.pvp && !battle_config.pk_mode){ // disable certain pvp functions on pk_mode [Valaris]
 		//ランキング計算
-		if(!map[sd->bl.m].flag.pvp_nocalcrank){
-			sd->pvp_point-=5;
+		if (!map[sd->bl.m].flag.pvp_nocalcrank) {
+			sd->pvp_point -= 5;
 			sd->pvp_lost++;
 			if (src && src->type == BL_PC) {
 				struct map_session_data *ssd = (struct map_session_data *)src;
@@ -6666,8 +6622,8 @@ int pc_marriage(struct map_session_data *sd,struct map_session_data *dstsd)
 		sd->status.partner_id > 0 || dstsd->status.partner_id > 0 ||
 		pc_calc_upper(sd->status.class_) == 2)
 		return -1;
-	sd->status.partner_id=dstsd->status.char_id;
-	dstsd->status.partner_id=sd->status.char_id;
+	sd->status.partner_id = dstsd->status.char_id;
+	dstsd->status.partner_id = sd->status.char_id;
 	return 0;
 }
 
@@ -6678,26 +6634,26 @@ int pc_marriage(struct map_session_data *sd,struct map_session_data *dstsd)
 int pc_divorce(struct map_session_data *sd)
 {
 	struct map_session_data *p_sd;
-	if(sd == NULL || !pc_ismarried(sd))
+	if (sd == NULL || !pc_ismarried(sd))
 		return -1;
 
 	if ((p_sd = map_charid2sd(sd->status.partner_id)) != NULL) {
 		int i;
-		if(p_sd->status.partner_id != sd->status.char_id || sd->status.partner_id != p_sd->status.char_id){
+		if (p_sd->status.partner_id != sd->status.char_id || sd->status.partner_id != p_sd->status.char_id) {
 			ShowMessage("pc_divorce: Illegal partner_id sd=%d p_sd=%d\n",sd->status.partner_id,p_sd->status.partner_id);
 			return -1;
 		}
-		sd->status.partner_id=0;
-		p_sd->status.partner_id=0;
-		for(i=0;i<MAX_INVENTORY;i++)
-			if(sd->status.inventory[i].nameid == WEDDING_RING_M || sd->status.inventory[i].nameid == WEDDING_RING_F)
-				pc_delitem(sd,i,1,0);
-		for(i=0;i<MAX_INVENTORY;i++)
-			if(p_sd->status.inventory[i].nameid == WEDDING_RING_M || p_sd->status.inventory[i].nameid == WEDDING_RING_F)
-				pc_delitem(p_sd,i,1,0);
+		sd->status.partner_id = 0;
+		p_sd->status.partner_id = 0;
+		for (i = 0; i < MAX_INVENTORY; i++)
+			if (sd->status.inventory[i].nameid == WEDDING_RING_M || sd->status.inventory[i].nameid == WEDDING_RING_F)
+				pc_delitem(sd, i, 1, 0);
+		for (i = 0; i < MAX_INVENTORY; i++)
+			if (p_sd->status.inventory[i].nameid == WEDDING_RING_M || p_sd->status.inventory[i].nameid == WEDDING_RING_F)
+				pc_delitem(p_sd, i, 1, 0);
 		clif_divorced(sd, p_sd->status.name);
 		clif_divorced(p_sd, sd->status.name);
-	}else{
+	} else {
 		ShowMessage("pc_divorce: p_sd nullpo\n");
 		return -1;
 	}
@@ -6709,9 +6665,9 @@ int pc_divorce(struct map_session_data *sd)
  */
 int pc_adoption(struct map_session_data *sd,struct map_session_data *dstsd, struct map_session_data *jasd)
 {       
-        int j;          
+	int j;          
 	if (sd == NULL || dstsd == NULL || jasd == NULL ||
-			sd->status.partner_id <= 0 || dstsd->status.partner_id <= 0 || 
+		sd->status.partner_id <= 0 || dstsd->status.partner_id <= 0 ||
 			sd->status.partner_id != dstsd->status.char_id || 
 			dstsd->status.partner_id != sd->status.char_id || 
 			sd->status.child_id > 0 || dstsd->status.child_id || 
@@ -6723,14 +6679,14 @@ int pc_adoption(struct map_session_data *sd,struct map_session_data *dstsd, stru
         dstsd->status.child_id = jasd->status.char_id;
         for (j=0; j < MAX_INVENTORY; j++)
 		{
-                if(jasd->status.inventory[j].nameid>0 && jasd->status.inventory[j].equip!=0)
-                        pc_unequipitem(jasd, j, 3);
-        }
-        if (pc_jobchange(jasd, 4023, 0) == 0)
-			clif_displaymessage(jasd->fd, msg_txt(12)); // Your job has been changed.
+		if(jasd->status.inventory[j].nameid>0 && jasd->status.inventory[j].equip!=0)
+			pc_unequipitem(jasd, j, 3);
+	}
+	if (pc_jobchange(jasd, 4023, 0) == 0)
+		clif_displaymessage(jasd->fd, msg_txt(12)); // Your job has been changed.
 		else
 		{
-			clif_displaymessage(jasd->fd, msg_txt(155)); // Impossible to change your job.
+		clif_displaymessage(jasd->fd, msg_txt(155)); // Impossible to change your job.
 		return -1;
 	}
 	return 0;
@@ -7133,7 +7089,7 @@ static int pc_bleeding (struct map_session_data *sd)
 	long hp=0, sp=0;
 	
 	nullpo_retr(0, sd);
-	
+
 	if (sd->hp_loss_value > 0)
 	{
 		sd->hp_loss_tick += natural_heal_diff_tick;
@@ -7160,7 +7116,7 @@ static int pc_bleeding (struct map_session_data *sd)
 			sd->sp_loss_tick = 0;
 		}
 	}
-	
+
 	if (hp > 0 || sp > 0)
 		pc_heal(sd,-hp,-sp);
 	return 0;

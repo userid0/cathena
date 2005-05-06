@@ -941,7 +941,7 @@ void do_final_msg () {
 	{
 		if(msg_table[i])
 		{
-			aFree(msg_table[i]);
+		aFree(msg_table[i]);
 			msg_table[i] = NULL;
 		}
 	}
@@ -1026,12 +1026,18 @@ int atcommand_send(
 	{
 		switch (type)
 		{
-		case -1:
+		case 0x209:
+			WFIFOW(fd,0) = 0x209;
+			WFIFOW(fd,2) = 2;
+			memcpy(WFIFOP(fd, 12), sd->status.name, 24);
+			WFIFOSET(fd, packet_db[clif_config.packet_db_ver][type].len);
 			break;
+		case 0x1b1:
+		case 0x1c2:
 		//case xxx:
 		//	add others here
 		//	break;
-		default:		
+		default:
 			WFIFOW(fd,0) = type;
 			WFIFOSET(fd, packet_db[clif_config.packet_db_ver][type].len);
 			break;
@@ -3696,6 +3702,16 @@ int atcommand_packet(
 	case 0:
 		clif_status_change(&sd->bl, x, y);
 		break;
+	case 1:
+		sd->status.skill[sd->cloneskill_id].id=0;
+		sd->status.skill[sd->cloneskill_id].lv=0;
+		sd->status.skill[sd->cloneskill_id].flag=0;
+		sd->cloneskill_id = x;
+		sd->status.skill[x].id = x;
+		sd->status.skill[x].lv = skill_get_max(x);
+		sd->status.skill[x].flag = 13;//cloneskill flag
+		clif_skillinfoblock(sd);
+		break;
 	default:
 		break;
 		//added later
@@ -5141,9 +5157,8 @@ int atcommand_mapexit(
 	
 	flush_fifos();
 
-	runflag = 0;
-
-        return 0;
+	core_stoprunning();
+	return 0;
 }
 
 /*==========================================
@@ -5169,7 +5184,7 @@ int atcommand_idsearch(
 	clif_displaymessage(fd, output);
 	match = 0;
 	for(i=0; i < MAX_ITEMS; i++) {
-		if((item = itemdb_exists(i)) != NULL && strstr(item->jname, item_name) != NULL) {
+		if ((item = itemdb_exists(i)) != NULL && strstr(item->jname, item_name) != NULL) {
 			match++;
 			sprintf(output, msg_table[78], item->jname, item->nameid); // %s: %d
 			clif_displaymessage(fd, output);
@@ -6140,7 +6155,7 @@ int atcommand_loadnpc(const int fd, struct map_session_data* sd, const char* com
 	}
 
 	// check if script file exists
-	if ((fp = fopen(message, "r")) == NULL) {
+	if ((fp = savefopen(message, "r")) == NULL) {
 		clif_displaymessage(fd, msg_table[261]);
 		return -1;
 	}
@@ -9235,16 +9250,16 @@ static int atcommand_mutearea_sub(struct block_list *bl,va_list ap)
 {
 	int time;
 	unsigned long id;
-	struct map_session_data *pl_sd = (struct map_session_data *) bl;
+	struct map_session_data *pl_sd = (struct map_session_data *)bl;
 	if (pl_sd == NULL)
 		return 1;
-	
+
 	id = va_arg(ap, unsigned long);
-	time = va_arg(ap, int);
+	time = va_arg(ap, int);	
 	if (id != bl->id && !pc_isGM(pl_sd))
 	{
 		pl_sd->status.manner -= time;
-		if( pl_sd->status.manner < 0 )
+		if (pl_sd->status.manner < 0)
 			status_change_start(&pl_sd->bl,SC_NOCHAT,0,0,0,0,0,0);
 	}
 	return 0;
@@ -9258,17 +9273,17 @@ int atcommand_mutearea(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-  int time;
-  nullpo_retr(0, sd);
+	int time;
+	nullpo_retr(0, sd);
 
-  time = atoi(message);
-  if (time <= 0)
+	time = atoi(message);
+	if (time <= 0)
 		time = 15; // 15 minutes default
-  map_foreachinarea(atcommand_mutearea_sub,sd->bl.m, 
-    sd->bl.x-AREA_SIZE,sd->bl.y-AREA_SIZE, 
+	map_foreachinarea(atcommand_mutearea_sub,sd->bl.m, 
+		sd->bl.x-AREA_SIZE,sd->bl.y-AREA_SIZE, 
 		sd->bl.x+AREA_SIZE, sd->bl.y+AREA_SIZE, BL_PC, sd->bl.id, time);
 
-  return 0;
+	return 0;
 }
 
 static int atcommand_shuffle_sub(struct block_list *bl,va_list ap)

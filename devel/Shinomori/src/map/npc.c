@@ -1742,7 +1742,7 @@ static int npc_parse_script(char *w1,char *w2,char *w3,char *w4,char *first_line
 		ref->refcnt= 0; 
 		ref->label_list = NULL;
 		ref->label_list_num=0;
-		ref->script  = (char *)parse_script(srcbuf,startline);
+		ref->script  = parse_script(srcbuf,startline);
 		if (ref->script==NULL) 
 		{
 			// script parse error?
@@ -2009,7 +2009,7 @@ static int npc_parse_function(char *w1,char *w2,char *w3,char *w4,char *first_li
 		} else
 			strcat(srcbuf,line);
 	}
-	script=(char*)parse_script((unsigned char*)(srcbuf),startline);
+	script=parse_script((unsigned char*)(srcbuf),startline);
 	if (script==NULL) {
 		// script parse error?
 		aFree(srcbuf);

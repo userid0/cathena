@@ -352,6 +352,8 @@ int mapif_account_reg(int fd, unsigned char *src) {
 // アカウント変数要求返信
 int mapif_account_reg_reply(int fd, unsigned long account_id) {
 	struct accreg *reg = (struct accreg *)numdb_search(accreg_db,account_id);
+	if( !session_isActive(fd) )
+		return 0;
 
 	WFIFOW(fd,0) = 0x3804;
 	WFIFOL(fd,4) = account_id;
@@ -409,10 +411,12 @@ int check_ttl_wisdata(void) {
 // received packets from map-server
 
 // GMメッセージ送信
-int mapif_parse_GMmessage(int fd) {
-	mapif_GMmessage(RFIFOP(fd,4), RFIFOW(fd,2), fd);
+int mapif_parse_GMmessage(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
 
-	return 0;
+	return mapif_GMmessage(RFIFOP(fd,4), RFIFOW(fd,2), fd);
 }
 
 // Wisp/page request to send
@@ -420,6 +424,8 @@ int mapif_parse_WisRequest(int fd) {
 	struct WisData* wd;
 	static int wisid = 0;
 	int index;
+	if( !session_isActive(fd) )
+		return 0;
 
 	if ((size_t)RFIFOW(fd,2) >= sizeof(wd->msg)+52) {
 		ShowMessage("inter: Wis message size too long.\n");
@@ -471,7 +477,11 @@ int mapif_parse_WisRequest(int fd) {
 }
 
 // Wisp/page transmission result
-int mapif_parse_WisReply(int fd) {
+int mapif_parse_WisReply(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	int id = RFIFOL(fd,2);
 	int flag = RFIFOB(fd,6);
 	struct WisData *wd = (struct WisData *)numdb_search(wis_db, id);
@@ -489,7 +499,11 @@ int mapif_parse_WisReply(int fd) {
 }
 
 // Received wisp message from map-server for ALL gm (just copy the message and resends it to ALL map-servers)
-int mapif_parse_WisToGM(int fd) {
+int mapif_parse_WisToGM(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	CREATE_BUFFER(buf,unsigned char,(unsigned short)RFIFOW(fd,2));
 
 	memcpy(WBUFP(buf,0), RFIFOP(fd,0), RFIFOW(fd,2));
@@ -501,7 +515,10 @@ int mapif_parse_WisToGM(int fd) {
 }
 
 // アカウント変数保存要求
-int mapif_parse_AccReg(int fd) {
+int mapif_parse_AccReg(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
 
 	int j, p;
 	struct accreg *reg = (struct accreg *)numdb_search(accreg_db, (unsigned long)RFIFOL(fd,4));
@@ -524,7 +541,11 @@ int mapif_parse_AccReg(int fd) {
 }
 
 // アカウント変数送信要求
-int mapif_parse_AccRegRequest(int fd) {
+int mapif_parse_AccRegRequest(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 //	ShowMessage("mapif: accreg request\n");
 	return mapif_account_reg_reply(fd, RFIFOL(fd,2));
 }
@@ -534,7 +555,11 @@ int mapif_parse_AccRegRequest(int fd) {
 // map server からの通信（１パケットのみ解析すること）
 // エラーなら0(false)、処理できたなら1、
 // パケット長が足りなければ2をかえさなければならない
-int inter_parse_frommap(int fd) {
+int inter_parse_frommap(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	unsigned short cmd = RFIFOW(fd,0);
 	int len = 0;
 
@@ -571,7 +596,11 @@ int inter_parse_frommap(int fd) {
 
 // RFIFOのパケット長確認
 // 必要パケット長があればパケット長、まだ足りなければ0
-int inter_check_length(int fd, int length) {
+int inter_check_length(int fd, int length)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	if (length == -1) {	// 可変パケット長
 		if (RFIFOREST(fd) < 4)	// パケット長が未着
 			return 0;

@@ -514,7 +514,7 @@ static void memmgr_log (char *buf)
 {
 	if (!log_fp)
 	{
-		log_fp = fopen(memmer_logfile,"w");
+		log_fp = savefopen(memmer_logfile,"w");
 		if (!log_fp) log_fp = stdout;
 		fprintf(log_fp, "Memory manager: Memory leaks found.\n");
 	}

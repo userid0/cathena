@@ -278,7 +278,7 @@ int clif_pet_food(struct map_session_data *sd,unsigned short foodid,unsigned cha
 
 //friends list
 int clif_friendslist_send(struct map_session_data *sd);
-int clif_friendslist_reqack(struct map_session_data *sd, unsigned short type);
+int clif_friendslist_reqack(struct map_session_data *sd, char *name, unsigned short type);
 
 int clif_specialeffect(struct block_list *bl,unsigned long type, int flag); // special effects [Valaris]
 int clif_message(struct block_list *bl, char* msg); // messages (from mobs/npcs) [Valaris]

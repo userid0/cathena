@@ -766,6 +766,8 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		}
 		if(sd->sc_data[SC_INCSTR].timer!=-1)
 			sd->paramb[0] += sd->sc_data[SC_INCSTR].val1;
+		if(sd->sc_data[SC_INCAGI].timer!=-1)
+			sd->paramb[1] += sd->sc_data[SC_INCAGI].val1;
 		if(sd->sc_data[SC_CONCENTRATE].timer!=-1 && sd->sc_data[SC_QUAGMIRE].timer == -1){	// 集中力向上
 			sd->paramb[1]+= (sd->status.agi+sd->paramb[1]+sd->parame[1]-sd->paramcard[1])*(2+sd->sc_data[SC_CONCENTRATE].val1)/100;
 			sd->paramb[4]+= (sd->status.dex+sd->paramb[4]+sd->parame[4]-sd->paramcard[4])*(2+sd->sc_data[SC_CONCENTRATE].val1)/100;
@@ -1238,7 +1240,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 		if(sd->sc_data[SC_TRUESIGHT].timer!=-1) //トゥル?サイト
 			sd->hit += 3*((unsigned short)sd->sc_data[SC_TRUESIGHT].val1);
 		if(sd->sc_data[SC_CONCENTRATION].timer!=-1) //コンセントレ?ション
-			sd->hit += (10*((unsigned short)sd->sc_data[SC_CONCENTRATION].val1));
+			sd->hit *= (100+(5*sd->sc_data[SC_CONCENTRATION].val1))/100;
 		if(sd->sc_data[SC_INCHIT].timer!=-1)
 			sd->hit += (unsigned short)sd->sc_data[SC_INCHIT].val1;
 		if(sd->sc_data[SC_INCHIT2].timer!=-1)
@@ -1421,7 +1423,7 @@ int status_calc_pc(struct map_session_data* sd,int first)
 				sd->flee += 10;
 			}
 		}
-		}
+	}
 
 	if (sd->speed_rate <= 0)
 		sd->speed_rate = 1;
@@ -1865,6 +1867,8 @@ int status_get_agi(struct block_list *bl)
 				agi += 5;
 			if(sc_data[SC_INCALLSTATUS].timer!=-1)
 				agi += sc_data[SC_INCALLSTATUS].val1;
+			if(sc_data[SC_INCAGI].timer!=-1)
+				agi += sc_data[SC_INCAGI].val1;
 		}
 	}
 	if(agi < 0) agi = 0;
@@ -2097,7 +2101,7 @@ int status_get_hit(struct block_list *bl)
 			if(sc_data[SC_TRUESIGHT].timer!=-1)		// トゥルーサイト
 				hit += 3*(sc_data[SC_TRUESIGHT].val1);
 			if(sc_data[SC_CONCENTRATION].timer!=-1) //コンセントレーション
-				hit += (hit*(10*(sc_data[SC_CONCENTRATION].val1)))/100;
+				hit *= (100+(5*sc_data[SC_CONCENTRATION].val1))/100;
 			if(sc_data[SC_GOSPEL].timer!=-1 &&
 				sc_data[SC_GOSPEL].val4 == BCT_PARTY &&
 				sc_data[SC_GOSPEL].val3 == 14)
@@ -2771,7 +2775,7 @@ int status_get_dmotion(struct block_list *bl)
 	else if(bl->type==BL_PC && (struct map_session_data *)bl){
 		ret=((struct map_session_data *)bl)->dmotion;
 		if(battle_config.pc_damage_delay_rate != 100)
-			ret = ret*battle_config.pc_damage_delay_rate/400;
+			ret = ret*battle_config.pc_damage_delay_rate/100;
 	}
 	else if(bl->type==BL_PET && (struct pet_data *)bl)
 		ret=mob_db[((struct pet_data *)bl)->class_].dmotion;
@@ -3896,6 +3900,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		case SC_INCFLEE2:		/* FLEE%上昇 */
 		case SC_INCDEF2:
 		case SC_INCSTR:
+		case SC_INCAGI:
 			calc_flag = 1;
 			break;
 
@@ -4144,6 +4149,7 @@ int status_change_end( struct block_list* bl , int type,int tid )
 			case SC_INCFLEE2:
 			case SC_INCDEF2:
 			case SC_INCSTR:
+			case SC_INCAGI:
 			case SC_BATTLEORDERS:
 			case SC_REGENERATION:
 			case SC_GUILDAURA:
@@ -4513,32 +4519,6 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 		if(sd && sd->state.infinite_endure) {
 			sc_data[type].timer=add_timer( 1000*60+tick,status_change_timer, bl->id, data );
 			return 0;
-		}
-		break;
-
-	case SC_DISSONANCE:	/* 不協和音 */
-		if( (--sc_data[type].val2)>0){
-			struct skill_unit *unit = (struct skill_unit *)sc_data[type].val4;
-			struct block_list *src;
-			if (unit && unit->group && (src = map_id2bl(unit->group->src_id)) != NULL) {
-			skill_attack(BF_MISC,src,&unit->bl,bl,unit->group->skill_id,(unsigned short)sc_data[type].val1,tick,0);
-				if (status_isdead(bl))
-					break;
-
-			sc_data[type].timer=add_timer(skill_get_time2(unit->group->skill_id,unit->group->skill_lv)+tick,status_change_timer, bl->id, data );
-			}
-			return 0;
-		}
-		break;
-
-	case SC_LULLABY:	/* 子守唄 */
-		if( (--sc_data[type].val2)>0){
-			struct skill_unit *unit = (struct skill_unit *)sc_data[type].val4;
-			if (unit && unit->group && unit->group->src_id != bl->id) {
-			skill_additional_effect(bl,bl,unit->group->skill_id,(unsigned short)sc_data[type].val1,BF_LONG|BF_SKILL|BF_MISC,tick);
-				sc_data[type].timer=add_timer(skill_get_time(unit->group->skill_id,unit->group->skill_lv)/10+tick,status_change_timer, bl->id, data );
-				return 0;
-			}
 		}
 		break;
 

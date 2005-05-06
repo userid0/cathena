@@ -33,6 +33,7 @@
 #define MAX_DROP_PER_MAP 48
 #define MAX_IGNORE_LIST 80
 #define MAX_VENDING 12
+#define MAX_FAMELIST 10
 
 #define DEFAULT_AUTOSAVE_INTERVAL 60*1000
 
@@ -1109,7 +1110,9 @@ extern char tmp_msql[65535];
 extern int db_use_sqldbs;
 
 extern char item_db_db[32];
+extern char item_db2_db[32];
 extern char mob_db_db[32];
+extern char mob_db2_db[32];
 extern char login_db[32];
 
 extern char login_db_level[32];

@@ -840,8 +840,6 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 				rate = 5;
 			if(sc_data && sc_data[SC_FREEZE].timer == -1 && rand()%100 < rate)
 				status_change_start(bl,SC_FREEZE,skilllv,0,0,0,skill_get_time2(skillid,skilllv)*(1-sc_def_mdef/100),0);
-			else if (sd && skillid == MG_FROSTDIVER)
-				clif_skill_fail(sd,skillid,0,0);
 		}
 		break;
 
@@ -887,7 +885,7 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 		break;
 
 	case CR_GRANDCROSS:		/* グランドクロス */
-	case NPC_DARKGRANDCROSS:	/*闇グランドクロス*/
+	case NPC_GRANDDARKNESS:	/*闇グランドクロス*/
 		{
 			int race = status_get_race(bl);
 			if( (battle_check_undead(race,status_get_elem_type(bl)) || race == 6) && rand()%100 < 100000*sc_def_int/100)	//?制付?だが完全耐性には無?
@@ -1389,7 +1387,7 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 	if(damage <= 0 || damage < dmg.div_) //吹き飛ばし判定？※
 		dmg.blewcount = 0;
 
-	if(skillid == CR_GRANDCROSS||skillid == NPC_DARKGRANDCROSS) {//グランドクロス
+	if(skillid == CR_GRANDCROSS||skillid == NPC_GRANDDARKNESS) {//グランドクロス
 		if(battle_config.gx_disptype) dsrc = src;	// 敵ダメ?ジ白文字表示
 		if( src == bl) type = 4;	// 反動はダメ?ジモ?ションなし
 	}
@@ -2227,7 +2225,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 	if (tsd && pc_isdead(tsd))
 		return 1;
 
-	if ((skillid == CR_GRANDCROSS || skillid == NPC_DARKGRANDCROSS) && src != bl)
+	if ((skillid == CR_GRANDCROSS || skillid == NPC_GRANDDARKNESS) && src != bl)
 		bl = src;
 	sc_data = status_get_sc_data(src);
 	
@@ -2589,7 +2587,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 
 	/* 魔法系スキル */
 	case MG_SOULSTRIKE:			/* ソウルストライク */
-	case NPC_DARKSOULSTRIKE:		/*闇ソウルストライク*/
+	case NPC_DARKSTRIKE:		/*闇ソウルストライク*/
 	case MG_COLDBOLT:			/* コールドボルト */
 	case MG_FIREBOLT:			/* ファイアーボルト */
 	case MG_LIGHTNINGBOLT:		/* ライトニングボルト */
@@ -2597,7 +2595,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 	case AL_HEAL:				/* ヒール */
 	case AL_HOLYLIGHT:			/* ホーリーライト */
 	case WZ_JUPITEL:			/* ユピテルサンダー */
-	case NPC_DARKJUPITEL:			/*闇ユピテル*/
+	case NPC_DARKTHUNDER:			/*闇ユピテル*/
 	case NPC_MAGICALATTACK:		/* MOB:魔法打?攻? */
 	case PR_ASPERSIO:			/* アスペルシオ */
 	case MG_FROSTDIVER:		/* フロストダイバー */
@@ -2728,7 +2726,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 		break;
 
 	case CR_GRANDCROSS:			/* グランドクロス */
-	case NPC_DARKGRANDCROSS:		/*闇グランドクロス*/
+	case NPC_GRANDDARKNESS:		/*闇グランドクロス*/
 		/* スキルユニット配置 */
 		skill_castend_pos2(src,bl->x,bl->y,skillid,skilllv,tick,0);
 		if(sd)
@@ -2798,13 +2796,6 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 				battle_heal(NULL, src, heal, 0, 0);
 			}
 		}
-		break;
-
-	// unknown skills [Celest]
-	case NPC_BIND:
-	case NPC_EXPLOSIONSPIRITS:
-	case NPC_INCAGI:
-		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		break;
 
 	case 0:
@@ -3452,6 +3443,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		}
 		break;
+
 	case BS_HAMMERFALL:		/* ハンマ?フォ?ル */
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		if(dstsd && dstsd->state.no_weapon_damage)
@@ -4174,12 +4166,13 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case NPC_CHANGEHOLY:
 	case NPC_CHANGEDARKNESS:
 	case NPC_CHANGETELEKINESIS:
+	case NPC_CHANGEUNDEAD:
 		if(md){
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
-			md->def_ele=skill_get_pl(skillid);
-			if(md->def_ele==0)			/* ランダム?化、ただし、*/
-				md->def_ele=rand()%10;	/* 不死?性は除く */
-			md->def_ele+=(1+rand()%4)*20;	/* ?性レベルはランダム */
+			md->def_ele = skill_get_pl(skillid);
+			if (md->def_ele == 0)			/* ランダム?化、ただし、*/
+				md->def_ele = rand()%10;	/* 不死?性は除く */
+			md->def_ele += (1+rand()%4)*20;	/* ?性レベルはランダム */
 		}
 		break;
 
@@ -4232,6 +4225,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case NPC_SELFDESTRUCTION2:	/* 自爆2 */
 		status_change_start(bl,SkillStatusChangeTable[skillid],skilllv,skillid,0,0,skill_get_time(skillid,skilllv),0);
 		break;
+
 	case NPC_LICK:
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		if (dstsd) {
@@ -4259,7 +4253,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			mob_summonslave(md,mob_db[md->class_].skill[md->skillidx].val,skilllv,(skillid==NPC_SUMMONSLAVE)?1:0);
 		break;
 
-	case NPC_RECALL:		//取り巻き呼び戻し
+	case NPC_CALLSLAVE:		//取り巻き呼び戻し
 		if(md) {
 			int mobcount;
 			md->recallcount = 0;//初期化
@@ -4272,7 +4266,41 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		}
 		break;
 
-	case NPC_RUNAWAY:		//後退
+	case NPC_RANDOMMOVE:
+		if (md && mob_db[md->class_].mode & 1 && mob_can_move(md) &&
+			(md->master_id == 0 || md->state.special_mob_ai || md->master_dist > 10) &&
+			(DIFF_TICK(md->next_walktime, tick) > 7000 &&
+			(md->walkpath.path_len == 0 || md->walkpath.path_pos >= md->walkpath.path_len)))
+		{
+			md->next_walktime = tick + 3000 * rand() % 2000;
+			mob_randomwalk(md,tick);
+		}
+		break;
+	
+	case NPC_SPEEDUP:
+		{
+			// or does it increase casting rate? just a guess xD
+			int i = SC_SPEEDPOTION0 + skilllv - 1;
+			if (i > SC_SPEEDPOTION3)
+				i = SC_SPEEDPOTION3;
+			status_change_start(bl,i,skilllv,0,0,0,skilllv * 60000,0);
+			clif_skill_nodamage(src,bl,skillid,skilllv,1);
+		}
+		break;
+
+	case NPC_REVENGE:
+		// not really needed... but adding here anyway ^^
+		clif_skill_nodamage(src,bl,skillid,skilllv,1);
+		break;
+
+	case NPC_STOP:
+		if (md && md->target_id > 0) {
+			mob_unlocktarget(md, tick);
+		}
+		clif_skill_nodamage(src,bl,skillid,skilllv,1);
+		break;
+
+	case NPC_RUN:		//後退
 		if(md) {
 			int dist = skilllv;//後退する距離
 			int dir = md->dir; //自分がどの方向に向いてるかチェック
@@ -4327,9 +4355,22 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			pc_breakshield(dstsd);
 		break;
 
-	case NPC_EXPLOSIONSPIRITS:	//NPC爆裂波動
+	case NPC_POWERUP:	//NPC爆裂波動
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
-		status_change_start(bl,SC_EXPLOSIONSPIRITS,skilllv,0,0,0,skill_get_time(skillid,skilllv),0 );
+		status_change_start(bl,SC_EXPLOSIONSPIRITS,skilllv,0,0,0,skilllv * 60000,0);
+		// another random guess xP
+		status_change_start(bl,SC_INCALLSTATUS,skilllv * 5,0,0,0,skilllv * 60000,0);
+		break;
+
+	case NPC_AGIUP:
+		clif_skill_nodamage(src,bl,skillid,skilllv,1);
+		status_change_start(bl,SC_INCAGI,skilllv * 10,0,0,0,skilllv * 60000,0);
+		break;
+
+	case NPC_SIEGEMODE:
+	case NPC_INVISIBLE:
+		// not sure what it does
+		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		break;
 
 	case WE_MALE:				/* 君だけは護るよ */
@@ -4630,16 +4671,16 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case RG_CLEANER:	//AppleGirl
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		{
-			struct skill_unit *su=NULL;
-			if((bl->type==BL_SKILL) &&
-			   (su=(struct skill_unit *)bl) &&
-			   (su->group->src_id == src->id || map[bl->m].flag.pvp || map[bl->m].flag.gvg) &&
-			   (su->group->unit_id == 0xb0)){ //?を取り返す
-				if(sd)
-				skill_delunit(su);
+			struct skill_unit *su;
+			if ((bl->type == BL_SKILL) &&
+				(su=(struct skill_unit *)bl) && (su->group) &&
+				(su->group->src_id == src->id || map[bl->m].flag.pvp || map[bl->m].flag.gvg) &&
+				(su->group->unit_id == 0xb0)){ //?を取り返す
+				skill_delunitgroup(su->group);
 			}
 		}
 		break;
+
 	case ST_PRESERVE:
 		if (sd){
 			if(//!!sd->sc_count && 
@@ -5218,7 +5259,7 @@ int skill_castend_pos2(struct block_list *src, int x,int y,unsigned short skilli
 	case PR_SANCTUARY:			/* サンクチュアリ */
 	case PR_MAGNUS:				/* マグヌスエクソシズム */
 	case CR_GRANDCROSS:			/* グランドクロス */
-	case NPC_DARKGRANDCROSS:		/*闇グランドクロス*/
+	case NPC_GRANDDARKNESS:		/*闇グランドクロス*/
 	case HT_SKIDTRAP:			/* スキッドトラップ */
 	case HT_LANDMINE:			/* ランドマイン */
 	case HT_ANKLESNARE:			/* アンクルスネア */
@@ -5813,7 +5854,7 @@ int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned lon
 			skill_get_time2(sg->skill_id,sg->skill_lv),0);
 		break;
 
-	case 0x9e:	/* 子守唄 */
+//	case 0x9e:	/* 子守唄 */
 	case 0x9f:	/* ニヨルドの宴 */
 	case 0xa0:	/* 永遠の混沌 */
 	case 0xa1:	/* ?太鼓の響き */
@@ -5821,7 +5862,7 @@ int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned lon
 	case 0xa3:	/* ロキの叫び */
 	case 0xa4:	/* 深淵の中に */
 	case 0xa5:	/* 不死身のジ?クフリ?ド */
-	case 0xa6:	/* 不協和音 */
+//	case 0xa6:	/* 不協和音 */
 	case 0xa7:	/* 口笛 */
 	case 0xa8:	/* 夕陽のアサシンクロス */
 	case 0xa9:	/* ブラギの詩 */
@@ -6071,21 +6112,31 @@ int skill_unit_onplace_timer(struct skill_unit *src,struct block_list *bl,unsign
 			status_change_start(bl,type,sg->skill_lv,(int)src,0,0,skill_get_time2(sg->skill_id,sg->skill_lv),0);
 		break;
 
+	case 0x9e:
+		if (ss->id == bl->id)
+			break;
+		skill_additional_effect(ss, bl, sg->skill_id, sg->skill_lv, BF_LONG|BF_SKILL|BF_MISC, tick);
+		break;
+
+	case 0xa6:
+		skill_attack(BF_MISC, ss, &src->bl, bl, sg->skill_id, sg->skill_lv, tick, 0);
+		break;
+
 	case 0xb1:	/* デモンストレ?ション */
-		skill_attack(BF_WEAPON,ss,&src->bl,bl,sg->skill_id,sg->skill_lv,tick,0);
-		if(bl->type == BL_PC && rand()%100 < sg->skill_lv && battle_config.equipment_breaking)
+		skill_attack(BF_WEAPON, ss, &src->bl, bl, sg->skill_id, sg->skill_lv, tick, 0);
+		if (bl->type == BL_PC && rand()%100 < sg->skill_lv && battle_config.equipment_breaking)
 			pc_breakweapon((struct map_session_data *)bl);
 		break;
 
 	case 0x99:				/* トーキーボックス */
-		if(sg->src_id == bl->id) //自分が踏んでも発動しない
+		if (sg->src_id == bl->id) //自分が踏んでも発動しない
 			break;
-		if(sg->val2==0){
-			clif_talkiebox(&src->bl,sg->valstr);
+		if (sg->val2 == 0){
+			clif_talkiebox(&src->bl, sg->valstr);
 			sg->unit_id = 0x8c;
-			clif_changelook(&src->bl,LOOK_BASE,sg->unit_id);
-			sg->limit=DIFF_TICK(tick,sg->tick)+5000;
-			sg->val2=-1; //踏んだ
+			clif_changelook(&src->bl, LOOK_BASE, sg->unit_id);
+			sg->limit = DIFF_TICK(tick, sg->tick) + 5000;
+			sg->val2 = -1; //踏んだ
 		}
 		break;	
 
@@ -6192,7 +6243,7 @@ int skill_unit_onout(struct skill_unit *src,struct block_list *bl,unsigned long 
 		}
 		break;
 	}
-	case 0x9e:	/* 子守唄 */
+//	case 0x9e:	/* 子守唄 */
 	case 0x9f:	/* ニヨルドの宴 */
 	case 0xa0:	/* 永遠の混沌 */
 	case 0xa1:	/* 戦太鼓の響き */
@@ -6207,7 +6258,7 @@ int skill_unit_onout(struct skill_unit *src,struct block_list *bl,unsigned long 
 		}
 		break;	
 
-	case 0xa6:	/* 不協和音 */
+//	case 0xa6:	/* 不協和音 */
 	case 0xa7:	/* 口笛 */
 	case 0xa8:	/* 夕陽のアサシンクロス */
 	case 0xa9:	/* ブラギの詩 */
@@ -9461,7 +9512,7 @@ void skill_init_unit_layout()
 				break;
 			}
 			case CR_GRANDCROSS:
-			case NPC_DARKGRANDCROSS:
+			case NPC_GRANDDARKNESS:
 			{
 				static const int dx[] = {
 					 0, 0,-1, 0, 1,-2,-1, 0, 1, 2,

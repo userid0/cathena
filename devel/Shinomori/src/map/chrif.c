@@ -128,7 +128,7 @@ int chrif_connect(int fd)
 	memcpy(WFIFOP(fd,26), passwd, 24);
 	WFIFOL(fd,50) = 0;
 	WFIFOLIP(fd,54) = clif_getip();
-	WFIFOW(fd,58)   = clif_getport();	// [Valaris] thanks to fov
+	WFIFOW(fd,58) = clif_getport();	// [Valaris] thanks to fov
 	WFIFOSET(fd,60);
 	return 0;
 }
@@ -140,14 +140,14 @@ int chrif_connect(int fd)
 int chrif_sendmap(int fd)
 {
 	size_t i;
-	
+
 	if( !session_isActive(fd) )
 		return -1;
 
 	WFIFOW(fd,0) = 0x2afa;
 	for(i = 0; i < map_num; i++) {
-		if (map[i].alias != '\0') // [MouseJstr] map aliasing
-			memcpy(WFIFOP(fd,4+i*16), map[i].alias, 16);
+                if (map[i].alias != '\0') // [MouseJstr] map aliasing
+		    memcpy(WFIFOP(fd,4+i*16), map[i].alias, 16);
 		else
 		    memcpy(WFIFOP(fd,4+i*16), map[i].mapname, 16);
 	}
@@ -244,7 +244,7 @@ int chrif_changemapserverack(int fd)
 
 	if( RFIFOL(fd,6) == 1 )
 	{
-		if( battle_config.error_log )
+		if (battle_config.error_log)
 			ShowMessage("map server change failed.\n");
 		pc_authfail(sd->fd);
 		return 0;
@@ -319,7 +319,7 @@ int chrif_authreq(struct map_session_data *sd)
 
 	nullpo_retr(-1, sd);
 
-	if( !sd || !sd->bl.id || !sd->login_id1)
+	if(!sd || !sd->bl.id || !sd->login_id1)
 		return -1;
 
 	if( !session_isActive(char_fd) || !chrif_isconnect() )
@@ -351,7 +351,7 @@ int chrif_charselectreq(struct map_session_data *sd)
 
 	nullpo_retr(-1, sd);
 
-	if(!sd || !sd->bl.id || !sd->login_id1)
+	if( !sd || !sd->bl.id || !sd->login_id1 )
 		return -1;
 	if( !session_isActive(char_fd) || !chrif_isconnect() )
 		return -1;
@@ -748,7 +748,7 @@ int chrif_accountreg2(int fd)
 	if( !session_isActive(fd) )
 		return -1;
 
-	if( (sd = map_id2sd(RFIFOL(fd,4))) == NULL)
+	if ((sd = map_id2sd(RFIFOL(fd,4))) == NULL)
 		return 1;
 
 	for(p = 8, j = 0; p < RFIFOW(fd,2) && j < ACCOUNT_REG2_NUM; p += 36, j++) {
@@ -769,7 +769,7 @@ int chrif_divorce(unsigned long char_id, unsigned long partner_id)
 {
 	struct map_session_data *sd = NULL;
 
-	if( !char_id || !partner_id)
+	if (!char_id || !partner_id)
 		return 0;
 
 	nullpo_retr(0, sd = map_nick2sd(map_charid2nick(partner_id)));
@@ -955,6 +955,7 @@ int chrif_recvfamelist(int fd)
 	size_t fame;
 	size_t i, num, size;
 	size_t total = 0;
+	char *name;
 
 	if( !session_isActive(fd) )
 		return -1;
@@ -968,13 +969,23 @@ int chrif_recvfamelist(int fd)
 	{
 		id = RFIFOL(fd,i);
 		fame = RFIFOL(fd,i+4);
-		if( id > 0 && fame > 0 && num < 10)
+		if( id > 0 && fame > 0 && num < MAX_FAMELIST)
 		{
 			smith_fame_list[num].id = id;
 			smith_fame_list[num].fame = fame;
-			//ShowMessage("received id: %d fame:%d\n", id, fame);
-			num++;
+			name = map_charid2nick(id);
+			if (name != NULL)
+				memcpy(smith_fame_list[num].name, name, 24);
+			else
+			{
+				memcpy(smith_fame_list[num].name, "-", 24);
+				chrif_searchcharid(id);
+			}
+			//ShowMessage("received : %s (id:%d) fame:%d\n", name, id, fame);
 		}
+		// in case the char server sends too long
+		if (++num >= MAX_FAMELIST)
+			break;
 	}
 	total += num;
 
@@ -983,18 +994,28 @@ int chrif_recvfamelist(int fd)
 	{
 		id = RFIFOL(fd,i);
 		fame = RFIFOL(fd,i+4);
-		if( id > 0 && fame > 0 && num < 10)
+		if( id > 0 && fame > 0 && num < MAX_FAMELIST)
 		{
 			chemist_fame_list[num].id = id;
 			chemist_fame_list[num].fame = fame;
-			//ShowMessage("received id: %d fame:%d\n", id, fame);
-			num++;
+			name = map_charid2nick(id);
+			if (name != NULL)
+				memcpy(chemist_fame_list[num].name, name, 24);
+			else
+			{
+				memcpy(chemist_fame_list[num].name, "Unknown", 24);
+				chrif_searchcharid(id);
+			}
+			//ShowMessage("received : %s (id:%d) fame:%d\n", name, id, fame);
 		}
+		// in case the char server sends too long
+		if (++num >= MAX_FAMELIST)
+			break;
 	}
 	total += num;
 
 	if(battle_config.etc_log)
-		ShowInfo("Receiving Fame List of '"CL_WHITE"%d"CL_RESET"' characters.\n", total);
+	ShowInfo("Receiving Fame List of '"CL_WHITE"%d"CL_RESET"' characters.\n", total);
 	return 0;
 }
 
@@ -1139,7 +1160,7 @@ int chrif_parse(int fd)
 	if (fd != char_fd) {
 		session_Remove(fd);
 		return 0;
-	}
+		}
 	// else it is the char_fd
 	if( !session_isActive(fd) ) {
 		// char server is disconnecting
@@ -1172,7 +1193,7 @@ int chrif_parse(int fd)
 				return 0;
 			packet_len = RFIFOW(fd,2);
 		}
-		if(RFIFOREST(fd) < packet_len)
+		if (RFIFOREST(fd) < packet_len)
 			return 0;
 
 		switch(cmd) {
@@ -1248,7 +1269,7 @@ int send_users_tochar(int tid, unsigned long tick, int id, int data) {
 int check_connect_char_server(int tid, unsigned long tick, int id, int data)
 {
 	static int displayed = 0;
-	if (char_fd <= 0 || session[char_fd] == NULL)
+	if( !session_isValid(char_fd) )
 	{
 		if( !displayed)
 		{
@@ -1259,7 +1280,7 @@ int check_connect_char_server(int tid, unsigned long tick, int id, int data)
 		chrif_state = 0;
 		
 		char_fd = make_connection(char_ip, char_port);
-		if(char_fd<0)
+		if( !session_isValid(char_fd) )
 			return 0;
 		
 		session[char_fd]->func_parse = chrif_parse;

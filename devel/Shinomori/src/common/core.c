@@ -13,6 +13,7 @@
 #include "malloc.h"
 #include "core.h"
 #include "db.h"
+#include "dll.h"
 #include "socket.h"
 #include "timer.h"
 #include "version.h"
@@ -27,6 +28,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 // global data
 int runflag = 1;
+
+void core_stoprunning()
+{
+	runflag = 0;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -189,6 +195,44 @@ void sig_dump(int sn)
 }
 #endif
 
+void init_signal()
+{
+	///////////////////////////////////////////////////////////////////////////
+#ifdef DUMPSTACK
+	///////////////////////////////////////////////////////////////////////////
+	// glibc dump
+	compat_signal(SIGPIPE,SIG_IGN);
+	compat_signal(SIGPIPE, sig_ignore);
+	compat_signal(SIGTERM,sig_proc);
+	compat_signal(SIGINT,sig_proc);
+
+	// Signal to create coredumps by system when necessary (crash)
+	compat_signal(SIGSEGV, sig_dump);
+	compat_signal(SIGFPE, sig_dump);
+	compat_signal(SIGILL, sig_dump);
+ #ifndef WIN32
+		compat_signal(SIGBUS, sig_dump);
+		compat_signal(SIGTRAP, SIG_DFL);
+ #endif
+	///////////////////////////////////////////////////////////////////////////
+#else
+	///////////////////////////////////////////////////////////////////////////
+	// normal dump
+	compat_signal(SIGPIPE,SIG_IGN);
+	compat_signal(SIGTERM,sig_proc);
+	compat_signal(SIGINT,sig_proc);
+
+	// Signal to create coredumps by system when necessary (crash)
+	compat_signal(SIGSEGV, SIG_DFL);
+ #ifndef WIN32
+	compat_signal(SIGBUS, SIG_DFL);
+	compat_signal(SIGTRAP, SIG_DFL); 
+ #endif
+	compat_signal(SIGILL, SIG_DFL);
+	///////////////////////////////////////////////////////////////////////////
+#endif
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // revision
 int get_svn_revision(char *svnentry)
@@ -250,44 +294,10 @@ static void display_title(void)
 int main(int argc,char **argv)
 {
 	int next;
-	///////////////////////////////////////////////////////////////////////////
-#ifdef DUMPSTACK
-	///////////////////////////////////////////////////////////////////////////
-	// glibc dump
-	compat_signal(SIGPIPE,SIG_IGN);
-	compat_signal(SIGPIPE, sig_ignore);
-	compat_signal(SIGTERM,sig_proc);
-	compat_signal(SIGINT,sig_proc);
-
-	// Signal to create coredumps by system when necessary (crash)
-	compat_signal(SIGSEGV, sig_dump);
-	compat_signal(SIGFPE, sig_dump);
-	compat_signal(SIGILL, sig_dump);
- #ifndef WIN32
-		compat_signal(SIGBUS, sig_dump);
-		compat_signal(SIGTRAP, SIG_DFL);
-	#endif
-	///////////////////////////////////////////////////////////////////////////
-#else
-	///////////////////////////////////////////////////////////////////////////
-	// normal dump
-	compat_signal(SIGPIPE,SIG_IGN);
-	compat_signal(SIGTERM,sig_proc);
-	compat_signal(SIGINT,sig_proc);
-
-	// Signal to create coredumps by system when necessary (crash)
-	compat_signal(SIGSEGV, SIG_DFL);
- #ifndef WIN32
-	compat_signal(SIGBUS, SIG_DFL);
-	compat_signal(SIGTRAP, SIG_DFL); 
- #endif
-	compat_signal(SIGILL, SIG_DFL);
-	///////////////////////////////////////////////////////////////////////////
-#endif
 
 	///////////////////////////////////////////////////////////////////////////
 	// startup
-
+	init_signal();
 	display_title();
 
 	///////////////////////////////////////////////////////////////////////////
@@ -300,10 +310,15 @@ int main(int argc,char **argv)
 	memmgr_init(argv[0]); // àÍî‘ç≈èâÇ…é¿çsÇ∑ÇÈïKóvÇ™Ç†ÇÈ
 	timer_init();
 	socket_init();
+	dll_init();
 
 	///////////////////////////////////////////////////////////////////////////
 	// user module initialisation
 	do_init(argc,argv);
+
+	///////////////////////////////////////////////////////////////////////////
+	// addon
+	addon_event_trigger("Athena_Init");
 
 	///////////////////////////////////////////////////////////////////////////
 	// run loop
@@ -316,12 +331,17 @@ int main(int argc,char **argv)
 	// termination
 
 	///////////////////////////////////////////////////////////////////////////
+	// addon
+	addon_event_trigger("Athena_Final");
+
+	///////////////////////////////////////////////////////////////////////////
 	// user module termination
 	do_final();
 
 	///////////////////////////////////////////////////////////////////////////
 	// core module termination
 	exit_dbn();
+	dll_final();
 	socket_final();
 	timer_final();
 	memmgr_final();

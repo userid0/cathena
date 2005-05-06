@@ -151,6 +151,9 @@ int inter_pet_delete(int pet_id){
 //------------------------------------------------------
 int mapif_pet_created(int fd, unsigned long account_id, struct s_pet *p)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd, 0) =0x3880;
 	WFIFOL(fd, 2) =account_id;
 	if(p!=NULL){
@@ -166,7 +169,11 @@ int mapif_pet_created(int fd, unsigned long account_id, struct s_pet *p)
 	return 0;
 }
 
-int mapif_pet_info(int fd, unsigned long account_id, struct s_pet *p){
+int mapif_pet_info(int fd, unsigned long account_id, struct s_pet *p)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd, 0) =0x3881;
 	WFIFOW(fd, 2) =sizeof(struct s_pet) + 9;
 	WFIFOL(fd, 4) =account_id;
@@ -178,7 +185,11 @@ int mapif_pet_info(int fd, unsigned long account_id, struct s_pet *p){
 	return 0;
 }
 
-int mapif_pet_noinfo(int fd, unsigned long account_id){
+int mapif_pet_noinfo(int fd, unsigned long account_id)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd, 0) =0x3881;
 	WFIFOW(fd, 2) =sizeof(struct s_pet) + 9;
 	WFIFOL(fd, 4) =account_id;
@@ -189,7 +200,11 @@ int mapif_pet_noinfo(int fd, unsigned long account_id){
 	return 0;
 }
 
-int mapif_save_pet_ack(int fd, unsigned long account_id, int flag){
+int mapif_save_pet_ack(int fd, unsigned long account_id, int flag)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd, 0) =0x3882;
 	WFIFOL(fd, 2) =account_id;
 	WFIFOB(fd, 6) =flag;
@@ -198,7 +213,11 @@ int mapif_save_pet_ack(int fd, unsigned long account_id, int flag){
 	return 0;
 }
 
-int mapif_delete_pet_ack(int fd, int flag){
+int mapif_delete_pet_ack(int fd, int flag)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd, 0) =0x3883;
 	WFIFOB(fd, 2) =flag;
 	WFIFOSET(fd, 3);
@@ -267,6 +286,8 @@ int mapif_load_pet(int fd, unsigned long account_id, unsigned long char_id, unsi
 int mapif_save_pet(int fd, unsigned long account_id, unsigned char* buf) {
 	//here process pet save request.
 	struct s_pet pet;
+	if( !session_isActive(fd) )
+		return 0;
 
 	int len=RFIFOW(fd, 2);
 	if(sizeof(struct s_pet)!=len-8) {
@@ -296,28 +317,48 @@ int mapif_delete_pet(int fd, int pet_id){
 	return 0;
 }
 
-int mapif_parse_CreatePet(int fd){
+int mapif_parse_CreatePet(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	mapif_create_pet(fd, RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOW(fd, 10), RFIFOW(fd, 12), RFIFOW(fd, 14), 
 						RFIFOW(fd, 16), RFIFOW(fd, 18), RFIFOW(fd, 20), RFIFOB(fd, 22), RFIFOB(fd, 23), (char*)RFIFOP(fd, 24));
 	return 0;
 }
 
-int mapif_parse_LoadPet(int fd){
+int mapif_parse_LoadPet(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	mapif_load_pet(fd, RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOL(fd, 10));
 	return 0;
 }
 
-int mapif_parse_SavePet(int fd){
+int mapif_parse_SavePet(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	mapif_save_pet(fd, RFIFOL(fd, 4), RFIFOP(fd, 8));
 	return 0;
 }
 
-int mapif_parse_DeletePet(int fd){
+int mapif_parse_DeletePet(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	mapif_delete_pet(fd, RFIFOL(fd, 2));
 	return 0;
 }
 
-int inter_pet_parse_frommap(int fd){
+int inter_pet_parse_frommap(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	switch(RFIFOW(fd, 0)){
 	case 0x3080: mapif_parse_CreatePet(fd); break;
 	case 0x3081: mapif_parse_LoadPet(fd); break;

@@ -840,6 +840,9 @@ int guild_calcinfo(struct guild *g)
 // ギルド作成可否
 int mapif_guild_created(int fd,unsigned long account_id,struct guild *g)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0)=0x3830;
 	WFIFOL(fd,2)=account_id;
 	if(g!=NULL){
@@ -854,6 +857,9 @@ int mapif_guild_created(int fd,unsigned long account_id,struct guild *g)
 // ギルド情報見つからず
 int mapif_guild_noinfo(int fd,int guild_id)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0)=0x3831;
 	WFIFOW(fd,2)=8;
 	WFIFOL(fd,4)=guild_id;
@@ -879,6 +885,9 @@ int mapif_guild_info(int fd,struct guild *g)
 // メンバ追加可否
 int mapif_guild_memberadded(int fd,unsigned long guild_id,unsigned long account_id,unsigned long char_id,int flag)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0)=0x3832;
 	WFIFOL(fd,2)=guild_id;
 	WFIFOL(fd,6)=account_id;
@@ -1062,6 +1071,8 @@ int mapif_guild_castle_alldataload(int fd) {
 	struct guild_castle* gc = guildcastle_pt;
         struct guild_castle *gcopy;
 	int i, len = 4;
+	if( !session_isActive(fd) )
+		return 0;
 
 	WFIFOW(fd,0) = 0x3842;
 	sprintf(tmp_sql, "SELECT * FROM `%s` ORDER BY `castle_id`", guild_castle_db);
@@ -1680,6 +1691,9 @@ int mapif_parse_GuildCheck(int fd,unsigned long guild_id,unsigned long account_i
 // ・エラーなら0(false)、そうでないなら1(true)をかえさなければならない
 int inter_guild_parse_frommap(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	switch(RFIFOW(fd,0)){
 	case 0x3030: mapif_parse_CreateGuild(fd,RFIFOL(fd,4),(char*)RFIFOP(fd,8),RFIFOP(fd,32)); break;
 	case 0x3031: mapif_parse_GuildInfo(fd,RFIFOL(fd,2)); break;

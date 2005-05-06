@@ -72,7 +72,9 @@ char login_server_pw[32] = "ragnarok";
 char login_server_db[32] = "ragnarok";
 
 char item_db_db[32] = "item_db";
+char item_db2_db[32] = "item_db2";
 char mob_db_db[32] = "mob_db";
+char mob_db2_db[32] = "mob_db2";
 char login_db[32] = "login";
 char login_db_level[32] = "level";
 char login_db_account_id[32] = "account_id";
@@ -1522,20 +1524,21 @@ int map_addflooritem(struct item *item_data,int amount,int m,int x,int y,struct 
  *------------------------------------------
  */
 void map_addchariddb(unsigned long charid, char *name) {
-	struct charid2nick *p=NULL;
+	struct charid2nick *p;
 	int req=0;
 
 	p = (struct charid2nick*)numdb_search(charid_db,charid);
 	if(p==NULL){	// デ?タベ?スにない
 		p = (struct charid2nick *)aCallocA(1,sizeof(struct charid2nick));
-		p->req_id=0;
-	}else
+	} else {
 		numdb_erase(charid_db,charid);
+		req = p->req_id;
+	}
 
-	req=p->req_id;
+	p->req_id = 0;
 	memcpy(p->nick,name,24);
-	p->req_id=0;
 	numdb_insert(charid_db,charid,p);
+
 	if(req){	// 返信待ちがあれば返信
 		struct map_session_data *sd = map_id2sd(req);
 		if(sd!=NULL)
@@ -2125,9 +2128,9 @@ void map_setcell(unsigned short m,unsigned short x, unsigned short y, int cellck
 	case CELL_CLRMOONLIT:
 		mg->moonlit = 0;
 		break;
-	case CELL_SETREGEN:
+		case CELL_SETREGEN:
 		mg->regen = 1;
-		break;
+			break;
 	case CELL_CLRREGEN:
 		mg->regen = 0;
 		break;
@@ -2536,20 +2539,20 @@ int map_cache_write(struct map_data *m)
 			}
 		}
 		// just make sure that everything gets updated
-		map_cache.map[i].xs  = m->xs;
-		map_cache.map[i].ys  = m->ys;
+			map_cache.map[i].xs  = m->xs;
+			map_cache.map[i].ys  = m->ys;
 		map_cache.map[i].water_height = map_waterheight(m->mapname);
 		map_cache.map[i].compressed   = compress;
 		map_cache.map[i].datalen      = len_new;
-		map_cache.dirty = 1;
+			map_cache.dirty = 1;
 
 		if(compress == 1)	// zlib compress has alloced an additional buffer
 		{
-			aFree(write_buf);
+				aFree(write_buf);
 			write_buf = NULL;
+			}
+			return 0;
 		}
-		return 0;
-	}
 	// 書き甲ﾟなかった
 	return 1;
 }
@@ -2684,10 +2687,10 @@ bool map_readaf2(int m, const char *fn)
 		memcpy(buf,              fn,     strlen(fn)-4);
 		memcpy(buf+strlen(fn)-4, ".out", 5);
 
-		dest = fopen(buf, "w");
+		dest = savefopen(buf, "w");
 		if (dest == NULL)
 		{
-			printf ("can't open\n");
+			ShowMessage("can't open\n");
 			fclose(af2_file);
 			return 0;
 		}
@@ -2695,11 +2698,11 @@ bool map_readaf2(int m, const char *fn)
 		fclose(af2_file);
 		fclose(dest);
 
-		if(ret) map_readafm(m, buf);
+		if (ret) map_readafm(m, buf);
 		remove(buf);
 	}
-	return ret;
-}
+		return ret;
+	}
 #endif
 
 /*==========================================
@@ -2712,7 +2715,7 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 	if(map_cache_read(&map[m]))
 	{	// キャッシュから読み甲ﾟた
 		(*map_cache)++;
-	}
+			}
 	else
 	{
 		int wh;
@@ -2749,14 +2752,14 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*2);
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*3);
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*4);
-			}
+		}
 
 			if(wh!=NO_WATER && pp.type==0)
 			{	// ﾉ倏揮ｩﾆ
 				// no direct access
 				//map[m].gat[x+y*map[m].xs].type=(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0;
 				map_setcell(m,x,y,(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0);
-			}
+				}
 			else
 			{	// no direct access
 				//map[m].gat[x+y*map[m].xs].type=() & CELL_MASK;
@@ -2783,8 +2786,8 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 	map[m].block_mob_count=(int *)aCalloc(size, sizeof(int));
 
 	if (alias)
-		strdb_insert(map_db,alias,&map[m]);
-	else
+           strdb_insert(map_db,alias,&map[m]);
+        else
 		strdb_insert(map_db,map[m].mapname,&map[m]);
 
 	return 0;
@@ -2808,8 +2811,8 @@ int map_readallmap(void)
 
 	ShowStatus("Loading Maps%s...\n",
 		(map_read_flag == READ_FROM_BITMAP_COMPRESSED ? " (w/ Compressed Map Cache)" :
-		 map_read_flag >= READ_FROM_BITMAP            ? " (w/ Map Cache)" :
-		 map_read_flag == READ_FROM_AFM               ? " (w/ AFM)" : "") );
+		map_read_flag >= READ_FROM_BITMAP ? " (w/ Map Cache)" :
+		map_read_flag == READ_FROM_AFM ? " (w/ AFM)" : ""));
 
 	// 先に全部のャbプの存在を確認
 	for(i=0;i<map_num;i++)
@@ -2831,7 +2834,7 @@ int map_readallmap(void)
 		{
 			fclose(afm_file);
 			// map_readafm open and closes the file anyway
-			map_readafm(i,fn);
+			map_readafm(i,fn);			
 			continue;
 		}
 
@@ -2854,7 +2857,7 @@ int map_readallmap(void)
 			// use bbbbb as mapname and aaaaaaaa as alias with pointer at map[i].alias
 			// so we do not need a strdup
 			char alias[64];
-			*p++ = '\0';
+				*p++ = '\0';
 			strcpy(alias, map[i].mapname);
 			strcpy(map[i].mapname, p);
 			p = map[i].mapname+strlen(map[i].mapname)+1; // the first position after the EOF of the new mapname
@@ -2862,16 +2865,16 @@ int map_readallmap(void)
 			map[i].alias = p;
 		}
 		else
-			map[i].alias = NULL;
+				map[i].alias = NULL;
 
 		sprintf(fn,"data\\%s",map[i].mapname);
 		if(map_readmap(i,fn, p, &map_cache, map_num) == -1)
 		{
 			map_delmap(map[i].mapname);
-			maps_removed++;
-			i--;
+				maps_removed++;
+				i--;
+			}
 		}
-	}
 
 	aFree(waterlist);
 	ShowMessage("\r");
@@ -2983,7 +2986,7 @@ int parse_console(char *buf) {
 			ShowConsole(CL_BOLD"no valid atcommand\n"CL_NORM);
     } else if ( strcasecmp("server",type) == 0 && n == 2 ) {
         if ( strcasecmp("shutdown", command) == 0 || strcasecmp("exit",command) == 0 || strcasecmp("quit",command) == 0 ) {
-            runflag = 0;
+            core_stoprunning();
         }
     } else if ( strcasecmp("help",type) == 0 ) {
         ShowMessage("To use GM commands:\n");
@@ -3031,7 +3034,7 @@ int map_config_read(const char *cfgName) {
 			} else if (strcasecmp(w1, "passwd") == 0) {
 				chrif_setpasswd(w2);
 			} else if (strcasecmp(w1, "char_ip") == 0) {
-				h = gethostbyname(w2);
+				h = gethostbyname (w2);
 				if(h != NULL) {
 					ShowInfo("Char Server IP Address : '"CL_WHITE"%s"CL_RESET"' -> '"CL_WHITE"%d.%d.%d.%d"CL_RESET"'.\n", w2, (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 					sprintf(w2,"%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
@@ -3041,7 +3044,7 @@ int map_config_read(const char *cfgName) {
 			} else if (strcasecmp(w1, "char_port") == 0) {
 				chrif_setport(atoi(w2));
 			} else if (strcasecmp(w1, "map_ip") == 0) {
-				h = gethostbyname(w2);
+				h = gethostbyname (w2);
 				if (h != NULL) {
 					ShowInfo("Map Server IP Address : '"CL_WHITE"%s"CL_RESET"' -> '"CL_WHITE"%d.%d.%d.%d"CL_RESET"'.\n", w2, (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 					sprintf(w2, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
@@ -3137,6 +3140,10 @@ int inter_config_read(char *cfgName)
 			strcpy(item_db_db,w2);
 		} else if(strcasecmp(w1,"mob_db_db")==0){
 			strcpy(mob_db_db,w2);
+		} else if(strcasecmp(w1,"item_db2_db")==0){
+			strcpy(item_db2_db,w2);
+		} else if(strcasecmp(w1,"mob_db2_db")==0){
+			strcpy(mob_db2_db,w2);
 		} else if(strcasecmp(w1,"login_db_level")==0){
 			strcpy(login_db_level,w2);
 		} else if(strcasecmp(w1,"login_db_account_id")==0){
@@ -3292,9 +3299,9 @@ void char_online_check(void)
 			pc_isGM(sd)) && 
 			sd->status.char_id)
 		{
-			chrif_char_online(sd);
-		}
+				 chrif_char_online(sd);
 	}
+}
 }
 
 int online_timer(int tid,unsigned long tick,int id,int data)
@@ -3405,7 +3412,7 @@ void do_final(void)
 		if(map[i].gat) {
 			aFree(map[i].gat);
 			map[i].gat=NULL;
-		}
+	}
 		if(map[i].block)			{ aFree(map[i].block); map[i].block=NULL; }
 		if(map[i].block_mob)		{ aFree(map[i].block_mob); map[i].block_mob=NULL; }
 		if(map[i].block_count)		{ aFree(map[i].block_count); map[i].block_count=NULL; }
@@ -3528,7 +3535,7 @@ int do_init(int argc, char *argv[]) {
 		else if (strcmp(argv[i],"--log_config") == 0 || strcmp(argv[i],"--log-config") == 0)
 		    LOG_CONF_NAME = argv[i+1];
 		else if (strcmp(argv[i],"--run_once") == 0)	// close the map-server as soon as its done.. for testing [Celest]
-			runflag = 0;
+			core_stoprunning();
 	}
 
 	map_config_read(MAP_CONF_NAME);

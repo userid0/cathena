@@ -381,6 +381,10 @@ int inter_guild_storage_delete(unsigned long guild_id)
 int mapif_load_storage(int fd,unsigned long account_id)
 {
 	struct pc_storage *stor=account2storage(account_id);
+
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0)=0x3810;
 	WFIFOW(fd,2)=sizeof(struct pc_storage)+8;
 	WFIFOL(fd,4)=account_id;
@@ -393,6 +397,9 @@ int mapif_load_storage(int fd,unsigned long account_id)
 // 倉庫データ保存完了送信
 int mapif_save_storage_ack(int fd,unsigned long account_id)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0)=0x3811;
 	WFIFOL(fd,2)=account_id;
 	WFIFOB(fd,6)=0;
@@ -403,6 +410,9 @@ int mapif_save_storage_ack(int fd,unsigned long account_id)
 int mapif_load_guild_storage(int fd,unsigned long account_id,unsigned long guild_id)
 {
 	struct guild_storage *gs=guild2storage(guild_id);
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0)=0x3818;
 	if(gs) {
 		WFIFOW(fd,2)=sizeof(struct guild_storage)+12;
@@ -422,6 +432,9 @@ int mapif_load_guild_storage(int fd,unsigned long account_id,unsigned long guild
 }
 int mapif_save_guild_storage_ack(int fd,unsigned long account_id,unsigned long guild_id,int fail)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0)=0x3819;
 	WFIFOL(fd,2)=account_id;
 	WFIFOL(fd,6)=guild_id;
@@ -436,12 +449,18 @@ int mapif_save_guild_storage_ack(int fd,unsigned long account_id,unsigned long g
 // 倉庫データ要求受信
 int mapif_parse_LoadStorage(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	mapif_load_storage(fd,RFIFOL(fd,2));
 	return 0;
 }
 // 倉庫データ受信＆保存
 int mapif_parse_SaveStorage(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	struct pc_storage *stor;
 	unsigned long account_id=RFIFOL(fd,4);
 	unsigned short len=RFIFOW(fd,2);
@@ -460,11 +479,17 @@ int mapif_parse_SaveStorage(int fd)
 
 int mapif_parse_LoadGuildStorage(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	mapif_load_guild_storage(fd,RFIFOL(fd,2),RFIFOL(fd,6));
 	return 0;
 }
 int mapif_parse_SaveGuildStorage(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	struct guild_storage *gs;
 	int guild_id=RFIFOL(fd,8);
 	int len=RFIFOW(fd,2);
@@ -492,6 +517,9 @@ int mapif_parse_SaveGuildStorage(int fd)
 // ・エラーなら0(false)、そうでないなら1(true)をかえさなければならない
 int inter_storage_parse_frommap(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	switch(RFIFOW(fd,0)){
 	case 0x3010: mapif_parse_LoadStorage(fd); break;
 	case 0x3011: mapif_parse_SaveStorage(fd); break;

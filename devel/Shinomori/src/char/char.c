@@ -1513,6 +1513,9 @@ int mmo_char_send006b(int fd, struct char_session_data *sd) {
 #else
 	const int offset = 4;
 #endif
+	
+	if( !sd || !session_isActive(fd) )
+		return 0;
 
 	set_char_online(99,sd->account_id);
 
@@ -1691,7 +1694,7 @@ int parse_tologin(int fd)
 	{
 		session_Remove(fd);
 		return 0;
-		}
+	}
 	// else it is the login_fd
 	if( !session_isActive(fd) )
 	{
@@ -2691,7 +2694,7 @@ int parse_frommap(int fd) {
 				{
 					//WBUFL(buf, len) = dat[i].account_id;
 					//WBUFL(buf, len+4) = dat[i].fame;
-					WBUFL(buf, len) = char_dat[id[i]].account_id;
+					WBUFL(buf, len) = char_dat[id[i]].char_id;
 					WBUFL(buf, len+4) = char_dat[id[i]].fame;
 					len += 8;
 					j++;
@@ -2786,17 +2789,9 @@ int lan_ip_check(unsigned long ip){
 	return lancheck;
 }
 
-int parse_char(int fd) {
-	size_t i;
-	int ch;
-	unsigned short cmd;
-	char email[40];
-	unsigned long client_ip = session[fd]->client_ip;
-	struct char_session_data *sd = (struct char_session_data *)session[fd]->session_data;
-
-	sd = (struct char_session_data*)session[fd]->session_data;
-
-	if(login_fd < 0)
+int parse_char(int fd)
+{
+	if( !session_isActive(login_fd) )
 	{	// no login server available, reject connection
 		session_Remove(fd);
 		return 0;
@@ -2809,6 +2804,14 @@ int parse_char(int fd) {
 		session_Remove(fd);// have it removed by do_sendrecv
 		return 0;
 	}
+
+	size_t i;
+	int ch;
+	unsigned short cmd;
+	char email[40];
+	unsigned long client_ip = session[fd]->client_ip;
+	struct char_session_data *sd = (struct char_session_data *)session[fd]->session_data;
+
 
 	while (RFIFOREST(fd) >= 2) {
 		cmd = RFIFOW(fd,0);
@@ -3266,13 +3269,13 @@ int parse_console(char *buf) {
 // 全てのMAPサーバーにデータ送信（送信したmap鯖の数を返す）
 int mapif_sendall(unsigned char *buf, unsigned int len) {
 	int i, c=0;
-		int fd;
+	int fd;
 
 	if(buf)
 	for(i = 0; i < MAX_MAP_SERVERS; i++)
 	{
 		fd = server[i].fd;
-		if( fd >= 0 )
+		if( session_isActive(fd) )
 		{
 			memcpy(WFIFOP(fd,0), buf, len);
 			WFIFOSET(fd,len);
@@ -3284,14 +3287,14 @@ int mapif_sendall(unsigned char *buf, unsigned int len) {
 
 // 自分以外の全てのMAPサーバーにデータ送信（送信したmap鯖の数を返す）
 int mapif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
-	int i, c;
+	int i, c=0;
 	int fd;
 
-	c = 0;
+	if(buf)
 	for(i = 0; i < MAX_MAP_SERVERS; i++)
 	{
 		fd = server[i].fd;
-		if( fd >= 0 && fd != sfd)
+		if( session_isActive(fd) && fd != sfd )
 		{
 			memcpy(WFIFOP(fd,0), buf, len);
 			WFIFOSET(fd, len);
@@ -3303,7 +3306,7 @@ int mapif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
 // MAPサーバーにデータ送信（map鯖生存確認有り）
 int mapif_send(int fd, unsigned char *buf, unsigned int len) {
 	int i;
-	if( session_isActive(fd) )
+	if( buf && session_isActive(fd) )
 	{
 		for(i = 0; i < MAX_MAP_SERVERS; i++)
 		{
@@ -3345,25 +3348,25 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		login_fd = make_connection(login_ip, login_port);
 		if( session_isActive(login_fd) )
 		{
-		session[login_fd]->func_parse = parse_tologin;
-		realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-		WFIFOW(login_fd,0) = 0x2710;
-		memset(WFIFOP(login_fd,2), 0, 24);
-		memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
-		memset(WFIFOP(login_fd,26), 0, 24);
-		memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
-		WFIFOL(login_fd,50) = 0;
+			session[login_fd]->func_parse = parse_tologin;
+			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+			WFIFOW(login_fd,0) = 0x2710;
+			memset(WFIFOP(login_fd,2), 0, 24);
+			memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
+			memset(WFIFOP(login_fd,26), 0, 24);
+			memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
+			WFIFOL(login_fd,50) = 0;
 			WFIFOLIP(login_fd,54) = char_ip;
-		WFIFOL(login_fd,58) = char_port;
-		memset(WFIFOP(login_fd,60), 0, 20);
-		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
-		WFIFOW(login_fd,80) = 0;
-		WFIFOW(login_fd,82) = char_maintenance;
-		WFIFOW(login_fd,84) = char_new;
-		WFIFOSET(login_fd,86);
+			WFIFOL(login_fd,58) = char_port;
+			memset(WFIFOP(login_fd,60), 0, 20);
+			memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
+			WFIFOW(login_fd,80) = 0;
+			WFIFOW(login_fd,82) = char_maintenance;
+			WFIFOW(login_fd,84) = char_new;
+			WFIFOSET(login_fd,86);
+		}
 	}
-}
-		return 0;
+	return 0;
 }
 
 

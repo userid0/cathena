@@ -160,7 +160,7 @@ enum {	// struct map_session_data の status_changeの番?テ?ブル
 //<-- 148 = falcon
 
 	SC_DANCING			= 149,
-	SC_LULLABY			= 150,
+	SC_LULLABY			= 150,	//0x96
 	SC_RICHMANKIM		= 151,
 	SC_ETERNALCHAOS		= 152,
 	SC_DRUMBATTLE		= 153,
@@ -168,7 +168,7 @@ enum {	// struct map_session_data の status_changeの番?テ?ブル
 	SC_ROKISWEIL		= 155,
 	SC_INTOABYSS		= 156,
 	SC_SIEGFRIED		= 157,
-	SC_DISSONANCE		= 158,
+	SC_DISSONANCE		= 158,	//0x9E
 	SC_WHISTLE			= 159,
 	SC_ASSNCROS			= 160,
 	SC_POEMBRAGI		= 161,
@@ -176,7 +176,7 @@ enum {	// struct map_session_data の status_changeの番?テ?ブル
 	SC_UGLYDANCE		= 163,
 	SC_HUMMING			= 164,
 	SC_DONTFORGETME		= 165,
-	SC_FORTUNE			= 166,
+	SC_FORTUNE			= 166,	//0xA6
 	SC_SERVICE4U		= 167,
 
 //<-- 169 = gloria
@@ -209,6 +209,7 @@ enum {	// struct map_session_data の status_changeの番?テ?ブル
 
 	SC_INCDEF2			= 194,
 	SC_INCSTR			= 195,
+	SC_INCAGI			= 196,
 // <-- 201 = two hand quicken
 };
 extern int SkillStatusChangeTable[];

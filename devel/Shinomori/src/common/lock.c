@@ -28,7 +28,7 @@
 
 
 
-#define exists(filename) (!access(filename, F_OK))
+	#define exists(filename) (!access(filename, F_OK))
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -45,7 +45,7 @@ const char* strerror(int err, char* buf, size_t size)
 			if( strlen(p)+1 < size ) size = strlen(p)+1;
 			memcpy(buf,p,size);
 			buf[size-1]=0; //force EOS
-		}
+}
 		else
 			*buf=0;
 	}
@@ -66,7 +66,7 @@ FILE* lock_fopen (const char* filename, int *info) {
 
 	// 安全なファイル名を得る（手抜き）
 	do {
-		sprintf(newfile,"%s_%04d.tmp",filename,++no);
+		sprintf(newfile, "%s_%04d.tmp", filename, ++no);
 	} while((fp = savefopen(newfile,"r")) && (fclose(fp), no<9999) );
 	*info = no;
 	return savefopen(newfile,"w");

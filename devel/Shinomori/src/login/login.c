@@ -3503,7 +3503,7 @@ int parse_console(char *buf) {
 	    strcasecmp("exit", command) == 0 ||
 	    strcasecmp("quit", command) == 0 ||
 	    strcasecmp("end", command) == 0)
-		runflag = 0;
+		core_stoprunning();
 	else if(strcasecmp("alive", command) == 0 ||
 	         strcasecmp("status", command) == 0)
 		ShowConsole(CL_BOLD"I'm Alive.\n"CL_NORM);

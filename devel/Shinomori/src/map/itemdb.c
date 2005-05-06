@@ -31,24 +31,6 @@ static int blue_box_default=0, violet_box_default=0, card_album_default=0, gift_
 
 static struct item_group itemgroup_db[MAX_ITEMGROUP];
 
-// Function declarations
-
-#ifndef TXT_ONLY
-static int itemdb_read_sqldb(void);
-#endif /* not TXT_ONLY */
-
-static void itemdb_read(void);
-static int itemdb_readdb(void);
-static int itemdb_read_randomitem();
-static int itemdb_read_itemavail(void);
-static int itemdb_read_itemnametable(void);
-static int itemdb_read_itemslotcounttable(void);
-static int itemdb_read_cardillustnametable(void);
-static int itemdb_read_noequip(void);
-static int itemdb_read_norefine(void);
-static int itemdb_read_itemslottable(void);
-void itemdb_reload(void);
-
 /*==========================================
  * –¼‘O‚ÅŒŸõ—p
  *------------------------------------------
@@ -366,7 +348,7 @@ static int itemdb_read_itemavail(void)
 {
 	FILE *fp;
 	char line[1024];
-	int ln=0;
+	int ln = 0;
 	unsigned short nameid;
 	size_t j,k;
 	char *str[10],*p;
@@ -421,8 +403,8 @@ static int itemdb_read_itemgroup(void)
 	size_t j;
 	char *str[31],*p;
 
-	if( (fp=fopen("db/item_group_db.txt","r"))==NULL ){
-		printf("can't read db/item_group_db.txt\n");
+	if( (fp=savefopen("db/item_group_db.txt","r"))==NULL ){
+		ShowError("can't read db/item_group_db.txt\n");
 		return -1;
 	}
 
@@ -448,7 +430,7 @@ static int itemdb_read_itemgroup(void)
 			nameid=atoi(str[j]);
 			if(nameid >= MAX_ITEMS || !itemdb_exists(nameid))
 				continue;
-			//printf ("%d[%d] = %d\n", groupid, j-1, k);
+			//ShowMessage ("%d[%d] = %d\n", groupid, j-1, k);
 			itemgroup_db[groupid].nameid[j-1] = nameid;
 		}		
 		ln++;
@@ -686,144 +668,137 @@ static int itemdb_read_sqldb(void)
 	unsigned short	nameid;
 	struct			item_data *id;
 	char			script[65535 + 2 + 1]; // Maximum length of MySQL TEXT type (65535) + 2 bytes for curly brackets + 1 byte for terminator
+	char *item_db_name[] = { item_db_db, item_db2_db };
+	long unsigned int ln = 0;
+	int i;	
 
 	// ----------
 
-	sprintf(tmp_sql, "SELECT * FROM `%s`", item_db_db);
-
-	// Execute the query; if the query execution succeeded...
-	if (mysql_query(&mmysql_handle, tmp_sql) == 0)
+	for (i = 0; i < 2; i++)
 	{
-		sql_res = mysql_store_result(&mmysql_handle);
-
-		// If the storage of the query result succeeded...
-		if (sql_res)
+		sprintf(tmp_sql, "SELECT * FROM `%s`", item_db_name[i]);
+		
+		// Execute the query; if the query execution succeeded...
+		if (mysql_query(&mmysql_handle, tmp_sql) == 0)
 		{
-			// Parse each row in the query result into sql_row
-			while ((sql_row = mysql_fetch_row(sql_res)))
+			sql_res = mysql_store_result(&mmysql_handle);
+			// If the storage of the query result succeeded...
+			if (sql_res)
 			{
-				/* +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+
-				   |  0 |            1 |             2 |    3 |         4 |          5 |      6 |      7 |       8 |     9 |    10 |         11 |            12 |              13 |           14 |          15 |   16 |         17 |           18 |
-				   +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+
-				   | id | name_english | name_japanese | type | price_buy | price_sell | weight | attack | defence | range | slots | equip_jobs | equip_genders | equip_locations | weapon_level | equip_level | view | script_use | script_equip |
-				   +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+ */
-
-				nameid = atoi(sql_row[0]);
-
-				// If the identifier is not within the valid range, process the next row
-				if(nameid == 0 || nameid >= MAX_ITEMS)
+				// Parse each row in the query result into sql_row
+				while ((sql_row = mysql_fetch_row(sql_res)))
 				{
-					continue;
+					/* +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+
+					   |  0 |            1 |             2 |    3 |         4 |          5 |      6 |      7 |       8 |     9 |    10 |         11 |            12 |              13 |           14 |          15 |   16 |         17 |           18 |
+					   +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+
+					   | id | name_english | name_japanese | type | price_buy | price_sell | weight | attack | defence | range | slots | equip_jobs | equip_genders | equip_locations | weapon_level | equip_level | view | script_use | script_equip |
+					   +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+ */
+
+					nameid = atoi(sql_row[0]);
+
+					// If the identifier is not within the valid range, process the next row
+					if(nameid == 0 || nameid >= MAX_ITEMS)
+						continue;
+
+					ln++;
+
+					// ----------
+					id=itemdb_search(nameid);
+					
+					memcpy(id->name, sql_row[1], 25);
+					memcpy(id->jname, sql_row[2], 25);
+
+					id->type = atoi(sql_row[3]);
+
+					if ((sql_row[4] != NULL) && (sql_row[5] != NULL))
+					{	// If price_buy is not NULL and price_sell is not NULL...
+						id->value_buy = atoi(sql_row[4]);
+						id->value_sell = atoi(sql_row[5]);
+					}
+					
+					else if ((sql_row[4] != NULL) && (sql_row[5] == NULL))
+					{	// If price_buy is not NULL and price_sell is NULL...
+						id->value_buy = atoi(sql_row[4]);
+						id->value_sell = atoi(sql_row[4]) / 2;
+					}
+					else if ((sql_row[4] == NULL) && (sql_row[5] != NULL))
+					{	// If price_buy is NULL and price_sell is not NULL...
+						id->value_buy = atoi(sql_row[5]) * 2;
+						id->value_sell = atoi(sql_row[5]);
+					}
+					else// if ((sql_row[4] == NULL) && (sql_row[5] == NULL))
+					{	// If price_buy is NULL and price_sell is NULL...
+						id->value_buy = 0;
+						id->value_sell = 0;
+					}
+
+					id->weight	= atoi(sql_row[6]);
+					id->atk		= (sql_row[7] != NULL)		? atoi(sql_row[7])	: 0;
+					id->def		= (sql_row[8] != NULL)		? atoi(sql_row[8])	: 0;
+					id->range	= (sql_row[9] != NULL)		? atoi(sql_row[9])	: 0;
+					id->flag.slot= (sql_row[10] != NULL)	? atoi(sql_row[10])	: 0;
+					id->class_	= (sql_row[11] != NULL)		? atoi(sql_row[11])	: 0;
+					id->flag.sex = (sql_row[12] != NULL)	? atoi(sql_row[12])	: 0;
+					id->equip	= (sql_row[13] != NULL)		? atoi(sql_row[13])	: 0;
+					id->wlv		= (sql_row[14] != NULL)		? atoi(sql_row[14])	: 0;
+					id->elv		= (sql_row[15] != NULL)		? atoi(sql_row[15])	: 0;
+					id->look	= (sql_row[16] != NULL)		? atoi(sql_row[16])	: 0;
+					id->view_id	= 0;
+					// ----------
+
+					if (sql_row[17] != NULL)
+					{
+						if (sql_row[17][0] == '{')
+							id->use_script = parse_script((unsigned char *) sql_row[17], 0);
+						else
+						{
+							sprintf(script, "{%s}", sql_row[17]);
+							id->use_script = parse_script((unsigned char *) script, 0);
+						}
+					}
+					else
+						id->use_script = NULL;
+					
+					if (sql_row[18] != NULL)
+					{
+						if (sql_row[18][0] == '{')
+							id->equip_script = parse_script((unsigned char *) sql_row[18], 0);
+						else
+						{
+							sprintf(script, "{%s}", sql_row[18]);
+							id->equip_script = parse_script((unsigned char *) script, 0);
+						}
+					}
+					else
+						id->equip_script = NULL;
+					// ----------
+					
+					id->flag.available		= 1;
+					id->flag.value_notdc	= 0;
+					id->flag.value_notoc	= 0;
 				}
-
-				// Insert a new row into the item database
-
-				/*id = aCalloc(1, sizeof(struct item_data));
-				numdb_insert(item_db, (int) nameid, id);*/
-
-				// ----------
-				id=itemdb_search(nameid);
 				
-				memcpy(id->name, sql_row[1], 25);
-				memcpy(id->jname, sql_row[2], 25);
-
-				id->type = atoi(sql_row[3]);
-
-				// If price_buy is not NULL and price_sell is not NULL...
-				if ((sql_row[4] != NULL) && (sql_row[5] != NULL))
+				// If the retrieval failed, output an error
+				if (mysql_errno(&mmysql_handle))
 				{
-					id->value_buy = atoi(sql_row[4]);
-					id->value_sell = atoi(sql_row[5]);
-				}
-				// If price_buy is not NULL and price_sell is NULL...
-				else if ((sql_row[4] != NULL) && (sql_row[5] == NULL))
-				{
-					id->value_buy = atoi(sql_row[4]);
-					id->value_sell = atoi(sql_row[4]) / 2;
-				}
-				// If price_buy is NULL and price_sell is not NULL...
-				else if ((sql_row[4] == NULL) && (sql_row[5] != NULL))
-				{
-					id->value_buy = atoi(sql_row[5]) * 2;
-					id->value_sell = atoi(sql_row[5]);
-				}
-				// If price_buy is NULL and price_sell is NULL...
-				if ((sql_row[4] == NULL) && (sql_row[5] == NULL))
-				{
-					id->value_buy = 0;
-					id->value_sell = 0;
-				}
-
-				id->weight	= atoi(sql_row[6]);
-
-				id->atk		 = (sql_row[7] != NULL)		? atoi(sql_row[7])	: 0;
-				id->def		 = (sql_row[8] != NULL)		? atoi(sql_row[8])	: 0;
-				id->range	 = (sql_row[9] != NULL)		? atoi(sql_row[9])	: 0;
-				id->flag.slot= (sql_row[10] != NULL)	? atoi(sql_row[10])	: 0;
-				id->class_	 = (sql_row[11] != NULL)	? atoi(sql_row[11])	: 0;
-				id->flag.sex = (sql_row[12] != NULL)	? atoi(sql_row[12])	: 0;
-				id->equip	 = (sql_row[13] != NULL)	? atoi(sql_row[13])	: 0;
-				id->wlv		 = (sql_row[14] != NULL)	? atoi(sql_row[14])	: 0;
-				id->elv		 = (sql_row[15] != NULL)	? atoi(sql_row[15])	: 0;
-				id->look	 = (sql_row[16] != NULL)	? atoi(sql_row[16])	: 0;
-				id->view_id	= 0;
-
-				// ----------
-
-				if (sql_row[17] != NULL)
-				{
-                                        if (sql_row[17][0] == '{')
-					  id->use_script = parse_script((unsigned char *) sql_row[17], 0);
-                                        else {
-					  sprintf(script, "{%s}", sql_row[17]);
-					  id->use_script = parse_script((unsigned char *) script, 0);
-                                        }
+					ShowError("Database server error (retrieving rows from %s): %s\n", item_db_name[i], mysql_error(&mmysql_handle));
 				}
 				else
 				{
-					id->use_script = NULL;
+					ShowStatus("Done reading '"CL_WHITE"%lu"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", ln, item_db_name[i]);
 				}
-
-				if (sql_row[18] != NULL)
-				{
-                                        if (sql_row[18][0] == '{')
-					  id->equip_script = parse_script((unsigned char *) sql_row[18], 0);
-                                        else {
-					  sprintf(script, "{%s}", sql_row[18]);
-					  id->equip_script = parse_script((unsigned char *) script, 0);
-                                        }
-				}
-				else
-				{
-					id->equip_script = NULL;
-				}
-
-				// ----------
-
-				id->flag.available		= 1;
-				id->flag.value_notdc	= 0;
-				id->flag.value_notoc	= 0;
+				ln = 0;
 			}
-
-			// If the retrieval failed, output an error
-			if (mysql_errno(&mmysql_handle))
+			else
 			{
-				ShowMessage("Database server error (retrieving rows from %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
+				ShowError("MySQL error (storing query result for %s): %s\n", item_db_name[i], mysql_error(&mmysql_handle));
 			}
-			ShowStatus("Done reading '"CL_WHITE"%lu"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",(unsigned long) mysql_num_rows(sql_res),item_db_db);
+			// Free the query result
+			mysql_free_result(sql_res);
 		}
 		else
-		{
-			ShowMessage("MySQL error (storing query result for %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
-		}
-		// Free the query result
-		mysql_free_result(sql_res);
+			ShowError("Database server error (executing query for %s): %s\n", item_db_name[i], mysql_error(&mmysql_handle));
 	}
-	else
-	{
-		ShowMessage("Database server error (executing query for %s): %s\n", item_db_db, mysql_error(&mmysql_handle));
-	}
-
 	return 0;
 }
 #endif /* not TXT_ONLY */
@@ -924,10 +899,10 @@ static int itemdb_readdb(void)
 
 			if((p=strchr(np,'{'))==NULL)
 				continue;
-			id->use_script = (char*)parse_script((unsigned char*)p,lines);
+			id->use_script = parse_script((unsigned char *) p,lines);
 			if((p=strchr(p+1,'{'))==NULL)
 				continue;
-			id->equip_script = (char*)parse_script((unsigned char*)p,lines);
+			id->equip_script = parse_script((unsigned char *) p,lines);
 		}
 		fclose(fp);
 		if (ln > 0) {
@@ -936,31 +911,6 @@ static int itemdb_readdb(void)
 		ln=0;	// reset to 0
 	}
 	return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static int itemdb_final(void *key,void *data,va_list ap)
-{
-	struct item_data *id = (struct item_data *)data;
-
-	nullpo_retr(0, id);
-
-	if(id->use_script)
-		aFree(id->use_script);
-	if(id->equip_script)
-		aFree(id->equip_script);
-	aFree(id);
-
-	return 0;
-}
-
-void itemdb_reload(void)
-{
-	numdb_final(item_db,itemdb_final);
-	do_init_itemdb();
 }
 
 /*====================================
@@ -976,7 +926,7 @@ static void itemdb_read(void)
 	}
 	else
 	{
-		itemdb_readdb();
+		itemdb_readdb();	
 	}
 #else	// not TXT_ONLY
 	itemdb_readdb();
@@ -998,39 +948,43 @@ static void itemdb_read(void)
 }
 
 /*==========================================
- *
+ * Initialize / Finalize
  *------------------------------------------
  */
-void do_final_itemdb(void)
+static int itemdb_final(void *key,void *data,va_list ap)
 {
-	if(item_db){
-		numdb_final(item_db,itemdb_final);
-		item_db=NULL;
-	}
-}
+	struct item_data *id = (struct item_data *)data;
 
-/*
-static FILE *dfp;
-static int itemdebug(void *key,void *data,va_list ap){
-//	struct item_data *id=(struct item_data *)data;
-	fprintf(dfp,"%6d",(int)key);
+	if (id == NULL)
+		return 0;
+	if (id->use_script)
+		aFree(id->use_script);
+	if (id->equip_script)
+		aFree(id->equip_script);
+	aFree(id);
+
 	return 0;
 }
-void itemdebugtxt()
+
+void itemdb_reload(void)
 {
-	dfp=savefopen("itemdebug.txt","wt");
-	numdb_foreach(item_db,itemdebug);
-	fclose(dfp);
+	numdb_final(item_db,itemdb_final);
+	do_init_itemdb();
 }
-*/
-/*==========================================
- *
- *------------------------------------------
- */
+
+void do_final_itemdb(void)
+{
+	if (item_db)
+		numdb_final(item_db, itemdb_final);
+}
+
 int do_init_itemdb(void)
 {
+	if(item_db)
+	{
+		numdb_final(item_db,itemdb_final);
+	}
 	item_db = numdb_init();
-
 	itemdb_read();
 
 	return 0;

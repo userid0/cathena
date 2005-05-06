@@ -426,6 +426,8 @@ int mapif_account_reg_reply(int fd,unsigned long account_id)
 {
 	struct accreg *reg=accreg_pt;
 	inter_accreg_fromsql(account_id,reg);
+	if( !session_isActive(fd) )
+		return 0;
 
 	WFIFOW(fd,0)=0x3804;
 	WFIFOL(fd,4)=account_id;
@@ -505,16 +507,22 @@ int check_ttl_wisdata() {
 // GM message sending
 int mapif_parse_GMmessage(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	mapif_GMmessage(RFIFOP(fd, 4), RFIFOW(fd, 2), fd);
 	return 0;
 }
 
 
 // Wisp/page request to send
-int mapif_parse_WisRequest(int fd) {
+int mapif_parse_WisRequest(int fd)
+{
 	struct WisData* wd;
 	static int wisid = 0;
 	char t_name[32];
+	if( !session_isActive(fd) )
+		return 0;
 
 	if((size_t)RFIFOW(fd,2) >= 52+sizeof(wd->msg) ) {
 		ShowMessage("inter: Wis message size too long.\n");
@@ -578,7 +586,11 @@ int mapif_parse_WisRequest(int fd) {
 
 
 // Wisp/page transmission result
-int mapif_parse_WisReply(int fd) {
+int mapif_parse_WisReply(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	int id = RFIFOL(fd,2), flag = RFIFOB(fd,6);
 	struct WisData *wd = (struct WisData*)numdb_search(wis_db, id);
 
@@ -598,6 +610,9 @@ int mapif_parse_WisReply(int fd) {
 // Save account_reg into sql (type=2)
 int mapif_parse_AccReg(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 	int j,p;
 	struct accreg *reg=accreg_pt;
 	unsigned long account_id = RFIFOL(fd,4);
@@ -617,6 +632,9 @@ int mapif_parse_AccReg(int fd)
 // Request the value of account_reg
 int mapif_parse_AccRegRequest(int fd)
 {
+	if( !session_isActive(fd) )
+		return 0;
+
 //	ShowMessage("mapif: accreg request\n");
 	return mapif_account_reg_reply(fd,RFIFOL(fd,2));
 }

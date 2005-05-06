@@ -317,23 +317,24 @@ int buildin_globalmes(struct script_state *st);
 int buildin_jump_zero(struct script_state *st);
 int buildin_select(struct script_state *st);
 int buildin_getmapmobs(struct script_state *st); //jA addition end
-
-// ADDITION Qamera death/disconnect/connect event mod
-int buildin_pcstrcharinfo(struct script_state *st);
+int buildin_pcstrcharinfo(struct script_state *st);// ADDITION Qamera death/disconnect/connect event mod
 int buildin_pcgetcharid(struct script_state *st);
 int buildin_disconnectevent(struct script_state *st);
-int buildin_deathevent(struct script_state *st);
-// END ADDITION 
+int buildin_deathevent(struct script_state *st);// END ADDITION 
+int buildin_defpattern(struct script_state *st); // MouseJstr
+int buildin_activatepset(struct script_state *st); // MouseJstr
+int buildin_deactivatepset(struct script_state *st); // MouseJstr
+int buildin_deletepset(struct script_state *st); // MouseJstr
+int buildin_unequip(struct script_state *st); // unequip [Spectre]
+
+
+
 void push_val(struct script_stack *stack,int type,int val);
 int run_func(struct script_state *st);
 
 int mapreg_setreg(int num,int val);
 int mapreg_setregstr(int num,const char *str);
 
-int buildin_defpattern(struct script_state *st); // MouseJstr
-int buildin_activatepset(struct script_state *st); // MouseJstr
-int buildin_deactivatepset(struct script_state *st); // MouseJstr
-int buildin_deletepset(struct script_state *st); // MouseJstr
 
 struct {
 	int (*func)(struct script_state *);
@@ -562,11 +563,10 @@ struct {
 	{buildin_adopt,"adopt","sss"}, // allows 2 parents to adopt a child
 	{buildin_night,"night",""}, // sets the server to night time
 	{buildin_day,"day",""}, // sets the server to day time
-        {buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
-        {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
-        {buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
-        {buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
-
+	{buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
+	{buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
+	{buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
+	{buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
 	{buildin_dispbottom,"dispbottom","s"}, //added from jA [Lupus]
 	{buildin_getusersname,"getusersname","*"},
 	{buildin_recovery,"recovery",""},
@@ -576,6 +576,7 @@ struct {
 	{buildin_select,"select","*"}, //for future jA script compatibility
 	{buildin_globalmes,"globalmes","s*"},
 	{buildin_getmapmobs,"getmapmobs","s"}, //end jA addition
+	{buildin_unequip,"unequip","i"}, // unequip command [Spectre]
 	{NULL,NULL,NULL},
 };
 
@@ -936,7 +937,7 @@ char* parse_simpleexpr(char *p)
 		int c,l;
 		char *p2;
 		// label , register , function etc
-		if(skip_word(p)==p){
+		if(skip_word(p)==p && !(*p==')' && p[-1]=='(')){
 			disp_error_message("unexpected character",p);
 			exit(1);
 		}
@@ -1063,8 +1064,8 @@ char* parse_subexpr(char *p,int limit)
 			if( str_data[func].type==C_FUNC && script_config.warn_func_mismatch_paramnum){
 				const char *arg=buildin_func[str_data[func].val].arg;
 				int j=0;
-				for(j=0;arg[j];j++) if(arg[j]=='*')break;
-				if( (arg[j]==0 && i!=j) || (arg[j]=='*' && i<j) ){
+				for (; arg[j]; j++) if (arg[j] == '*') break;
+				if (!(i <= 1 && j == 0) && ((arg[j] == 0 && i != j) || (arg[j] == '*' && i < j))) {
 					disp_error_message("illegal number of parameters",plist[(i<j)?i:j]);
 				}
 			}
@@ -1601,16 +1602,16 @@ int buildin_goto(struct script_state *st)
 {
 	int pos;
 
-	if( st->stack->stack_data[st->start+2].type!=C_POS ){
+	if (st->stack->stack_data[st->start+2].type != C_POS){
 		int func = st->stack->stack_data[st->start+2].u.num;
 		ShowMessage("script: goto '"CL_WHITE"%s"CL_RESET"': not label!\n", str_buf + str_data[func].str);
-		st->state=END;
+		st->state = END;
 		return 0;
 	}
 
-	pos=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	st->pos=pos;
-	st->state=GOTO;
+	pos = conv_num(st,& (st->stack->stack_data[st->start+2]));
+	st->pos = pos;
+	st->state = GOTO;
 	return 0;
 }
 
@@ -2352,12 +2353,12 @@ int buildin_checkweight(struct script_state *st)
 	}
 	else
 	{
-		sd=script_rid2sd(st);
-		if(itemdb_weight(nameid)*amount + sd->weight > sd->max_weight){
-			push_val(st->stack,C_INT,0);
-		} else {
-			push_val(st->stack,C_INT,1);
-		}
+	sd=script_rid2sd(st);
+	if(itemdb_weight(nameid)*amount + sd->weight > sd->max_weight){
+		push_val(st->stack,C_INT,0);
+	} else {
+		push_val(st->stack,C_INT,1);
+	}
 	}
 
 	return 0;
@@ -2402,7 +2403,7 @@ int buildin_getitem(struct script_state *st)
 			log_present(sd, -nameidsrc, nameid); //fixed missing ID by Lupus
 		flag = 1;
 	}
-	
+
 	if(nameid > 0)
 	{
 		memset(&item_tmp,0,sizeof(item_tmp));
@@ -2547,7 +2548,7 @@ int buildin_makeitem(struct script_state *st)
 		nameid=itemdb_searchrandomid(-nameid);
 		flag = 1;
 	}
-	
+
 	if(nameid > 0) {
 		memset(&item_tmp,0,sizeof(item_tmp));
 		item_tmp.nameid=nameid;
@@ -2638,7 +2639,7 @@ int buildin_delitem(struct script_state *st)
 			//we don't delete wrong item
 			if( sd->status.inventory[i].nameid!=nameid || sd->inventory_data[i] == NULL ||
 				sd->status.inventory[i].nameid>=20000  || sd->status.inventory[i].amount>=MAX_AMOUNT )
-					continue;
+				continue;
 
 			if(sd->status.inventory[i].amount>=amount)
 			{
@@ -7061,7 +7062,7 @@ int buildin_isequippedcnt(struct script_state *st)
 			
 			if(sd->inventory_data[index]) {
 				if (type == 4 || type == 5) {
-					if(sd->inventory_data[index]->nameid == id)
+					if (sd->inventory_data[index]->nameid == id)
 						ret++; //[Lupus]
 				} else if (type == 6) {
 					for(k=0; k<sd->inventory_data[index]->flag.slot; k++) {
@@ -7099,7 +7100,7 @@ int buildin_isequipped(struct script_state *st)
 	for (i=0; id!=0; i++)
 	{
 		int flag = 0;
-
+	
 		if(st->end>st->start+(i+2)) \
 			id=conv_num(st,&(st->stack->stack_data[st->start+(i+2)]));
 		else
@@ -7276,6 +7277,25 @@ int buildin_night(struct script_state *st)
 int buildin_day(struct script_state *st)
 {
 	if (night_flag != 0) map_day_timer(day_timer_tid, 0, 0, 1);
+	return 0;
+}
+
+//=======================================================
+// Unequip [Spectre]
+//-------------------------------------------------------
+int buildin_unequip(struct script_state *st)
+{
+	int i;
+	size_t num;
+	struct map_session_data *sd;
+	num = conv_num(st,& (st->stack->stack_data[st->start+2])) - 1;
+	sd=script_rid2sd(st);
+	if(sd!=NULL && num<10)
+	{
+		i=pc_checkequip(sd,equip[num]);
+		pc_unequipitem(sd,i,2);
+		return 0;
+	}
 	return 0;
 }
 

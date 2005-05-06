@@ -691,7 +691,11 @@ int guild_calcinfo(struct guild *g) {
 // map serverへの通信
 
 // ギルド作成可否
-int mapif_guild_created(int fd, unsigned long account_id, struct guild *g) {
+int mapif_guild_created(int fd, unsigned long account_id, struct guild *g)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0) = 0x3830;
 	WFIFOL(fd,2) = account_id;
 	if (g != NULL) {
@@ -705,7 +709,11 @@ int mapif_guild_created(int fd, unsigned long account_id, struct guild *g) {
 }
 
 // ギルド情報見つからず
-int mapif_guild_noinfo(int fd, int guild_id) {
+int mapif_guild_noinfo(int fd, int guild_id)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0) = 0x3831;
 	WFIFOW(fd,2) = 8;
 	WFIFOL(fd,4) = guild_id;
@@ -724,7 +732,7 @@ int mapif_guild_info(int fd, struct guild *g) {
 	//memcpy(WBUFP(buf,4), g, sizeof(struct guild));
 	guild_tobuffer(g, WBUFP(buf,4));
 //	ShowMessage("int_guild: sizeof(guild)=%d\n", sizeof(struct guild));
-	if (fd < 0)
+	if( !session_isActive(fd) )
 		mapif_sendall(buf, WBUFW(buf,2));
 	else
 		mapif_send(fd, buf, WBUFW(buf,2));
@@ -734,7 +742,11 @@ int mapif_guild_info(int fd, struct guild *g) {
 }
 
 // メンバ追加可否
-int mapif_guild_memberadded(int fd, unsigned long guild_id, unsigned long account_id, unsigned long char_id, int flag) {
+int mapif_guild_memberadded(int fd, unsigned long guild_id, unsigned long account_id, unsigned long char_id, int flag)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	WFIFOW(fd,0) = 0x3832;
 	WFIFOL(fd,2) = guild_id;
 	WFIFOL(fd,6) = account_id;
@@ -922,7 +934,8 @@ int mapif_guild_castle_dataload(unsigned short castle_id, int index, int value) 
 	return 0;
 }
 
-int mapif_guild_castle_datasave(int castle_id, int index, int value) {
+int mapif_guild_castle_datasave(int castle_id, int index, int value)
+{
 	unsigned char buf[9];
 
 	WBUFW(buf,0) = 0x3841;
@@ -934,9 +947,13 @@ int mapif_guild_castle_datasave(int castle_id, int index, int value) {
 	return 0;
 }
 
-int mapif_guild_castle_alldataload_sub(void *key, void *data, va_list ap) {
+int mapif_guild_castle_alldataload_sub(void *key, void *data, va_list ap)
+{
 	int fd = va_arg(ap, int);
 	int *offset = va_arg(ap, int*);
+
+	if( !session_isActive(fd) )
+		return 0;
 
 	//memcpy(WFIFOP(fd,*offset), (struct guild_castle*)data, sizeof(struct guild_castle));
 	guild_castle_tobuffer((struct guild_castle*)data, WFIFOP(fd,*offset));
@@ -945,8 +962,11 @@ int mapif_guild_castle_alldataload_sub(void *key, void *data, va_list ap) {
 	return 0;
 }
 
-int mapif_guild_castle_alldataload(int fd) {
+int mapif_guild_castle_alldataload(int fd)
+{
 	int len = 4;
+	if( !session_isActive(fd) )
+		return 0;
 
 	WFIFOW(fd,0) = 0x3842;
 	numdb_foreach(castle_db, mapif_guild_castle_alldataload_sub, fd, &len);
@@ -1268,7 +1288,8 @@ int mapif_parse_GuildSkillUp(int fd, unsigned long guild_id, unsigned long skill
 }
 
 // ギルド同盟要求
-int mapif_parse_GuildAlliance(int fd, unsigned long guild_id1, unsigned long guild_id2, unsigned long account_id1, unsigned long account_id2, int flag) {
+int mapif_parse_GuildAlliance(int fd, unsigned long guild_id1, unsigned long guild_id2, unsigned long account_id1, unsigned long account_id2, int flag)
+{
 	struct guild *g[2];
 	int j, i;
 
@@ -1302,7 +1323,8 @@ int mapif_parse_GuildAlliance(int fd, unsigned long guild_id1, unsigned long gui
 }
 
 // ギルド告知変更要求
-int mapif_parse_GuildNotice(int fd, int guild_id, const char *mes1, const char *mes2) {
+int mapif_parse_GuildNotice(int fd, int guild_id, const char *mes1, const char *mes2)
+{
 	struct guild *g;
 
 	g = (struct guild *)numdb_search(guild_db, guild_id);
@@ -1315,7 +1337,8 @@ int mapif_parse_GuildNotice(int fd, int guild_id, const char *mes1, const char *
 }
 
 // ギルドエンブレム変更要求
-int mapif_parse_GuildEmblem(int fd, int len, int guild_id, int dummy, const char *data) {
+int mapif_parse_GuildEmblem(int fd, int len, int guild_id, int dummy, const char *data)
+{
 	struct guild *g;
 
 	g = (struct guild *)numdb_search(guild_db, guild_id);
@@ -1329,7 +1352,8 @@ int mapif_parse_GuildEmblem(int fd, int len, int guild_id, int dummy, const char
 	return mapif_guild_emblem(g);
 }
 
-int mapif_parse_GuildCastleDataLoad(int fd, int castle_id, int index) {
+int mapif_parse_GuildCastleDataLoad(int fd, int castle_id, int index)
+{
 
 	struct guild_castle *gc = (struct guild_castle *)numdb_search(castle_db, castle_id);
 
@@ -1373,7 +1397,8 @@ int mapif_parse_GuildCastleDataLoad(int fd, int castle_id, int index) {
 	return 0;
 }
 
-int mapif_parse_GuildCastleDataSave(int fd, int castle_id, int index, int value) {
+int mapif_parse_GuildCastleDataSave(int fd, int castle_id, int index, int value)
+{
 	struct guild_castle *gc=(struct guild_castle *)numdb_search(castle_db, castle_id);
 
 	if (gc == NULL) {
@@ -1423,7 +1448,8 @@ int mapif_parse_GuildCastleDataSave(int fd, int castle_id, int index, int value)
 }
 
 // ギルドチェック要求
-int mapif_parse_GuildCheck(int fd, unsigned long guild_id, unsigned long account_id, unsigned long char_id) {
+int mapif_parse_GuildCheck(int fd, unsigned long guild_id, unsigned long account_id, unsigned long char_id)
+{
 	return guild_check_conflict(guild_id, account_id, char_id);
 }
 
@@ -1432,7 +1458,11 @@ int mapif_parse_GuildCheck(int fd, unsigned long guild_id, unsigned long account
 // ・パケット長データはinter.cにセットしておくこと
 // ・パケット長チェックや、RFIFOSKIPは呼び出し元で行われるので行ってはならない
 // ・エラーなら0(false)、そうでないなら1(true)をかえさなければならない
-int inter_guild_parse_frommap(int fd) {
+int inter_guild_parse_frommap(int fd)
+{
+	if( !session_isActive(fd) )
+		return 0;
+
 	switch(RFIFOW(fd,0)) {
 	case 0x3030: mapif_parse_CreateGuild(fd, RFIFOL(fd,4), (char*)RFIFOP(fd,8), RFIFOP(fd,32)); break;
 	case 0x3031: mapif_parse_GuildInfo(fd, RFIFOL(fd,2)); break;

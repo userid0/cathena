@@ -151,7 +151,11 @@ int console = 0;
 // Set Character online/offline [Wizputer]
 //-------------------------------------------------
 
-void set_char_online(unsigned long char_id, unsigned long account_id) {
+void set_char_online(unsigned long char_id, unsigned long account_id)
+{
+    if ( !session_isActive(login_fd) )
+		return;
+
     if ( char_id != 99 ) {
         sprintf(tmp_sql, "UPDATE `%s` SET `online`='1' WHERE `char_id`='%d'",char_db,char_id);
 		if (mysql_query(&mysql_handle, tmp_sql)) {
@@ -159,15 +163,17 @@ void set_char_online(unsigned long char_id, unsigned long account_id) {
 		}
     }
 
-    if ( !session_isActive(login_fd) )
-		return;
 	WFIFOW(login_fd,0) = 0x272b;
 	WFIFOL(login_fd,2) = account_id;
 	WFIFOSET(login_fd,6);
 
 }
 
-void set_all_offline(void) {
+void set_all_offline(void)
+{
+    if ( !session_isActive(login_fd) )
+		return;
+
 	sprintf(tmp_sql, "SELECT `account_id` FROM `%s` WHERE `online`='1'",char_db);
 	if (mysql_query(&mysql_handle, tmp_sql)) {
 		ShowMessage("DB server Error (select all online)- %s\n", mysql_error(&mysql_handle));
@@ -192,8 +198,11 @@ void set_all_offline(void) {
 
 }
 
-void set_char_offline(unsigned long char_id, unsigned long account_id) {
+void set_char_offline(unsigned long char_id, unsigned long account_id)
+{
     struct mmo_charstatus *cp;
+    if ( !session_isActive(login_fd) )
+		return;
 
     if ( char_id == 99 )
         sprintf(tmp_sql,"UPDATE `%s` SET `online`='0' WHERE `account_id`='%d'", char_db, account_id);
@@ -209,9 +218,6 @@ void set_char_offline(unsigned long char_id, unsigned long account_id) {
 		if (mysql_query(&mysql_handle, tmp_sql))
 		ShowMessage("DB server Error (set_char_offline)- %s\n", mysql_error(&mysql_handle));
 	}
-
-   if( !session_isActive(login_fd) )
-	return;
 
    WFIFOW(login_fd,0) = 0x272c;
    WFIFOL(login_fd,2) = account_id;
@@ -1350,7 +1356,8 @@ int count_users(void) {
 	return 0;
 }
 
-int mmo_char_send006b(int fd, struct char_session_data *sd) {
+int mmo_char_send006b(int fd, struct char_session_data *sd)
+{
 	int i, j, found_num = 0;
 	struct mmo_charstatus *p = NULL;
 // hehe. commented other. anyway there's no need to use older version.
@@ -1360,6 +1367,10 @@ int mmo_char_send006b(int fd, struct char_session_data *sd) {
 //#else
 //	int offset = 4;
 //#endif
+
+    if ( !session_isActive(fd) )
+		return 0;
+
 
 	ShowMessage("mmo_char_send006b start.. (account:%d)\n",sd->account_id);
 //	ShowMessage("offset -> %d...\n",offset);
@@ -1804,8 +1815,7 @@ int parse_frommap(int fd) {
 	int i, j;
 	int id;
 
-	// Sometimes fd=0, and it will cause server crash. Don't know why. :(
-	if (fd <= 0)
+	if( !session_isActive(fd) )
 	{
 		ShowMessage("parse_frommap error fd=0\n");
 		return 0;
@@ -2324,7 +2334,7 @@ int parse_frommap(int fd) {
 			unsigned char buf[32000];
 
 			WBUFW(buf,0) = 0x2b1b;
-			sprintf(tmp_sql, "SELECT `account_id`,`fame` FROM `%s` WHERE `class`='10' OR `class`='4011'"
+			sprintf(tmp_sql, "SELECT `char_id`,`fame` FROM `%s` WHERE `class`='10' OR `class`='4011'"
 				"OR `class`='4033' ORDER BY `fame` DESC", char_db);
 			if (mysql_query(&mysql_handle, tmp_sql)) {
 				ShowMessage("DB server Error (select fame)- %s\n", mysql_error(&mysql_handle));
@@ -2425,14 +2435,17 @@ int lan_ip_check(unsigned long ip){
 }
 
 
-int parse_char(int fd) {
+int parse_char(int fd)
+{
 	int i, ch = 0;
 	char email[40];
 	unsigned short cmd;
-	struct char_session_data *sd;
-	unsigned long client_ip = session[fd]->client_ip;
 
-	sd = (struct char_session_data*)session[fd]->session_data;
+	if( !session_isValid(fd) )
+		return 0;
+
+	unsigned long client_ip = session[fd]->client_ip;
+	struct char_session_data *sd = (struct char_session_data*)session[fd]->session_data;
 
 	if( !session_isActive(login_fd) )
 	{
@@ -3026,12 +3039,15 @@ int parse_console(char *buf) {
 
 // MAP send all
 int mapif_sendall(unsigned char *buf, unsigned int len) {
-	int i, c;
+	int i, c=0;
 	int fd;
 
-	c = 0;
-	for(i = 0; i < MAX_MAP_SERVERS; i++) {
-		if ((fd = server[i].fd) >= 0) {
+	if(buf)
+	for(i = 0; i < MAX_MAP_SERVERS; i++)
+	{
+		fd = server[i].fd;
+		if( session_isActive(fd) )
+		{
 			memcpy(WFIFOP(fd,0), buf, len);
 			WFIFOSET(fd,len);
 			c++;
@@ -3042,12 +3058,15 @@ int mapif_sendall(unsigned char *buf, unsigned int len) {
 }
 
 int mapif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
-	int i, c;
+	int i, c=0;
 	int fd;
 
-	c = 0;
-	for(i=0, c=0;i<MAX_MAP_SERVERS;i++){
-		if ((fd = server[i].fd) >= 0 && fd != sfd) {
+	if(buf)
+	for(i=0, c=0;i<MAX_MAP_SERVERS;i++)
+	{
+		fd = server[i].fd;
+		if( session_isActive(fd) && fd != sfd )
+		{
 			memcpy(WFIFOP(fd,0), buf, len);
 			WFIFOSET(fd, len);
 			c++;
@@ -3060,9 +3079,11 @@ int mapif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
 int mapif_send(int fd, unsigned char *buf, unsigned int len) {
 	int i;
 
-	if (fd >= 0) {
-		for(i = 0; i < MAX_MAP_SERVERS; i++) {
-			if (fd == server[i].fd) {
+	if( buf && session_isActive(fd) ) {
+		for(i = 0; i < MAX_MAP_SERVERS; i++)
+		{
+			if( fd == server[i].fd )
+			{
 				memcpy(WFIFOP(fd,0), buf, len);
 				WFIFOSET(fd,len);
 				return 1;
@@ -3099,24 +3120,24 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		login_fd = make_connection(login_ip, login_port);
 		if ( session_isActive(login_fd) ) 
 		{
-		session[login_fd]->func_parse = parse_tologin;
-		realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-		WFIFOW(login_fd,0) = 0x2710;
-		memset(WFIFOP(login_fd,2), 0, 24);
-		memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
-		memset(WFIFOP(login_fd,26), 0, 24);
-		memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
-		WFIFOL(login_fd,50) = 0;
-		WFIFOL(login_fd,54) = char_ip;
-		WFIFOL(login_fd,58) = char_port;
-		memset(WFIFOP(login_fd,60), 0, 20);
-		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
-		WFIFOW(login_fd,80) = 0;
-		WFIFOW(login_fd,82) = char_maintenance;
-		WFIFOW(login_fd,84) = char_new;
-		WFIFOSET(login_fd,86);
+			session[login_fd]->func_parse = parse_tologin;
+			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+			WFIFOW(login_fd,0) = 0x2710;
+			memset(WFIFOP(login_fd,2), 0, 24);
+			memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
+			memset(WFIFOP(login_fd,26), 0, 24);
+			memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
+			WFIFOL(login_fd,50) = 0;
+			WFIFOL(login_fd,54) = char_ip;
+			WFIFOL(login_fd,58) = char_port;
+			memset(WFIFOP(login_fd,60), 0, 20);
+			memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
+			WFIFOW(login_fd,80) = 0;
+			WFIFOW(login_fd,82) = char_maintenance;
+			WFIFOW(login_fd,84) = char_new;
+			WFIFOSET(login_fd,86);
+		}
 	}
-}
 	return 0;
 }
 

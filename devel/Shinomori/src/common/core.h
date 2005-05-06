@@ -5,12 +5,14 @@
 
 #include "base.h"
 
-extern int runflag;
 
 extern int do_init(int,char**);
 extern void do_final();
 
 
+void core_stoprunning();
+
 extern inline char* get_svn_revision()	{ return "Shinomori's Modified Version"; }
+
 
 #endif	// _CORE_H_
