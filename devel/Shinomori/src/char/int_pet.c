@@ -32,7 +32,7 @@ int inter_pet_tostr(char *str,struct s_pet *p)
 
 	len=sprintf(str,"%ld,%d,%s\t%ld,%ld,%d,%d,%d,%d,%d,%d,%d",
 		p->pet_id,p->class_,p->name,p->account_id,p->char_id,p->level,p->egg_id,
-		p->equip,p->intimate,p->hungry,p->rename_flag,p->incuvate);
+		p->equip_id,p->intimate,p->hungry,p->rename_flag,p->incuvate);
 
 	return 0;
 }
@@ -59,7 +59,7 @@ int inter_pet_fromstr(char *str,struct s_pet *p)
 	p->char_id = tmp_int[3];
 	p->level = tmp_int[4];
 	p->egg_id = tmp_int[5];
-	p->equip = tmp_int[6];
+	p->equip_id = tmp_int[6];
 	p->intimate = tmp_int[7];
 	p->hungry = tmp_int[8];
 	p->rename_flag = tmp_int[9];
@@ -178,14 +178,17 @@ int mapif_pet_info(int fd,unsigned long account_id,struct s_pet *pet)
 	if( !session_isActive(fd) )
 		return 0;
 
-	WFIFOW(fd,0)=0x3881;
-	WFIFOW(fd,2)=sizeof(struct s_pet) + 9;
-	WFIFOL(fd,4)=account_id;
-	WFIFOB(fd,8)=0;
-	//memcpy(WFIFOP(fd,9),pet,sizeof(struct s_pet));
-	s_pet_tobuffer(pet, WFIFOP(fd,9));
+	if(pet)
+	{
+		WFIFOW(fd,0)=0x3881;
+		WFIFOW(fd,2)=sizeof(struct s_pet) + 9;
+		WFIFOL(fd,4)=account_id;
+		WFIFOB(fd,8)=0;
+		//memcpy(WFIFOP(fd,9),pet,sizeof(struct s_pet));
+		s_pet_tobuffer(*pet, WFIFOP(fd,9));
 
-	WFIFOSET(fd,WFIFOW(fd,2));
+		WFIFOSET(fd,WFIFOW(fd,2));
+	}
 
 	return 0;
 }
@@ -246,7 +249,7 @@ int mapif_create_pet(int fd,unsigned long account_id,unsigned long char_id,short
 	p->class_ = pet_class;
 	p->level = pet_lv;
 	p->egg_id = pet_egg_id;
-	p->equip = pet_equip;
+	p->equip_id = pet_equip;
 	p->intimate = intimate;
 	p->hungry = hungry;
 	p->rename_flag = rename_flag;
@@ -299,7 +302,7 @@ int mapif_save_pet(int fd,unsigned long account_id, unsigned char* buf)
 		ShowMessage("inter pet: data size error %d %d\n",sizeof(struct s_pet),len-8);
 	}
 	else{
-		s_pet_frombuffer(&pet, buf);
+		s_pet_frombuffer(pet, buf);
 		ppet = (struct s_pet *)numdb_search(pet_db,pet.pet_id);
 		if(ppet == NULL) {
 			ppet = (struct s_pet *)aCalloc(1, sizeof(struct s_pet));

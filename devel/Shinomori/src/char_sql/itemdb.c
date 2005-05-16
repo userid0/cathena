@@ -12,11 +12,6 @@
 #include "itemdb.h"
 #include "char.h"
 
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 #define MAX_RANDITEM	2000
 
 // ** ITEMDB_OVERRIDE_NAME_VERBOSE **

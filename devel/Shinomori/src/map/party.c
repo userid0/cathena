@@ -1,22 +1,20 @@
 // $Id: party.c,v 1.2 2004/09/22 02:59:47 Akitasha Exp $
 #include "base.h"
-#include "party.h"
 #include "db.h"
 #include "timer.h"
 #include "socket.h"
 #include "nullpo.h"
 #include "malloc.h"
+#include "showmsg.h"
+#include "utils.h"
+
+#include "party.h"
 #include "pc.h"
 #include "map.h"
 #include "battle.h"
 #include "intif.h"
 #include "clif.h"
-#include "showmsg.h"
-#include "utils.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
+#include "log.h"
 
 #define PARTY_SEND_XYHP_INVERVAL	1000	// 座標やＨＰ送信の間隔
 
@@ -61,14 +59,14 @@ int party_searchname_sub(void *key,void *data,va_list ap)
 	return 0;
 }
 // パーティ名検索
-struct party* party_searchname(char *str)
+struct party* party_searchname(const char *str)
 {
 	struct party *p=NULL;
 	numdb_foreach(party_db,party_searchname_sub,str,&p);
 	return p;
 }
 // 作成要求
-int party_create(struct map_session_data *sd,char *name,int item,int item2)
+int party_create(struct map_session_data *sd,const char *name,int item,int item2)
 {
 	nullpo_retr(0, sd);
 
@@ -80,7 +78,7 @@ int party_create(struct map_session_data *sd,char *name,int item,int item2)
 }
 
 // 作成可否
-int party_created(unsigned long account_id,int fail,unsigned long party_id,char *name)
+int party_created(unsigned long account_id,int fail,unsigned long party_id,const char *name)
 {
 	struct map_session_data *sd;
 	sd=map_id2sd(account_id);
@@ -112,26 +110,30 @@ int party_request_info(unsigned long party_id)
 }
 
 // 所属キャラの確認
-int party_check_member(struct party *p)
+int party_check_member(struct party &p)
 {
 	size_t i;
 	struct map_session_data *sd;
 
-	nullpo_retr(0, p);
-
-	for(i=0;i<fd_max;i++){
-		if(session[i] && (sd=(struct map_session_data *)session[i]->session_data) && sd->state.auth){
-			if(sd->status.party_id==p->party_id){
-				int j,f=1;
-				for(j=0;j<MAX_PARTY;j++){	// パーティにデータがあるか確認
-					if(	p->member[j].account_id==sd->status.account_id){
-						if(	strcmp(p->member[j].name,sd->status.name)==0 )
+	for(i=0;i<fd_max;i++)
+	{
+		if(session[i] && (sd=(struct map_session_data *)session[i]->session_data) && sd->state.auth)
+		{
+			if(sd->status.party_id==p.party_id)
+			{
+				size_t j, f=1;
+				for(j=0;j<MAX_PARTY;j++)
+				{	// パーティにデータがあるか確認
+					if(	p.member[j].account_id==sd->status.account_id)
+					{
+						if(	strcmp(p.member[j].name,sd->status.name)==0 )
 							f=0;	// データがある
 						else
-							p->member[j].sd=NULL;	// 同垢別キャラだった
+							p.member[j].sd=NULL;	// 同垢別キャラだった
 					}
 				}
-				if(f){
+				if(f)
+				{
 					sd->status.party_id=0;
 					if(battle_config.error_log)
 						ShowMessage("party: check_member %d[%s] is not member\n",sd->status.account_id,sd->status.name);
@@ -168,7 +170,7 @@ int party_recv_info(struct party *sp)
 		numdb_insert(party_db,sp->party_id,p);
 		
 		// 最初のロードなのでユーザーのチェックを行う
-		party_check_member(sp);
+		party_check_member(*sp);
 	}
 	memcpy(p,sp,sizeof(struct party));
 	
@@ -447,7 +449,7 @@ int party_send_movemap(struct map_session_data *sd)
 	
 	// あるならパーティ情報送信
 	if( (p=party_search(sd->status.party_id))!=NULL ){
-		party_check_member(p);	// 所属を確認する
+		party_check_member(*p);	// 所属を確認する
 		if(sd->status.party_id==p->party_id){
 			clif_party_info(p,sd->fd);
 			clif_party_option(p,sd,0x100);
@@ -483,6 +485,10 @@ int party_send_message(struct map_session_data *sd,char *mes,int len)
 		return 0;
 	intif_party_message(sd->status.party_id,sd->status.account_id,mes,len);
 	party_recv_message (sd->status.party_id,sd->status.account_id,mes,len);
+	//Chat Logging support Type 'P'
+	log_chat("P", sd->status.party_id, sd->status.char_id, sd->status.account_id, (char*)sd->mapname, sd->bl.x, sd->bl.y, NULL, mes);
+	
+
 	return 0;
 }
 

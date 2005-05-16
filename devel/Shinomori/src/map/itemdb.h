@@ -37,6 +37,8 @@ struct item_data
 		unsigned no_refine : 1;			// 7 [celest]
 		unsigned sex : 2;				// 8,9 // male=0, female=1, all=2
 		unsigned slot : 2;				// 10,11
+		unsigned delay_consume : 1;		// 12 Signifies items that are not consumed inmediately upon double-click [Skotlex]
+		unsigned _unused : 3;
 	} flag;
 
 	char *use_script;	// 回復とかも全部この中でやろうかなと
@@ -82,7 +84,7 @@ int itemdb_searchrandomgroup(unsigned short groupid);
 int itemdb_isequip(unsigned short nameid);
 int itemdb_isequip2(struct item_data *);
 int itemdb_isequip3(unsigned short nameid);
-int itemdb_isdropable(unsigned short nameid);
+bool itemdb_isdropable(unsigned short nameid);
 
 // itemdb_equipマクロとitemdb_equippointとの違いは
 // 前者が鯖側dbで定義された値そのものを返すのに対し

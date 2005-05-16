@@ -19,8 +19,10 @@
 #define MAX_MAP_PER_SERVER 512
 #define MAX_INVENTORY 100
 #define MAX_ITEMS 20000
+#define MAX_EQUIP 11
 #define MAX_AMOUNT 30000
 #define MAX_ZENY 1000000000	// 1G zeny
+#define MAX_FAME 1000000000 // 1G fame point [DracoRPG]
 #define MAX_CART 100
 #define MAX_SKILL 650
 #define GLOBAL_REG_NUM 96
@@ -149,60 +151,94 @@ struct mmo_char_server {
 // no pointer checking is implemented here, so make sure the calls are correct
 /////////////////////////////////////////////////////////////////////////////
 
-extern inline void _L_tobuffer(const unsigned long *valin, unsigned char **buf)
+extern inline void _L_tobuffer(const unsigned long &valin, unsigned char *&buf)
 {	
-	*(*buf)++ = (unsigned char)((*valin & 0x000000FF)          );
-	*(*buf)++ = (unsigned char)((*valin & 0x0000FF00)  >> 0x08 );
-	*(*buf)++ = (unsigned char)((*valin & 0x00FF0000)  >> 0x10 );
-	*(*buf)++ = (unsigned char)((*valin & 0xFF000000)  >> 0x18 );
+	*buf++ = ((valin & 0x000000FF)        );
+	*buf++ = ((valin & 0x0000FF00)>> 0x08 );
+	*buf++ = ((valin & 0x00FF0000)>> 0x10 );
+	*buf++ = ((valin & 0xFF000000)>> 0x18 );
+}
+extern inline void _L_tobuffer(const long &valin, unsigned char *&buf)
+{	
+	*buf++ = ((valin & 0x000000FF)        );
+	*buf++ = ((valin & 0x0000FF00)>> 0x08 );
+	*buf++ = ((valin & 0x00FF0000)>> 0x10 );
+	*buf++ = ((valin & 0xFF000000)>> 0x18 );
 }
 
-extern inline void _W_tobuffer(const unsigned short *valin, unsigned char **buf)
+extern inline void _W_tobuffer(const unsigned short &valin, unsigned char *&buf)
 {	
-	*(*buf)++ = (unsigned char)((*valin & 0x00FF)          );
-	*(*buf)++ = (unsigned char)((*valin & 0xFF00)  >> 0x08 );
+	*buf++ = ((valin & 0x00FF)        );
+	*buf++ = ((valin & 0xFF00)>> 0x08 );
+}
+extern inline void _W_tobuffer(const short &valin, unsigned char *&buf)
+{	
+	*buf++ = ((valin & 0x00FF)        );
+	*buf++ = ((valin & 0xFF00)>> 0x08 );
 }
 
-extern inline void _B_tobuffer(const unsigned char *valin, unsigned char **buf)
+extern inline void _B_tobuffer(const unsigned char &valin, unsigned char *&buf)
 {	
-	*(*buf)++ = (unsigned char)((*valin & 0xFF)          );
+	*buf++ = ((valin & 0xFF)        );
+}
+extern inline void _B_tobuffer(const char &valin, unsigned char *&buf)
+{	
+	*buf++ = ((valin & 0xFF)        );
 }
 
-extern inline void _S_tobuffer(const char *valin, unsigned char **buf, const size_t sz)
+extern inline void _S_tobuffer(const char *valin, unsigned char *&buf, const size_t sz)
 {	
-	strncpy((char*)(*buf), (char*)valin, sz);
-	(*buf) += sz;
+	strncpy((char*)buf, (char*)valin, sz);
+	buf += sz;
 }
-extern inline void S_tobuffer(const char *valin, unsigned char **buf, const size_t sz)
+extern inline void S_tobuffer(const char *valin, unsigned char *&buf, const size_t sz)
 {	
 	strncpy((char*)buf, (char*)valin, sz);
 }
 
-extern inline void _L_frombuffer(unsigned long *valin, const unsigned char **buf)
+extern inline void _L_frombuffer(unsigned long &valin, const unsigned char *&buf)
 {	
-	*valin = ( ((unsigned long)((*buf)[0]))        )
-			|( ((unsigned long)((*buf)[1])) << 0x08)
-			|( ((unsigned long)((*buf)[2])) << 0x10)
-			|( ((unsigned long)((*buf)[3])) << 0x18);
-	(*buf) += 4;
+	valin = ( ((buf[0]))      )
+			|( ((buf[1])) << 0x08)
+			|( ((buf[2])) << 0x10)
+			|( ((buf[3])) << 0x18);
+	buf += 4;
+}
+extern inline void _L_frombuffer(long &valin, const unsigned char *&buf)
+{	
+	valin = ( ((buf[0]))      )
+			|( ((buf[1])) << 0x08)
+			|( ((buf[2])) << 0x10)
+			|( ((buf[3])) << 0x18);
+	buf += 4;
 }
 
-extern inline void _W_frombuffer(unsigned short *valin, const unsigned char **buf)
+extern inline void _W_frombuffer(unsigned short &valin, const unsigned char *&buf)
 {	
-	*valin = ( ((unsigned short)((*buf)[0]))        )
-			|( ((unsigned short)((*buf)[1])) << 0x08);
-	(*buf) += 2;
+	valin = ( ((buf[0]))      )
+			|( ((buf[1])) << 0x08);
+	buf += 2;
+}
+extern inline void _W_frombuffer(short &valin, const unsigned char *&buf)
+{	
+	valin = ( ((buf[0]))      )
+			|( ((buf[1])) << 0x08);
+	buf += 2;
 }
 
-extern inline void _B_frombuffer(unsigned char *valin, const unsigned char **buf)
+extern inline void _B_frombuffer(unsigned char &valin, const unsigned char *&buf)
 {	
-	*valin	= *(*buf)++;
+	valin	= *buf++;
+}
+extern inline void _B_frombuffer(char &valin, const unsigned char *&buf)
+{	
+	valin	= (char)(*buf++);
 }
 
-extern inline void _S_frombuffer(char *valin, const unsigned char **buf, const size_t sz)
+extern inline void _S_frombuffer(char *valin, const unsigned char *&buf, const size_t sz)
 {	
-	strncpy((char*)valin, (char*)(*buf), sz);
-	(*buf) += sz;
+	strncpy((char*)valin, (char*)buf, sz);
+	buf += sz;
 }
 extern inline void S_frombuffer(char *valin, const unsigned char *buf, const size_t sz)
 {	
@@ -224,54 +260,96 @@ struct map_session_data;
 /////////////////////////////////////////////////////////////////////////////
 struct item
 {
-	unsigned short id;
-	unsigned short nameid;
-	unsigned short amount;
-	unsigned short equip;
-	char identify;
-	char refine;
-	char attribute;
-	unsigned short card[4];
+	unsigned short	id;				// 
+	unsigned short	nameid;			// nameid of the corrosponding item_data
+
+	unsigned short	amount;			// number of items in this stash
+	unsigned short	equip;			//-> remove, make a better equip system
+
+	unsigned char	identify;		// :1; used as boolean only 
+	unsigned char	refine;			// :4; stores number of refines (max 10)
+	unsigned char	attribute;		// 
+
+// -> introduce, if it should be possible to introduce production of slotted items
+//	unsigned long	producer_id;	// the id of the producer or zero
+
+
+	unsigned short	card[4];		// cards
+// current usage of the cards:
+// card[0] == 0xff00	Petegg
+//					with
+// (card[1], card[2]) = pet_id
+
+// card[0] == 0x00ff	forged weapon
+//					with
+//	hibyte(card[1]>>8)  = star
+//	card[1]&0x000f)		= wele (weapon_element, I guess)
+// (card[2], card[3]) = producer_id
+
+// card[0] == 0x00fe	forged something
+//					with
+// card[1] =0	
+// (card[2], card[3]) = producer_id
+
+/*
+	not that good for consistent socket transfer
+	but structural better might be:
+	union
+	{
+		struct
+		{
+			unsigned short card[4];
+		};
+		struct
+		{
+			unsigned short itemtype;	// 0xff00 Petegg
+										// 0x00ff forged weapon
+										// 0x00fe forged something
+			unsigned short info;
+			unsigned long nameid[4];
+		};
+	}
+*/
 };
 
-extern inline void _item_tobuffer(const struct item *p, unsigned char **buf)
+extern inline void _item_tobuffer(const struct item &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->id),			buf);
-	_W_tobuffer( (unsigned short*)(&p->nameid),		buf);
-	_W_tobuffer( (unsigned short*)(&p->amount),		buf);
-	_W_tobuffer(                  (&p->equip),		buf);
-	_B_tobuffer( (unsigned char*) (&p->identify),	buf);
-	_B_tobuffer( (unsigned char*) (&p->refine),		buf);
-	_B_tobuffer( (unsigned char*) (&p->attribute),	buf);
-	_W_tobuffer( (unsigned short*)(&p->card[0]),	buf);
-	_W_tobuffer( (unsigned short*)(&p->card[1]),	buf);
-	_W_tobuffer( (unsigned short*)(&p->card[2]),	buf);
-	_W_tobuffer( (unsigned short*)(&p->card[3]),	buf);
+	if(NULL==buf )	return;
+	_W_tobuffer(  (p.id),			buf);
+	_W_tobuffer( (p.nameid),		buf);
+	_W_tobuffer( (p.amount),		buf);
+	_W_tobuffer( (p.equip),		buf);
+	_B_tobuffer(  (p.identify),	buf);
+	_B_tobuffer(  (p.refine),		buf);
+	_B_tobuffer(  (p.attribute),	buf);
+	_W_tobuffer( (p.card[0]),		buf);
+	_W_tobuffer( (p.card[1]),		buf);
+	_W_tobuffer( (p.card[2]),		buf);
+	_W_tobuffer( (p.card[3]),		buf);
 }
-extern inline void item_tobuffer(const struct item *p, unsigned char *buf)
+extern inline void item_tobuffer(const struct item &p, unsigned char *buf)
 {
-	_item_tobuffer(p, &buf);
+	_item_tobuffer(p, buf);
 }
 
-extern inline void _item_frombuffer(struct item *p, const unsigned char **buf)
+extern inline void _item_frombuffer(struct item &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->id),		buf);
-	_W_frombuffer( (unsigned short*)(&p->nameid),	buf);
-	_W_frombuffer( (unsigned short*)(&p->amount),	buf);
-	_W_frombuffer(                  (&p->equip),		buf);
-	_B_frombuffer( (unsigned char*) (&p->identify),	buf);
-	_B_frombuffer( (unsigned char*) (&p->refine),	buf);
-	_B_frombuffer( (unsigned char*) (&p->attribute),buf);
-	_W_frombuffer( (unsigned short*)(&p->card[0]),	buf);
-	_W_frombuffer( (unsigned short*)(&p->card[1]),	buf);
-	_W_frombuffer( (unsigned short*)(&p->card[2]),	buf);
-	_W_frombuffer( (unsigned short*)(&p->card[3]),	buf);
+	if( NULL==buf )	return;
+	_W_frombuffer( (p.id),		buf);
+	_W_frombuffer( (p.nameid),	buf);
+	_W_frombuffer( (p.amount),	buf);
+	_W_frombuffer( (p.equip),		buf);
+	_B_frombuffer( (p.identify),	buf);
+	_B_frombuffer( (p.refine),	buf);
+	_B_frombuffer( (p.attribute),buf);
+	_W_frombuffer( (p.card[0]),	buf);
+	_W_frombuffer( (p.card[1]),	buf);
+	_W_frombuffer( (p.card[2]),	buf);
+	_W_frombuffer( (p.card[3]),	buf);
 }
-extern inline void item_frombuffer(struct item *p, const unsigned char *buf)
+extern inline void item_frombuffer(struct item &p, const unsigned char *buf)
 {
-	_item_frombuffer(p, &buf);
+	_item_frombuffer(p, buf);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -282,28 +360,28 @@ struct point
 	short x;
 	short y;
 };
-extern inline void _point_tobuffer(const struct point *p, unsigned char **buf)
+extern inline void _point_tobuffer(const struct point &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_S_tobuffer(                   p->map,		buf, 24);
-	_W_tobuffer( (unsigned short*)(&p->x),		buf);
-	_W_tobuffer( (unsigned short*)(&p->y),		buf);
+	if( NULL==buf )	return;
+	_S_tobuffer(  p.map,		buf, 24);
+	_W_tobuffer( (p.x),		buf);
+	_W_tobuffer( (p.y),		buf);
 }
-extern inline void point_tobuffer(const struct point *p, unsigned char *buf)
+extern inline void point_tobuffer(const struct point &p, unsigned char *buf)
 {
-	_point_tobuffer(p, &buf);
+	_point_tobuffer(p, buf);
 }
 
-extern inline void _point_frombuffer(struct point *p, const unsigned char **buf)
+extern inline void _point_frombuffer(struct point &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_S_frombuffer(                   p->map,	buf, 24);
-	_W_frombuffer( (unsigned short*)(&p->x),		buf);
-	_W_frombuffer( (unsigned short*)(&p->y),		buf);
+	if( NULL==buf )	return;
+	_S_frombuffer(                   p.map,	buf, 24);
+	_W_frombuffer( (p.x),		buf);
+	_W_frombuffer( (p.y),		buf);
 }
-extern inline void point_frombuffer(struct point *p, const unsigned char *buf)
+extern inline void point_frombuffer(struct point &p, const unsigned char *buf)
 {
-	_point_frombuffer(p, &buf);
+	_point_frombuffer(p, buf);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -314,28 +392,28 @@ struct skill
 	unsigned short lv;
 	unsigned short flag;
 };
-extern inline void _skill_tobuffer(const struct skill *p, unsigned char **buf)
+extern inline void _skill_tobuffer(const struct skill &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_W_tobuffer( &(p->id),		buf);
-	_W_tobuffer( &(p->lv),		buf);
-	_W_tobuffer( &(p->flag),	buf);
+	if( NULL==buf )	return;
+	_W_tobuffer( (p.id),		buf);
+	_W_tobuffer( (p.lv),		buf);
+	_W_tobuffer( (p.flag),	buf);
 }
-extern inline void skill_tobuffer(const struct skill *p, unsigned char *buf)
+extern inline void skill_tobuffer(const struct skill &p, unsigned char *buf)
 {
-	_skill_tobuffer(p, &buf);
+	_skill_tobuffer(p, buf);
 }
 
-extern inline void _skill_frombuffer(struct skill *p, const unsigned char **buf)
+extern inline void _skill_frombuffer(struct skill &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_W_frombuffer( &(p->id),	buf);
-	_W_frombuffer( &(p->lv),	buf);
-	_W_frombuffer( &(p->flag),	buf);
+	if( NULL==buf )	return;
+	_W_frombuffer( (p.id),	buf);
+	_W_frombuffer( (p.lv),	buf);
+	_W_frombuffer( (p.flag),	buf);
 }
-extern inline void skill_frombuffer(struct skill *p, const unsigned char *buf)
+extern inline void skill_frombuffer(struct skill &p, const unsigned char *buf)
 {
-	_skill_frombuffer(p, &buf);
+	_skill_frombuffer(p, buf);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -345,26 +423,26 @@ struct global_reg
 	char str[32];
 	long value;
 };
-extern inline void _global_reg_tobuffer(const struct global_reg *p, unsigned char **buf)
+extern inline void _global_reg_tobuffer(const struct global_reg &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_S_tobuffer(                   p->str,		buf, 32);
-	_L_tobuffer( (unsigned long*) (&p->value),	buf);
+	if( NULL==buf )	return;
+	_S_tobuffer(                   p.str,		buf, 32);
+	_L_tobuffer(  (p.value),	buf);
 }
-extern inline void global_reg_tobuffer(const struct global_reg *p, unsigned char *buf)
+extern inline void global_reg_tobuffer(const struct global_reg &p, unsigned char *buf)
 {
-	_global_reg_tobuffer(p, &buf);
+	_global_reg_tobuffer(p, buf);
 }
 
-extern inline void _global_reg_frombuffer(struct global_reg *p, const unsigned char **buf)
+extern inline void _global_reg_frombuffer(struct global_reg &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_S_frombuffer(                   p->str,	buf, 32);
-	_L_frombuffer( (unsigned long*) (&p->value),	buf);
+	if( NULL==buf )	return;
+	_S_frombuffer(                   p.str,	buf, 32);
+	_L_frombuffer(  (p.value),	buf);
 }
-extern inline void global_reg_frombuffer(struct global_reg *p, const unsigned char *buf)
+extern inline void global_reg_frombuffer(struct global_reg &p, const unsigned char *buf)
 {
-	_global_reg_frombuffer(p, &buf);
+	_global_reg_frombuffer(p, buf);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -376,53 +454,53 @@ struct s_pet
 	unsigned long pet_id;
 	short class_;
 	short level;
-	short egg_id;		//pet egg id
-	short equip;		//pet equip name_id
-	short intimate;		//pet friendly
-	short hungry;		//pet hungry
+	short egg_id;					//pet egg id
+	unsigned short equip_id;		//pet equip name_id
+	short intimate;					//pet friendly
+	short hungry;					//pet hungry
 	char name[24];
 	char rename_flag;
 	char incuvate;
 };
-extern inline void _s_pet_tobuffer(const struct s_pet *p, unsigned char **buf)
+extern inline void _s_pet_tobuffer(const struct s_pet &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->account_id),	buf);
-	_L_tobuffer( (unsigned long*) (&p->char_id),		buf);
-	_L_tobuffer( (unsigned long*) (&p->pet_id),		buf);
-	_W_tobuffer( (unsigned short*)(&p->class_),		buf);
-	_W_tobuffer( (unsigned short*)(&p->level),		buf);
-	_W_tobuffer( (unsigned short*)(&p->egg_id),		buf);
-	_W_tobuffer( (unsigned short*)(&p->equip),		buf);
-	_W_tobuffer( (unsigned short*)(&p->intimate),	buf);
-	_W_tobuffer( (unsigned short*)(&p->hungry),		buf);
-	_S_tobuffer(                  (p->name),		buf, 24);
-	_B_tobuffer( (unsigned char*) (&p->rename_flag),	buf);
-	_B_tobuffer( (unsigned char*) (&p->incuvate),	buf);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.account_id),	buf);
+	_L_tobuffer(  (p.char_id),		buf);
+	_L_tobuffer(  (p.pet_id),		buf);
+	_W_tobuffer( (p.class_),		buf);
+	_W_tobuffer( (p.level),		buf);
+	_W_tobuffer( (p.egg_id),		buf);
+	_W_tobuffer( (p.equip_id),		buf);
+	_W_tobuffer( (p.intimate),	buf);
+	_W_tobuffer( (p.hungry),		buf);
+	_S_tobuffer(                  (p.name),		buf, 24);
+	_B_tobuffer(  (p.rename_flag),	buf);
+	_B_tobuffer(  (p.incuvate),	buf);
 }
-extern inline void s_pet_tobuffer(const struct s_pet *p, unsigned char *buf)
+extern inline void s_pet_tobuffer(const struct s_pet &p, unsigned char *buf)
 {
-	_s_pet_tobuffer(p, &buf);
+	_s_pet_tobuffer(p, buf);
 }
-extern inline void _s_pet_frombuffer(struct s_pet *p, const unsigned char **buf)
+extern inline void _s_pet_frombuffer(struct s_pet &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->account_id),	buf);
-	_L_frombuffer( (unsigned long*) (&p->char_id),		buf);
-	_L_frombuffer( (unsigned long*) (&p->pet_id),		buf);
-	_W_frombuffer( (unsigned short*)(&p->class_),		buf);
-	_W_frombuffer( (unsigned short*)(&p->level),			buf);
-	_W_frombuffer( (unsigned short*)(&p->egg_id),		buf);
-	_W_frombuffer( (unsigned short*)(&p->equip),			buf);
-	_W_frombuffer( (unsigned short*)(&p->intimate),		buf);
-	_W_frombuffer( (unsigned short*)(&p->hungry),		buf);
-	_S_frombuffer(                  (p->name),			buf, 24);
-	_B_frombuffer( (unsigned char*) (&p->rename_flag),	buf);
-	_B_frombuffer( (unsigned char*) (&p->incuvate),		buf);
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.account_id),	buf);
+	_L_frombuffer(  (p.char_id),		buf);
+	_L_frombuffer(  (p.pet_id),		buf);
+	_W_frombuffer( (p.class_),		buf);
+	_W_frombuffer( (p.level),			buf);
+	_W_frombuffer( (p.egg_id),		buf);
+	_W_frombuffer( (p.equip_id),			buf);
+	_W_frombuffer( (p.intimate),		buf);
+	_W_frombuffer( (p.hungry),		buf);
+	_S_frombuffer(                  (p.name),			buf, 24);
+	_B_frombuffer(  (p.rename_flag),	buf);
+	_B_frombuffer(  (p.incuvate),		buf);
 }
-extern inline void s_pet_frombuffer(struct s_pet *p, const unsigned char *buf)
+extern inline void s_pet_frombuffer(struct s_pet &p, const unsigned char *buf)
 {
-	_s_pet_frombuffer(p, &buf);
+	_s_pet_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -450,7 +528,7 @@ struct mmo_charstatus
 	long max_sp;
 
 	short option;
-	short karma;
+	char karma;
 	short manner;
 
 	unsigned short hair;
@@ -460,7 +538,7 @@ struct mmo_charstatus
 	unsigned long party_id;
 	unsigned long guild_id;
 	unsigned long pet_id;
-	unsigned long fame;
+	unsigned long fame_points;
 
 	unsigned short weapon;
 	unsigned short shield;
@@ -486,6 +564,9 @@ struct mmo_charstatus
 	struct point save_point;
 	struct point memo_point[10];
 	struct item inventory[MAX_INVENTORY];
+
+	struct item equipment[MAX_EQUIP];
+
 	struct item cart[MAX_CART];
 	struct skill skill[MAX_SKILL];
 	unsigned long global_reg_num;
@@ -499,212 +580,201 @@ struct mmo_charstatus
 	unsigned long friend_id[MAX_FRIENDLIST];
 	char friend_name[MAX_FRIENDLIST][24];
 };
-extern inline void _mmo_charstatus_tobuffer(const struct mmo_charstatus *p, unsigned char **buf)
+extern inline void _mmo_charstatus_tobuffer(const struct mmo_charstatus &p, unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->char_id),			buf);
-	_L_tobuffer( (unsigned long*) (&p->account_id),		buf);
-	_L_tobuffer( (unsigned long*) (&p->partner_id),		buf);
-	_L_tobuffer( (unsigned long*) (&p->father_id),		buf);
-	_L_tobuffer( (unsigned long*) (&p->mother_id),		buf);
-	_L_tobuffer( (unsigned long*) (&p->child_id),		buf);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.char_id),			buf);
+	_L_tobuffer(  (p.account_id),		buf);
+	_L_tobuffer(  (p.partner_id),		buf);
+	_L_tobuffer(  (p.father_id),		buf);
+	_L_tobuffer(  (p.mother_id),		buf);
+	_L_tobuffer(  (p.child_id),		buf);
 
-	_L_tobuffer( (unsigned long*) (&p->base_exp),		buf);
-	_L_tobuffer( (unsigned long*) (&p->job_exp),			buf);
-	_L_tobuffer( (unsigned long*) (&p->zeny),			buf);
+	_L_tobuffer(  (p.base_exp),		buf);
+	_L_tobuffer(  (p.job_exp),			buf);
+	_L_tobuffer(  (p.zeny),			buf);
 
-	_W_tobuffer( (unsigned short*)(&p->class_),			buf);
-	_W_tobuffer( (unsigned short*)(&p->status_point),	buf);
-	_W_tobuffer( (unsigned short*)(&p->skill_point),		buf);
+	_W_tobuffer( (p.class_),			buf);
+	_W_tobuffer( (p.status_point),	buf);
+	_W_tobuffer( (p.skill_point),		buf);
 
-	_L_tobuffer( (unsigned long*) (&p->hp),				buf);
-	_L_tobuffer( (unsigned long*) (&p->max_hp),			buf);
-	_L_tobuffer( (unsigned long*) (&p->sp),				buf);
-	_L_tobuffer( (unsigned long*) (&p->max_sp),			buf);
+	_L_tobuffer(  (p.hp),				buf);
+	_L_tobuffer(  (p.max_hp),			buf);
+	_L_tobuffer(  (p.sp),				buf);
+	_L_tobuffer(  (p.max_sp),			buf);
 
-	_W_tobuffer( (unsigned short*)(&p->option),			buf);
-	_W_tobuffer( (unsigned short*)(&p->karma),			buf);
-	_W_tobuffer( (unsigned short*)(&p->manner),			buf);
-	_W_tobuffer( (unsigned short*)(&p->hair),			buf);
-	_W_tobuffer( (unsigned short*)(&p->hair_color),		buf);
-	_W_tobuffer( (unsigned short*)(&p->clothes_color),	buf);
+	_W_tobuffer( (p.option),			buf);
+	_B_tobuffer( (p.karma),			buf);
+	_W_tobuffer( (p.manner),			buf);
+	_W_tobuffer( (p.hair),			buf);
+	_W_tobuffer( (p.hair_color),		buf);
+	_W_tobuffer( (p.clothes_color),	buf);
 
-	_L_tobuffer( (unsigned long*) (&p->party_id),		buf);
-	_L_tobuffer( (unsigned long*) (&p->guild_id),		buf);
-	_L_tobuffer( (unsigned long*) (&p->pet_id),			buf);
+	_L_tobuffer(  (p.party_id),		buf);
+	_L_tobuffer(  (p.guild_id),		buf);
+	_L_tobuffer(  (p.pet_id),			buf);
 
-	_L_tobuffer( (unsigned long*) (&p->fame),			buf);
+	_L_tobuffer(  (p.fame_points),			buf);
 
-	_W_tobuffer( (unsigned short*)(&p->option),			buf);
-	_W_tobuffer( (unsigned short*)(&p->karma),			buf);
-	_W_tobuffer( (unsigned short*)(&p->manner),			buf);
-	_W_tobuffer( (unsigned short*)(&p->hair),			buf);
+	_W_tobuffer( (p.weapon),			buf);
+	_W_tobuffer( (p.shield),			buf);
+	_W_tobuffer( (p.head_top),		buf);
+	_W_tobuffer( (p.head_mid),		buf);
+	_W_tobuffer( (p.head_bottom),		buf);
 
-	_W_tobuffer( (unsigned short*)(&p->weapon),			buf);
-	_W_tobuffer( (unsigned short*)(&p->shield),			buf);
-	_W_tobuffer( (unsigned short*)(&p->head_top),		buf);
-	_W_tobuffer( (unsigned short*)(&p->head_mid),		buf);
-	_W_tobuffer( (unsigned short*)(&p->head_bottom),		buf);
-
-	_S_tobuffer(                   p->name,				buf, 24);
+	_S_tobuffer(                   p.name,				buf, 24);
 
 
-	_W_tobuffer(                 (&p->base_level),		buf);
-	_W_tobuffer(                 (&p->job_level),		buf);
-	_W_tobuffer( (unsigned short*)(&p->str),			buf);
-	_W_tobuffer( (unsigned short*)(&p->agi),			buf);
-	_W_tobuffer( (unsigned short*)(&p->vit),			buf);
-	_W_tobuffer( (unsigned short*)(&p->int_),			buf);
-	_W_tobuffer( (unsigned short*)(&p->dex),			buf);
-	_W_tobuffer( (unsigned short*)(&p->luk),			buf);
+	_W_tobuffer(                 (p.base_level),		buf);
+	_W_tobuffer(                 (p.job_level),		buf);
+	_W_tobuffer( (p.str),			buf);
+	_W_tobuffer( (p.agi),			buf);
+	_W_tobuffer( (p.vit),			buf);
+	_W_tobuffer( (p.int_),			buf);
+	_W_tobuffer( (p.dex),			buf);
+	_W_tobuffer( (p.luk),			buf);
 
-	_B_tobuffer(                  (&p->char_num),		buf);
-	_B_tobuffer(                  (&p->sex),			buf);
+	_B_tobuffer(                  (p.char_num),		buf);
+	_B_tobuffer(                  (p.sex),			buf);
 
-	_L_tobuffer(                  (&p->mapip),			buf);
-	_W_tobuffer(                  (&p->mapport),		buf);
+	_L_tobuffer(                  (p.mapip),			buf);
+	_W_tobuffer(                  (p.mapport),		buf);
 
-	_point_tobuffer(             &(p->last_point),		buf);
-	_point_tobuffer(             &(p->save_point),		buf);
+	_point_tobuffer(             (p.last_point),		buf);
+	_point_tobuffer(             (p.save_point),		buf);
 	for(i=0; i<10; i++)
-		_point_tobuffer(           p->memo_point+i,		buf);
+		_point_tobuffer(           p.memo_point[i],		buf);
 
 	for(i=0; i<MAX_INVENTORY; i++)
-		_item_tobuffer(            p->inventory+i,		buf);
+		_item_tobuffer(            p.inventory[i],		buf);
 
 	for(i=0; i<MAX_CART; i++)
-		_item_tobuffer(            p->cart+i,			buf);
+		_item_tobuffer(            p.cart[i],			buf);
 
 	for(i=0; i<MAX_SKILL; i++)
-		_skill_tobuffer(           p->skill+i,			buf);
+		_skill_tobuffer(           p.skill[i],			buf);
 
-	_L_tobuffer( (unsigned long*) (&p->global_reg_num),	buf);
+	_L_tobuffer(  (p.global_reg_num),	buf);
 	for(i=0; i<GLOBAL_REG_NUM; i++)
-		_global_reg_tobuffer(      p->global_reg+i,		buf);
+		_global_reg_tobuffer(      p.global_reg[i],		buf);
 
 
-	_L_tobuffer( (unsigned long*) (&p->account_reg_num),	buf);
+	_L_tobuffer(  (p.account_reg_num),	buf);
 	for(i=0; i<ACCOUNT_REG_NUM; i++)
-		_global_reg_tobuffer(      p->account_reg+i,	buf);
+		_global_reg_tobuffer(      p.account_reg[i],	buf);
 
-	_L_tobuffer( (unsigned long*) (&p->account_reg2_num),buf);
+	_L_tobuffer(  (p.account_reg2_num),buf);
 	for(i=0; i<ACCOUNT_REG2_NUM; i++)
-		_global_reg_tobuffer(      p->account_reg2+i,	buf);
+		_global_reg_tobuffer(      p.account_reg2[i],	buf);
 
 	// Friends list vars
 	for(i=0; i<MAX_FRIENDLIST; i++)
-		_L_tobuffer((unsigned long*) (&p->friend_id[i]),	buf);
+		_L_tobuffer( (p.friend_id[i]),	buf);
 	for(i=0; i<MAX_FRIENDLIST; i++)
-		_S_tobuffer(               p->friend_name[i],	buf, 24);
+		_S_tobuffer(               p.friend_name[i],	buf, 24);
 }
-extern inline void mmo_charstatus_tobuffer(const struct mmo_charstatus *p, unsigned char *buf)
+extern inline void mmo_charstatus_tobuffer(const struct mmo_charstatus &p, unsigned char *buf)
 {
-	_mmo_charstatus_tobuffer(p, &buf);
+	_mmo_charstatus_tobuffer(p, buf);
 }
-extern inline void _mmo_charstatus_frombuffer(struct mmo_charstatus *p, const unsigned char **buf)
+extern inline void _mmo_charstatus_frombuffer(struct mmo_charstatus &p, const unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->char_id),		buf);
-	_L_frombuffer( (unsigned long*) (&p->account_id),	buf);
-	_L_frombuffer( (unsigned long*) (&p->partner_id),	buf);
-	_L_frombuffer( (unsigned long*) (&p->father_id),	buf);
-	_L_frombuffer( (unsigned long*) (&p->mother_id),	buf);
-	_L_frombuffer( (unsigned long*) (&p->child_id),		buf);
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.char_id),		buf);
+	_L_frombuffer(  (p.account_id),	buf);
+	_L_frombuffer(  (p.partner_id),	buf);
+	_L_frombuffer(  (p.father_id),	buf);
+	_L_frombuffer(  (p.mother_id),	buf);
+	_L_frombuffer(  (p.child_id),		buf);
 
-	_L_frombuffer( (unsigned long*) (&p->base_exp),		buf);
-	_L_frombuffer( (unsigned long*) (&p->job_exp),		buf);
-	_L_frombuffer( (unsigned long*) (&p->zeny),			buf);
+	_L_frombuffer(  (p.base_exp),		buf);
+	_L_frombuffer(  (p.job_exp),		buf);
+	_L_frombuffer(  (p.zeny),			buf);
 
-	_W_frombuffer( (unsigned short*)(&p->class_),		buf);
-	_W_frombuffer( (unsigned short*)(&p->status_point),	buf);
-	_W_frombuffer( (unsigned short*)(&p->skill_point),	buf);
+	_W_frombuffer( (p.class_),		buf);
+	_W_frombuffer( (p.status_point),	buf);
+	_W_frombuffer( (p.skill_point),	buf);
 
-	_L_frombuffer( (unsigned long*) (&p->hp),			buf);
-	_L_frombuffer( (unsigned long*) (&p->max_hp),		buf);
-	_L_frombuffer( (unsigned long*) (&p->sp),			buf);
-	_L_frombuffer( (unsigned long*) (&p->max_sp),		buf);
+	_L_frombuffer(  (p.hp),			buf);
+	_L_frombuffer(  (p.max_hp),		buf);
+	_L_frombuffer(  (p.sp),			buf);
+	_L_frombuffer(  (p.max_sp),		buf);
 
-	_W_frombuffer( (unsigned short*)(&p->option),		buf);
-	_W_frombuffer( (unsigned short*)(&p->karma),		buf);
-	_W_frombuffer( (unsigned short*)(&p->manner),		buf);
-	_W_frombuffer( (unsigned short*)(&p->hair),			buf);
-	_W_frombuffer( (unsigned short*)(&p->hair_color),	buf);
-	_W_frombuffer( (unsigned short*)(&p->clothes_color),buf);
+	_W_frombuffer( (p.option),		buf);
+	_B_frombuffer( (p.karma),		buf);
+	_W_frombuffer( (p.manner),		buf);
+	_W_frombuffer( (p.hair),			buf);
+	_W_frombuffer( (p.hair_color),	buf);
+	_W_frombuffer( (p.clothes_color),buf);
 
-	_L_frombuffer( (unsigned long*) (&p->party_id),		buf);
-	_L_frombuffer( (unsigned long*) (&p->guild_id),		buf);
-	_L_frombuffer( (unsigned long*) (&p->pet_id),		buf);
+	_L_frombuffer(  (p.party_id),		buf);
+	_L_frombuffer(  (p.guild_id),		buf);
+	_L_frombuffer(  (p.pet_id),		buf);
 
-	_L_frombuffer( (unsigned long*) (&p->fame),			buf);
+	_L_frombuffer(  (p.fame_points),			buf);
 
-	_W_frombuffer( (unsigned short*)(&p->option),		buf);
-	_W_frombuffer( (unsigned short*)(&p->karma),		buf);
-	_W_frombuffer( (unsigned short*)(&p->manner),		buf);
-	_W_frombuffer( (unsigned short*)(&p->hair),			buf);
+	_W_frombuffer( (p.weapon),		buf);
+	_W_frombuffer( (p.shield),		buf);
+	_W_frombuffer( (p.head_top),		buf);
+	_W_frombuffer( (p.head_mid),		buf);
+	_W_frombuffer( (p.head_bottom),	buf);
 
-	_W_frombuffer( (unsigned short*)(&p->weapon),		buf);
-	_W_frombuffer( (unsigned short*)(&p->shield),		buf);
-	_W_frombuffer( (unsigned short*)(&p->head_top),		buf);
-	_W_frombuffer( (unsigned short*)(&p->head_mid),		buf);
-	_W_frombuffer( (unsigned short*)(&p->head_bottom),	buf);
+	_S_frombuffer(                   p.name,			buf, 24);
 
-	_S_frombuffer(                   p->name,			buf, 24);
+	_W_frombuffer(                 (p.base_level),	buf);
+	_W_frombuffer(                 (p.job_level),		buf);
+	_W_frombuffer( (p.str),			buf);
+	_W_frombuffer( (p.agi),			buf);
+	_W_frombuffer( (p.vit),			buf);
+	_W_frombuffer( (p.int_),			buf);
+	_W_frombuffer( (p.dex),			buf);
+	_W_frombuffer( (p.luk),			buf);
 
+	_B_frombuffer(                 (p.char_num),		buf);
+	_B_frombuffer(                 (p.sex),			buf);
 
-	_W_frombuffer(                 (&p->base_level),	buf);
-	_W_frombuffer(                 (&p->job_level),		buf);
-	_W_frombuffer( (unsigned short*)(&p->str),			buf);
-	_W_frombuffer( (unsigned short*)(&p->agi),			buf);
-	_W_frombuffer( (unsigned short*)(&p->vit),			buf);
-	_W_frombuffer( (unsigned short*)(&p->int_),			buf);
-	_W_frombuffer( (unsigned short*)(&p->dex),			buf);
-	_W_frombuffer( (unsigned short*)(&p->luk),			buf);
-
-	_B_frombuffer(                 (&p->char_num),		buf);
-	_B_frombuffer(                 (&p->sex),			buf);
-
-	_L_frombuffer(                 (&p->mapip),			buf);
-	_W_frombuffer(                 (&p->mapport),		buf);
+	_L_frombuffer(                 (p.mapip),			buf);
+	_W_frombuffer(                 (p.mapport),		buf);
 
 
-	_point_frombuffer(             &(p->last_point),	buf);
-	_point_frombuffer(             &(p->save_point),	buf);
+	_point_frombuffer(             (p.last_point),	buf);
+	_point_frombuffer(             (p.save_point),	buf);
 	for(i=0; i<10; i++)
-		_point_frombuffer(           p->memo_point+i,	buf);
+		_point_frombuffer(           p.memo_point[i],	buf);
 
 	for(i=0; i<MAX_INVENTORY; i++)
-		_item_frombuffer(            p->inventory+i,	buf);
+		_item_frombuffer(            p.inventory[i],	buf);
 
 	for(i=0; i<MAX_CART; i++)
-		_item_frombuffer(            p->cart+i,			buf);
+		_item_frombuffer(            p.cart[i],			buf);
 
 	for(i=0; i<MAX_SKILL; i++)
-		_skill_frombuffer(           p->skill+i,		buf);
+		_skill_frombuffer(           p.skill[i],		buf);
 
-	_L_frombuffer( (unsigned long*) (&p->global_reg_num),buf);
+	_L_frombuffer(  (p.global_reg_num),buf);
 	for(i=0; i<GLOBAL_REG_NUM; i++)
-		_global_reg_frombuffer(      p->global_reg+i,	buf);
+		_global_reg_frombuffer(      p.global_reg[i],	buf);
 
 
-	_L_frombuffer( (unsigned long*) (&p->account_reg_num),buf);
+	_L_frombuffer(  (p.account_reg_num),buf);
 	for(i=0; i<ACCOUNT_REG_NUM; i++)
-		_global_reg_frombuffer(      p->account_reg+i,	buf);
+		_global_reg_frombuffer(      p.account_reg[i],	buf);
 
-	_L_frombuffer( (unsigned long*) (&p->account_reg2_num),buf);
+	_L_frombuffer(  (p.account_reg2_num),buf);
 	for(i=0; i<ACCOUNT_REG2_NUM; i++)
-		_global_reg_frombuffer(      p->account_reg2+i,	buf);
+		_global_reg_frombuffer(      p.account_reg2[i],	buf);
 
 	// Friends list vars
 	for(i=0; i<MAX_FRIENDLIST; i++)
-		_L_frombuffer((unsigned long*) (&p->friend_id[i]),buf);
+		_L_frombuffer( (p.friend_id[i]),buf);
 	for(i=0; i<MAX_FRIENDLIST; i++)
-		_S_frombuffer(               p->friend_name[i],	buf, 24);
+		_S_frombuffer(               p.friend_name[i],	buf, 24);
 }
-extern inline void mmo_charstatus_frombuffer(struct mmo_charstatus *p, const unsigned char *buf)
+extern inline void mmo_charstatus_frombuffer(struct mmo_charstatus &p, const unsigned char *buf)
 {
-	_mmo_charstatus_frombuffer(p, &buf);
+	_mmo_charstatus_frombuffer(p, buf);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -716,35 +786,35 @@ struct pc_storage {
 	short storage_amount;
 	struct item storage[MAX_STORAGE];
 };
-extern inline void _pc_storage_tobuffer(const struct pc_storage *p, unsigned char **buf)
+extern inline void _pc_storage_tobuffer(const struct pc_storage &p, unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->dirty),			buf);
-	_L_tobuffer( (unsigned long*) (&p->account_id),		buf);
-	_W_tobuffer( (unsigned short*)(&p->storage_status),	buf);
-	_W_tobuffer( (unsigned short*)(&p->storage_amount),	buf);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.dirty),			buf);
+	_L_tobuffer(  (p.account_id),		buf);
+	_W_tobuffer( (p.storage_status),	buf);
+	_W_tobuffer( (p.storage_amount),	buf);
 	for(i=0;i<MAX_STORAGE;i++)
-		_item_tobuffer(p->storage+i,		buf);
+		_item_tobuffer(p.storage[i],		buf);
 }
-extern inline void pc_storage_tobuffer(const struct pc_storage *p, unsigned char *buf)
+extern inline void pc_storage_tobuffer(const struct pc_storage &p, unsigned char *buf)
 {
-	_pc_storage_tobuffer(p, &buf);
+	_pc_storage_tobuffer(p, buf);
 }
-extern inline void _pc_storage_frombuffer(struct pc_storage *p, const unsigned char **buf)
+extern inline void _pc_storage_frombuffer(struct pc_storage &p, const unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->dirty),			buf);
-	_L_frombuffer( (unsigned long*) (&p->account_id),	buf);
-	_W_frombuffer( (unsigned short*)(&p->storage_status),buf);
-	_W_frombuffer( (unsigned short*)(&p->storage_amount),buf);
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.dirty),			buf);
+	_L_frombuffer(  (p.account_id),	buf);
+	_W_frombuffer( (p.storage_status),buf);
+	_W_frombuffer( (p.storage_amount),buf);
 	for(i=0;i<MAX_STORAGE;i++)
-		_item_frombuffer(p->storage+i,	buf);
+		_item_frombuffer(p.storage[i],	buf);
 }
-extern inline void pc_storage_frombuffer(struct pc_storage *p, const unsigned char *buf)
+extern inline void pc_storage_frombuffer(struct pc_storage &p, const unsigned char *buf)
 {
-	_pc_storage_frombuffer(p, &buf);
+	_pc_storage_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -754,39 +824,39 @@ struct guild_storage {
 	short storage_amount;
 	struct item storage[MAX_GUILD_STORAGE];
 };
-extern inline void _guild_storage_tobuffer(const struct guild_storage *p, unsigned char **buf)
+extern inline void _guild_storage_tobuffer(const struct guild_storage &p, unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->guild_id),			buf);
-	_W_tobuffer( (unsigned short*)(&p->storage_status),		buf);
-	_W_tobuffer( (unsigned short*)(&p->storage_amount),		buf);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.guild_id),			buf);
+	_W_tobuffer( (p.storage_status),		buf);
+	_W_tobuffer( (p.storage_amount),		buf);
 	for(i=0;i<MAX_STORAGE;i++)
-		_item_tobuffer(p->storage+i,		buf);
+		_item_tobuffer(p.storage[i],		buf);
 }
-extern inline void guild_storage_tobuffer(const struct guild_storage *p, unsigned char *buf)
+extern inline void guild_storage_tobuffer(const struct guild_storage &p, unsigned char *buf)
 {
-	_guild_storage_tobuffer(p, &buf);
+	_guild_storage_tobuffer(p, buf);
 }
-extern inline void _guild_storage_frombuffer(struct guild_storage *p, const unsigned char **buf)
+extern inline void _guild_storage_frombuffer(struct guild_storage &p, const unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->guild_id),			buf);
-	_W_frombuffer( (unsigned short*)(&p->storage_status),	buf);
-	_W_frombuffer( (unsigned short*)(&p->storage_amount),	buf);
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.guild_id),			buf);
+	_W_frombuffer( (p.storage_status),	buf);
+	_W_frombuffer( (p.storage_amount),	buf);
 	for(i=0;i<MAX_STORAGE;i++)
-		_item_frombuffer(p->storage+i,		buf);
+		_item_frombuffer(p.storage[i],		buf);
 }
-extern inline void guild_storage_frombuffer(struct guild_storage *p, const unsigned char *buf)
+extern inline void guild_storage_frombuffer(struct guild_storage &p, const unsigned char *buf)
 {
-	_guild_storage_frombuffer(p, &buf);
+	_guild_storage_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 struct gm_account {
 	unsigned long account_id;
-	unsigned long level;
+	unsigned char level;
 };
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -799,39 +869,39 @@ struct party_member {
 	unsigned short lv;
 	struct map_session_data *sd;
 };
-extern inline void _party_member_tobuffer(const struct party_member *p, unsigned char **buf)
+extern inline void _party_member_tobuffer(const struct party_member &p, unsigned char *&buf)
 {	
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->account_id),		buf);
-	_S_tobuffer(                  (p->name),			buf, 24);
-	_S_tobuffer(                  (p->map),				buf, 24);
-	_L_tobuffer( (unsigned long*) (&p->leader),			buf);
-	_L_tobuffer( (unsigned long*) (&p->online),			buf);
-	_W_tobuffer(                 (&p->lv),				buf);
-	//_L_tobuffer( &(p->sd),				buf);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.account_id),		buf);
+	_S_tobuffer(                  (p.name),			buf, 24);
+	_S_tobuffer(                  (p.map),				buf, 24);
+	_L_tobuffer(  (p.leader),			buf);
+	_B_tobuffer(  (p.online),			buf);
+	_W_tobuffer(                 (p.lv),				buf);
+	//_L_tobuffer( &(p.sd),				buf);
 	(*buf)+=4;
 	// skip the map_session_data *
 }
-extern inline void party_member_tobuffer(const struct party_member *p, unsigned char *buf)
+extern inline void party_member_tobuffer(const struct party_member &p, unsigned char *buf)
 {
-	_party_member_tobuffer(p, &buf);
+	_party_member_tobuffer(p, buf);
 }
-extern inline void _party_member_frombuffer(struct party_member *p, const unsigned char **buf)
+extern inline void _party_member_frombuffer(struct party_member &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->account_id),	buf);
-	_S_frombuffer(                  (p->name),			buf, 24);
-	_S_frombuffer(                  (p->map),			buf, 24);
-	_L_frombuffer( (unsigned long*) (&p->leader),		buf);
-	_L_frombuffer( (unsigned long*) (&p->online),		buf);
-	_W_frombuffer(                 (&p->lv),			buf);
-	//_L_frombuffer( &(p->sd),			buf);
-	(*buf)+=4; p->sd = NULL; 
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.account_id),	buf);
+	_S_frombuffer(                  (p.name),			buf, 24);
+	_S_frombuffer(                  (p.map),			buf, 24);
+	_L_frombuffer(  (p.leader),		buf);
+	_B_frombuffer(  (p.online),		buf);
+	_W_frombuffer(                 (p.lv),			buf);
+	//_L_frombuffer( (p.sd),			buf);
+	buf+=4; p.sd = NULL; 
 	// skip the map_session_data *
 }
-extern inline void party_member_frombuffer(struct party_member *p, const unsigned char *buf)
+extern inline void party_member_frombuffer(struct party_member &p, const unsigned char *buf)
 {
-	_party_member_frombuffer(p, &buf);
+	_party_member_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -843,37 +913,37 @@ struct party {
 	unsigned short itemc;
 	struct party_member member[MAX_PARTY];
 };
-extern inline void _party_tobuffer(const struct party *p, unsigned char **buf)
+extern inline void _party_tobuffer(const struct party &p, unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->party_id),	buf);
-	_S_tobuffer(                  (p->name),		buf, 24);
-	_W_tobuffer(                  (&p->exp),			buf);
-	_W_tobuffer(                  (&p->item),		buf);
-	_W_tobuffer(                  (&p->itemc),		buf);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.party_id),	buf);
+	_S_tobuffer(                  (p.name),		buf, 24);
+	_W_tobuffer(                  (p.exp),			buf);
+	_W_tobuffer(                  (p.item),		buf);
+	_W_tobuffer(                  (p.itemc),		buf);
 	for(i=0; i< MAX_PARTY; i++)
-		_party_member_tobuffer(p->member+i, buf);
+		_party_member_tobuffer(p.member[i], buf);
 }
-extern inline void party_tobuffer(const struct party *p, unsigned char *buf)
+extern inline void party_tobuffer(const struct party &p, unsigned char *buf)
 {
-	_party_tobuffer(p, &buf);
+	_party_tobuffer(p, buf);
 }
-extern inline void _party_frombuffer(struct party *p, const unsigned char **buf)
+extern inline void _party_frombuffer(struct party &p, const unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->party_id),	buf);
-	_S_frombuffer(                  (p->name),		buf, 24);
-	_W_frombuffer(                  (&p->exp),		buf);
-	_W_frombuffer(                  (&p->item),		buf);
-	_W_frombuffer(                  (&p->itemc),	buf);
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.party_id),	buf);
+	_S_frombuffer(                  (p.name),		buf, 24);
+	_W_frombuffer(                  (p.exp),		buf);
+	_W_frombuffer(                  (p.item),		buf);
+	_W_frombuffer(                  (p.itemc),	buf);
 	for(i=0; i< MAX_PARTY; i++)
-		_party_member_frombuffer(p->member+i, buf);
+		_party_member_frombuffer(p.member[i], buf);
 }
-extern inline void party_frombuffer(struct party *p, const unsigned char *buf)
+extern inline void party_frombuffer(struct party &p, const unsigned char *buf)
 {
-	_party_frombuffer(p, &buf);
+	_party_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -894,55 +964,55 @@ struct guild_member {
 	char name[24];
 	struct map_session_data *sd;
 };
-extern inline void _guild_member_tobuffer(const struct guild_member *p, unsigned char **buf)
+extern inline void _guild_member_tobuffer(const struct guild_member &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->account_id),	buf);
-	_L_tobuffer( (unsigned long*) (&p->char_id),		buf);
-	_W_tobuffer( (unsigned short*)(&p->hair),		buf);
-	_W_tobuffer( (unsigned short*)(&p->hair_color),	buf);
-	_B_tobuffer(                 (&p->gender),		buf);
-	_W_tobuffer( (unsigned short*)(&p->class_),		buf);
-	_W_tobuffer(                 (&p->lv),			buf);
-	_L_tobuffer( (unsigned long*) (&p->exp),			buf);
-	_L_tobuffer( (unsigned long*) (&p->exp_payper),	buf);
-	_W_tobuffer( (unsigned short*)(&p->online),		buf);
-	_W_tobuffer( (unsigned short*)(&p->position),	buf);
-	_L_tobuffer( (unsigned long*) (&p->rsv1),		buf);
-	_L_tobuffer( (unsigned long*) (&p->rsv2),		buf);
-	_S_tobuffer(                  (p->name),		buf, 24);
-	//_L_tobuffer( &(p->sd),			buf);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.account_id),	buf);
+	_L_tobuffer(  (p.char_id),		buf);
+	_W_tobuffer( (p.hair),		buf);
+	_W_tobuffer( (p.hair_color),	buf);
+	_B_tobuffer(                 (p.gender),		buf);
+	_W_tobuffer( (p.class_),		buf);
+	_W_tobuffer(                 (p.lv),			buf);
+	_L_tobuffer(  (p.exp),			buf);
+	_L_tobuffer(  (p.exp_payper),	buf);
+	_W_tobuffer( (p.online),		buf);
+	_W_tobuffer( (p.position),	buf);
+	_L_tobuffer(  (p.rsv1),		buf);
+	_L_tobuffer(  (p.rsv2),		buf);
+	_S_tobuffer(                  (p.name),		buf, 24);
+	//_L_tobuffer( &(p.sd),			buf);
 	(*buf)+=4;
 	// skip the struct map_session_data *
 }
-extern inline void guild_member_tobuffer(const struct guild_member *p, unsigned char *buf)
+extern inline void guild_member_tobuffer(const struct guild_member &p, unsigned char *buf)
 {
-	_guild_member_tobuffer(p, &buf);
+	_guild_member_tobuffer(p, buf);
 }
-extern inline void _guild_member_frombuffer(struct guild_member *p, const unsigned char **buf)
+extern inline void _guild_member_frombuffer(struct guild_member &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->account_id),	buf);
-	_L_frombuffer( (unsigned long*) (&p->char_id),		buf);
-	_W_frombuffer( (unsigned short*)(&p->hair),		buf);
-	_W_frombuffer( (unsigned short*)(&p->hair_color),	buf);
-	_B_frombuffer(                 (&p->gender),		buf);
-	_W_frombuffer( (unsigned short*)(&p->class_),		buf);
-	_W_frombuffer(                 (&p->lv),			buf);
-	_L_frombuffer( (unsigned long*) (&p->exp),			buf);
-	_L_frombuffer( (unsigned long*) (&p->exp_payper),	buf);
-	_W_frombuffer( (unsigned short*)(&p->online),		buf);
-	_W_frombuffer( (unsigned short*)(&p->position),	buf);
-	_L_frombuffer( (unsigned long*) (&p->rsv1),		buf);
-	_L_frombuffer( (unsigned long*) (&p->rsv2),		buf);
-	_S_frombuffer(                  (p->name),		buf, 24);
-	//_L_frombuffer( &(p->sd),		buf);
-	(*buf)+=4; p->sd = NULL; 
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.account_id),	buf);
+	_L_frombuffer(  (p.char_id),		buf);
+	_W_frombuffer( (p.hair),		buf);
+	_W_frombuffer( (p.hair_color),	buf);
+	_B_frombuffer(                 (p.gender),		buf);
+	_W_frombuffer( (p.class_),		buf);
+	_W_frombuffer(                 (p.lv),			buf);
+	_L_frombuffer(  (p.exp),			buf);
+	_L_frombuffer(  (p.exp_payper),	buf);
+	_W_frombuffer( (p.online),		buf);
+	_W_frombuffer( (p.position),	buf);
+	_L_frombuffer(  (p.rsv1),		buf);
+	_L_frombuffer(  (p.rsv2),		buf);
+	_S_frombuffer(                  (p.name),		buf, 24);
+	//_L_frombuffer( &(p.sd),		buf);
+	buf+=4; p.sd = NULL; 
 	// skip the struct map_session_data *
 }
-extern inline void guild_member_frombuffer(struct guild_member *p, const unsigned char *buf)
+extern inline void guild_member_frombuffer(struct guild_member &p, const unsigned char *buf)
 {
-	_guild_member_frombuffer(p, &buf);
+	_guild_member_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -952,27 +1022,27 @@ struct guild_position {
 	unsigned long mode;
 	unsigned long exp_mode;
 };
-extern inline void _guild_position_tobuffer(const struct guild_position*p, unsigned char **buf)
+extern inline void _guild_position_tobuffer(const struct guild_position &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_S_tobuffer(                  (p->name),		buf, 24);
-	_L_tobuffer( (unsigned long*) (&p->mode),		buf);
-	_L_tobuffer( (unsigned long*) (&p->exp_mode),	buf);
+	if( NULL==buf )	return;
+	_S_tobuffer(                  (p.name),		buf, 24);
+	_L_tobuffer(  (p.mode),		buf);
+	_L_tobuffer(  (p.exp_mode),	buf);
 }
-extern inline void guild_position_tobuffer(const struct guild_position*p, unsigned char *buf)
+extern inline void guild_position_tobuffer(const struct guild_position &p, unsigned char *buf)
 {
-	_guild_position_tobuffer(p, &buf);
+	_guild_position_tobuffer(p, buf);
 }
-extern inline void _guild_position_frombuffer(struct guild_position*p, const unsigned char **buf)
+extern inline void _guild_position_frombuffer(struct guild_position &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_S_frombuffer(                  (p->name),		buf, 24);
-	_L_frombuffer( (unsigned long*) (&p->mode),		buf);
-	_L_frombuffer( (unsigned long*) (&p->exp_mode),	buf);
+	if( NULL==buf )	return;
+	_S_frombuffer(                  (p.name),		buf, 24);
+	_L_frombuffer(  (p.mode),		buf);
+	_L_frombuffer(  (p.exp_mode),	buf);
 }
-extern inline void guild_position_frombuffer(struct guild_position*p, const unsigned char *buf)
+extern inline void guild_position_frombuffer(struct guild_position &p, const unsigned char *buf)
 {
-	_guild_position_frombuffer(p, &buf);
+	_guild_position_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -982,27 +1052,27 @@ struct guild_alliance {
 	unsigned long guild_id;
 	char name[24];
 };
-extern inline void _guild_alliance_tobuffer(const struct guild_alliance*p, unsigned char **buf)
+extern inline void _guild_alliance_tobuffer(const struct guild_alliance &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->opposition),	buf);
-	_L_tobuffer( (unsigned long*) (&p->guild_id),	buf);
-	_S_tobuffer(                  (p->name),		buf, 24);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.opposition),	buf);
+	_L_tobuffer(  (p.guild_id),	buf);
+	_S_tobuffer(                  (p.name),		buf, 24);
 }
-extern inline void guild_alliance_tobuffer(const struct guild_alliance*p, unsigned char *buf)
+extern inline void guild_alliance_tobuffer(const struct guild_alliance &p, unsigned char *buf)
 {
-	_guild_alliance_tobuffer(p, &buf);
+	_guild_alliance_tobuffer(p, buf);
 }
-extern inline void _guild_alliance_frombuffer(struct guild_alliance*p, const unsigned char **buf)
+extern inline void _guild_alliance_frombuffer(struct guild_alliance &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->opposition),buf);
-	_L_frombuffer( (unsigned long*) (&p->guild_id),	buf);
-	_S_frombuffer(                  (p->name),		buf, 24);
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.opposition),buf);
+	_L_frombuffer(  (p.guild_id),	buf);
+	_S_frombuffer(                  (p.name),		buf, 24);
 }
-extern inline void guild_alliance_frombuffer(struct guild_alliance*p, const unsigned char *buf)
+extern inline void guild_alliance_frombuffer(struct guild_alliance &p, const unsigned char *buf)
 {
-	_guild_alliance_frombuffer(p, &buf);
+	_guild_alliance_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -1012,39 +1082,42 @@ struct guild_explusion {
 	char mes[40];
 	char acc[40];
 	unsigned long account_id;
+	unsigned long char_id;
 	unsigned long rsv1;
 	unsigned long rsv2;
 	unsigned long rsv3;
 };
-extern inline void _guild_explusion_tobuffer(const struct guild_explusion*p, unsigned char **buf)
+extern inline void _guild_explusion_tobuffer(const struct guild_explusion &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_S_tobuffer(                  (p->name),		buf, 24);
-	_S_tobuffer(                  (p->mes),			buf, 40);
-	_S_tobuffer(                  (p->acc),			buf, 40);
-	_L_tobuffer( (unsigned long*) (&p->account_id),	buf);
-	_L_tobuffer( (unsigned long*) (&p->rsv1),		buf);
-	_L_tobuffer( (unsigned long*) (&p->rsv2),		buf);
-	_L_tobuffer( (unsigned long*) (&p->rsv3),		buf);
+	if( NULL==buf )	return;
+	_S_tobuffer(                  (p.name),		buf, 24);
+	_S_tobuffer(                  (p.mes),			buf, 40);
+	_S_tobuffer(                  (p.acc),			buf, 40);
+	_L_tobuffer(  (p.account_id),	buf);
+	_L_tobuffer(  (p.char_id),	buf);
+	_L_tobuffer(  (p.rsv1),		buf);
+	_L_tobuffer(  (p.rsv2),		buf);
+	_L_tobuffer(  (p.rsv3),		buf);
 }
-extern inline void guild_explusion_tobuffer(const struct guild_explusion*p, unsigned char *buf)
+extern inline void guild_explusion_tobuffer(const struct guild_explusion &p, unsigned char *buf)
 {
-	_guild_explusion_tobuffer(p, &buf);
+	_guild_explusion_tobuffer(p, buf);
 }
-extern inline void _guild_explusion_frombuffer(struct guild_explusion*p, const unsigned char **buf)
+extern inline void _guild_explusion_frombuffer(struct guild_explusion &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_S_frombuffer(                  (p->name),		buf, 24);
-	_S_frombuffer(                  (p->mes),		buf, 40);
-	_S_frombuffer(                  (p->acc),		buf, 40);
-	_L_frombuffer( (unsigned long*) (&p->account_id),buf);
-	_L_frombuffer( (unsigned long*) (&p->rsv1),		buf);
-	_L_frombuffer( (unsigned long*) (&p->rsv2),		buf);
-	_L_frombuffer( (unsigned long*) (&p->rsv3),		buf);
+	if( NULL==buf )	return;
+	_S_frombuffer(                  (p.name),		buf, 24);
+	_S_frombuffer(                  (p.mes),		buf, 40);
+	_S_frombuffer(                  (p.acc),		buf, 40);
+	_L_frombuffer(  (p.account_id),buf);
+	_L_frombuffer(  (p.char_id),buf);
+	_L_frombuffer(  (p.rsv1),		buf);
+	_L_frombuffer(  (p.rsv2),		buf);
+	_L_frombuffer(  (p.rsv3),		buf);
 }
-extern inline void guild_explusion_frombuffer(struct guild_explusion*p, const unsigned char *buf)
+extern inline void guild_explusion_frombuffer(struct guild_explusion &p, const unsigned char *buf)
 {
-	_guild_explusion_frombuffer(p, &buf);
+	_guild_explusion_frombuffer(p, buf);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1053,25 +1126,25 @@ struct guild_skill {
 	unsigned short id;
 	unsigned short lv;
 };
-extern inline void _guild_skill_tobuffer(const struct guild_skill*p, unsigned char **buf)
+extern inline void _guild_skill_tobuffer(const struct guild_skill &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_W_tobuffer( (unsigned short*) (&p->id),	buf);
-	_W_tobuffer( (unsigned short*) (&p->lv),	buf);
+	if( NULL==buf )	return;
+	_W_tobuffer(  (p.id),	buf);
+	_W_tobuffer(  (p.lv),	buf);
 }
-extern inline void guild_skill_tobuffer(const struct guild_skill*p, unsigned char *buf)
+extern inline void guild_skill_tobuffer(const struct guild_skill &p, unsigned char *buf)
 {
-	_guild_skill_tobuffer(p, &buf);
+	_guild_skill_tobuffer(p, buf);
 }
-extern inline void _guild_skill_frombuffer(struct guild_skill*p, const unsigned char **buf)
+extern inline void _guild_skill_frombuffer(struct guild_skill &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_W_frombuffer( (unsigned short*) (&p->id),buf);
-	_W_frombuffer( (unsigned short*) (&p->lv),buf);
+	if( NULL==buf )	return;
+	_W_frombuffer(  (p.id),buf);
+	_W_frombuffer(  (p.lv),buf);
 }
-extern inline void guild_skill_frombuffer(struct guild_skill*p, const unsigned char *buf)
+extern inline void guild_skill_frombuffer(struct guild_skill &p, const unsigned char *buf)
 {
-	_guild_skill_frombuffer(p, &buf);
+	_guild_skill_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -1099,75 +1172,75 @@ struct guild {
 	struct guild_explusion explusion[MAX_GUILDEXPLUSION];
 	struct guild_skill skill[MAX_GUILDSKILL];
 };
-extern inline void _guild_tobuffer(const struct guild* p, unsigned char **buf)
+extern inline void _guild_tobuffer(const struct guild &p, unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_tobuffer( (unsigned long*) (&p->guild_id),		buf);
-	_W_tobuffer(                  (&p->guild_lv),		buf);
-	_W_tobuffer(                  (&p->connect_member),	buf);
-	_W_tobuffer(                  (&p->max_member),		buf);
-	_W_tobuffer(                  (&p->average_lv),		buf);
-	_L_tobuffer( (unsigned long*) (&p->exp),				buf);
-	_L_tobuffer( (unsigned long*) (&p->next_exp),		buf);
-	_W_tobuffer(                  (&p->skill_point),		buf);
-	_L_tobuffer( (unsigned long*) (&p->castle_id),		buf);
-	_S_tobuffer(                  (p->name),			buf, 24);
-	_S_tobuffer(                  (p->master),			buf, 24);
+	if( NULL==buf )	return;
+	_L_tobuffer(  (p.guild_id),		buf);
+	_W_tobuffer(                  (p.guild_lv),		buf);
+	_W_tobuffer(                  (p.connect_member),	buf);
+	_W_tobuffer(                  (p.max_member),		buf);
+	_W_tobuffer(                  (p.average_lv),		buf);
+	_L_tobuffer(  (p.exp),				buf);
+	_L_tobuffer(  (p.next_exp),		buf);
+	_W_tobuffer(                  (p.skill_point),		buf);
+	_W_tobuffer(  (p.castle_id),		buf);
+	_S_tobuffer(                  (p.name),			buf, 24);
+	_S_tobuffer(                  (p.master),			buf, 24);
 	for(i=0; i< MAX_GUILD; i++)
-		_guild_member_tobuffer(p->member+i,		buf);
+		_guild_member_tobuffer(p.member[i],		buf);
 	for(i=0; i< MAX_GUILDPOSITION; i++)
-		_guild_position_tobuffer(p->position+i,	buf);
-	_S_tobuffer(                  (p->mes1),			buf, 60);
-	_S_tobuffer(                  (p->mes2),			buf, 120);
-	_L_tobuffer( (unsigned long*) (&p->emblem_id),		buf);
-	_W_tobuffer(                  (&p->emblem_len),		buf);
-	_S_tobuffer( (         char*) (p->emblem_data),		buf, 2048);
+		_guild_position_tobuffer(p.position[i],	buf);
+	_S_tobuffer(                  (p.mes1),			buf, 60);
+	_S_tobuffer(                  (p.mes2),			buf, 120);
+	_L_tobuffer(  (p.emblem_id),		buf);
+	_W_tobuffer(                  (p.emblem_len),		buf);
+	_S_tobuffer( (         char*) (p.emblem_data),		buf, 2048);
 	for(i=0; i< MAX_GUILDALLIANCE; i++)
-		_guild_alliance_tobuffer(p->alliance+i,	buf);
+		_guild_alliance_tobuffer(p.alliance[i],	buf);
 	for(i=0; i< MAX_GUILDEXPLUSION; i++)
-		_guild_explusion_tobuffer(p->explusion+i,buf);
+		_guild_explusion_tobuffer(p.explusion[i],buf);
 	for(i=0; i< MAX_GUILDSKILL; i++)
-		_guild_skill_tobuffer(p->skill+i,		buf);
+		_guild_skill_tobuffer(p.skill[i],		buf);
 }
-extern inline void guild_tobuffer(const struct guild* p, unsigned char *buf)
+extern inline void guild_tobuffer(const struct guild &p, unsigned char *buf)
 {
-	_guild_tobuffer(p, &buf);
+	_guild_tobuffer(p, buf);
 }
-extern inline void _guild_frombuffer(struct guild* p, const unsigned char **buf)
+extern inline void _guild_frombuffer(struct guild &p, const unsigned char *&buf)
 {
 	size_t i;
-	if( NULL==p || NULL==buf)	return;
-	_L_frombuffer( (unsigned long*) (&p->guild_id),		buf);
-	_W_frombuffer(                  (&p->guild_lv),		buf);
-	_W_frombuffer(                  (&p->connect_member),	buf);
-	_W_frombuffer(                  (&p->max_member),		buf);
-	_W_frombuffer(                  (&p->average_lv),		buf);
-	_L_frombuffer( (unsigned long*) (&p->exp),				buf);
-	_L_frombuffer( (unsigned long*) (&p->next_exp),		buf);
-	_W_frombuffer(                  (&p->skill_point),		buf);
-	_L_frombuffer( (unsigned long*) (&p->castle_id),		buf);
-	_S_frombuffer(                  (p->name),			buf, 24);
-	_S_frombuffer(                  (p->master),			buf, 24);
+	if( NULL==buf )	return;
+	_L_frombuffer(  (p.guild_id),		buf);
+	_W_frombuffer(                  (p.guild_lv),		buf);
+	_W_frombuffer(                  (p.connect_member),	buf);
+	_W_frombuffer(                  (p.max_member),		buf);
+	_W_frombuffer(                  (p.average_lv),		buf);
+	_L_frombuffer(  (p.exp),				buf);
+	_L_frombuffer(  (p.next_exp),		buf);
+	_W_frombuffer(                  (p.skill_point),		buf);
+	_W_frombuffer(  (p.castle_id),		buf);
+	_S_frombuffer(                  (p.name),			buf, 24);
+	_S_frombuffer(                  (p.master),			buf, 24);
 	for(i=0; i< MAX_GUILD; i++)
-		_guild_member_frombuffer(p->member+i,		buf);
+		_guild_member_frombuffer(p.member[i],		buf);
 	for(i=0; i< MAX_GUILDPOSITION; i++)
-		_guild_position_frombuffer(p->position+i,	buf);
-	_S_frombuffer(                  (p->mes1),			buf, 60);
-	_S_frombuffer(                  (p->mes2),			buf, 120);
-	_L_frombuffer( (unsigned long*) (&p->emblem_id),		buf);
-	_W_frombuffer(                  (&p->emblem_len),		buf);
-	_S_frombuffer( (         char*) (p->emblem_data),		buf, 2048);
+		_guild_position_frombuffer(p.position[i],	buf);
+	_S_frombuffer(                  (p.mes1),			buf, 60);
+	_S_frombuffer(                  (p.mes2),			buf, 120);
+	_L_frombuffer(  (p.emblem_id),		buf);
+	_W_frombuffer(                  (p.emblem_len),		buf);
+	_S_frombuffer( (         char*) (p.emblem_data),		buf, 2048);
 	for(i=0; i< MAX_GUILDALLIANCE; i++)
-		_guild_alliance_frombuffer(p->alliance+i,	buf);
+		_guild_alliance_frombuffer(p.alliance[i],	buf);
 	for(i=0; i< MAX_GUILDEXPLUSION; i++)
-		_guild_explusion_frombuffer(p->explusion+i,buf);
+		_guild_explusion_frombuffer(p.explusion[i],buf);
 	for(i=0; i< MAX_GUILDSKILL; i++)
-		_guild_skill_frombuffer(p->skill+i,		buf);
+		_guild_skill_frombuffer(p.skill[i],		buf);
 }
-extern inline void guild_frombuffer(struct guild* p, const unsigned char *buf)
+extern inline void guild_frombuffer(struct guild &p, const unsigned char *buf)
 {
-	_guild_frombuffer(p, &buf);
+	_guild_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -1210,95 +1283,95 @@ struct guild_castle {
 	unsigned long GID6;
 	unsigned long GID7;	// end addition [Valaris]
 };
-extern inline void _guild_castle_tobuffer(const struct guild_castle* p, unsigned char **buf)
+extern inline void _guild_castle_tobuffer(const struct guild_castle &p, unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_W_tobuffer( (unsigned short*)(&p->castle_id),	buf);
-	_S_tobuffer(                  (p->map_name),	buf, 24);
-	_S_tobuffer(                  (p->castle_name),	buf, 24);
-	_S_tobuffer(                  (p->castle_event),buf, 24);
-	_L_tobuffer( (unsigned long*) (&p->guild_id),	buf);
-	_L_tobuffer( (unsigned long*) (&p->economy),		buf);
-	_L_tobuffer( (unsigned long*) (&p->defense),		buf);
-	_L_tobuffer( (unsigned long*) (&p->triggerE),	buf);
-	_L_tobuffer( (unsigned long*) (&p->triggerD),	buf);
-	_L_tobuffer( (unsigned long*) (&p->nextTime),	buf);
-	_L_tobuffer( (unsigned long*) (&p->payTime),		buf);
-	_L_tobuffer( (unsigned long*) (&p->createTime),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleC),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleG0),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleG1),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleG2),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleG3),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleG4),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleG5),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleG6),	buf);
-	_L_tobuffer( (unsigned long*) (&p->visibleG7),	buf);
-	_L_tobuffer( (unsigned long*) (&p->Ghp0),		buf);
-	_L_tobuffer( (unsigned long*) (&p->Ghp1),		buf);
-	_L_tobuffer( (unsigned long*) (&p->Ghp2),		buf);
-	_L_tobuffer( (unsigned long*) (&p->Ghp3),		buf);
-	_L_tobuffer( (unsigned long*) (&p->Ghp4),		buf);
-	_L_tobuffer( (unsigned long*) (&p->Ghp5),		buf);
-	_L_tobuffer( (unsigned long*) (&p->Ghp6),		buf);
-	_L_tobuffer( (unsigned long*) (&p->Ghp7),		buf);
-	_L_tobuffer( (unsigned long*) (&p->GID0),		buf);
-	_L_tobuffer( (unsigned long*) (&p->GID1),		buf);
-	_L_tobuffer( (unsigned long*) (&p->GID2),		buf);
-	_L_tobuffer( (unsigned long*) (&p->GID3),		buf);
-	_L_tobuffer( (unsigned long*) (&p->GID4),		buf);
-	_L_tobuffer( (unsigned long*) (&p->GID5),		buf);
-	_L_tobuffer( (unsigned long*) (&p->GID6),		buf);
-	_L_tobuffer( (unsigned long*) (&p->GID7),		buf);
+	if( NULL==buf )	return;
+	_W_tobuffer( (p.castle_id),	buf);
+	_S_tobuffer(                  (p.map_name),	buf, 24);
+	_S_tobuffer(                  (p.castle_name),	buf, 24);
+	_S_tobuffer(                  (p.castle_event),buf, 24);
+	_L_tobuffer(  (p.guild_id),	buf);
+	_L_tobuffer(  (p.economy),		buf);
+	_L_tobuffer(  (p.defense),		buf);
+	_L_tobuffer(  (p.triggerE),	buf);
+	_L_tobuffer(  (p.triggerD),	buf);
+	_L_tobuffer(  (p.nextTime),	buf);
+	_L_tobuffer(  (p.payTime),		buf);
+	_L_tobuffer(  (p.createTime),	buf);
+	_L_tobuffer(  (p.visibleC),	buf);
+	_L_tobuffer(  (p.visibleG0),	buf);
+	_L_tobuffer(  (p.visibleG1),	buf);
+	_L_tobuffer(  (p.visibleG2),	buf);
+	_L_tobuffer(  (p.visibleG3),	buf);
+	_L_tobuffer(  (p.visibleG4),	buf);
+	_L_tobuffer(  (p.visibleG5),	buf);
+	_L_tobuffer(  (p.visibleG6),	buf);
+	_L_tobuffer(  (p.visibleG7),	buf);
+	_L_tobuffer(  (p.Ghp0),		buf);
+	_L_tobuffer(  (p.Ghp1),		buf);
+	_L_tobuffer(  (p.Ghp2),		buf);
+	_L_tobuffer(  (p.Ghp3),		buf);
+	_L_tobuffer(  (p.Ghp4),		buf);
+	_L_tobuffer(  (p.Ghp5),		buf);
+	_L_tobuffer(  (p.Ghp6),		buf);
+	_L_tobuffer(  (p.Ghp7),		buf);
+	_L_tobuffer(  (p.GID0),		buf);
+	_L_tobuffer(  (p.GID1),		buf);
+	_L_tobuffer(  (p.GID2),		buf);
+	_L_tobuffer(  (p.GID3),		buf);
+	_L_tobuffer(  (p.GID4),		buf);
+	_L_tobuffer(  (p.GID5),		buf);
+	_L_tobuffer(  (p.GID6),		buf);
+	_L_tobuffer(  (p.GID7),		buf);
 }
-extern inline void guild_castle_tobuffer(const struct guild_castle* p, unsigned char *buf)
+extern inline void guild_castle_tobuffer(const struct guild_castle &p, unsigned char *buf)
 {
-	_guild_castle_tobuffer(p, &buf);
+	_guild_castle_tobuffer(p, buf);
 }
-extern inline void _guild_castle_frombuffer(struct guild_castle* p, const unsigned char **buf)
+extern inline void _guild_castle_frombuffer(struct guild_castle &p, const unsigned char *&buf)
 {
-	if( NULL==p || NULL==buf)	return;
-	_W_frombuffer( (unsigned short*)(&p->castle_id),	buf);
-	_S_frombuffer(                  (p->map_name),	buf, 24);
-	_S_frombuffer(                  (p->castle_name),	buf, 24);
-	_S_frombuffer(                  (p->castle_event),buf, 24);
-	_L_frombuffer( (unsigned long*) (&p->guild_id),	buf);
-	_L_frombuffer( (unsigned long*) (&p->economy),		buf);
-	_L_frombuffer( (unsigned long*) (&p->defense),		buf);
-	_L_frombuffer( (unsigned long*) (&p->triggerE),	buf);
-	_L_frombuffer( (unsigned long*) (&p->triggerD),	buf);
-	_L_frombuffer( (unsigned long*) (&p->nextTime),	buf);
-	_L_frombuffer( (unsigned long*) (&p->payTime),		buf);
-	_L_frombuffer( (unsigned long*) (&p->createTime),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleC),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleG0),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleG1),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleG2),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleG3),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleG4),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleG5),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleG6),	buf);
-	_L_frombuffer( (unsigned long*) (&p->visibleG7),	buf);
-	_L_frombuffer( (unsigned long*) (&p->Ghp0),		buf);
-	_L_frombuffer( (unsigned long*) (&p->Ghp1),		buf);
-	_L_frombuffer( (unsigned long*) (&p->Ghp2),		buf);
-	_L_frombuffer( (unsigned long*) (&p->Ghp3),		buf);
-	_L_frombuffer( (unsigned long*) (&p->Ghp4),		buf);
-	_L_frombuffer( (unsigned long*) (&p->Ghp5),		buf);
-	_L_frombuffer( (unsigned long*) (&p->Ghp6),		buf);
-	_L_frombuffer( (unsigned long*) (&p->Ghp7),		buf);
-	_L_frombuffer( (unsigned long*) (&p->GID0),		buf);
-	_L_frombuffer( (unsigned long*) (&p->GID1),		buf);
-	_L_frombuffer( (unsigned long*) (&p->GID2),		buf);
-	_L_frombuffer( (unsigned long*) (&p->GID3),		buf);
-	_L_frombuffer( (unsigned long*) (&p->GID4),		buf);
-	_L_frombuffer( (unsigned long*) (&p->GID5),		buf);
-	_L_frombuffer( (unsigned long*) (&p->GID6),		buf);
-	_L_frombuffer( (unsigned long*) (&p->GID7),		buf);
+	if( NULL==buf )	return;
+	_W_frombuffer( (p.castle_id),	buf);
+	_S_frombuffer(                  (p.map_name),	buf, 24);
+	_S_frombuffer(                  (p.castle_name),	buf, 24);
+	_S_frombuffer(                  (p.castle_event),buf, 24);
+	_L_frombuffer(  (p.guild_id),	buf);
+	_L_frombuffer(  (p.economy),		buf);
+	_L_frombuffer(  (p.defense),		buf);
+	_L_frombuffer(  (p.triggerE),	buf);
+	_L_frombuffer(  (p.triggerD),	buf);
+	_L_frombuffer(  (p.nextTime),	buf);
+	_L_frombuffer(  (p.payTime),		buf);
+	_L_frombuffer(  (p.createTime),	buf);
+	_L_frombuffer(  (p.visibleC),	buf);
+	_L_frombuffer(  (p.visibleG0),	buf);
+	_L_frombuffer(  (p.visibleG1),	buf);
+	_L_frombuffer(  (p.visibleG2),	buf);
+	_L_frombuffer(  (p.visibleG3),	buf);
+	_L_frombuffer(  (p.visibleG4),	buf);
+	_L_frombuffer(  (p.visibleG5),	buf);
+	_L_frombuffer(  (p.visibleG6),	buf);
+	_L_frombuffer(  (p.visibleG7),	buf);
+	_L_frombuffer(  (p.Ghp0),		buf);
+	_L_frombuffer(  (p.Ghp1),		buf);
+	_L_frombuffer(  (p.Ghp2),		buf);
+	_L_frombuffer(  (p.Ghp3),		buf);
+	_L_frombuffer(  (p.Ghp4),		buf);
+	_L_frombuffer(  (p.Ghp5),		buf);
+	_L_frombuffer(  (p.Ghp6),		buf);
+	_L_frombuffer(  (p.Ghp7),		buf);
+	_L_frombuffer(  (p.GID0),		buf);
+	_L_frombuffer(  (p.GID1),		buf);
+	_L_frombuffer(  (p.GID2),		buf);
+	_L_frombuffer(  (p.GID3),		buf);
+	_L_frombuffer(  (p.GID4),		buf);
+	_L_frombuffer(  (p.GID5),		buf);
+	_L_frombuffer(  (p.GID6),		buf);
+	_L_frombuffer(  (p.GID7),		buf);
 }
-extern inline void guild_castle_frombuffer(struct guild_castle* p, const unsigned char *buf)
+extern inline void guild_castle_frombuffer(struct guild_castle &p, const unsigned char *buf)
 {
-	_guild_castle_frombuffer(p, &buf);
+	_guild_castle_frombuffer(p, buf);
 }
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////

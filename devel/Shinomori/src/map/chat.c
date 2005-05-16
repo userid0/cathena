@@ -11,10 +11,6 @@
 #include "showmsg.h"
 #include "utils.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 int chat_triggerevent(struct chat_data *cd);
 
 
@@ -109,7 +105,7 @@ int chat_joinchat(struct map_session_data *sd,int chatid,char* pass)
 int chat_leavechat(struct map_session_data *sd)
 {
 	struct chat_data *cd;
-	int i,leavechar;
+	size_t leavechar;
 
 	nullpo_retr(1, sd);
 
@@ -117,13 +113,13 @@ int chat_leavechat(struct map_session_data *sd)
 	if(cd==NULL)
 		return 1;
 
-	for(i = 0,leavechar=-1;i < cd->users;i++){
-		if(cd->usersd[i] == sd){
-			leavechar=i;
+	for(leavechar=0; leavechar<cd->users; leavechar++)
+	{
+		if(cd->usersd[leavechar] == sd){
 			break;
 		}
 	}
-	if(leavechar<0)	// そのchatに所属していないらしい (バグ時のみ)
+	if(leavechar>=cd->users)	// そのchatに所属していないらしい (バグ時のみ)
 		return -1;
 
 	if(leavechar==0 && cd->users>1 && (*cd->owner)->type==BL_PC){
@@ -143,6 +139,7 @@ int chat_leavechat(struct map_session_data *sd)
 		clif_clearchat(cd,0);
 		map_delobject(cd->bl.id);	// freeまでしてくれる
 	} else {
+		size_t i;
 		for(i=leavechar;i < cd->users;i++)
 			cd->usersd[i] = cd->usersd[i+1];
 		if(leavechar==0 && (*cd->owner)->type==BL_PC){
@@ -152,7 +149,6 @@ int chat_leavechat(struct map_session_data *sd)
 		}
 		clif_dispchat(cd,0);
 	}
-
 	return 0;
 }
 
@@ -164,7 +160,7 @@ int chat_changechatowner(struct map_session_data *sd,char *nextownername)
 {
 	struct chat_data *cd;
 	struct map_session_data *tmp_sd;
-	int i,nextowner;
+	size_t nextowner;
 
 	nullpo_retr(1, sd);
 
@@ -172,13 +168,12 @@ int chat_changechatowner(struct map_session_data *sd,char *nextownername)
 	if(cd==NULL || (struct block_list *)sd!=(*cd->owner))
 		return 1;
 
-	for(i = 1,nextowner=-1;i < cd->users;i++){
-		if(strcmp(cd->usersd[i]->status.name,nextownername)==0){
-			nextowner=i;
+	for(nextowner=1; nextowner<cd->users; nextowner++){
+		if(strcmp(cd->usersd[nextowner]->status.name,nextownername)==0){
 			break;
 		}
 	}
-	if(nextowner<0) // そんな人は居ない
+	if(nextowner>=cd->users) // そんな人は居ない
 		return -1;
 
 	clif_changechatowner(cd,cd->usersd[nextowner]);
@@ -235,7 +230,7 @@ int chat_changechatstatus(struct map_session_data *sd,int limit,int pub,char* pa
 int chat_kickchat(struct map_session_data *sd,char *kickusername)
 {
 	struct chat_data *cd;
-	int i,kickuser;
+	size_t kickuser;
 
 	nullpo_retr(1, sd);
 
@@ -243,13 +238,12 @@ int chat_kickchat(struct map_session_data *sd,char *kickusername)
 	if(cd==NULL || (struct block_list *)sd!=(*cd->owner))
 		return 1;
 
-	for(i = 0,kickuser=-1;i < cd->users;i++){
-		if(strcmp(cd->usersd[i]->status.name,kickusername)==0){
-			kickuser=i;
+	for(kickuser=1; kickuser<cd->users; kickuser++){
+		if(strcmp(cd->usersd[kickuser]->status.name,kickusername)==0){
 			break;
 		}
 	}
-	if(kickuser<0) // そんな人は居ない
+	if(kickuser>=cd->users) // そんな人は居ない
 		return -1;
 
 	chat_leavechat(cd->usersd[kickuser]);

@@ -20,10 +20,6 @@
 #include "md5calc.h"
 #endif
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 #include <mysql.h>
 
 
@@ -1752,6 +1748,10 @@ void do_final(void) {
 	numdb_final(online_db, online_db_final);
 }
 
+unsigned char getServerType()
+{
+	return ATHENA_SERVER_LOGIN | ATHENA_SERVER_CORE;
+}
 int do_init(int argc,char **argv){
 	//initialize login server
 	int i;

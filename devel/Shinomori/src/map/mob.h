@@ -84,6 +84,7 @@ enum {
 	MSC_CASTTARGETED	=	0x1011,
 	MSC_RUDEATTACKED	=	0x1100,
 	MSC_MASTERHPLTMAXRATE=	0x1101,
+	MSC_MASTERATTACKED	=	0x1110
 };
 
 enum {
@@ -96,7 +97,7 @@ enum {
 };
 
 int mobdb_searchname(const char *str);
-int mobdb_checkid(const int id);
+int mobdb_checkid(const unsigned long id);
 int mob_once_spawn(struct map_session_data *sd,char *mapname,
 	int x,int y,const char *mobname,int class_,int amount,const char *event);
 int mob_once_spawn_area(struct map_session_data *sd,char *mapname,
@@ -106,21 +107,21 @@ int mob_once_spawn_area(struct map_session_data *sd,char *mapname,
 int mob_spawn_guardian(struct map_session_data *sd,char *mapname,	// Spawning Guardians [Valaris]
 	int x,int y,const char *mobname,int class_,int amount,const char *event,int guardian);	// Spawning Guardians [Valaris]
 
-int mob_walktoxy(struct mob_data *md,int x,int y,int easy);
-int mob_randomwalk(struct mob_data *md,unsigned long tick);
-int mob_can_move(struct mob_data *md);
+int mob_walktoxy(struct mob_data &md,int x,int y,int easy);
+int mob_randomwalk(struct mob_data &md,unsigned long tick);
+int mob_can_move(struct mob_data &md);
 
-int mob_target(struct mob_data *md,struct block_list *bl,int dist);
-int mob_unlocktarget(struct mob_data *md,unsigned long tick);
-int mob_stop_walking(struct mob_data *md,int type);
-int mob_stopattack(struct mob_data *);
-int mob_spawn(int);
-int mob_setdelayspawn(int);
-int mob_damage(struct block_list *,struct mob_data*,int,int);
-int mob_changestate(struct mob_data *md,int state,int type);
-int mob_heal(struct mob_data*,int);
-int mob_exclusion_add(struct mob_data *md,int type,int id);
-int mob_exclusion_check(struct mob_data *md,struct map_session_data *sd);
+int mob_target(struct mob_data &md,struct block_list *bl,int dist);
+int mob_unlocktarget(struct mob_data &md,unsigned long tick);
+int mob_stop_walking(struct mob_data &md,int type);
+int mob_stopattack(struct mob_data &md);
+int mob_spawn(unsigned long id);
+int mob_setdelayspawn(unsigned long id);
+int mob_damage(struct block_list *src,struct mob_data &md,int damage,int type);
+int mob_changestate(struct mob_data &md,int state,int type);
+int mob_heal(struct mob_data &md,int heal);
+int mob_exclusion_add(struct mob_data &md,int type,unsigned long id);
+int mob_exclusion_check(struct mob_data &md,struct map_session_data *sd);
 int mob_get_viewclass(int);
 int mob_get_sex(int);
 short mob_get_hair(int);
@@ -139,17 +140,17 @@ int mob_remove_map(struct mob_data *md, int type);
 int mob_delete(struct mob_data *md);
 int mob_timer_delete(int tid, unsigned long tick, int id, int data);
 
-int mob_deleteslave(struct mob_data *md);
+int mob_deleteslave(struct mob_data &md);
 
-int mob_class_change(struct mob_data *md,int *value);
-int mob_warp(struct mob_data *md,int m,int x,int y,int type);
+int mob_class_change(struct mob_data &md,int *value);
+int mob_warp(struct mob_data &md,int m,int x,int y,int type);
 
-int mobskill_use(struct mob_data *md,unsigned long tick,int event);
-int mobskill_event(struct mob_data *md,int flag);
+int mobskill_use(struct mob_data &md,unsigned long tick,int event);
+int mobskill_event(struct mob_data &md,int flag);
 int mobskill_castend_id( int tid, unsigned long tick, int id,int data );
 int mobskill_castend_pos( int tid, unsigned long tick, int id,int data );
-int mob_summonslave(struct mob_data *md2,int *value,int amount,int flag);
-int mob_countslave(struct mob_data *md);
+int mob_summonslave(struct mob_data &md2,int *value,int amount,int flag);
+unsigned int mob_countslave(struct mob_data &md);
 
 int mob_gvmobcheck(struct map_session_data *sd, struct block_list *bl);
 void mob_reload(void);

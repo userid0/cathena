@@ -12,13 +12,8 @@
 #include "showmsg.h"
 #include "utils.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 #define MAX_RANDITEM	2000
 #define MAX_ITEMGROUP	20
-
 // ** ITEMDB_OVERRIDE_NAME_VERBOSE **
 //   定義すると、itemdb.txtとgrfで名前が異なる場合、表示します.
 //#define ITEMDB_OVERRIDE_NAME_VERBOSE	1
@@ -170,20 +165,23 @@ struct item_data* itemdb_search(unsigned short nameid)
 	id=(struct item_data *)aCalloc(1,sizeof(struct item_data));
 	numdb_insert(item_db,nameid,id);
 
+	memset (id, 0, sizeof(struct item_data)); //Isn't this quicker? [Skotlex]
 	id->nameid=nameid;
 	id->value_buy=10;
 	id->value_sell=id->value_buy/2;
 	id->weight=10;
 	id->flag.sex=2;
-	id->elv=0;
+//	id->elv=0;
 	id->class_=0xffff;
+/*	
 	id->flag.available=0;
 	id->flag.value_notdc=0;  //一応・・・
 	id->flag.value_notoc=0;
 	id->flag.no_equip=0;
 	id->flag.no_refine=0;
+	id->flag.delay_consume=0;
 	id->view_id=0;
-
+*/
 	if(nameid>500 && nameid<600)
 		id->type=0;   //heal item
 	else if(nameid>600 && nameid<700)
@@ -250,16 +248,16 @@ int itemdb_isequip3(unsigned short nameid)
  * 捨てられるアイテムは1、そうでないアイテムは0
  *------------------------------------------
  */
-int itemdb_isdropable(unsigned short nameid)
+bool itemdb_isdropable(unsigned short nameid)
 {
 	//結婚指輪は捨てられない
 	switch(nameid){
 	case 2634: //結婚指輪
 	case 2635: //結婚指輪
-		return 0;
+		return false;
 	}
 
-	return 1;
+	return true;
 }
 
 /*==========================================
@@ -526,25 +524,24 @@ static int itemdb_read_cardillustnametable(void)
  */
 static int itemdb_read_itemslottable(void)
 {
-	char *buf,*p;
+	char *buf, *p;
 	int s;
 
-	buf=(char *) grfio_read("data\\itemslottable.txt");
-	if(buf==NULL)
+	buf = (char *)grfio_reads("data\\itemslottable.txt", &s);
+	if (buf == NULL)
 		return -1;
-	s=grfio_size("data\\itemslottable.txt");
-	buf[s]=0;
-	for(p=buf;p-buf<s;){
-		int nameid,equip;
+	buf[s] = 0;
+	for (p = buf; p - buf < s; ) {
+		int nameid, equip;
 		struct item_data* item;
-		sscanf(p,"%d#%d#",&nameid,&equip);
+		sscanf(p, "%d#%d#", &nameid, &equip);
 		item = itemdb_search(nameid);
 		if (item && itemdb_isequip2(item))			
-			item->equip=equip;
-		p=strchr(p,10);
+			item->equip = equip;
+		p = strchr(p, 10);
 		if(!p) break;
 		p++;
-		p=strchr(p,10);
+		p=strchr(p, 10);
 		if(!p) break;
 		p++;
 	}
@@ -555,27 +552,26 @@ static int itemdb_read_itemslottable(void)
 
 static int itemdb_read_itemslotcounttable(void)
 {
-	char *buf,*p;
+	char *buf, *p;
 	int s;
 
-	buf=(char *) grfio_read("data\\itemslotcounttable.txt");
-	if(buf==NULL)
+	buf = (char *)grfio_reads("data\\itemslotcounttable.txt", &s);
+	if (buf == NULL)
 		return -1;
-	s=grfio_size("data\\itemslotcounttable.txt");
-	buf[s]=0;
-	for(p=buf;p-buf<s;){
-		int nameid,slot;
-		sscanf(p,"%d#%d#",&nameid,&slot);
-		itemdb_search(nameid)->flag.slot=slot;
-		p=strchr(p,10);
+	buf[s] = 0;
+	for (p = buf; p - buf < s;){
+		int nameid, slot;
+		sscanf(p, "%d#%d#", &nameid, &slot);
+		itemdb_search(nameid)->flag.slot = slot;
+		p = strchr(p,10);
 		if(!p) break;
 		p++;
-		p=strchr(p,10);
+		p = strchr(p,10);
 		if(!p) break;
 		p++;
 	}
 	aFree(buf);
-	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\itemslotcounttable.txt");
+	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n", "data\\itemslotcounttable.txt");
 	return 0;
 }
 
@@ -665,9 +661,9 @@ static int itemdb_read_norefine(void)
 */
 static int itemdb_read_sqldb(void)
 {
-	unsigned short	nameid;
-	struct			item_data *id;
-	char			script[65535 + 2 + 1]; // Maximum length of MySQL TEXT type (65535) + 2 bytes for curly brackets + 1 byte for terminator
+	unsigned short nameid;
+	struct item_data *id;
+	char script[65535 + 2 + 1]; // Maximum length of MySQL TEXT type (65535) + 2 bytes for curly brackets + 1 byte for terminator
 	char *item_db_name[] = { item_db_db, item_db2_db };
 	long unsigned int ln = 0;
 	int i;	
@@ -677,7 +673,7 @@ static int itemdb_read_sqldb(void)
 	for (i = 0; i < 2; i++)
 	{
 		sprintf(tmp_sql, "SELECT * FROM `%s`", item_db_name[i]);
-		
+
 		// Execute the query; if the query execution succeeded...
 		if (mysql_query(&mmysql_handle, tmp_sql) == 0)
 		{
@@ -703,12 +699,18 @@ static int itemdb_read_sqldb(void)
 					ln++;
 
 					// ----------
-					id=itemdb_search(nameid);
+					id = itemdb_search(nameid);
 					
 					memcpy(id->name, sql_row[1], 25);
 					memcpy(id->jname, sql_row[2], 25);
 
 					id->type = atoi(sql_row[3]);
+					if (id->type == 11)
+					{	//Items that are consumed upon target confirmation
+						//(yggdrasil leaf, spells & pet lures) [Skotlex]
+						id->type = 2;
+						id->flag.delay_consume=1;
+					}
 
 					if ((sql_row[4] != NULL) && (sql_row[5] != NULL))
 					{	// If price_buy is not NULL and price_sell is not NULL...
@@ -733,16 +735,17 @@ static int itemdb_read_sqldb(void)
 					}
 
 					id->weight	= atoi(sql_row[6]);
-					id->atk		= (sql_row[7] != NULL)		? atoi(sql_row[7])	: 0;
-					id->def		= (sql_row[8] != NULL)		? atoi(sql_row[8])	: 0;
-					id->range	= (sql_row[9] != NULL)		? atoi(sql_row[9])	: 0;
+					id->atk		= (sql_row[7] != NULL) ? atoi(sql_row[7]) : 0;
+					id->def		= (sql_row[8] != NULL) ? atoi(sql_row[8]) : 0;
+					id->range	= (sql_row[9] != NULL) ? atoi(sql_row[9]) : 0;
 					id->flag.slot= (sql_row[10] != NULL)	? atoi(sql_row[10])	: 0;
-					id->class_	= (sql_row[11] != NULL)		? atoi(sql_row[11])	: 0;
-					id->flag.sex = (sql_row[12] != NULL)	? atoi(sql_row[12])	: 0;
-					id->equip	= (sql_row[13] != NULL)		? atoi(sql_row[13])	: 0;
-					id->wlv		= (sql_row[14] != NULL)		? atoi(sql_row[14])	: 0;
-					id->elv		= (sql_row[15] != NULL)		? atoi(sql_row[15])	: 0;
-					id->look	= (sql_row[16] != NULL)		? atoi(sql_row[16])	: 0;
+					id->class_	= (sql_row[11] != NULL) ? atoi(sql_row[11]) : 0;
+					id->flag.sex= (battle_config.ignore_items_gender && nameid!=2634 && nameid!=2635) ? 2 :
+									( (sql_row[12] != NULL) ? atoi(sql_row[12]) : 0);
+					id->equip	= (sql_row[13] != NULL) ? atoi(sql_row[13]) : 0;
+					id->wlv		= (sql_row[14] != NULL) ? atoi(sql_row[14]) : 0;
+					id->elv		= (sql_row[15] != NULL)	? atoi(sql_row[15]) : 0;
+					id->look	= (sql_row[16] != NULL) ? atoi(sql_row[16]) : 0;
 					id->view_id	= 0;
 					// ----------
 
@@ -758,7 +761,7 @@ static int itemdb_read_sqldb(void)
 					}
 					else
 						id->use_script = NULL;
-					
+
 					if (sql_row[18] != NULL)
 					{
 						if (sql_row[18][0] == '{')
@@ -772,12 +775,12 @@ static int itemdb_read_sqldb(void)
 					else
 						id->equip_script = NULL;
 					// ----------
-					
+
 					id->flag.available		= 1;
 					id->flag.value_notdc	= 0;
 					id->flag.value_notoc	= 0;
 				}
-				
+
 				// If the retrieval failed, output an error
 				if (mysql_errno(&mmysql_handle))
 				{
@@ -795,7 +798,7 @@ static int itemdb_read_sqldb(void)
 			}
 			// Free the query result
 			mysql_free_result(sql_res);
-		}
+	}
 		else
 			ShowError("Database server error (executing query for %s): %s\n", item_db_name[i], mysql_error(&mmysql_handle));
 	}
@@ -850,12 +853,21 @@ static int itemdb_readdb(void)
 
 			//ID,Name,Jname,Type,Price,Sell,Weight,ATK,DEF,Range,Slot,Job,Gender,Loc,wLV,eLV,View
 			id=itemdb_search(nameid);
+			if(!id)
+				continue;
+
 			memcpy(id->name,str[1],24);
 			memcpy(id->jname,str[2],24);
 			id->type=atoi(str[3]);
+			if (id->type == 11)
+			{	//Items that are consumed upon target confirmation
+				//(yggdrasil leaf, spells & pet lures) [Skotlex]
+				id->type = 2;
+				id->flag.delay_consume=1;
+			}
 
 			{
-				int buy = atoi(str[4]), sell = atoi(str[5]);
+				int buy = abs(atoi(str[4])), sell = abs(atoi(str[5]));
 				// if buying price > selling price * 2 consider it valid and don't change it [celest]
 				if (buy && sell && buy > sell*2){
 					id->value_buy = buy;
@@ -883,6 +895,7 @@ static int itemdb_readdb(void)
 			id->flag.slot=atoi(str[10]);
 			id->class_=atoi(str[11]);
 			id->flag.sex=atoi(str[12]);
+			id->flag.sex= (battle_config.ignore_items_gender && nameid!=2634 && nameid!=2635) ? 2 : atoi(str[12]);
 			if(id->equip != atoi(str[13])){
 				id->equip=atoi(str[13]);
 			}
@@ -894,15 +907,15 @@ static int itemdb_readdb(void)
 			id->flag.value_notoc=0;
 			id->view_id=0;
 
-			id->use_script=NULL;
-			id->equip_script=NULL;
+			if((p=strchr(np,'{'))!=NULL)
+				id->use_script = parse_script((unsigned char *) p,lines);
+			else
+				id->use_script=NULL;
 
-			if((p=strchr(np,'{'))==NULL)
-				continue;
-			id->use_script = parse_script((unsigned char *) p,lines);
-			if((p=strchr(p+1,'{'))==NULL)
-				continue;
-			id->equip_script = parse_script((unsigned char *) p,lines);
+			if((p=strchr(p+1,'{'))!=NULL)
+				id->equip_script = parse_script((unsigned char *) p,lines);
+			else
+				id->equip_script=NULL;
 		}
 		fclose(fp);
 		if (ln > 0) {

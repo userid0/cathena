@@ -19,10 +19,6 @@
 #include "md5calc.h"
 #endif
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 #include "login.h"
 
 
@@ -490,11 +486,11 @@ int is_user_online (unsigned long account_id) {
 	return (p != NULL);
 }
 void remove_online_user (unsigned long account_id) {
+	unsigned long *p;
 	if (account_id == 99) {	// reset all to offline
 		numdb_final(online_db, online_db_final);	// purge db
 		online_db = numdb_init();	// reinitialise
 	}
-	unsigned long *p;
 	p = (unsigned long*)numdb_erase(online_db, account_id);
 	aFree(p);
 }
@@ -4171,6 +4167,10 @@ void do_final(void) {
 //------------------------------
 // Main function of login-server
 //------------------------------
+unsigned char getServerType()
+{
+	return ATHENA_SERVER_LOGIN | ATHENA_SERVER_CORE;
+}
 int do_init(int argc, char **argv) {
 	int i, j;
 

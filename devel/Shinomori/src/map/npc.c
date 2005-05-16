@@ -21,10 +21,6 @@
 #include "utils.h"
 #include "socket.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 
 struct npc_src_list {
 	struct npc_src_list * next;
@@ -42,11 +38,11 @@ typedef struct npc_mark* npc_mark_p;
 
 static struct npc_src_list *npc_src_first=NULL;
 static struct npc_src_list *npc_src_last=NULL;
-static int npc_id=START_NPC_NUM;
-static int npc_warp=0;
-static int npc_shop=0;
-static int npc_script=0;
-static int npc_mob=0;
+static size_t npc_id=START_NPC_NUM;
+static size_t npc_warp=0;
+static size_t npc_shop=0;
+static size_t npc_script=0;
+static size_t npc_mob=0;
 
 int npc_get_new_npc_id(void){ return npc_id++; }
 
@@ -61,7 +57,7 @@ struct event_data {
 static struct tm ev_tm_b;	// 時計イベント用
 
 static int npc_walktimer(int tid,unsigned long tick,int id,int data); // [Valaris]
-static int npc_walktoxy_sub(struct npc_data *nd); // [Valaris]
+static int npc_walktoxy_sub(struct npc_data &nd); // [Valaris]
 
 
 
@@ -112,7 +108,7 @@ int npc_event_doall_attached(const char *name, struct map_session_data *sd)
  * npc_enable_sub 有効時にOnTouchイベントを実行
  *------------------------------------------
  */
-int npc_enable_sub( struct block_list *bl, va_list ap )
+int npc_enable_sub(struct block_list *bl, va_list ap)
 {
 	struct map_session_data *sd;
 	struct npc_data *nd;
@@ -473,7 +469,7 @@ int npc_do_ontimer_sub(void *key,void *data,va_list ap)
 	}
 	return 0;
 }
-int npc_do_ontimer(int npc_id, struct map_session_data *sd, int option)
+int npc_do_ontimer(unsigned long npc_id, struct map_session_data *sd, int option)
 {
 	strdb_foreach(ev_db,npc_do_ontimer_sub,&npc_id,sd,option);
 	return 0;
@@ -543,46 +539,43 @@ int npc_timerevent(int tid,unsigned long tick,int id,int data)
  * タイマーイベント開始
  *------------------------------------------
  */
-int npc_timerevent_start(struct npc_data *nd, int rid)
+int npc_timerevent_start(struct npc_data &nd, unsigned long rid)
 {
 	int j,n, next;
 
-	nullpo_retr(0, nd);
-
-	n=nd->u.scr.timeramount;
-	if( nd->u.scr.nexttimer>=0 || n==0 )
+	n = nd.u.scr.timeramount;
+	if( nd.u.scr.nexttimer>=0 || n==0 )
 		return 0;
 
 	for(j=0;j<n;j++){
-		if( nd->u.scr.timer_event[j].timer > nd->u.scr.timer )
+		if( nd.u.scr.timer_event[j].timer > nd.u.scr.timer )
 			break;
 	}
 	if(j>=n) // check if there is a timer to use !!BEFORE!! you write stuff to the structures [Shinomori]
 		return 0;
 
-	nd->u.scr.nexttimer=j;
-	nd->u.scr.timertick=gettick();
-	if (rid >= 0) nd->u.scr.rid=rid;	// changed to: attaching to given rid by default [Shinomori]
-	// if rid is less than 0 leave it unchanged [celest]
+	nd.u.scr.nexttimer=j;
+	nd.u.scr.timertick=gettick();
+	nd.u.scr.rid=rid;	// changed to: attaching to given rid by default [Shinomori]
 
-	next = nd->u.scr.timer_event[j].timer - nd->u.scr.timer;
-	nd->u.scr.timerid = add_timer(nd->u.scr.timertick+next,npc_timerevent,nd->bl.id,next);
+
+	next = nd.u.scr.timer_event[j].timer - nd.u.scr.timer;
+	nd.u.scr.timerid = add_timer(nd.u.scr.timertick+next,npc_timerevent,nd.bl.id,next);
 	return 0;
 }
 /*==========================================
  * タイマーイベント終了
  *------------------------------------------
  */
-int npc_timerevent_stop(struct npc_data *nd)
+int npc_timerevent_stop(struct npc_data &nd)
 {
-	nullpo_retr(0, nd);
-	if( nd->u.scr.nexttimer>=0 ){
-		nd->u.scr.nexttimer = -1;
-		nd->u.scr.timer += (int)(gettick() - nd->u.scr.timertick);
-		if(nd->u.scr.timerid!=-1)
-			delete_timer(nd->u.scr.timerid,npc_timerevent);
-		nd->u.scr.timerid = -1;
-		nd->u.scr.rid = 0;
+	if( nd.u.scr.nexttimer>=0 ){
+		nd.u.scr.nexttimer = -1;
+		nd.u.scr.timer += (int)(gettick() - nd.u.scr.timertick);
+		if(nd.u.scr.timerid!=-1)
+			delete_timer(nd.u.scr.timerid,npc_timerevent);
+		nd.u.scr.timerid = -1;
+		nd.u.scr.rid = 0;
 	}
 	return 0;
 }
@@ -590,34 +583,29 @@ int npc_timerevent_stop(struct npc_data *nd)
  * タイマー値の所得
  *------------------------------------------
  */
-int npc_gettimerevent_tick(struct npc_data *nd)
+int npc_gettimerevent_tick(struct npc_data &nd)
 {
 	unsigned long tick;
 
-	nullpo_retr(0, nd);
-
-	tick=nd->u.scr.timer;
-
-	if( nd->u.scr.nexttimer>=0 )
-		tick += gettick() - nd->u.scr.timertick;
+	tick=nd.u.scr.timer;
+	if( nd.u.scr.nexttimer>=0 )
+		tick += gettick() - nd.u.scr.timertick;
 	return tick;
 }
 /*==========================================
  * タイマー値の設定
  *------------------------------------------
  */
-int npc_settimerevent_tick(struct npc_data *nd,int newtimer)
+int npc_settimerevent_tick(struct npc_data &nd,int newtimer)
 {
 	int flag;
-	int rid;
+	unsigned long rid;
 
-	nullpo_retr(0, nd);
-
-	flag= nd->u.scr.nexttimer;
-	rid = nd->u.scr.timerid;
+	flag= nd.u.scr.nexttimer;
+	rid = nd.u.scr.timerid;
 
 	npc_timerevent_stop(nd);
-	nd->u.scr.timer=newtimer;
+	nd.u.scr.timer=newtimer;
 	if(flag>=0)
 		npc_timerevent_start(nd, rid);
 	return 0;
@@ -730,14 +718,14 @@ int npc_command(struct map_session_data *sd,char *npcname,char *command)
  * 接触型のNPC処理
  *------------------------------------------
  */
-int npc_touch_areanpc(struct map_session_data *sd,int m,int x,int y)
+int npc_touch_areanpc(struct map_session_data *sd,unsigned short m,int x,int y)
 {
 	size_t i,f=1;
 	int xs,ys;
 
 	nullpo_retr(1, sd);
 
-	if(sd->npc_id)
+	if(sd->npc_id || m>=map_num)
 		return 1;
 
 	for(i=0;i<map[m].npc_num;i++) {
@@ -969,7 +957,7 @@ int npc_buylist(struct map_session_data *sd,int n,unsigned char *itemlist)
 	for(i=0,w=0,z=0;i<n;i++) {
 
 		// amount fix
-		if( RBUFW(itemlist,2*(i*2)) > battle_config.vending_max_value )
+		if( (unsigned long)RBUFW(itemlist,2*(i*2)) > battle_config.vending_max_value )
 			RBUFW(itemlist,2*(i*2)) = 0;	// clear the amount
 
 		amount = RBUFW(itemlist,2*(i*2));
@@ -1058,7 +1046,7 @@ int npc_selllist(struct map_session_data *sd,int n,unsigned char *itemlist)
 	for(i=0,z=0;i<n;i++)
 	{
 		// amount fix
-		if( RBUFW(itemlist,2*(i*2+1)) > battle_config.vending_max_value )
+		if( (unsigned long)RBUFW(itemlist,2*(i*2+1)) > battle_config.vending_max_value )
 			RBUFW(itemlist,2*(i*2+1)) = 0;	// clear the amount
 		
 		amount = RBUFW(itemlist,2*(i*2+1));
@@ -1092,10 +1080,6 @@ int npc_selllist(struct map_session_data *sd,int n,unsigned char *itemlist)
 	}
 
 	//商人経験値
-/*	if ((sd->status.class_ == 5) || (sd->status.class_ == 10) || (sd->status.class_ == 18)) {
-		z = z * pc_checkskill(sd,MC_OVERCHARGE) / ((1 + 500 / itemamount) * 4000) * battle_config.shop_exp ;
-		pc_gainexp(sd,0,z);
-	}*/
 	if (battle_config.shop_exp > 0 && z > 0 && (skill = pc_checkskill(sd,MC_OVERCHARGE)) > 0) {
 		if (sd->status.skill[MC_OVERCHARGE].flag != 0)
 			skill = sd->status.skill[MC_OVERCHARGE].flag - 2;
@@ -1151,7 +1135,7 @@ static int npc_walk(struct npc_data *nd,unsigned long tick,int data)
 	if(nd->walkpath.path_half==0){
 		nd->walkpath.path_pos++;
 		if(nd->state.change_walk_target){
-			npc_walktoxy_sub(nd);
+			npc_walktoxy_sub(*nd);
 			return 0;
 		}
 	}
@@ -1162,7 +1146,7 @@ static int npc_walk(struct npc_data *nd,unsigned long tick,int data)
 		x = nd->bl.x;
 		y = nd->bl.y;
 		if(map_getcell(nd->bl.m,x,y,CELL_CHKNOPASS)) {
-			npc_stop_walking(nd,1);
+			npc_stop_walking(*nd,1);
 			return 0;
 		}
 		nd->dir=nd->walkpath.path[nd->walkpath.path_pos];
@@ -1170,7 +1154,7 @@ static int npc_walk(struct npc_data *nd,unsigned long tick,int data)
 		dy = diry[nd->dir];
 
 		if(map_getcell(nd->bl.m,x+dx,y+dy,CELL_CHKNOPASS)) {
-			npc_walktoxy_sub(nd);
+			npc_walktoxy_sub(*nd);
 			return 0;
 		}
 
@@ -1235,34 +1219,32 @@ static int npc_walk(struct npc_data *nd,unsigned long tick,int data)
 	return 0;
 }
 
-int npc_changestate(struct npc_data *nd,int state,int type)
+int npc_changestate(struct npc_data &nd,int state,int type)
 {
 	int i;
 
-	nullpo_retr(0, nd);
-
-	if(nd->walktimer != -1)
+	if(nd.walktimer != -1)
 	{
-		delete_timer(nd->walktimer,npc_walktimer);
-	nd->walktimer=-1;
+		delete_timer(nd.walktimer,npc_walktimer);
+		nd.walktimer=-1;
 	}
 
-	nd->state.state=state;
+	nd.state.state=state;
 
 	switch(state){
 	case MS_WALK:
-		if((i=calc_next_walk_step(nd))>0){
+		if((i=calc_next_walk_step(&nd))>0){
 			i = i>>2;
-			nd->walktimer=add_timer(gettick()+i,npc_walktimer,nd->bl.id,0);
+			nd.walktimer = add_timer(gettick()+i,npc_walktimer,nd.bl.id,0);
 		}
 		else {
-			nd->state.state=MS_IDLE;
+			nd.state.state=MS_IDLE;
 		}
 		break;
 	case MS_IDLE:
 		break;
 	case MS_DELAY:
-		nd->walktimer=add_timer(gettick()+type,npc_walktimer,nd->bl.id,0);
+		nd.walktimer = add_timer(gettick()+type,npc_walktimer,nd.bl.id,0);
 		break;
 	}
 
@@ -1290,7 +1272,7 @@ static int npc_walktimer(int tid,unsigned long tick,int id,int data)
 			npc_walk(nd,tick,data);
 			break;
 		case MS_DELAY:
-			npc_changestate(nd,MS_IDLE,0);
+			npc_changestate(*nd,MS_IDLE,0);
 			break;
 		default:
 			break;
@@ -1299,38 +1281,34 @@ static int npc_walktimer(int tid,unsigned long tick,int id,int data)
 }
 
 
-static int npc_walktoxy_sub(struct npc_data *nd)
+static int npc_walktoxy_sub(struct npc_data &nd)
 {
 	struct walkpath_data wpd;
 
-	nullpo_retr(0, nd);
-
-	if(path_search(&wpd,nd->bl.m,nd->bl.x,nd->bl.y,nd->to_x,nd->to_y,nd->state.walk_easy))
+	if( path_search(wpd,nd.bl.m,nd.bl.x,nd.bl.y,nd.to_x,nd.to_y,nd.state.walk_easy) )
 		return 1;
-	memcpy(&nd->walkpath,&wpd,sizeof(wpd));
+	memcpy(&nd.walkpath,&wpd,sizeof(wpd));
 
-	nd->state.change_walk_target=0;
+	nd.state.change_walk_target=0;
+
 	npc_changestate(nd,MS_WALK,0);
-
-	clif_movenpc(nd);
+	clif_movenpc(&nd);
 
 	return 0;
 }
 
-int npc_walktoxy(struct npc_data *nd,int x,int y,int easy)
+int npc_walktoxy(struct npc_data &nd,int x,int y,int easy)
 {
 	struct walkpath_data wpd;
 
-	nullpo_retr(0, nd);
-
-	if(nd->state.state == MS_WALK && path_search(&wpd,nd->bl.m,nd->bl.x,nd->bl.y,x,y,0) )
+	if(nd.state.state == MS_WALK && path_search(wpd,nd.bl.m,nd.bl.x,nd.bl.y,x,y,0) )
 		return 1;
 
-	nd->state.walk_easy = easy;
-	nd->to_x=x;
-	nd->to_y=y;
-	if(nd->state.state == MS_WALK) {
-		nd->state.change_walk_target=1;
+	nd.state.walk_easy = easy;
+	nd.to_x=x;
+	nd.to_y=y;
+	if(nd.state.state == MS_WALK) {
+		nd.state.change_walk_target=1;
 	} else {
 		return npc_walktoxy_sub(nd);
 	}
@@ -1338,28 +1316,28 @@ int npc_walktoxy(struct npc_data *nd,int x,int y,int easy)
 	return 0;
 }
 
-int npc_stop_walking(struct npc_data *nd,int type)
+int npc_stop_walking(struct npc_data &nd,int type)
 {
-	nullpo_retr(0, nd);
-
-	if(nd->state.state == MS_WALK || nd->state.state == MS_IDLE) {
+	if(nd.state.state == MS_WALK || nd.state.state == MS_IDLE)
+	{
 		int dx=0,dy=0;
 
-		nd->walkpath.path_len=0;
-		if(type&4){
-			dx=nd->to_x-nd->bl.x;
+		nd.walkpath.path_len=0;
+		if(type&4)
+		{
+			dx = nd.to_x - nd.bl.x;
 			if(dx<0)
 				dx=-1;
 			else if(dx>0)
 				dx=1;
-			dy=nd->to_y-nd->bl.y;
+			dy = nd.to_y - nd.bl.y;
 			if(dy<0)
 				dy=-1;
 			else if(dy>0)
 				dy=1;
 		}
-		nd->to_x=nd->bl.x+dx;
-		nd->to_y=nd->bl.y+dy;
+		nd.to_x = nd.bl.x+dx;
+		nd.to_y = nd.bl.y+dy;
 		if(dx!=0 || dy!=0){
 			npc_walktoxy_sub(nd);
 			return 0;
@@ -1368,17 +1346,20 @@ int npc_stop_walking(struct npc_data *nd,int type)
 	}
 
 	if(type&0x01)
-		clif_fixnpcpos(nd);
+		clif_fixnpcpos(&nd);
 
-	if(type&0x02) {
-		int delay=status_get_dmotion(&nd->bl);
+	if(type&0x02)
+	{
+		int delay=status_get_dmotion(&nd.bl);
 		unsigned long tick = gettick();
-		if(nd->canmove_tick < tick)
-			nd->canmove_tick = tick + delay;
+		if(nd.canmove_tick < tick)
+			nd.canmove_tick = tick + delay;
 	}
 
 	return 0;
 }
+
+
 
 //
 // 初期化関係
@@ -2062,6 +2043,7 @@ int npc_parse_mob(char *w1,char *w2,char *w3,char *w4)
 
 	for(i=0;i<num;i++) {
 		md=(struct mob_data *)aCalloc(1,sizeof(struct mob_data));
+		memset(md,0,sizeof(struct mob_data));	//Why not 0 up the structure?	[Skotlex]
 
 		if (class_ > MAX_MOB_DB + 2000) { // large/tiny mobs [Valaris]
 			md->size=2;
@@ -2096,10 +2078,10 @@ int npc_parse_mob(char *w1,char *w2,char *w3,char *w4)
 		md->spawndelay1=delay1;
 		md->spawndelay2=delay2;
 
-		memset(&md->state,0,sizeof(md->state));
+//		memset(&md->state,0,sizeof(md->state));
 		md->timer = -1;
-		md->target_id=0;
-		md->attacked_id=0;
+//		md->target_id=0;
+//		md->attacked_id=0;
 		md->speed=mob_db[class_].speed;
 
 		if (mob_db[class_].mode&0x02)
@@ -2270,6 +2252,26 @@ static int npc_parse_mapflag(char *w1,char *w2,char *w3,char *w4)
 	}
 	else if (strcasecmp(w3,"nogo")==0) { // celest
 		map[m].flag.nogo=1;
+	}
+	else if (strcasecmp(w3,"noexp")==0) { // Lorky
+		map[m].flag.nobaseexp=1;
+		map[m].flag.nojobexp=1;
+	}
+	else if (strcasecmp(w3,"nobaseexp")==0) { // Lorky
+		map[m].flag.nobaseexp=1;
+	}
+	else if (strcasecmp(w3,"nojobexp")==0) { // Lorky
+		map[m].flag.nojobexp=1;
+	}
+	else if (strcasecmp(w3,"noloot")==0) { // Lorky
+		map[m].flag.nomobloot=1;
+		map[m].flag.nomvploot=1;
+	}
+	else if (strcasecmp(w3,"nomobloot")==0) { // Lorky
+		map[m].flag.nomobloot=1;
+	}
+	else if (strcasecmp(w3,"nomvploot")==0) { // Lorky
+		map[m].flag.nomvploot=1;
 	}
 
 	return 0;
@@ -2529,7 +2531,6 @@ static int npcname_db_final(void *key,void *data,va_list ap)
 {
 	struct npc_data *nd = (struct npc_data *) data;
 	npc_unload(nd);
-
 	return 0;
 }
 
@@ -2582,7 +2583,6 @@ int npc_reload(void)
  * 終了
  *------------------------------------------
  */
-
 int npc_remove_map (struct npc_data *nd)
 {
     if(!nd || nd->bl.prev == NULL)
@@ -2593,7 +2593,7 @@ int npc_remove_map (struct npc_data *nd)
 	map_deliddb(&nd->bl);
 
     return 0;
-		}
+}
 
 int npc_unload(struct npc_data *nd)
 {
@@ -2644,7 +2644,7 @@ int npc_unload(struct npc_data *nd)
  */
 int do_final_npc(void)
 {
-	int i;
+	size_t i;
 	struct block_list *bl;
 	struct npc_data *nd;
 	struct mob_data *md;
@@ -2658,7 +2658,7 @@ int do_final_npc(void)
 			{
 				npc_unload(nd);
 				nd = NULL;
-				}
+			}
 			else 
 				if(bl->type == BL_MOB && (md = (struct mob_data *)bl))
 			{

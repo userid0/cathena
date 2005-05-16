@@ -15,7 +15,7 @@ int guild_skill_get_range(unsigned short id);
 int guild_skill_get_max(unsigned short id);
 
 int guild_checkskill(struct guild *g,unsigned short id);
-int guild_checkcastles(struct guild *g); // [MouseJstr]
+unsigned int guild_checkcastles(struct guild *g); // [MouseJstr]
 int guild_isallied(struct guild *g, struct guild_castle *gc);
 
 void do_init_guild(void);
@@ -54,7 +54,7 @@ int guild_check_alliance(unsigned long guild_id1, unsigned long guild_id2, int f
 
 int guild_send_memberinfoshort(struct map_session_data *sd,int online);
 int guild_recv_memberinfoshort(unsigned long guild_id,unsigned long account_id,unsigned long char_id,int online,int lv,int class_);
-int guild_change_memberposition(unsigned long guild_id,unsigned long account_id,unsigned long char_id,int idx);
+int guild_change_memberposition(unsigned long guild_id,unsigned long account_id,unsigned long char_id,unsigned long idx);
 int guild_memberposition_changed(struct guild *g,int idx,int pos);
 int guild_change_position(struct map_session_data *sd,int idx,int mode,int exp_mode,const char *name);
 int guild_position_changed(unsigned long guild_id,int idx,struct guild_position *p);
@@ -77,7 +77,7 @@ int guild_castlealldataload(int len, unsigned char *gc);
 
 int guild_agit_start(void);
 int guild_agit_end(void);
-int guild_agit_break(struct mob_data *md);
+int guild_agit_break(struct mob_data &md);
 
 void do_final_guild(void);
 

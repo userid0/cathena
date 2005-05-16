@@ -205,12 +205,15 @@ int mapif_load_storage(int fd,unsigned long account_id)
 
 	//load from DB
 	storage_fromsql(account_id, storage_pt);
-	WFIFOW(fd,0)=0x3810;
-	WFIFOW(fd,2)=sizeof(struct pc_storage)+8;
-	WFIFOL(fd,4)=account_id;
-	//memcpy(WFIFOP(fd,8),storage_pt,sizeof(struct pc_storage));
-	pc_storage_tobuffer(storage_pt,WFIFOP(fd,8));
-	WFIFOSET(fd,WFIFOW(fd,2));
+	if(storage_pt)
+	{
+		WFIFOW(fd,0)=0x3810;
+		WFIFOW(fd,2)=sizeof(struct pc_storage)+8;
+		WFIFOL(fd,4)=account_id;
+		//memcpy(WFIFOP(fd,8),storage_pt,sizeof(struct pc_storage));
+		pc_storage_tobuffer(*storage_pt,WFIFOP(fd,8));
+		WFIFOSET(fd,WFIFOW(fd,2));
+	}
 	return 0;
 }
 // send ack to map server which is "storage data save ok."
@@ -250,19 +253,22 @@ int mapif_load_guild_storage(int fd,unsigned long account_id,unsigned long guild
 
 	if(guild_exist==1) {
 		guild_storage_fromsql(guild_id,guild_storage_pt);
-		WFIFOW(fd,2)=sizeof(struct guild_storage)+12;
-		WFIFOL(fd,4)=account_id;
-		WFIFOL(fd,8)=guild_id;
-		//memcpy(WFIFOP(fd,12),guild_storage_pt,sizeof(struct guild_storage));
-		guild_storage_tobuffer(guild_storage_pt,WFIFOP(fd,12));
+		if(guild_storage_pt)
+		{
+			WFIFOW(fd,2)=sizeof(struct guild_storage)+12;
+			WFIFOL(fd,4)=account_id;
+			WFIFOL(fd,8)=guild_id;
+			//memcpy(WFIFOP(fd,12),guild_storage_pt,sizeof(struct guild_storage));
+			guild_storage_tobuffer(*guild_storage_pt,WFIFOP(fd,12));
+			WFIFOSET(fd,sizeof(struct guild_storage)+12);
+			return 0;
+		}
 	}
-	else {
-		WFIFOW(fd,2)=12;
-		WFIFOL(fd,4)=account_id;
-		WFIFOL(fd,8)=0;
-	}
-	WFIFOSET(fd,WFIFOW(fd,2));
-
+	// failed
+	WFIFOW(fd,2)=12;
+	WFIFOL(fd,4)=account_id;
+	WFIFOL(fd,8)=0;
+	WFIFOSET(fd,12);
 	return 0;
 }
 int mapif_save_guild_storage_ack(int fd,unsigned long account_id,unsigned long guild_id,int fail)
@@ -299,11 +305,14 @@ int mapif_parse_SaveStorage(int fd)
 	unsigned long account_id=RFIFOL(fd,4);
 	int len=RFIFOW(fd,2);
 
-	if(sizeof(struct pc_storage)!=len-8){
+	if(sizeof(struct pc_storage)!=len-8)
+	{
 		ShowMessage("inter storage: data size error %d %d\n",sizeof(struct pc_storage),len-8);
-	}else{
+	}
+	else if(storage_pt)
+	{
 		//memcpy(&storage_pt[0],RFIFOP(fd,8),sizeof(struct pc_storage));
-		pc_storage_frombuffer(storage_pt+0,RFIFOP(fd,8));
+		pc_storage_frombuffer(*storage_pt,RFIFOP(fd,8));
 		storage_tosql(account_id, storage_pt);
 		mapif_save_storage_ack(fd,account_id);
 	}
@@ -345,9 +354,10 @@ int mapif_parse_SaveGuildStorage(int fd)
 		}
 		mysql_free_result(sql_res) ; //resource free
 
-		if(guild_exist==1) {
+		if(guild_exist==1 && guild_storage_pt)
+		{
 			//memcpy(guild_storage_pt,RFIFOP(fd,12),sizeof(struct guild_storage));
-			guild_storage_frombuffer(guild_storage_pt, RFIFOP(fd,12));
+			guild_storage_frombuffer(*guild_storage_pt, RFIFOP(fd,12));
 			guild_storage_tosql(guild_id,guild_storage_pt);
 			mapif_save_guild_storage_ack(fd,RFIFOL(fd,4),guild_id,0);
 		}

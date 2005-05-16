@@ -17,10 +17,6 @@
 
 #include "char.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 static struct dbt *char_db_;
 
 char char_db[256] = "char";
@@ -201,8 +197,6 @@ void set_all_offline(void)
 void set_char_offline(unsigned long char_id, unsigned long account_id)
 {
     struct mmo_charstatus *cp;
-    if ( !session_isActive(login_fd) )
-		return;
 
     if ( char_id == 99 )
         sprintf(tmp_sql,"UPDATE `%s` SET `online`='0' WHERE `account_id`='%d'", char_db, account_id);
@@ -219,9 +213,12 @@ void set_char_offline(unsigned long char_id, unsigned long account_id)
 		ShowMessage("DB server Error (set_char_offline)- %s\n", mysql_error(&mysql_handle));
 	}
 
-   WFIFOW(login_fd,0) = 0x272c;
-   WFIFOL(login_fd,2) = account_id;
-   WFIFOSET(login_fd,6);
+    if ( session_isActive(login_fd) )
+	{
+		WFIFOW(login_fd,0) = 0x272c;
+		WFIFOL(login_fd,2) = account_id;
+		WFIFOSET(login_fd,6);
+	}
 }
 
 //----------------------------------------------------------------------
@@ -411,7 +408,7 @@ int mmo_char_tosql(unsigned long char_id, struct mmo_charstatus *p)
 	    (p->head_mid != cp->head_mid) || (p->head_bottom != cp->head_bottom) ||
 	    (p->partner_id != cp->partner_id) || (p->father_id != cp->father_id) ||
 	    (p->mother_id != cp->mother_id) || (p->child_id != cp->child_id) || 
-		(p->fame != cp->fame)) 
+		(p->fame_points != cp->fame_points)) 
 	{	//check party_exist
 	party_exist=0;
 	sprintf(tmp_sql, "SELECT count(*) FROM `%s` WHERE `party_id` = '%d'",party_db, p->party_id); // TBR
@@ -464,7 +461,7 @@ int mmo_char_tosql(unsigned long char_id, struct mmo_charstatus *p)
 		p->last_point.map, p->last_point.x, p->last_point.y,
 			p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id, 
 			p->father_id, p->mother_id, p->child_id, 
-			p->fame, 
+			p->fame_points, 
 			p->account_id, p->char_id
 	);
 
@@ -821,7 +818,7 @@ int mmo_char_fromsql(int char_id, struct mmo_charstatus *p, int online){
 		p->father_id = atoi(sql_row[21]); 
 		p->mother_id = atoi(sql_row[22]); 
 		p->child_id = atoi(sql_row[23]);
-		p->fame = atoi(sql_row[24]);
+		p->fame_points = atoi(sql_row[24]);
 
 		//free mysql result.
 		mysql_free_result(sql_res);
@@ -1092,134 +1089,158 @@ int mmo_char_sql_init(void) {
 
 //==========================================================================================================
 
-int make_new_char_sql(int fd, unsigned char *dat) {
+int make_new_char_sql(int fd, unsigned char *dat)
+{
 	struct char_session_data *sd;
 	char t_name[100];
 	size_t i;
 	int char_id, temp;
-
-
+	
 	//aphostropy error check! - fixed!
 	jstrescapecpy(t_name, (char*)dat);
-
+	
 	sd = (struct char_session_data*)session[fd]->session_data;
-        
-        ShowMessage("[CHAR] Add - ");
-        
+	ShowMessage("[CHAR] Add - ");
+	
 	//check for charcount (maxchars) :)
-	if(char_per_account != 0){
-          sprintf(tmp_sql, "SELECT `account_id` FROM `%s` WHERE `account_id` = '%d'", char_db, sd->account_id);
-          if(mysql_query(&mysql_handle, tmp_sql)){
-            ShowMessage("fail, SQL Error: %s !!FAIL!!\n", tmp_sql);
-          }
-          sql_res = mysql_store_result(&mysql_handle);
-          if(sql_res){
-            //ok 
-            temp = (int)mysql_num_rows(sql_res);
-            if(temp >= char_per_account){
-              //hehe .. limit exceeded :P
-              ShowMessage("fail (aid: %d), charlimit exceeded.\n", sd->account_id);
-              mysql_free_result(sql_res);
-              return -2;
-            }
-            mysql_free_result(sql_res);          
-          }
+	if(char_per_account != 0)
+	{
+		sprintf(tmp_sql, "SELECT `account_id` FROM `%s` WHERE `account_id` = '%d'", char_db, sd->account_id);
+		if(mysql_query(&mysql_handle, tmp_sql))
+		{
+			ShowMessage("fail, SQL Error: %s !!FAIL!!\n", tmp_sql);
+		}
+		sql_res = mysql_store_result(&mysql_handle);
+		if(sql_res)
+		{	//ok
+			temp = (int)mysql_num_rows(sql_res);
+			if(temp >= char_per_account)
+			{	//hehe .. limit exceeded :P
+				ShowMessage("fail (aid: %d), charlimit exceeded.\n", sd->account_id);
+				mysql_free_result(sql_res);
+				return -2;
+			}
+			mysql_free_result(sql_res);
+		}
 	}
 	
 	// Check Authorised letters/symbols in the name of the character
-	if (char_name_option == 1) { // only letters/symbols in char_name_letters are authorised
+	if (char_name_option == 1)
+	{	// only letters/symbols in char_name_letters are authorised
 		for (i = 0; i < strlen((const char*)dat); i++)
 			if (strchr(char_name_letters, dat[i]) == NULL)
 				return -2;
-	} else if (char_name_option == 2) { // letters/symbols in char_name_letters are forbidden
+	} else if (char_name_option == 2)
+	{	// letters/symbols in char_name_letters are forbidden
 		for (i = 0; i < strlen((const char*)dat); i++)
 			if (strchr(char_name_letters, dat[i]) != NULL)
 				return -2;
-	} // else, all letters/symbols are authorised (except control char removed before)
-
-
+	}
+	// else, all letters/symbols are authorised (except control char removed before)
+	
 	//check stat error
-	if ((dat[24]+dat[25]+dat[26]+dat[27]+dat[28]+dat[29]!=5*6 ) ||
-	    (dat[30] >= 9) ||
-	    (dat[33] <= 0) || (dat[33] >= 20) ||
-	    (dat[31] >= 9)) {
-
-		// check individual stat value
-		for(i = 24; i <= 29; i++) {
-			if (dat[i] < 1 || dat[i] > 9) {
-				ShowMessage("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
-        		return -2;
-			}
-		}
-
-		if (log_char) {
+	if ((dat[24]+dat[25]+dat[26]+dat[27]+dat[28]+dat[29]!=6*5 ) || // stats
+	    (dat[30] >= 9) || // slots (dat[30] can not be negativ)
+	    (dat[33] <= 0) || (dat[33] >= 24) || // hair style
+	    (dat[31] >= 9)) { // hair color (dat[31] can not be negativ)
+		if (log_char) {	
 			// char.log to charlog
 			sprintf(tmp_sql,"INSERT INTO `%s` (`time`, `char_msg`,`account_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
 				"VALUES (NOW(), '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
 				charlog_db,"make new char error", sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
 			//query
+			mysql_query(&mysql_handle, tmp_sql);		
+		}
+		printf("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
+		return -2;
+	} // for now we have checked: stat points used <31, char slot is less then 9, hair style/color values are acceptable
+
+	// check individual stat value
+	for(i = 24; i <= 29; i++) {
+		if (dat[i] < 1 || dat[i] > 9) {
+			if (log_char) {
+				// char.log to charlog
+				sprintf(tmp_sql,"INSERT INTO `%s` (`time`, `char_msg`,`account_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
+					"VALUES (NOW(), '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
+					charlog_db,"make new char error", sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
+				//query
+				mysql_query(&mysql_handle, tmp_sql);
+			}
+			printf("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
+       			return -2;
+		}
+	} // now we know that every stat has proper value but we have to check if str/int agi/luk vit/dex pairs are correct
+
+	if( ((dat[24]+dat[27]) > 10) || ((dat[25]+dat[29]) > 10) || ((dat[26]+dat[28]) > 10) ) {
+		if (log_char) {
+			// char.log to charlog
+			sprintf(tmp_sql,"INSERT INTO `%s` (`time`, `char_msg`,`account_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
+					"VALUES (NOW(), '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
+					charlog_db,"make new char error", sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
+			//query
 			mysql_query(&mysql_handle, tmp_sql);
 		}
-		//ShowMessage("make new char error %d-%d %s %d, %d, %d, %d, %d, %d %d, %d" RETCODE,
-		//	fd, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
-		
-                ShowMessage("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
+		printf("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
 		return -2;
-	}
-
+	} // now when we have passed all stat checks
+		
 	if (log_char) {
 		// char.log to charlog
 		sprintf(tmp_sql,"INSERT INTO `%s`(`time`, `char_msg`,`account_id`,`char_num`,`name`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`hair`,`hair_color`)"
 			"VALUES (NOW(), '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
 			charlog_db,"make new char", sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
 		//query
-		if (mysql_query(&mysql_handle, tmp_sql)) {
+		if (mysql_query(&mysql_handle, tmp_sql))
+		{
 			ShowMessage("fail(log error), SQL error: %s\n", mysql_error(&mysql_handle));
 		}
 	}
 	//ShowMessage("make new char %d-%d %s %d, %d, %d, %d, %d, %d - %d, %d" RETCODE,
 	//	fd, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[33], dat[31]);
-
+	
 	//Check Name (already in use?)
 	sprintf(tmp_sql, "SELECT `name` FROM `%s` WHERE `name` = '%s'",char_db, t_name);
-	if (mysql_query(&mysql_handle, tmp_sql)) {
+	if (mysql_query(&mysql_handle, tmp_sql))
+	{
 		ShowMessage("fail (namecheck!), SQL error: %s\n", mysql_error(&mysql_handle));
 		return -2;
 	}
 	sql_res = mysql_store_result(&mysql_handle);
-	if(sql_res){
-	  temp = (int)mysql_num_rows(sql_res);
-	
-	  if (temp > 0) {
+	if(sql_res)
+	{
+		temp = (int)mysql_num_rows(sql_res);
+		if (temp > 0)
+		{
+			mysql_free_result(sql_res);
+			ShowMessage("fail, charname already in use\n");
+			return -1;
+		}
 		mysql_free_result(sql_res);
-		ShowMessage("fail, charname already in use\n");
-		return -1;
-          }
-	mysql_free_result(sql_res);
 	}
-
+	
 	// check char slot.
 	sprintf(tmp_sql, "SELECT `account_id`, `char_num` FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d'",char_db, sd->account_id, dat[30]);
-	if (mysql_query(&mysql_handle, tmp_sql)) {
+	if (mysql_query(&mysql_handle, tmp_sql))
+	{
 		ShowMessage("fail (charslot check), SQL error: %s\n", mysql_error(&mysql_handle));
 	}
 	sql_res = mysql_store_result(&mysql_handle);
-	
-	if(sql_res){
-	  temp = (int)mysql_num_rows(sql_res);
-
-	  if (temp > 0) {
+	if(sql_res)
+	{
+		temp = (int)mysql_num_rows(sql_res);
+		if (temp > 0)
+		{
+			mysql_free_result(sql_res);
+			ShowMessage("fail (aid: %d, slot: %d), slot already in use\n", sd->account_id, dat[30]);
+			return -2;
+		}
 		mysql_free_result(sql_res);
-		ShowMessage("fail (aid: %d, slot: %d), slot already in use\n", sd->account_id, dat[30]);
-		return -2;
-          } 
-	  mysql_free_result(sql_res);
-        }
-  	
+	}
+	
 	//char_id_count++;
-
+	
 	// make new char.
-         /*
+/*
 	sprintf(tmp_sql,"INSERT INTO `%s` (`char_id`,`account_id`,`char_num`,`name`,`zeny`,`str`,`agi`,`vit`,`int`,`dex`,`luk`,`max_hp`,`hp`,`max_sp`,`sp`,`hair`,`hair_color`)"
 		" VALUES ('%d', '%d', '%d', '%s', '%d',  '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d','%d', '%d','%d', '%d')",
 		 char_db, char_id_count, sd->account_id , dat[30] , t_name, start_zeny, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29],
@@ -1250,75 +1271,85 @@ int make_new_char_sql(int fd, unsigned char *dat) {
 
 	// Insert friends list
 	insert_friends(char_id_count);
-           */
+*/
+	
+	
+	//New Querys [Sirius]
+	//Insert the char to the 'chardb' ^^
+	sprintf(tmp_sql, "INSERT INTO `%s` (`account_id`, `char_num`, `name`, `zeny`, `str`, `agi`, `vit`, `int`, `dex`, `luk`, `max_hp`, `hp`, `max_sp`, `sp`, `hair`, `hair_color`, `last_map`, `last_x`, `last_y`, `save_map`, `save_x`, `save_y`) VALUES ('%d', '%d', '%s', '%d',  '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d','%d', '%d','%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d')", char_db, sd->account_id , dat[30] , t_name, start_zeny, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], (40 * (100 + dat[26])/100) , (40 * (100 + dat[26])/100 ),  (11 * (100 + dat[27])/100), (11 * (100 + dat[27])/100), dat[33], dat[31], start_point.map, start_point.x, start_point.y, start_point.map, start_point.x, start_point.y);
+	if(mysql_query(&mysql_handle, tmp_sql))
+	{
+		ShowMessage("failed (insert in chardb), SQL error: %s\n", mysql_error(&mysql_handle));
+		return -2; //No, stop the procedure!
+	}
 
-         //New Querys [Sirius]
-         //Insert the char to the 'chardb' ^^
-         sprintf(tmp_sql, "INSERT INTO `%s` (`account_id`, `char_num`, `name`, `zeny`, `str`, `agi`, `vit`, `int`, `dex`, `luk`, `max_hp`, `hp`, `max_sp`, `sp`, `hair`, `hair_color`, `last_map`, `last_x`, `last_y`, `save_map`, `save_x`, `save_y`) VALUES ('%d', '%d', '%s', '%d',  '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d','%d', '%d','%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d')", char_db, sd->account_id , dat[30] , t_name, start_zeny, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], (40 * (100 + dat[26])/100) , (40 * (100 + dat[26])/100 ),  (11 * (100 + dat[27])/100), (11 * (100 + dat[27])/100), dat[33], dat[31], start_point.map, start_point.x, start_point.y, start_point.map, start_point.x, start_point.y);
-         if(mysql_query(&mysql_handle, tmp_sql)){
-         	ShowMessage("failed (insert in chardb), SQL error: %s\n", mysql_error(&mysql_handle));
-         	return -2; //No, stop the procedure!
-         }
-
-         //Now we need the charid from sql!
-         sprintf(tmp_sql, "SELECT `char_id` FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id , dat[30] , t_name);
-         if(mysql_query(&mysql_handle, tmp_sql)){
-         	ShowMessage("failed (get char_id), SQL error: %s\n", mysql_error(&mysql_handle));
-               	//delete the char ..(no trash in DB!)
-                 sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
-                 mysql_query(&mysql_handle, tmp_sql);
-                 return -2; //XD end of the (World? :P) .. charcreate (denied)
-         }else{
-         	//query ok -> get the data!
-                 sql_res = mysql_store_result(&mysql_handle);
-                 if(sql_res){
-                 	sql_row = mysql_fetch_row(sql_res);
-                         char_id = atoi(sql_row[0]); //char id :)
-                         mysql_free_result(sql_res);
-                         if(char_id <= 0){
-                         	ShowMessage("failed (get char id..) CHARID wrong!\n");
-                                 sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
-                                 mysql_query(&mysql_handle, tmp_sql);
-                                 return -2; //charcreate denied ..
-                         }
-                 }else{
-                 	//prevent to crash (if its false, and we want to free -> segfault :)
-                 	ShowMessage("failed (get char id.. res), SQL error: %s\n", mysql_error(&mysql_handle));
-	                sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
-	                mysql_query(&mysql_handle, tmp_sql);
-                         return -2; //end ...... -> charcreate failed :)
-                 }
-         }
-
-         //Give the char the default items
-         //knife
+	//Now we need the charid from sql!
+	sprintf(tmp_sql, "SELECT `char_id` FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id , dat[30] , t_name);
+	if(mysql_query(&mysql_handle, tmp_sql))
+	{
+		ShowMessage("failed (get char_id), SQL error: %s\n", mysql_error(&mysql_handle));
+		//delete the char ..(no trash in DB!)
+		sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
+		mysql_query(&mysql_handle, tmp_sql);
+		return -2; //XD end of the (World? :P) .. charcreate (denied)
+	}
+	else
+	{	//query ok -> get the data!
+		sql_res = mysql_store_result(&mysql_handle);
+		if(sql_res)
+		{
+			sql_row = mysql_fetch_row(sql_res);
+			char_id = atoi(sql_row[0]); //char id :)
+			mysql_free_result(sql_res);
+			if(char_id <= 0)
+			{
+				ShowMessage("failed (get char id..) CHARID wrong!\n");
+				sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
+				mysql_query(&mysql_handle, tmp_sql);
+				return -2; //charcreate denied ..
+			}
+		}
+		else
+		{	//prevent to crash (if its false, and we want to free -> segfault :)
+			ShowMessage("failed (get char id.. res), SQL error: %s\n", mysql_error(&mysql_handle));
+			sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
+			mysql_query(&mysql_handle, tmp_sql);
+			return -2; //end ...... -> charcreate failed :)
+		}
+	}
+	
+	//Give the char the default items
+	//knife
 	sprintf(tmp_sql,"INSERT INTO `%s` (`char_id`,`nameid`, `amount`, `equip`, `identify`) VALUES ('%d', '%d', '%d', '%d', '%d')", inventory_db, char_id, 1201,1,0x02,1); //add Knife
-	if (mysql_query(&mysql_handle, tmp_sql)){
+	if (mysql_query(&mysql_handle, tmp_sql))
+	{
 		ShowMessage("fail (insert in inventory  the 'knife'), SQL error: %s\n", mysql_error(&mysql_handle));
-	        sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
-	        mysql_query(&mysql_handle, tmp_sql);
-                 return -2;//end XD
-         }
-         //cotton shirt
+		sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
+		mysql_query(&mysql_handle, tmp_sql);
+		return -2;//end XD
+	}
+	//cotton shirt
 	sprintf(tmp_sql,"INSERT INTO `%s` (`char_id`,`nameid`, `amount`, `equip`, `identify`) VALUES ('%d', '%d', '%d', '%d', '%d')", inventory_db, char_id, 2301,1,0x10,1); //add Cotton Shirt
-	if (mysql_query(&mysql_handle, tmp_sql)){
+	if (mysql_query(&mysql_handle, tmp_sql))
+	{
 		ShowMessage("fail (insert in inventroxy the 'cotton shirt'), SQL error: %s\n", mysql_error(&mysql_handle));
-	        sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
-	        mysql_query(&mysql_handle, tmp_sql);
-                 sprintf(tmp_sql, "DELETE FROM `%s` WHERE `char_id` = '%d'", inventory_db, char_id);
-                 mysql_query(&mysql_handle, tmp_sql);
-                 return -2; //end....
-         }
-
-         if(!insert_friends(char_id)){
-          	ShowMessage("fail (friendlist entrys..)\n");
-                 sprintf(tmp_sql, "DELETE FROM `%s` WHERE `char_id` = '%d'", char_db, char_id);
-                 mysql_query(&mysql_handle, tmp_sql);
-                 sprintf(tmp_sql, "DELETE FROM `%s` WHERE `char_id` = '%d'", inventory_db, char_id);
-                 mysql_query(&mysql_handle, tmp_sql);
-                 return -2; //end.. charcreate failed
-         }
-
+		sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id` = '%d' AND `char_num` = '%d' AND `name` = '%s'", char_db, sd->account_id, dat[30], t_name);
+		mysql_query(&mysql_handle, tmp_sql);
+		sprintf(tmp_sql, "DELETE FROM `%s` WHERE `char_id` = '%d'", inventory_db, char_id);
+		mysql_query(&mysql_handle, tmp_sql);
+		return -2; //end....
+	}
+	
+	if(!insert_friends(char_id))
+	{
+		ShowMessage("fail (friendlist entrys..)\n");
+		sprintf(tmp_sql, "DELETE FROM `%s` WHERE `char_id` = '%d'", char_db, char_id);
+		mysql_query(&mysql_handle, tmp_sql);
+		sprintf(tmp_sql, "DELETE FROM `%s` WHERE `char_id` = '%d'", inventory_db, char_id);
+		mysql_query(&mysql_handle, tmp_sql);
+		return -2; //end.. charcreate failed
+	}
+	
 	//ShowMessage("making new char success - id:(\033[1;32m%d\033[0m\tname:\033[1;32%s\033[0m\n", char_id, t_name);
 	ShowMessage("success, aid: %d, cid: %d, slot: %d, name: %s\n", sd->account_id, char_id, dat[30], t_name);
 	return char_id;
@@ -1472,13 +1503,16 @@ int parse_tologin(int fd)
 
 	// only login-server can have an access to here.
 	// so, if it isn't the login-server, we disconnect the session.
-	//session eof check!
 	if(fd != login_fd)
+	{
 		session_Remove(fd);
+		return 0;
+	}
 	// else it is the login
-	if( !session_isActive(fd) ) {
-		ShowMessage("Char-server can't connect to login-server (connection #%d).\n", fd);
-			login_fd = -1;
+	if( !session_isActive(fd) )
+	{	// login is disconnecting
+		ShowMessage("Connection to login-server dropped (connection #%d).\n", fd);
+		login_fd = -1;
 		session_Remove(fd);
 		return 0;
 	}
@@ -1815,26 +1849,24 @@ int parse_frommap(int fd) {
 	int i, j;
 	int id;
 
-	if( !session_isActive(fd) )
-	{
-		ShowMessage("parse_frommap error fd=0\n");
-		return 0;
-	}
-
 	for(id = 0; id < MAX_MAP_SERVERS; id++)
 		if (server[id].fd == fd)
 			break;
 	if(id == MAX_MAP_SERVERS)
+	{
 		session_Remove(fd);
+		return 0;
+	}
 	// else it is the map server id
-	if( !session_isActive(fd) ) {
-		
+	if( !session_isActive(fd) )
+	{
 		ShowMessage("Map-server %d (session #%d) has disconnected.\n", id, fd);
-			sprintf(tmp_sql, "DELETE FROM `ragsrvinfo` WHERE `index`='%d'", server[id].fd);
-			if (mysql_query(&mysql_handle, tmp_sql)) {
+		sprintf(tmp_sql, "DELETE FROM `ragsrvinfo` WHERE `index`='%d'", server[id].fd);
+		if (mysql_query(&mysql_handle, tmp_sql))
+		{
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
-			}
-			server[id].fd = -1;
+		}
+		server[id].fd = -1;
 		session_Remove(fd);
 		return 0;
 	}
@@ -1947,7 +1979,7 @@ int parse_frommap(int fd) {
 					mmo_char_fromsql(auth_fifo[i].char_id, char_dat, 1);
 					char_dat[0].sex = auth_fifo[i].sex;
 					//memcpy(WFIFOP(fd,16), &char_dat[0], sizeof(struct mmo_charstatus));
-					mmo_charstatus_tobuffer(char_dat,WFIFOP(fd,16));
+					if(char_dat) mmo_charstatus_tobuffer(*char_dat,WFIFOP(fd,16));
 					WFIFOSET(fd, WFIFOW(fd,2));
 					//ShowMessage("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6));
 					break;
@@ -1991,9 +2023,9 @@ int parse_frommap(int fd) {
 			}
 			mysql_free_result(sql_res);
 
-			if (i == 1) {
+			if (i == 1 && char_dat) {
 				//memcpy(&char_dat[0], RFIFOP(fd,12), sizeof(struct mmo_charstatus));
-				mmo_charstatus_frombuffer(char_dat,RFIFOP(fd,12));
+				mmo_charstatus_frombuffer(*char_dat,RFIFOP(fd,12));
 				mmo_char_tosql(RFIFOL(fd,8), char_dat);
 				//save to DB
 			}
@@ -2303,6 +2335,7 @@ int parse_frommap(int fd) {
 			RFIFOSKIP(fd,RFIFOW(fd,8));
 			break;
 
+
 		// Character disconnected set online 0 [Wizputer]
 		case 0x2b17:
 			if (RFIFOREST(fd) < 6 )
@@ -2448,7 +2481,7 @@ int parse_char(int fd)
 	struct char_session_data *sd = (struct char_session_data*)session[fd]->session_data;
 
 	if( !session_isActive(login_fd) )
-	{
+	{	// no login server available, reject connection
 		session_Remove(fd);
 		return 0;
 	}
@@ -2697,27 +2730,27 @@ int parse_char(int fd)
 			//Changed that we can support 'Charname already exists' (-1) amd 'Char creation denied' (-2)
 			//And 'You are underaged' (-3) (XD) [Sirius]
 			if(i == -1){
-                            //already exists
-                            WFIFOW(fd, 0) = 0x6e;
-                            WFIFOB(fd, 2) = 0x00;
-                            WFIFOSET(fd, 3);
-                            RFIFOSKIP(fd, 37);
-                            break;
-                        }else if(i == -2){
-                            //denied
-                            WFIFOW(fd, 0) = 0x6e;
-                            WFIFOB(fd, 2) = 0x02;
-                            WFIFOSET(fd, 3); 
-                            RFIFOSKIP(fd, 37);                           
-                            break;
-                        }else if(i == -3){
-                            //underaged XD
-                            WFIFOW(fd, 0) = 0x6e;
-                            WFIFOB(fd, 2) = 0x01;
-                            WFIFOSET(fd, 3);
-                            RFIFOSKIP(fd, 37);
-                            break;
-                        }
+				//already exists
+				WFIFOW(fd, 0) = 0x6e;
+				WFIFOB(fd, 2) = 0x00;
+				WFIFOSET(fd, 3);
+				RFIFOSKIP(fd, 37);
+				break;
+			}else if(i == -2){
+				//denied
+				WFIFOW(fd, 0) = 0x6e;
+				WFIFOB(fd, 2) = 0x02;
+				WFIFOSET(fd, 3); 
+				RFIFOSKIP(fd, 37);
+				break;
+			}else if(i == -3){
+				//underaged XD
+				WFIFOW(fd, 0) = 0x6e;
+				WFIFOB(fd, 2) = 0x01;
+				WFIFOSET(fd, 3);
+				RFIFOSKIP(fd, 37);
+				break;
+			}
 
 			WFIFOW(fd, 0) = 0x6d;
 			memset(WFIFOP(fd, 2), 0x00, 106);
@@ -3479,6 +3512,10 @@ int flush_timer(int tid, unsigned long tick, int id, int data){
 	return 0;
 }
 
+unsigned char getServerType()
+{
+	return ATHENA_SERVER_CHAR | ATHENA_SERVER_INTER | ATHENA_SERVER_CORE;
+}
 int do_init(int argc, char **argv){
 	int i;
 
@@ -3601,10 +3638,10 @@ int do_init(int argc, char **argv){
 #undef mysql_query
 
 int debug_mysql_query(char *file, int line, void *mysql, const char *q) {
-#ifdef TWILIGHT
-        ShowMessage("sql: %s:%d# %s\n", file, line, q);
-#endif
-        return mysql_query((MYSQL *) mysql, q);
+//#ifdef TWILIGHT
+        ShowSQL("%s:%d# %s\n", file, line, q);
+//#endif
+		return mysql_query((MYSQL *)mysql, q);
 }
 
 int char_child(int parent_id, int child_id) {

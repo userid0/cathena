@@ -1,12 +1,16 @@
 // $Id: guild.c,v 1.5 2004/09/25 05:32:18 MouseJstr Exp $
 #include "base.h"
-#include "guild.h"
-#include "storage.h"
 #include "db.h"
 #include "timer.h"
 #include "socket.h"
 #include "nullpo.h"
 #include "malloc.h"
+#include "showmsg.h"
+#include "utils.h"
+
+
+#include "guild.h"
+#include "storage.h"
 #include "battle.h"
 #include "npc.h"
 #include "pc.h"
@@ -16,12 +20,7 @@
 #include "intif.h"
 #include "clif.h"
 #include "skill.h"
-#include "showmsg.h"
-#include "utils.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
+#include "log.h"
 
 static struct dbt *guild_db;
 static struct dbt *castle_db;
@@ -86,7 +85,7 @@ int guild_skill_get_max(unsigned short id) { // Modified for new skills [Sara]
 int guild_checkskill(struct guild *g,unsigned short skillid)
 {
 	int idx = skillid-GD_SKILLBASE;
-	if (idx < 0 || idx >= MAX_GUILDSKILL)
+	if(!g || idx < 0 || idx >= MAX_GUILDSKILL)
 		return 0;
 	return g->skill[idx].lv;
 }
@@ -226,9 +225,7 @@ int guild_getindex(struct guild *g,unsigned long account_id,unsigned long char_i
 int guild_getposition(struct map_session_data *sd,struct guild *g)
 {
 	int i;
-
 	nullpo_retr(-1, sd);
-
 	if(g==NULL && (g=guild_search(sd->status.guild_id))==NULL)
 		return -1;
 	for(i=0;i<g->max_member;i++)
@@ -239,23 +236,23 @@ int guild_getposition(struct map_session_data *sd,struct guild *g)
 }
 
 // メンバー情報の作成
-void guild_makemember(struct guild_member *m,struct map_session_data *sd)
+void guild_makemember(struct guild_member &m,struct map_session_data *sd)
 {
 	nullpo_retv(sd);
 
-	memset(m,0,sizeof(struct guild_member));
-	m->account_id	=sd->status.account_id;
-	m->char_id		=sd->status.char_id;
-	m->hair			=sd->status.hair;
-	m->hair_color	=sd->status.hair_color;
-	m->gender		=sd->sex;
-	m->class_		=sd->status.class_;
-	m->lv			=sd->status.base_level;
-	m->exp			=0;
-	m->exp_payper	=0;
-	m->online		=1;
-	m->position		=MAX_GUILDPOSITION-1;
-	memcpy(m->name,sd->status.name,24);
+	memset(&m,0,sizeof(struct guild_member));
+	m.account_id	=sd->status.account_id;
+	m.char_id		=sd->status.char_id;
+	m.hair			=sd->status.hair;
+	m.hair_color	=sd->status.hair_color;
+	m.gender		=sd->sex;
+	m.class_		=sd->status.class_;
+	m.lv			=sd->status.base_level;
+	m.exp			=0;
+	m.exp_payper	=0;
+	m.online		=1;
+	m.position		=MAX_GUILDPOSITION-1;
+	memcpy(m.name,sd->status.name,24);
 	return;
 }
 // ギルド競合確認
@@ -286,10 +283,16 @@ int guild_payexp_timer_sub(void *key,void *data,va_list ap)
 		(i = guild_getindex(g, c->account_id, c->char_id)) < 0)
 		return 0;
 
+	// It is *already* fixed... this would be more appropriate ^^; [celest]
 	exp2 = g->member[i].exp + c->exp;
 	g->member[i].exp = (exp2 > 0x7FFFFFFF) ? 0x7FFFFFFF : (int)exp2;
-	intif_guild_change_memberinfo(g->guild_id,c->account_id,c->char_id,
-		GMI_EXP,&g->member[i].exp,sizeof(g->member[i].exp));
+
+	//fixed a bug in exp overflow [Kevin]
+	//g->member[i].exp += c->exp;
+	//if(g->member[i].exp < 0)
+		//g->member[i].exp = 0x7FFFFFFF;
+	
+	intif_guild_change_memberinfo(g->guild_id,c->account_id,c->char_id,GMI_EXP,g->member[i].exp);
 	c->exp=0;
 
 	dellist[(*delp)++]=dataid;
@@ -317,9 +320,9 @@ int guild_create(struct map_session_data *sd,char *name)
 	if(sd->status.guild_id==0){
 		if(!battle_config.guild_emperium_check || pc_search_inventory(sd,714) >= 0) {
 			struct guild_member m;
-			guild_makemember(&m,sd);
+			guild_makemember(m,sd);
 			m.position=0;
-			intif_guild_create(name,&m);
+			intif_guild_create(name,m);
 		} else
 			clif_guild_created(sd,3);	// エンペリウムがいない
 	}else
@@ -569,11 +572,9 @@ int guild_reply_invite(struct map_session_data *sd,unsigned long guild_id,int fl
 			clif_guild_inviteack(tsd,3);
 			return 0;
 		}
-
-
 		//inter鯖へ追加要求
-		guild_makemember(&m,sd);
-		intif_guild_addmember( sd->guild_invite, &m );
+		guild_makemember(m,sd);
+		intif_guild_addmember( sd->guild_invite, m );
 		return 0;
 	}else{		// 拒否
 		sd->guild_invite=0;
@@ -670,7 +671,8 @@ int guild_explusion(struct map_session_data *sd,unsigned long guild_id,unsigned 
 
 	for(i=0;i<g->max_member;i++){	// 所属しているか
 		if(	g->member[i].account_id==account_id &&
-			g->member[i].char_id==char_id ){
+			g->member[i].char_id==char_id )
+		{
 			intif_guild_leave(g->guild_id,account_id,char_id,1,mes);
 			memset(&g->member[i],0,sizeof(struct guild_member));
 			return 0;
@@ -814,6 +816,10 @@ int guild_send_message(struct map_session_data *sd,char *mes,size_t len)
 	intif_guild_message(sd->status.guild_id,sd->status.account_id,mes,len);
 	guild_recv_message(sd->status.guild_id,sd->status.account_id,mes,len);
 
+	//Chatlogging type 'G'
+	log_chat("G", sd->status.guild_id, sd->status.char_id, sd->status.account_id, (char*)sd->mapname, sd->bl.x, sd->bl.y, NULL, mes);
+	
+
 	return 0;
 }
 // ギルド会話受信
@@ -826,10 +832,9 @@ int guild_recv_message(unsigned long guild_id,unsigned long account_id,char *mes
 	return 0;
 }
 // ギルドメンバの役職変更
-int guild_change_memberposition(unsigned long guild_id,unsigned long account_id,unsigned long char_id,int idx)
+int guild_change_memberposition(unsigned long guild_id,unsigned long account_id,unsigned long char_id, unsigned long idx)
 {
-	return intif_guild_change_memberinfo(
-		guild_id,account_id,char_id,GMI_POSITION,&idx,sizeof(idx));
+	return intif_guild_change_memberinfo(guild_id,account_id,char_id,GMI_POSITION,idx);
 }
 // ギルドメンバの役職変更通知
 int guild_memberposition_changed(struct guild *g,int idx,int pos)
@@ -847,13 +852,13 @@ int guild_change_position(struct map_session_data *sd,int idx,int mode,int exp_m
 
 	nullpo_retr(0, sd);
 
-	if(exp_mode>battle_config.guild_exp_limit)
+	if(exp_mode > (int)battle_config.guild_exp_limit)
 		exp_mode=battle_config.guild_exp_limit;
-	if(exp_mode<0)exp_mode=0;
+	if(exp_mode<0) exp_mode=0;
 	p.mode=mode;
 	p.exp_mode=exp_mode;
 	memcpy(p.name,name,24);
-	return intif_guild_position(sd->status.guild_id,idx,&p);
+	return intif_guild_position(sd->status.guild_id,idx,p);
 }
 // ギルド役職変更通知
 int guild_position_changed(unsigned long guild_id,int idx,struct guild_position *p)
@@ -1499,7 +1504,7 @@ int guild_castlealldataload(int len, unsigned char *buf)
 	for(i = 0; i < n; i++) {
 //		if ((gc + i)->guild_id) // this access might be unalligned
 //		memcpy(&gctmp,(gc+i),sizeof(struct guild_castle)); // no memcopy, use access function
-		guild_castle_frombuffer(&gctmp, buf+i*sizeof(struct guild_castle));
+		guild_castle_frombuffer(gctmp, buf+i*sizeof(struct guild_castle));
 		if ( gctmp.guild_id )
 			ev = i;
 	}
@@ -1509,7 +1514,7 @@ int guild_castlealldataload(int len, unsigned char *buf)
 		struct guild_castle *c;
 //		struct guild_castle *c = guild_castle_search(gc->castle_id);
 //		memcpy(&gctmp,gc,sizeof(struct guild_castle));
-		guild_castle_frombuffer(&gctmp, buf+i*sizeof(struct guild_castle));
+		guild_castle_frombuffer(gctmp, buf+i*sizeof(struct guild_castle));
 		c = guild_castle_search(gctmp.castle_id);
 		if (!c) {
 			ShowMessage("guild_castlealldataload ??\n");
@@ -1622,28 +1627,29 @@ int guild_save_sub(int tid,unsigned long tick,int id,int data)
 	return 0;
 }
 
-int guild_agit_break(struct mob_data *md)
+int guild_agit_break(struct mob_data &md)
 {	// Run One NPC_Event[OnAgitBreak]
 	char *evname;
 
-	nullpo_retr(0, md);
-	evname=(char *)aMalloc( (strlen(md->npc_event) + 1) * sizeof(char));
+	evname=(char *)aMalloc( (strlen(md.npc_event) + 1) * sizeof(char));
 
-	strcpy(evname,md->npc_event);
+	strcpy(evname,md.npc_event);
 // Now By User to Run [OnAgitBreak] NPC Event...
 // It's a little impossible to null point with player disconnect in this!
 // But Script will be stop, so nothing...
 // Maybe will be changed in the futher..
 //      int c = npc_event_do(evname);
 	if(!agit_flag) return 0;	// Agit already End
-	add_timer(gettick()+battle_config.gvg_eliminate_time,guild_gvg_eliminate_timer,md->bl.m,(int)evname);//!!todo!!
+	add_timer(gettick()+battle_config.gvg_eliminate_time,guild_gvg_eliminate_timer,md.bl.m,(int)evname);//!!todo!!
 	return 0;
 }
 
 // [MouseJstr]
 //   How many castles does this guild have?
-int guild_checkcastles(struct guild *g) {
-	unsigned long i,nb_cas=0, id,cas_id=0;
+unsigned int guild_checkcastles(struct guild *g)
+{
+	unsigned int i,nb_cas=0;
+	unsigned long id,cas_id=0;
 	struct guild_castle *gc;
 	id=g->guild_id;
 	for(i=0;i<MAX_GUILDCASTLE;i++)

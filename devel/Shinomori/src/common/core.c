@@ -1,6 +1,9 @@
 // $Id: core.c,v 1.1.1.1 2004/09/10 17:44:49 MagicalTux Exp $
 // original : core.c 2003/02/26 18:03:12 Rev 1.7
 
+#define LOG_UPTIME 0
+
+
 #ifdef DUMPSTACK
 	#if !defined(CYGWIN) && !defined(WIN32) && !defined(__NETBSD__)	// HAVE_EXECINFO_H
 		#include <execinfo.h>
@@ -20,20 +23,48 @@
 #include "utils.h"
 #include "showmsg.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
+
+
+///////////////////////////////////////////////////////////////////////////////
+// uptime class
+
+unsigned long uptime::starttick = gettick();
+
+void uptime::getvalues(unsigned long& days,unsigned long& hours,unsigned long& minutes,unsigned long& seconds)
+{
+	seconds = (gettick()-starttick)/CLOCKS_PER_SEC;
+	days    = seconds/(24*60*60);
+	seconds-= days*(24*60*60);
+	hours   = seconds/(60*60);
+	seconds-= hours*(60*60);
+	minutes = seconds/(60);
+	seconds-= minutes*(60);
+}
+const char *uptime::getstring(char *buffer)
+{	// usage of the static buffer is not threadsafe
+	static char tmp[128];
+	char *buf = (buffer) ? buffer : tmp;
+
+	unsigned long day, minute, hour, seconds;
+	getvalues(day, minute, hour, seconds);
+
+	sprintf(buf, "%ld days, %ld hours, %ld minutes, %ld seconds",
+		day, minute, hour, seconds);
+	return buf;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // global data
 int runflag = 1;
+const char *argv0;
 
+///////////////////////////////////////////////////////////////////////////////
+// run control
 void core_stoprunning()
 {
 	runflag = 0;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // pid stuff
@@ -66,7 +97,6 @@ void pid_create(const char* file)
 
 ///////////////////////////////////////////////////////////////////////////////
 // uptime logging
-#define LOG_UPTIME 0
 void log_uptime(void)
 {
 #if LOG_UPTIME
@@ -82,16 +112,9 @@ void log_uptime(void)
 		time(&curtime);
 		strftime(curtime2, 24, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
 
-		seconds = (gettick()-ticks)/CLOCKS_PER_SEC;
-		days = seconds/day;
-		seconds -= (seconds/day>0)?(seconds/day)*day:0;
-		hours = seconds/hour;
-		seconds -= (seconds/hour>0)?(seconds/hour)*hour:0;
-		minutes = seconds/minute;
-		seconds -= (seconds/minute>0)?(seconds/minute)*minute:0;
 
-		fprintf(fp, "%s: %s uptime - %ld days, %ld hours, %ld minutes, %ld seconds.\n",
-			curtime2, server_type, days, hours, minutes, seconds);
+		fprintf(fp, "%s: %s uptime - %s.\n",
+			curtime2, argv0, uptime.getstring());
 		fclose(fp);
 	}
 	return;
@@ -106,7 +129,8 @@ void log_uptime(void)
 // (sigaction() is POSIX; signal() is not.)  Taken from Stevens' _Advanced
 // Programming in the UNIX Environment_.
 //
-#ifndef SIGPIPE
+
+#ifdef WIN32	// windows don't have SIGPIPE others don't define them
 #define SIGPIPE SIGINT
 #endif
 
@@ -153,7 +177,10 @@ static void sig_proc(int sn)
                 runflag = 0;
 	}
 }
-
+static void sig_pipe(int sn) {
+	ShowMessage ("Broken pipe found... closing socket\n");	// set to eof in socket.c
+	return;	// does nothing here
+}
 /*=========================================
  *	Dumps the stack using glibc's backtrace
  *-----------------------------------------
@@ -201,8 +228,6 @@ void init_signal()
 #ifdef DUMPSTACK
 	///////////////////////////////////////////////////////////////////////////
 	// glibc dump
-	compat_signal(SIGPIPE,SIG_IGN);
-	compat_signal(SIGPIPE, sig_ignore);
 	compat_signal(SIGTERM,sig_proc);
 	compat_signal(SIGINT,sig_proc);
 
@@ -211,24 +236,27 @@ void init_signal()
 	compat_signal(SIGFPE, sig_dump);
 	compat_signal(SIGILL, sig_dump);
  #ifndef WIN32
-		compat_signal(SIGBUS, sig_dump);
-		compat_signal(SIGTRAP, SIG_DFL);
+	compat_signal(SIGPIPE, sig_pipe);
+	compat_signal(SIGBUS, sig_dump);
+	compat_signal(SIGTRAP, SIG_DFL);
  #endif
 	///////////////////////////////////////////////////////////////////////////
 #else
 	///////////////////////////////////////////////////////////////////////////
 	// normal dump
-	compat_signal(SIGPIPE,SIG_IGN);
 	compat_signal(SIGTERM,sig_proc);
 	compat_signal(SIGINT,sig_proc);
 
 	// Signal to create coredumps by system when necessary (crash)
 	compat_signal(SIGSEGV, SIG_DFL);
+	compat_signal(SIGFPE, SIG_DFL);
+	compat_signal(SIGILL, SIG_DFL);
  #ifndef WIN32
+	compat_signal(SIGPIPE,sig_pipe);
 	compat_signal(SIGBUS, SIG_DFL);
 	compat_signal(SIGTRAP, SIG_DFL); 
  #endif
-	compat_signal(SIGILL, SIG_DFL);
+
 	///////////////////////////////////////////////////////////////////////////
 #endif
 }
@@ -300,14 +328,19 @@ int main(int argc,char **argv)
 	init_signal();
 	display_title();
 
+
+	argv0 = strrchr(argv[0],PATHSEP);
+	if(NULL==argv0)
+		argv0 = argv[0];
+
 	///////////////////////////////////////////////////////////////////////////
 	// stuff
-	pid_create(argv[0]);
-	tick_ = time(0);
+
+	pid_create(argv0);
 
 	///////////////////////////////////////////////////////////////////////////
 	// core module initialisation
-	memmgr_init(argv[0]); // 一番最初に実行する必要がある
+	memmgr_init(argv0); // 一番最初に実行する必要がある
 	timer_init();
 	socket_init();
 	dll_init();

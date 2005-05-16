@@ -249,12 +249,15 @@ enum AtCommandType {
 	AtCommand_ChangeLook,
 	AtCommand_AutoLoot, //by Upa-Kun
 	AtCommand_MobInfo, //by Lupus
-        AtCommand_Adopt, // by Veider
-        AtCommand_Version, // by Ancyker
+	AtCommand_Adopt, // by Veider
+	AtCommand_Version, // by Ancyker
+	AtCommand_MuteArea, // MouseJstr
+	AtCommand_Shuffle, // MouseJstr
+	AtCommand_Rates, // MouseJstr
+	AtCommand_BattleOption,
 
-        AtCommand_MuteArea, // MouseJstr
-        AtCommand_Shuffle, // MouseJstr
-        AtCommand_Rates, // MouseJstr
+	AtCommand_ItemInfo, // Lupus
+	AtCommand_MapFlag, // Lupus
 
 	// end
 	AtCommand_Unknown,

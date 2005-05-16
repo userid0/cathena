@@ -1,6 +1,5 @@
+#include "base.h"
 
-
-#include "dll.h"
 #include "mmo.h"
 #include "core.h"
 #include "utils.h"
@@ -8,9 +7,9 @@
 #include "version.h"
 #include "showmsg.h"
 
+#include "dll.h"
 
 
-#include "base.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -77,19 +76,39 @@ const char *LibraryError(void)
 
 
 //////////////////////////////////////////////////////////////////////////
-// basic data layout of loadable dll files
+////// Plugin Export functions /////////////
+
+// same layout than ServerType from version.h
+typedef enum 
+{
+	ADDON_NONE	=	0x00,
+	ADDON_LOGIN	=	0x01,
+	ADDON_CHAR	=	0x02,
+	ADDON_INTER	=	0x04,
+	ADDON_MAP	=	0x08,
+	ADDON_CORE	=	0x10,
+	ADDON_xxx1	=	0x20,
+	ADDON_xxx2	=	0x40,
+	ADDON_xxx3	=	0x80,
+	ADDON_ALL	=	0xFF
+} AddonType;
+
+
 struct Addon_Info {
 	char *name;
-	char type;
+	unsigned char type;
 	char *version;
 	char *req_version;
 	char *description;
 };
 
+Addon_Info default_info = { "Unknown", (unsigned char)ADDON_ALL, "0", DLL_VERSION, "Unknown" };
+
 struct Addon_Event_Table {
 	char *func_name;
 	char *event_name;
 };
+
 
 
 
@@ -129,7 +148,7 @@ struct Addon *addon_head = NULL;
 //////////////////////////////////////////////
 ////// Plugin Events Functions //////////////////
 
-int register_addon_func (char* name)
+int register_addon_func (char *name)
 {
 	struct Addon_Event_List *evl;
 	if (name) {
@@ -200,78 +219,101 @@ int addon_event_trigger (char *name)
 
 ////// Plugins Core /////////////////////////
 
-void dll_open (const char *filename)
+void dll_close(Addon *addon)
+{
+	if(addon)
+	{
+		if (addon->dll)	FreeLibrary(addon->dll);
+		if (addon->filename) aFree(addon->filename);
+		aFree(addon);
+	}
+}
+
+Addon *dll_open (const char *filename, bool force=false)
 {
 	struct Addon *addon;
 	struct Addon_Info *info;
 	struct Addon_Event_Table *events;
+	int init_flag = 1;
 
 	//printf ("loading %s\n", filename);
 	
 	// Check if the plugin has been loaded before
 	addon = addon_head;
 	while (addon) {
-		if (strcasecmp(addon->filename, filename) == 0)
-			return;
+		// returns handle to the already loaded plugin
+		if (addon->state && strcasecmp(addon->filename, filename) == 0) {
+			//printf ("not loaded (duplicate) : %s\n", filename);
+			return addon;
+		}
 		addon = addon->next;
 	}
 
-	addon = (struct Addon *)aMallocA(sizeof(struct Addon));
+	addon = (struct Addon*)aMallocA(sizeof(struct Addon));
 	addon->state = -1;	// not loaded
 
 	addon->dll = LoadLibrary(filename);
 	if (!addon->dll) {
 		//printf ("not loaded (invalid file) : %s\n", filename);
-		goto err;
+		dll_close(addon);
+		return NULL;
 	}
 	
 	// Retrieve plugin information
 	addon->state = 0;	// initialising
-	info = (Addon_Info *)GetProcAddress(addon->dll, "addon_info");
-	if( !info ||
+	info = (struct Addon_Info *)GetProcAddress(addon->dll, "addon_info");
+	// For high priority plugins (those that are explicitly loaded from the conf file)
+	// we'll ignore them even (could be a 3rd party dll file)
+	if( (!info && !force) ||
 		// plugin is based on older code
-		atof(info->req_version) < atof(DLL_VERSION) )
+		(info && ((atof(info->req_version) < atof(DLL_VERSION)) ||	
+		// plugin is not for this server 
+		!(getServerType() & info->type))) )
 	{
-		//printf ("not loaded (incompatible) : %s\n", filename);		
-		goto err;
+		//printf ("not loaded (incompatible) : %s\n", filename);
+		dll_close(addon);
+		return NULL;
 	}
-	addon->info = info;
+	addon->info = (info) ? info : &default_info;
 
 	addon->filename = (char *) aMalloc (strlen(filename) + 1);
 	strcpy(addon->filename, filename);
 	
 	// Register plugin events
-	events = (struct Addon_Event_Table *)GetProcAddress(addon->dll, "addon_event_table");
-	if (events)
-	{
+	events = (struct Addon_Event_Table*)GetProcAddress(addon->dll, "addon_event_table");
+	if (events) {
 		int i = 0;
 		while (events[i].func_name) {
-			void (*func)(void);
-			func = (void (*)(void))GetProcAddress(addon->dll, events[i].func_name);
-			if (func)
-				register_addon_event (func, events[i].event_name);
+			if (strcasecmp(events[i].event_name, "DLL_Test") == 0) {
+				int (*test_func)(void);
+				test_func = (int (*)(void))GetProcAddress(addon->dll, events[i].func_name);
+				if (test_func && test_func() == 0) {
+					// plugin has failed test, disabling
+					//printf ("disabled (failed test) : %s\n", filename);
+					init_flag = 0;
+				}
+			} else {
+				void (*func)(void);
+				func = (void (*)(void))GetProcAddress(addon->dll, events[i].func_name);
+				if (func) register_addon_event (func, events[i].event_name);
+			}
 			i++;
 		}
 	}
 
-	// always place the new loaded dll in front of all others
 	addon->next = addon_head;
 	addon_head = addon;
 
+	addon->state = init_flag;	// fully loaded
+	ShowStatus ("Done loading plugin '"CL_WHITE"%s"CL_RESET"'\n", (info) ? addon->info->name : filename);
 
-	addon->state = 1;	// fully loaded
-	ShowStatus ("Done loading plugin '"CL_WHITE"%s"CL_RESET"'\n", addon->info->name);
-	return;
+	return addon;
+}
 
-err:
 
-	if(addon)
-	{
-		if(addon->filename) aFree(addon->filename);
-		if(addon->dll) FreeLibrary(addon->dll);
-		aFree(addon);
-	}
-	return;
+void dll_load (const char *filename)
+{
+	dll_open(filename);
 }
 
 
@@ -283,7 +325,7 @@ int dll_config_read(const char *cfgName)
 	char line[1024], w1[1024], w2[1024];
 	FILE *fp;
 
-	fp = fopen(cfgName, "r");
+	fp = savefopen(cfgName, "r");
 	if (fp == NULL) {
 		ShowError("File not found: %s\n", cfgName);
 		return 1;
@@ -302,8 +344,8 @@ int dll_config_read(const char *cfgName)
 			else auto_search = atoi(w2);
 		} else if (strcasecmp(w1, "addon") == 0) {
 			char filename[128];
-			sprintf (filename, "addons/%s%s", w2, DLL_EXT);
-			dll_open(filename);
+			sprintf (filename, "addons%c%s%s", w2, PATHSEP, DLL_EXT);
+			dll_open(filename, true);
 		} else if (strcasecmp(w1, "import") == 0)
 			dll_config_read(w2);
 	}
@@ -322,7 +364,7 @@ void dll_init (void)
 	dll_config_read (DLL_CONF_FILENAME);
 
 	if (auto_search)
-		findfile("addons", DLL_EXT, dll_open);
+		findfile("addons", DLL_EXT, dll_load);
 
 	addon_event_trigger("DLL_Init");
 
@@ -331,14 +373,13 @@ void dll_init (void)
 
 void dll_final (void)
 {
-	struct Addon *addon = addon_head, *addon2;
-	struct Addon_Event_List *evl = event_head, *evl2;
-	struct Addon_Event *ev, *ev2;
+	Addon *addon = addon_head, *addon2;
+	Addon_Event_List *evl = event_head, *evl2;
+	Addon_Event *ev, *ev2;
 
 	addon_event_trigger("DLL_Final");
 
-	while (evl)
-	{
+	while (evl) {
 		ev = evl->events;
 		while (ev) {
 			ev2 = ev->next;
@@ -350,13 +391,9 @@ void dll_final (void)
 		aFree(evl);
 		evl = evl2;
 	}
-	while (addon)
-	{
+	while (addon) {
 		addon2 = addon->next;
-		addon->state = 0;
-		FreeLibrary(addon->dll);
-		aFree(addon->filename);
-		aFree(addon);
+		dll_close(addon);
 		addon = addon2;
 	}
 

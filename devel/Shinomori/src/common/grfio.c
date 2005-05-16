@@ -28,32 +28,21 @@
 #include <zlib.h>
 
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
-typedef	unsigned char	BYTE;
-typedef	unsigned short	WORD;
-typedef	unsigned long	DWORD;
-
-static char data_file[1024] = "";	// "data.grf";
-static char sdata_file[1024] = "";	// "sdata.grf";
-static char adata_file[1024] = "";	// "adata.grf";
 static char data_dir[1024] = "";	// "../";
 
-// accessor to data_file,adata_file,sdata_file
-char *grfio_setdatafile(const char *str){ strcpy(data_file,str); return data_file; }
-char *grfio_setadatafile(const char *str){ strcpy(adata_file,str); return adata_file; }
-char *grfio_setsdatafile(const char *str){ strcpy(sdata_file,str); return sdata_file; }
+//static char data_file[1024] = "";	// "data.grf";
+//static char sdata_file[1024] = "";	// "sdata.grf";
+//static char adata_file[1024] = "";	// "adata.grf";
 
 //----------------------------
 //	file entry table struct
 //----------------------------
 typedef struct {
-	int 	srclen;				// compressed size
-	int		srclen_aligned;		//
-	int		declen;				// original size
-	int		srcpos;
+	long 	srclen;				// compressed size
+	long	srclen_aligned;		//
+	long	declen;				// original size
+	long	srcpos;
 	short	next;
 	char	cycle;
 	char	type;
@@ -71,18 +60,18 @@ typedef struct {
 #define	GENTRY_LIMIT	127
 #define	FILELIST_LIMIT	65536	// temporary maximum, and a theory top maximum are 2G.
 
-static FILELIST *filelist;
-static int	filelist_entrys;
-static int	filelist_maxentry;
+FILELIST *filelist=NULL;
+size_t	filelist_entrys=0;
+size_t	filelist_maxentry=0;
 
-static char **gentry_table;
-static int gentry_entrys;
-static int gentry_maxentry;
+char **gentry_table=NULL;
+size_t gentry_entrys=0;
+size_t gentry_maxentry=0;
 
 //----------------------------
 //	file list hash table
 //----------------------------
-static int filelist_hash[256];
+long filelist_hash[256];
 
 //----------------------------
 //	grf decode data table
@@ -134,12 +123,12 @@ static unsigned char NibbleData[4][64]={
 /*-----------------
  *	long data get
  */
-static unsigned int getlong(unsigned char *p)
+static unsigned long getlong(unsigned char *p)
 {
 //	return *p+p[1]*256+(p[2]+p[3]*256)*65536;
-	return   p[0]
-		| p[1] << 0x08
-		| p[2] << 0x10
+	return    p[0]
+			| p[1] << 0x08
+			| p[2] << 0x10
 			| p[3] << 0x18;
 }
 
@@ -147,18 +136,17 @@ static unsigned int getlong(unsigned char *p)
  *	Grf data decode : Subs
  *------------------------------------------
  */
-static void NibbleSwap(BYTE *Src, int len)
+static void NibbleSwap(unsigned char *Src, size_t len)
 {
 	for(;0<len;len--,Src++) {
 		*Src = (*Src>>4) | (*Src<<4);
 	}
 }
 
-static void BitConvert(BYTE *Src,unsigned char *BitSwapTable)
+static void BitConvert(unsigned char *Src,unsigned char *BitSwapTable)
 {
 	size_t lop,prm;
-	BYTE tmp[8];
-//	*(DWORD*)tmp=*(DWORD*)(tmp+4)=0;
+	unsigned char tmp[8];
 	memset(tmp,0,8);
 	for(lop=0;lop!=64;lop++) {
 		prm = BitSwapTable[lop]-1;
@@ -166,15 +154,13 @@ static void BitConvert(BYTE *Src,unsigned char *BitSwapTable)
 			tmp[(lop >> 3) & 7] |= BitMaskTable[lop & 7];
 		}
 	}
-//	*(DWORD*)Src     = *(DWORD*)tmp;
-//	*(DWORD*)(Src+4) = *(DWORD*)(tmp+4);
 	memcpy(Src,tmp,8);
 }
 
-static void BitConvert4(BYTE *Src)
+static void BitConvert4(unsigned char *Src)
 {
 	size_t lop,prm;
-	BYTE tmp[8];
+	unsigned char tmp[8];
 	tmp[0] = ((Src[7]<<5) | (Src[4]>>3)) & 0x3f;	// ..0 vutsr
 	tmp[1] = ((Src[4]<<1) | (Src[5]>>7)) & 0x3f;	// ..srqpo n
 	tmp[2] = ((Src[4]<<5) | (Src[5]>>3)) & 0x3f;	// ..o nmlkj
@@ -189,7 +175,6 @@ static void BitConvert4(BYTE *Src)
 		         | (NibbleData[lop][tmp[lop*2+1]] & 0x0f);
 	}
 
-//	*(DWORD*)(tmp+4)=0;
 	memset(tmp+4,0,4);
 	for(lop=0;lop!=32;lop++) {
 		prm = BitSwapTable3[lop]-1;
@@ -197,14 +182,13 @@ static void BitConvert4(BYTE *Src)
 			tmp[(lop >> 3) + 4] |= BitMaskTable[lop & 7];
 		}
 	}
-//	*(DWORD*)Src ^= *(DWORD*)(tmp+4);
 	Src[0] ^= tmp[4];
 	Src[1] ^= tmp[5];
 	Src[2] ^= tmp[6];
 	Src[3] ^= tmp[7];
 }
 
-static void decode_des_etc(BYTE *buf,size_t len,int type,int cycle)
+static void decode_des_etc(unsigned char *buf, size_t len, int type, size_t cycle)
 {
 	size_t lop,cnt=0;
 	if(cycle<3) cycle=3;
@@ -220,10 +204,7 @@ static void decode_des_etc(BYTE *buf,size_t len,int type,int cycle)
 		} else {
 			if(cnt==7 && type==0){
 				size_t a;
-				BYTE tmp[8];
-				
-//				*(DWORD*)tmp     = *(DWORD*)buf;
-//				*(DWORD*)(tmp+4) = *(DWORD*)(buf+4);
+				unsigned char tmp[8];
 				memcpy(tmp,buf,8);
 				cnt=0;
 				buf[0]=tmp[3];
@@ -400,14 +381,14 @@ int decode_file (FILE *source, FILE *dest)
  *	File List : Hash make
  *------------------------------------------
  */
-static int filehash(unsigned char *fname)
+static unsigned char filehash(unsigned char *fname)
 {
-	unsigned int hash=0;
+	unsigned long hash=0;
 	while(*fname) {
 		hash = ((hash<<1)+(hash>>7)*9+tolower(*fname));
 		fname++;
 	}
-	return hash & 255;
+	return hash & 0xFF;
 }
 
 /*==========================================
@@ -416,7 +397,7 @@ static int filehash(unsigned char *fname)
  */
 static void hashinit(void)
 {
-	int lop;
+	size_t lop;
 	for(lop=0;lop<256;lop++)
 		filelist_hash[lop]=-1;
 }
@@ -734,9 +715,9 @@ static int grfio_entryread(const char *gfname,int gentry)
 		return 1;	// 1:not found error
 	}
 
-	fseek(fp,0,2);	// SEEK_END
+	fseek(fp,0,SEEK_END);
 	grf_size = ftell(fp);
-	fseek(fp,0,0);	// SEEK_SET
+	fseek(fp,0,SEEK_SET);
 	fread(grf_header,1,0x2e,fp);
 	if(strcmp((char*)grf_header,"Master of Magic") || fseek(fp,getlong(grf_header+0x1e),1)){	// SEEK_CUR
 		fclose(fp);
@@ -984,7 +965,7 @@ int grfio_add(const char *fname)
  */
 void grfio_final(void)
 {
-	int lop;
+	size_t lop;
 
 	if (filelist!=NULL)	aFree(filelist);
 	filelist = NULL;
@@ -1010,9 +991,15 @@ void grfio_init(const char *fname)
 {
 	FILE *data_conf;
 	char line[1024], w1[1024], w2[1024];
-	int result = 0, result2 = 0, result3 = 0, result4 = 0;
+	int result = 0;
 
 	data_conf = savefopen(fname, "r");
+
+	hashinit();	// hash table initialization
+
+	filelist = NULL;     filelist_entrys = filelist_maxentry = 0;
+	gentry_table = NULL; gentry_entrys = gentry_maxentry = 0;
+
 
 	// It will read, if there is grf-files.txt.
 	if (data_conf)
@@ -1021,44 +1008,24 @@ void grfio_init(const char *fname)
 		{
 			if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) == 2)
 			{
-				if(strcmp(w1, "data") == 0)
-					strcpy(data_file, w2);
-				else if(strcmp(w1, "sdata") == 0)
-					strcpy(sdata_file, w2);
-				else if(strcmp(w1, "adata") == 0)
-					strcpy(adata_file, w2);
-				else if(strcmp(w1,"data_dir") == 0)
-					strcpy(data_dir, w2);
+			// Entry table reading
+			if(strcmp(w1, "grf") == 0 ||
+					strcmp(w1, "data") == 0 ||	// Primary data file
+					strcmp(w1, "sdata") == 0 ||	// Sakray data file
+					strcmp(w1, "adata") == 0)	// Alpha version data file
+				// increment if successfully loaded
+				result += (grfio_add(w2) == 0);
+			else if(strcmp(w1,"data_dir") == 0)	// Data directory
+				strcpy(data_dir, w2);
 			}
 		}
-
 		fclose(data_conf);
 		ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n",fname);
 
 	} // end of reading grf-files.txt
 
-	hashinit();	// hash table initialization
-
-	filelist = NULL;     filelist_entrys = filelist_maxentry = 0;
-	gentry_table = NULL; gentry_entrys = gentry_maxentry = 0;
-
-	// Entry table reading
-
-	if (strcmp(data_file, "") != 0)			// If data directive exists in grf-files.txt (i.e. data_file is not equal to "")
-		result = grfio_add(data_file);		// Primary data file
-
-	if (strcmp(sdata_file, "") != 0)		// If sdata directive exists in grf-files.txt (i.e. sdata_file is not equal to "")
-		result2 = grfio_add(sdata_file);	// Sakray data file
-
-	if (strcmp(adata_file, "") != 0)		// If data directive exists in grf-files.txt (i.e. adata_file is not equal to "")
-		result3 = grfio_add(adata_file);	// Alpha version data file
-
-	if (strcmp(data_dir, "") == 0)		    // Id data_dir doesn't exist
-		result4 = 1;	                    // Data directory
-
-	if (result != 0 && result2 != 0 && result3 != 0 && result4 != 0)
+	if( !result )
 	{
-		ShowFatalError("not grf file readed exit!!\n");
-		exit(1);	// It ends, if a resource cannot read one.
+		ShowInfo("No grf's loaded.. using default data directory\n");
 	}
 }

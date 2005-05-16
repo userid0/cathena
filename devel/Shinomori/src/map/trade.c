@@ -20,7 +20,7 @@
  */
 void trade_traderequest(struct map_session_data *sd, unsigned long target_id) {
 	struct map_session_data *target_sd;
-	int level, level2;
+	unsigned char level, level2;
 
 	nullpo_retv(sd);
 
@@ -193,13 +193,18 @@ void trade_tradeadditem(struct map_session_data *sd, unsigned long index, unsign
 				if (sd->deal_item_amount[trade_i] == 0) {
 					trade_weight += sd->inventory_data[index-2]->weight * amount;
 					level = pc_isGM(sd);
-					if (itemdb_isdropable(sd->inventory_data[index-2]->nameid) == 0 && pc_get_partner(sd) != target_sd && !level) {
+					if( !itemdb_isdropable(sd->inventory_data[index-2]->nameid) && pc_get_partner(sd) != target_sd && !level )
+					{
 						clif_displaymessage (sd->fd, msg_txt(260));
 						amount = 0;
-					} else if (target_sd->weight + trade_weight > target_sd->max_weight){
+					}
+					else if (target_sd->weight + trade_weight > target_sd->max_weight)
+					{
 						clif_tradeitemok(sd, index, 1); // fail to add item -- the player was over weighted.
 						amount = 0;
-					} else {
+					}
+					else 
+					{
 						for(c = 0; c == trade_i - 1; c++) { // re-deal exploit protection [Valaris]
 							if (sd->deal_item_index[c] == index) {
 								trade_tradecancel(sd);

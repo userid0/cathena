@@ -1,19 +1,18 @@
 my personal kingdom
 
-based on svn1619
+based on svn1770
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
 preparing the switch to my other class library
 and testing some new gimmicks
+start converting function call parameters from pointers
+to references as far as possible, 
+will reduce the amount of NULL checks dramatically
 ///////////////////////////////////////////////////////////
-the memory leak at the end is not real; 
-memory manager is closed before the last free is called 
-because of I start changing to c++ objects with different
-allocation/deallocation order
+keep on updating with branch but do not copy any enhancement
 ///////////////////////////////////////////////////////////
-keep on updating with branch but do not copy any "enhancement"
-///////////////////////////////////////////////////////////
+
 
 ///////////////////////////////////////////////////////////
 now referencing builds to gcc 3.3.2
@@ -22,7 +21,7 @@ nsl now needs be linked explicitely in my environment
 you might need to modify build options on your's
 ///////////////////////////////////////////////////////////
 introduced slight changes the character file format (txt)
-so be sure to make a backup befor trying this version
+so be sure to make a backup before trying this version
 otherwise you might not be able to switch back to branch
 ///////////////////////////////////////////////////////////
 start to change all data to real types for better type checking

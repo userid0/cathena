@@ -364,6 +364,22 @@ extern inline unsigned long GetTickCount() {
 #endif
 
 
+
+
+
+//////////////////////////////////////////////////////////////////////////
+// seek defines do not always exist
+#ifndef SEEK_SET
+#define SEEK_SET 0
+#endif
+#ifndef SEEK_CUR
+#define SEEK_CUR 1
+#endif
+#ifndef SEEK_END
+#define SEEK_END 2
+#endif
+
+
 //////////////////////////////////////////////////////////////////////////
 // byte word dword access
 //////////////////////////////////////////////////////////////////////////
@@ -389,9 +405,9 @@ extern inline unsigned short GetWord(unsigned long val, size_t num)
 	switch(num)
 	{
 	case 0:
-		return (unsigned char)((val & 0x0000FFFF)      );
+		return (unsigned short)((val & 0x0000FFFF)      );
 	case 1:
-		return (unsigned char)((val & 0xFFFF0000)>>0x10);
+		return (unsigned short)((val & 0xFFFF0000)>>0x10);
 	default:
 		return 0;	//better throw something here
 	}	
@@ -1445,8 +1461,8 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 template <class T> class TslistDST : public TFifoDST<T>
 {
-	bool cAllowDup;	// allow duplicate entries (find might then not find specific elems)
 	bool cAscending;// sorting order
+	bool cAllowDup;	// allow duplicate entries (find might then not find specific elems)
 
 	int compare(const T&a, const T&b)
 	{

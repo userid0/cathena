@@ -19,10 +19,6 @@
 #include "md5calc.h"
 #endif
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 //-------------------------------INSTRUCTIONS------------------------------
 // Set the variables below:
 //   IP of the login server.
@@ -4258,6 +4254,11 @@ void do_final(void) {
 //------------------------
 // Main function of ladmin
 //------------------------
+unsigned char getServerType()
+{
+	return ATHENA_SERVER_NONE | ATHENA_SERVER_CORE;
+}
+
 int do_init(int argc, char **argv) {
 	// read ladmin configuration
 	ladmin_config_read((argc > 1) ? argv[1] : LADMIN_CONF_NAME);

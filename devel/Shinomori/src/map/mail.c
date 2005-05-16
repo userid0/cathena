@@ -23,10 +23,6 @@ char mail_db[32] = "mail";
 int MAIL_CHECK_TIME = 120000;
 int mail_timer;
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 int mail_check(struct map_session_data *sd,int type)
 {
 	int i = 0, new_ = 0, priority = 0;

@@ -13,7 +13,6 @@
 
 #define pc_setdead(sd) ((sd)->state.dead_sit = 1)
 #define pc_setsit(sd) ((sd)->state.dead_sit = 2)
-//#define pc_setstand(sd) ((sd)->state.dead_sit = 0)
 #define pc_isdead(sd) ((sd)->state.dead_sit == 1)
 #define pc_issit(sd) ((sd)->state.dead_sit == 2)
 #define pc_setdir(sd,b,h) ((sd)->dir = (char)(b) ,(sd)->head_dir = (char)(h) )
@@ -26,7 +25,8 @@
 #define pc_is50overweight(sd) (sd->weight*2 >= sd->max_weight) 
 #define pc_is90overweight(sd) (sd->weight*10 >= sd->max_weight*9)
 
-int pc_isGM(struct map_session_data *sd);
+bool pc_istop10fame(unsigned long char_id,int type);
+unsigned char pc_isGM(struct map_session_data *sd);
 int pc_iskiller(struct map_session_data *src, struct map_session_data *target); // [MouseJstr]
 int pc_getrefinebonus(int lv,int type);
 
@@ -128,7 +128,7 @@ int pc_resetskill(struct map_session_data*);
 int pc_equipitem(struct map_session_data*,int,int);
 int pc_unequipitem(struct map_session_data*,int,int);
 int pc_checkitem(struct map_session_data*);
-int pc_useitem(struct map_session_data*,int);
+int pc_useitem(struct map_session_data *sd,unsigned short n);
 
 int pc_damage(struct block_list *,struct map_session_data*,int);
 int pc_heal(struct map_session_data *,int,int);
@@ -139,7 +139,7 @@ int pc_setoption(struct map_session_data *,int);
 int pc_setcart(struct map_session_data *sd,int type);
 int pc_setfalcon(struct map_session_data *sd);
 int pc_setriding(struct map_session_data *sd);
-int pc_changelook(struct map_session_data *,int,int);
+int pc_changelook(struct map_session_data *sd,int type,unsigned short val);
 int pc_equiplookall(struct map_session_data *sd);
 
 int pc_readparam(struct map_session_data*,int);
@@ -175,7 +175,7 @@ struct map_session_data *pc_get_child(struct map_session_data *sd);
 int pc_set_gm_level(unsigned long account_id, unsigned long level);
 void pc_setstand(struct map_session_data *sd);
 int pc_break_equip(struct map_session_data *sd, unsigned short where);
-int pc_candrop(struct map_session_data *sd,int item_id);
+bool pc_candrop(struct map_session_data *sd,unsigned short item_id);
 
 struct pc_base_job{
 	int job; //E‹ÆA‚½‚¾‚µ“]¶E‚â—{qE‚Ìê‡‚ÍŒ³‚ÌE‹Æ‚ğ•Ô‚·(”pƒvƒŠ¨ƒvƒŠ)
@@ -207,8 +207,8 @@ int pc_delspiritball(struct map_session_data *sd,int,int);
 int pc_eventtimer(int tid,unsigned long tick,int id,int data);
 
 struct Fame_list {
-	int id;
-	int fame;
+	unsigned long id;
+	unsigned long fame;
 	char name[24];
 };
 extern struct Fame_list smith_fame_list[10];

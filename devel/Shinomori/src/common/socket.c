@@ -6,9 +6,6 @@
 #include "utils.h"
 #include "showmsg.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 
 //#define SOCKET_DEBUG_PRINT
@@ -85,8 +82,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-unsigned long ticks;
-time_t tick_;
+time_t tick_ 	   = time(0);
 time_t stall_time_ = 60;
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -955,15 +951,18 @@ int WFIFOSET(int fd,size_t len)
 
 int RFIFOSKIP(int fd, size_t len)
 {
-	struct socket_data *s=session[fd];
-	if( s->rdata_pos + len > s->rdata_size ) 
-	{	// this should not happen
-		ShowError("Read FIFO is skipping more data then it has.\n");
-		s->rdata_pos = s->rdata_size;
-	}
-	else
+	if( session_isActive(fd) )
 	{
-		s->rdata_pos += len;
+		struct socket_data *s=session[fd];
+		if( s->rdata_pos + len > s->rdata_size ) 
+		{	// this should not happen
+			ShowError("Read FIFO is skipping more data then it has.\n");
+			s->rdata_pos = s->rdata_size;
+		}
+		else
+		{
+			s->rdata_pos += len;
+		}
 	}
 	return 0;
 }

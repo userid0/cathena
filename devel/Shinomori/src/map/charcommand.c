@@ -85,8 +85,8 @@ static CharCommandInfo charcommand_info[] = {
 	{ CharCommandWarp,					"#rura",					60, charcommand_warp },
 	{ CharCommandWarp,					"#rura+",					60, charcommand_warp },
 	{ CharCommandZeny,					"#zeny",					60, charcommand_zeny },
-	{ CharCommandShowExp,					"#showexp", 					0, charcommand_showexp},
-	{ CharCommandShowDelay,					"#showdelay",					0, charcommand_showdelay},
+	{ CharCommandShowExp,				"#showexp", 				0, charcommand_showexp},
+	{ CharCommandShowDelay,				"#showdelay",				0, charcommand_showdelay},
 
 
 #ifdef TXT_ONLY
@@ -265,9 +265,10 @@ int charcommand_config_read(const char *cfgName) {
 		if (strcasecmp(w1, "import") == 0)
 			charcommand_config_read(w2);
 		else if (strcasecmp(w1, "command_symbol") == 0 && w2[0] > 31 &&
-		         w2[0] != '/' && // symbol of standard ragnarok GM commands
-		         w2[0] != '%'	// symbol of party chat speaking
-			)
+				w2[0] != '/' && // symbol of standard ragnarok GM commands
+				w2[0] != '%' && // symbol of party chat speaking
+				w2[0] != '$' && // symbol of guild chat speaking
+				w2[0] != '@')	// symbol of atcommand
 			command_symbol = w2[0];
 	}
 	fclose(fp);
@@ -382,7 +383,7 @@ int charcommand_petrename(
 		if (pl_sd->status.pet_id > 0 && pl_sd->pd) {
 			if (pl_sd->pet.rename_flag != 0) {
 				pl_sd->pet.rename_flag = 0;
-				intif_save_petdata(pl_sd->status.account_id, &pl_sd->pet);
+				intif_save_petdata(pl_sd->status.account_id, pl_sd->pet);
 				clif_send_petstatus(pl_sd);
 				clif_displaymessage(fd, msg_txt(189)); // This player can now rename his/her pet.
 			} else {

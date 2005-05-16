@@ -17,7 +17,7 @@ int npc_event_timer(int tid,unsigned long tick,int id,int data);
 int npc_event(struct map_session_data *sd,const char *npcname,int);
 int npc_timer_event(const char *eventname);				// Added by RoVeRT
 int npc_command(struct map_session_data *sd,char *npcname,char *command);
-int npc_touch_areanpc(struct map_session_data *,int,int,int);
+int npc_touch_areanpc(struct map_session_data *sd,unsigned short m,int x,int y);
 int npc_click(struct map_session_data *sd,unsigned long id);
 int npc_scriptcont(struct map_session_data *sd,unsigned long id);
 int npc_checknear(struct map_session_data *sd,unsigned long id);
@@ -31,9 +31,9 @@ int npc_globalmessage(const char *name,char *mes);
 int npc_enable(const char *name,int flag);
 struct npc_data* npc_name2id(const char *name);
 
-int npc_walktoxy(struct npc_data *nd,int x,int y,int easy); // npc walking [Valaris]
-int npc_stop_walking(struct npc_data *nd,int type);
-int npc_changestate(struct npc_data *nd,int state,int type);
+int npc_walktoxy(struct npc_data &nd,int x,int y,int easy); // npc walking [Valaris]
+int npc_stop_walking(struct npc_data &nd,int type);
+int npc_changestate(struct npc_data &nd,int state,int type);
 
 int npc_get_new_npc_id(void);
 
@@ -44,16 +44,16 @@ void npc_parsesrcfile(const char *);
 int do_final_npc(void);
 int do_init_npc(void);
 int npc_event_do_oninit(void);
-int npc_do_ontimer(int npc_id, struct map_session_data *sd, int option);
+int npc_do_ontimer(unsigned long npc_id, struct map_session_data *sd, int option);
 
 int npc_event_doall(const char *name);
 int npc_event_do(const char *name);
 int npc_event_doall_id(const char *name, int id);
 
-int npc_timerevent_start(struct npc_data *nd, int rid);
-int npc_timerevent_stop(struct npc_data *nd);
-int npc_gettimerevent_tick(struct npc_data *nd);
-int npc_settimerevent_tick(struct npc_data *nd,int newtimer);
+int npc_timerevent_start(struct npc_data &nd, unsigned long rid);
+int npc_timerevent_stop(struct npc_data &nd);
+int npc_gettimerevent_tick(struct npc_data &nd);
+int npc_settimerevent_tick(struct npc_data &nd,int newtimer);
 int npc_remove_map(struct npc_data *nd);
 int npc_unload(struct npc_data *nd);
 int npc_reload(void);

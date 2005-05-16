@@ -9,12 +9,6 @@
 #define ATHENA_RELEASE_FLAG		1	// 1=Develop,0=Stable
 #define ATHENA_OFFICIAL_FLAG	1	// 1=Mod,0=Official
 
-#define ATHENA_SERVER_NONE	0	// not defined
-#define ATHENA_SERVER_LOGIN	1	// login server
-#define ATHENA_SERVER_CHAR	2	// char server
-#define ATHENA_SERVER_INTER	4	// inter server
-#define ATHENA_SERVER_MAP	8	// map server
-#define ATHENA_SERVER_ALL	15
 
 // ATHENA_MOD_VERSIONはパッチ番号です。
 // これは無理に変えなくても気が向いたら変える程度の扱いで。
@@ -25,5 +19,26 @@
 // 鯖snapshotの時や、大きな変更があった場合は設定してほしいです。
 // C言語の仕様上、最初に0を付けると8進数になるので間違えないで下さい。
 #define ATHENA_MOD_VERSION	1052	// mod version (patch No.)
+
+
+
+
+
+
+typedef enum 
+{
+	ATHENA_SERVER_NONE	=	0x00,	// not defined
+	ATHENA_SERVER_LOGIN	=	0x01,	// login server
+	ATHENA_SERVER_CHAR	=	0x02,	// char server
+	ATHENA_SERVER_INTER	=	0x04,	// inter server
+	ATHENA_SERVER_MAP	=	0x08,	// map server
+	ATHENA_SERVER_CORE	=	0x10,	// core component
+	ATHENA_SERVER_xxx1	=	0x20,
+	ATHENA_SERVER_xxx2	=	0x40,
+	ATHENA_SERVER_xxx3	=	0x80,
+	ATHENA_SERVER_ALL	=	0xFF
+} ServerType;
+
+
 
 #endif

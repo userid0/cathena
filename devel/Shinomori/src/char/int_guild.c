@@ -552,7 +552,7 @@ int search_guildname_sub(void *key, void *data, va_list ap) {
 
 	str = va_arg(ap, char *);
 	dst = va_arg(ap, struct guild **);
-	if (strcasecmp(g->name, str) == 0)
+	if (dst && g && g->name && str && strcasecmp(g->name, str) == 0)
 		*dst = g;
 	return 0;
 }
@@ -648,7 +648,7 @@ int guild_calcinfo(struct guild *g) {
 		g->guild_lv = 1;
 	nextexp = guild_nextexp(g->guild_lv);
 	if (nextexp > 0) {
-		while(g->exp >= nextexp) {	// レベルアップ処理
+		while(g->exp >= nextexp && nextexp > 0) {	//fixed guild exp overflow [Kevin]
 			g->exp -= nextexp;
 			g->guild_lv++;
 			g->skill_point++;
@@ -727,17 +727,19 @@ int mapif_guild_noinfo(int fd, int guild_id)
 int mapif_guild_info(int fd, struct guild *g) {
 	unsigned char buf[16384];
 
-	WBUFW(buf,0) = 0x3831;
-	WBUFW(buf,2) = 4 + sizeof(struct guild);
-	//memcpy(WBUFP(buf,4), g, sizeof(struct guild));
-	guild_tobuffer(g, WBUFP(buf,4));
-//	ShowMessage("int_guild: sizeof(guild)=%d\n", sizeof(struct guild));
-	if( !session_isActive(fd) )
-		mapif_sendall(buf, WBUFW(buf,2));
-	else
-		mapif_send(fd, buf, WBUFW(buf,2));
-//	ShowMessage("int_guild: info %d %s\n", p->guild_id, p->name);
-
+	if(g)
+	{
+		WBUFW(buf,0) = 0x3831;
+		WBUFW(buf,2) = 4 + sizeof(struct guild);
+		//memcpy(WBUFP(buf,4), g, sizeof(struct guild));
+		guild_tobuffer(*g, WBUFP(buf,4));
+		//ShowMessage("int_guild: sizeof(guild)=%d\n", sizeof(struct guild));
+		if( !session_isActive(fd) )
+			mapif_sendall(buf, WBUFW(buf,2));
+		else
+			mapif_send(fd, buf, WBUFW(buf,2));
+		//ShowMessage("int_guild: info %d %s\n", p->guild_id, p->name);
+	}
 	return 0;
 }
 
@@ -833,19 +835,18 @@ int mapif_guild_basicinfochanged(unsigned long guild_id, int type, const void *d
 }
 
 // ギルドメンバ情報変更通知
-int mapif_guild_memberinfochanged(unsigned long guild_id, unsigned long account_id, unsigned long char_id, int type, const void *data, int len) {
-	CREATE_BUFFER(buf,unsigned char,len+18);
+int mapif_guild_memberinfochanged(unsigned long guild_id, unsigned long account_id, unsigned long char_id, int type, unsigned long data)
+{
+	unsigned char buf[22];
 
 	WBUFW(buf, 0) = 0x383a;
-	WBUFW(buf, 2) = len + 18;
+	WBUFW(buf, 2) = 22;
 	WBUFL(buf, 4) = guild_id;
 	WBUFL(buf, 8) = account_id;
 	WBUFL(buf,12) = char_id;
 	WBUFW(buf,16) = type;
-	memcpy(WBUFP(buf,18), data, len);
-	mapif_sendall(buf,len+18);
-
-	DELETE_BUFFER(buf);
+	WBUFL(buf,18) = data;
+	mapif_sendall(buf,22);
 	return 0;
 }
 
@@ -880,17 +881,20 @@ int mapif_guild_alliance(unsigned long guild_id1, unsigned long guild_id2, unsig
 }
 
 // ギルド役職変更通知
-int mapif_guild_position(struct guild *g, int idx) {
+int mapif_guild_position(struct guild *g, size_t idx) {
 	unsigned char buf[2048];
 
-	WBUFW(buf,0) = 0x383b;
-	WBUFW(buf,2) = sizeof(struct guild_position) + 12;
-	WBUFL(buf,4) = g->guild_id;
-	WBUFL(buf,8) = idx;
-	//memcpy(WBUFP(buf,12), &g->position[idx], sizeof(struct guild_position));
-	guild_position_tobuffer(&g->position[idx], WBUFP(buf,12));
+	if(idx < MAX_GUILDPOSITION)
+	{
+		WBUFW(buf,0) = 0x383b;
+		WBUFW(buf,2) = sizeof(struct guild_position) + 12;
+		WBUFL(buf,4) = g->guild_id;
+		WBUFL(buf,8) = idx;
+		//memcpy(WBUFP(buf,12), &g->position[idx], sizeof(struct guild_position));
+		guild_position_tobuffer(g->position[idx], WBUFP(buf,12));
 
-	mapif_sendall(buf, WBUFW(buf,2));
+		mapif_sendall(buf, WBUFW(buf,2));
+	}
 
 	return 0;
 }
@@ -956,8 +960,8 @@ int mapif_guild_castle_alldataload_sub(void *key, void *data, va_list ap)
 		return 0;
 
 	//memcpy(WFIFOP(fd,*offset), (struct guild_castle*)data, sizeof(struct guild_castle));
-	guild_castle_tobuffer((struct guild_castle*)data, WFIFOP(fd,*offset));
 
+	if(data) guild_castle_tobuffer( *((struct guild_castle*)data), WFIFOP(fd,*offset));
 	(*offset) += sizeof(struct guild_castle);
 	return 0;
 }
@@ -1001,7 +1005,7 @@ int mapif_parse_CreateGuild(int fd, unsigned long account_id, char *name, unsign
 	g->guild_id = guild_newid++;
 	memcpy(g->name, name, 24);
 	//memcpy(&g->member[0], buf, sizeof(struct guild_member));
-	guild_member_frombuffer(&g->member[0], buf);
+	guild_member_frombuffer(g->member[0], buf);
 	memcpy(g->master, g->member[0].name, 24);
 
 	g->position[0].mode = 0x11;
@@ -1048,7 +1052,7 @@ int mapif_parse_GuildAddMember(int fd, int guild_id, unsigned char *buf) {
 	struct guild_member member;
 	int i;
 
-	guild_member_frombuffer(&member,buf);
+	guild_member_frombuffer(member,buf);
 	g = (struct guild *)numdb_search(guild_db, guild_id);
 	if (g == NULL) {
 		mapif_guild_memberadded(fd, guild_id, member.account_id, member.char_id, 1);
@@ -1093,14 +1097,13 @@ int mapif_parse_GuildLeave(int fd, unsigned long guild_id, unsigned long account
 						j = MAX_GUILDEXPLUSION - 1;
 					}
 					g->explusion[j].account_id = account_id;
+					g->explusion[j].char_id    = char_id;
 					memcpy(g->explusion[j].acc, "dummy", 24);
 					memcpy(g->explusion[j].name, g->member[i].name, 24);
 					memcpy(g->explusion[j].mes, mes, 40);
+					g->explusion[j].mes[39]=0;
 				}
-
 				mapif_guild_leaved(guild_id, account_id, char_id, flag, g->member[i].name, mes);
-//				ShowMessage("%d %d\n", i, (int)(&g->member[i]));
-//				ShowMessage("%d %s\n", i, (&g->member[i])->name);
 				memset(&g->member[i], 0, sizeof(struct guild_member));
 
 				if (guild_check_empty(g) == 0)
@@ -1214,7 +1217,8 @@ int mapif_parse_GuildBasicInfoChange(int fd, unsigned long guild_id, int type, c
 }
 
 // ギルドメンバデータ変更要求
-int mapif_parse_GuildMemberInfoChange(int fd, unsigned long guild_id, unsigned long account_id, unsigned long char_id, int type, const char *data, int len) {
+int mapif_parse_GuildMemberInfoChange(int fd, unsigned long guild_id, unsigned long account_id, unsigned long char_id, int type, unsigned long data)
+{
 	int i;
 	struct guild *g;
 
@@ -1231,12 +1235,12 @@ int mapif_parse_GuildMemberInfoChange(int fd, unsigned long guild_id, unsigned l
 		}
 		switch(type) {
 		case GMI_POSITION:	// 役職
-			g->member[i].position = (short)RBUFL((char*)data,0);
+			g->member[i].position = data;
 			break;
 		case GMI_EXP:	// EXP
 		  {
 			int exp, oldexp = g->member[i].exp;
-			exp = g->member[i].exp = RBUFL((char*)data,0);
+			exp = g->member[i].exp = data;
 			g->exp += (exp - oldexp);
 			guild_calcinfo(g);	// Lvアップ判断
 			mapif_guild_basicinfochanged(guild_id, GBI_EXP, &g->exp, 4);
@@ -1246,20 +1250,20 @@ int mapif_parse_GuildMemberInfoChange(int fd, unsigned long guild_id, unsigned l
 		ShowMessage("int_guild: GuildMemberInfoChange: Unknown type %d\n", type);
 		break;
 	}
-	mapif_guild_memberinfochanged(guild_id, account_id, char_id, type, data, len);
+	mapif_guild_memberinfochanged(guild_id, account_id, char_id, type, data);
 
 	return 0;
 }
 
 // ギルド役職名変更要求
-int mapif_parse_GuildPosition(int fd, unsigned long guild_id, int idx, unsigned char *buf) {
+int mapif_parse_GuildPosition(int fd, unsigned long guild_id, size_t idx, unsigned char *buf) {
 	struct guild *g = (struct guild *)numdb_search(guild_db, guild_id);
 
-	if (g == NULL || idx < 0 || idx >= MAX_GUILDPOSITION)
+	if (g == NULL || idx >= MAX_GUILDPOSITION)
 		return 0;
 
 	//memcpy(&g->position[idx], buf, sizeof(struct guild_position));
-	guild_position_frombuffer(&g->position[idx],buf);
+	guild_position_frombuffer(g->position[idx],buf);
 
 	mapif_guild_position(g, idx);
 	ShowMessage("int_guild: position changed %d\n", idx);
@@ -1473,7 +1477,7 @@ int inter_guild_parse_frommap(int fd)
 	case 0x3037: mapif_parse_GuildMessage(fd, RFIFOL(fd,4), RFIFOL(fd,8), (char*)RFIFOP(fd,12), RFIFOW(fd,2)-12); break;
 	case 0x3038: mapif_parse_GuildCheck(fd, RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10)); break;
 	case 0x3039: mapif_parse_GuildBasicInfoChange(fd, RFIFOL(fd,4), RFIFOW(fd,8), (char*)RFIFOP(fd,10), RFIFOW(fd,2)-10); break;
-	case 0x303A: mapif_parse_GuildMemberInfoChange(fd, RFIFOL(fd,4), RFIFOL(fd,8), RFIFOL(fd,12), RFIFOW(fd,16), (char*)RFIFOP(fd,18), RFIFOW(fd,2)-18); break;
+	case 0x303A: mapif_parse_GuildMemberInfoChange(fd, RFIFOL(fd,4), RFIFOL(fd,8), RFIFOL(fd,12), RFIFOW(fd,16), RFIFOL(fd,18)); break;
 	case 0x303B: mapif_parse_GuildPosition(fd, RFIFOL(fd,4), RFIFOL(fd,8), RFIFOP(fd,12)); break;
 	case 0x303C: mapif_parse_GuildSkillUp(fd, RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10)); break;
 	case 0x303D: mapif_parse_GuildAlliance(fd, RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10), RFIFOL(fd,14), RFIFOB(fd,18)); break;

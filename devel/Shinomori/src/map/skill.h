@@ -162,8 +162,8 @@ int skill_clear_unitgroup(struct block_list *src);
 
 int skill_unit_ondamaged(struct skill_unit *src,struct block_list *bl,int damage,unsigned long tick);
 
-int skill_castfix( struct block_list *bl, int time );
-int skill_delayfix( struct block_list *bl, int time );
+int skill_castfix(struct block_list *bl, unsigned long time);
+int skill_delayfix(struct block_list *bl, unsigned long time);
 int skill_check_unit_range(int m,int x,int y,unsigned short skillid, unsigned short skilllv);
 int skill_check_unit_range2(int m,int x,int y,unsigned short skillid, unsigned short skilllv, int type);
 
@@ -724,8 +724,11 @@ enum {
 	SL_SWOO,
 	SL_SKE,
 	SL_SKA,
-	
-	ST_PRESERVE = 475,
+
+	//SM_SELFPROVOKE = 473, // temporarily replaced
+	NPC_SELFDESTRUCTION2 = 473,
+	NPC_EMOTION_ON,	
+	ST_PRESERVE,
 	ST_FULLSTRIP,
 	WS_WEAPONREFINE,
 	CR_SLIMPITCHER,
@@ -742,8 +745,6 @@ enum {
 	CG_TAROTCARD,
 	CR_ACIDDEMONSTRATION,
 	CR_CULTIVATION,
-
-	NPC_SELFDESTRUCTION2 = 492,
 };
 
 #endif

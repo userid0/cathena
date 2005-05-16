@@ -274,6 +274,11 @@ ACMD_FUNC(mutearea); // by MouseJstr
 ACMD_FUNC(shuffle); // by MouseJstr
 ACMD_FUNC(rates); // by MouseJstr
 
+ACMD_FUNC(battleoption);
+
+ACMD_FUNC(iteminfo); // Lupus
+ACMD_FUNC(mapflag); // Lupus
+
 /*==========================================
  *AtCommandInfo atcommand_info[]\‘¢‘Ì‚Ì’è‹`
  *------------------------------------------
@@ -568,7 +573,11 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_MuteArea,			"@stfu",			99, atcommand_mutearea }, // MouseJstr
 	{ AtCommand_Shuffle,			"@shuffle",			40, atcommand_shuffle }, // MouseJstr
 	{ AtCommand_Rates,				"@rates",			10, atcommand_rates }, // MouseJstr
-	
+	{ AtCommand_BattleOption,		"@battleoption",	40, atcommand_battleoption }, // MouseJstr
+	{ AtCommand_ItemInfo,			"@iteminfo",		1, atcommand_iteminfo }, // [Lupus]
+	{ AtCommand_ItemInfo,			"@ii",		1, atcommand_iteminfo }, // [Lupus]
+	{ AtCommand_MapFlag,			"@mapflag",		99, atcommand_mapflag }, // [Lupus]
+
 // add new commands before this line
 	{ AtCommand_Unknown,			NULL,				1,	NULL }
 };
@@ -828,7 +837,7 @@ static int atkillmonster_sub(struct block_list *bl, va_list ap) {
 	flag = va_arg(ap, int);
 
 	if (flag)
-		mob_damage(NULL, md, md->hp, 2);
+		mob_damage(NULL, *md, md->hp, 2);
 	else
 		mob_delete(md);
 	
@@ -863,30 +872,7 @@ static int atmobsearch_sub(struct block_list *bl,va_list ap)
 	}
 	return 0;
 }
-/*==========================================
- * cleanmap
- *------------------------------------------
- */
-static int atcommand_cleanmap_sub(struct block_list *bl,va_list ap)
-{
-	struct flooritem_data *fitem;
 
-	nullpo_retr(0, bl);
-
-	fitem = (struct flooritem_data *)bl;
-	if(fitem==NULL || fitem->bl.type!=BL_ITEM){
-		if(battle_config.error_log)
-			ShowError("map_clearflooritem_timer : error\n");
-		return 1;
-	}
-	delete_timer(fitem->cleartimer,map_clearflooritem_timer);
-	if(fitem->item_data.card[0] == 0xff00)
-		intif_delete_petdata( MakeDWord(fitem->item_data.card[1],fitem->item_data.card[2]) );
-	clif_clearflooritem(fitem);
-	map_delobject(fitem->bl.id);
-
-	return 0;
-}
 
 /*==========================================
  * Read Message Data
@@ -994,9 +980,10 @@ int atcommand_config_read(const char *cfgName) {
 		if(strcasecmp(w1, "import") == 0)
 			atcommand_config_read(w2);
 		else if(strcasecmp(w1, "command_symbol") == 0 && w2[0] > 31 &&
-		         w2[0] != '/' && // symbol of standard ragnarok GM commands
-		         w2[0] != '%' && // symbol of party chat speaking
-				 w2[0] != '#')	// symbol of charcommand
+				w2[0] != '/' && // symbol of standard ragnarok GM commands
+				w2[0] != '%' && // symbol of party chat speaking
+				w2[0] != '$' && // symbol of guild chat
+				w2[0] != '#')	// symbol of charcommand
 			command_symbol = w2[0];
 	}
 	fclose(fp);
@@ -1019,11 +1006,17 @@ int atcommand_send(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	char output[512];
-	int type = strtol(message,(char **)NULL,0);
+	size_t i,type=0;
+	int info[20];
+	char output[128]="";
+	
+   	if (!message || !*message || sscanf(message, "%x %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &type, &info[1], &info[2], &info[3], &info[4], &info[5], &info[6], &info[7], &info[8], &info[9], &info[10], &info[11], &info[12], &info[13], &info[14], &info[15], &info[16], &info[17], &info[18], &info[19], &info[20]) < 1) {
+		clif_displaymessage(fd, "Please enter a packet number, and - if required - up to 20 additional values.");
+		return -1;
+	}
 
-	if(type > 0 && type < MAX_PACKET_DB)
-	{
+	if(type < MAX_PACKET_DB) {
+
 		switch (type)
 		{
 		case 0x209:
@@ -1039,6 +1032,9 @@ int atcommand_send(
 		//	break;
 		default:
 			WFIFOW(fd,0) = type;
+			for(i=1;i<=sizeof(info);i++)
+				if(info[i])
+					WFIFOW(fd,i) = info[i];
 			WFIFOSET(fd, packet_db[clif_config.packet_db_ver][type].len);
 			break;
 		}
@@ -1128,6 +1124,13 @@ int atcommand_where(
 		return -1;
 	if(strncmp(sd->status.name,player_name,24)==0)
 		return -1;
+		
+	if (battle_config.hide_GM_session) {
+		if (!(battle_config.who_display_aid > 0 && pc_isGM(sd) >= battle_config.who_display_aid))
+		{
+			return -1;
+		}
+	}
 
 	if((pl_sd = map_nick2sd(player_name)) == NULL) {
 		snprintf(output, sizeof(output), "%s %d %d",
@@ -1767,7 +1770,7 @@ int atcommand_save(
 
 	pc_setsavepoint(sd, sd->mapname, sd->bl.x, sd->bl.y);
 	if (sd->status.pet_id > 0 && sd->pd)
-		intif_save_petdata(sd->status.account_id, &sd->pet);
+		intif_save_petdata(sd->status.account_id, sd->pet);
 	pc_makesavestatus(sd);
 	chrif_save(sd);
 	storage_storage_save(sd);
@@ -2507,7 +2510,7 @@ int atcommand_joblevelup(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	unsigned int up_level = 50;
+	int up_level = 50;
 	int level;
 	struct pc_base_job s_class;
 	nullpo_retr(-1, sd);
@@ -2531,7 +2534,7 @@ int atcommand_joblevelup(
 			clif_displaymessage(fd, msg_table[23]); // Job level can't go any higher.
 			return -1;
 		}
-		if ((unsigned int)level > up_level || (unsigned int)level > (up_level - sd->status.job_level)) // fix positiv overflow
+		if( level > up_level || level+sd->status.job_level > up_level) // fix positiv overflow
 			level = up_level - sd->status.job_level;
 		sd->status.job_level += level;
 		clif_updatestatus(sd, SP_JOBLEVEL);
@@ -2763,7 +2766,7 @@ int atcommand_model(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	int hair_style = 0, hair_color = 0, cloth_color = 0;
+	unsigned int hair_style = 0, hair_color = 0, cloth_color = 0;
 	char output[128];
 	nullpo_retr(-1, sd);
 
@@ -2803,7 +2806,7 @@ int atcommand_model(
  */
 int atcommand_dye(const int fd, struct map_session_data* sd, const char* command, const char* message)
 {
-	int cloth_color = 0;
+	unsigned int cloth_color = 0;
 	char output[128];
 	nullpo_retr(-1, sd);
 
@@ -2830,7 +2833,7 @@ int atcommand_dye(const int fd, struct map_session_data* sd, const char* command
  */
 int atcommand_hair_style(const int fd, struct map_session_data* sd, const char* command, const char* message)
 {
-	int hair_style = 0;
+	unsigned int hair_style = 0;
 	char output[128];
 	nullpo_retr(-1, sd);
 
@@ -2874,7 +2877,7 @@ atcommand_charhairstyle(const int fd, struct map_session_data* sd,
  */
 int atcommand_hair_color(const int fd, struct map_session_data* sd, const char* command, const char* message)
 {
-	int hair_color = 0;
+	unsigned int hair_color = 0;
 	char output[128];
 	nullpo_retr(-1, sd);
 
@@ -3081,12 +3084,12 @@ int atcommand_monster(
 	char name[128]="";
 	char monster[128]="";
 	char output[128];
-	int mob_id;
-	int number = 0;
-	int x = 0, y = 0;
-	int count;
-	int i, j, k;
-	int mx, my, range;
+	unsigned long mob_id;
+	unsigned int number = 0;
+	unsigned int x = 0, y = 0;
+	unsigned int count;
+	unsigned int i, j, k;
+	unsigned int mx, my, range;
 	nullpo_retr(-1, sd);
 
 
@@ -3168,12 +3171,12 @@ int atcommand_spawn(
 	char name[128]="";
 	char monster[128]="";
 	char output[128];
-	int mob_id;
-	int number = 0;
-	int x = 0, y = 0;
-	int count;
-	int i, j, k;
-	int mx, my, range;
+	unsigned long mob_id;
+	unsigned int number = 0;
+	unsigned int x = 0, y = 0;
+	unsigned int count;
+	unsigned int i, j, k;
+	unsigned int mx, my, range;
 
 	nullpo_retr(-1, sd);
 
@@ -3252,12 +3255,12 @@ int atcommand_monstersmall(
 	const char* command, const char* message) {
 	char name[128] = "";
 	char monster[128] = "";
-	int mob_id = 0;
-	int number = 0;
-	int x = 0;
-	int y = 0;
-	int count;
-	int i;
+	unsigned long mob_id = 0;
+	unsigned int number = 0;
+	unsigned int x = 0;
+	unsigned int y = 0;
+	unsigned int count;
+	unsigned int i;
 
 	nullpo_retr(-1, sd);
 
@@ -3329,12 +3332,12 @@ int atcommand_monsterbig(
 	const char* command, const char* message) {
 	char name[128] = "";
 	char monster[128] = "";
-	int mob_id = 0;
-	int number = 0;
-	int x = 0;
-	int y = 0;
-	int count;
-	int i;
+	unsigned long mob_id = 0;
+	unsigned int number = 0;
+	unsigned int x = 0;
+	unsigned int y = 0;
+	unsigned int count;
+	unsigned int i;
 
 	nullpo_retr(-1, sd);
 
@@ -3487,9 +3490,10 @@ int atcommand_refine(
 
 	count = 0;
 	for (i = 0; i < MAX_INVENTORY; i++) {
-		if (sd->status.inventory[i].nameid &&	// ŠY“–ŒÂŠ‚Ì‘•”õ‚ð¸˜B‚·‚é
-		    (sd->status.inventory[i].equip & position ||
-			(sd->status.inventory[i].equip && !position))) {
+		if( sd->status.inventory[i].nameid &&	// ŠY“–ŒÂŠ‚Ì‘•”õ‚ð¸˜B‚·‚é
+			(sd->status.inventory[i].equip & position ||
+			(sd->status.inventory[i].equip && !position)))
+		{
 			final_refine = sd->status.inventory[i].refine + refine;
 			if (final_refine > 10)
 				final_refine = 10;
@@ -3973,7 +3977,7 @@ int atcommand_guildlevelup(
 		added_level = 1 - guild_info->guild_lv;
 
 	if (added_level != 0) {
-		char buf[2];
+		unsigned char buf[2];
 		WBUFW(buf,0) = added_level;	// do the same as on the other side
 		intif_guild_change_basicinfo(guild_info->guild_id, GBI_GUILDLV, buf, 2);
 		clif_displaymessage(fd, msg_table[179]); // Guild level changed.
@@ -4143,7 +4147,7 @@ int atcommand_petrename(
 	if (sd->status.pet_id > 0 && sd->pd) {
 		if (sd->pet.rename_flag != 0) {
 			sd->pet.rename_flag = 0;
-			intif_save_petdata(sd->status.account_id, &sd->pet);
+			intif_save_petdata(sd->status.account_id, sd->pet);
 			clif_send_petstatus(sd);
 			clif_displaymessage(fd, msg_table[187]); // You can now rename your pet.
 		} else {
@@ -5158,7 +5162,7 @@ int atcommand_mapexit(
 	flush_fifos();
 
 	core_stoprunning();
-	return 0;
+        return 0;
 }
 
 /*==========================================
@@ -5275,7 +5279,7 @@ int atcommand_charmodel(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	int hair_style = 0, hair_color = 0, cloth_color = 0;
+	unsigned int hair_style = 0, hair_color = 0, cloth_color = 0;
 	struct map_session_data *pl_sd;
 	char output[128];
 	char player_name[128];
@@ -5746,12 +5750,6 @@ int atcommand_mapinfo(
 	}
 
 	clif_displaymessage(fd, "------ Map Info ------");
-	sprintf(output, "Map Name: %s", map_name);
-	clif_displaymessage(fd, output);
-	sprintf(output, "Players In Map: %d", map[m_id].users);
-	clif_displaymessage(fd, output);
-	sprintf(output, "NPCs In Map: %d", map[m_id].npc_num);
-	clif_displaymessage(fd, output);
 	chat_num = 0;
 	for (i = 0; i < fd_max; i++) {
 		if (session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
@@ -5759,32 +5757,105 @@ int atcommand_mapinfo(
 			chat_num++;
 		}
 	}
-	sprintf(output, "Chats In Map: %d", chat_num);
+	sprintf(output, "Map Name: %s | Players In Map: %d | NPCs In Map: %d | Chats In Map: %d", map_name, map[m_id].users, map[m_id].npc_num, chat_num);
 	clif_displaymessage(fd, output);
+	if (map[m_id].alias)
+		strcat(output, "This map is an alias (a named clone of some other map).");
 	clif_displaymessage(fd, "------ Map Flags ------");
-	sprintf(output, "Player vs Player: %s | No Guild: %s | No Party: %s",
-	        (map[m_id].flag.pvp) ? "True" : "False",
-	        (map[m_id].flag.pvp_noguild) ? "True" : "False",
-	        (map[m_id].flag.pvp_noparty) ? "True" : "False");
+	strcpy(output,"PvP Flags: ");
+	if (map[m_id].flag.pvp)
+		strcat(output, "Pvp ON | ");
+	if (map[m_id].flag.nopvp)
+		strcat(output, "NoPvp | ");
+	if (map[m_id].flag.pvp_noguild)
+		strcat(output, "NoGuild | ");
+	if (map[m_id].flag.pvp_noparty)
+		strcat(output, "NoParty | ");
+	if (map[m_id].flag.pvp_nightmaredrop)
+		strcat(output, "NightmareDrop | ");
+	if (map[m_id].flag.pvp_nocalcrank)
+		strcat(output, "NoCalcRank | ");
 	clif_displaymessage(fd, output);
-	sprintf(output, "Guild vs Guild: %s | No Party: %s", (map[m_id].flag.gvg) ? "True" : "False", (map[m_id].flag.gvg_noparty) ? "True" : "False");
+
+	strcpy(output,"GvG Flags: ");
+	if (map[m_id].flag.gvg)
+		strcat(output, "GvG ON | ");
+	if (map[m_id].flag.gvg_dungeon)
+		strcat(output, "GvGDungeon | ");
+	if (map[m_id].flag.gvg_noparty)
+		strcat(output, "NoParty | ");
 	clif_displaymessage(fd, output);
-	sprintf(output, "No Dead Branch: %s", (map[m_id].flag.nobranch) ? "True" : "False");
+
+	strcpy(output,"Teleport Flags: ");
+	if (map[m_id].flag.noteleport)
+		strcat(output, "NoTeleport | ");
+	if (map[m_id].flag.monster_noteleport)
+		strcat(output, "Monster NoTeleport | ");
+	if (map[m_id].flag.nowarp)
+		strcat(output, "NoWarp | ");
+	if (map[m_id].flag.nowarpto)
+		strcat(output, "NoWarpTo | ");
+	if (map[m_id].flag.noreturn)
+		strcat(output, "NoReturn | ");
+	if (map[m_id].flag.nogo)
+		strcat(output, "NoGo | ");
+	if (map[m_id].flag.nomemo)
+		strcat(output, "NoMemo | ");
 	clif_displaymessage(fd, output);
-	sprintf(output, "No Memo: %s", (map[m_id].flag.nomemo) ? "True" : "False");
+
+	sprintf(output, "No Penalty: %s | No Zeny Penalty: %s", (map[m_id].flag.nopenalty) ? "On" : "Off", (map[m_id].flag.nozenypenalty) ? "On" : "Off");
 	clif_displaymessage(fd, output);
-	sprintf(output, "No Penalty: %s", (map[m_id].flag.nopenalty) ? "True" : "False");
+
+	if (map[m_id].flag.nosave) {
+		if (map[m_id].save.x == -1 || map[m_id].save.y == -1 )
+			sprintf(output, "No Save, Save Point: %s,Random",map[m_id].save.map);
+		else
+			sprintf(output, "No Save, Save Point: %s,%d,%d",
+				map[m_id].save.map,map[m_id].save.x,map[m_id].save.y);
+		clif_displaymessage(fd, output);
+	}
+
+	strcpy(output,"Weather Flags: ");
+	if (map[m_id].flag.snow)
+		strcat(output, "Snow | ");
+	if (map[m_id].flag.fog)
+		strcat(output, "Fog | ");
+	if (map[m_id].flag.sakura)
+		strcat(output, "Sakura | ");
+	if (map[m_id].flag.clouds)
+		strcat(output, "Clouds | ");
+	if (map[m_id].flag.fireworks)
+		strcat(output, "Fireworks | ");
+	if (map[m_id].flag.leaves)
+		strcat(output, "Leaves | ");
+	if (map[m_id].flag.rain)
+		strcat(output, "Rain | ");
+	if (map[m_id].flag.indoors)
+		strcat(output, "Indoors | ");
 	clif_displaymessage(fd, output);
-	sprintf(output, "No Return: %s", (map[m_id].flag.noreturn) ? "True" : "False");
+
+	strcpy(output,"Other Flags: ");
+	if (map[m_id].flag.nobranch)
+		strcat(output, "NoBranch | ");
+	if (map[m_id].flag.notrade)
+		strcat(output, "NoTrade | ");
+	if (map[m_id].flag.noskill)
+		strcat(output, "NoSkill | ");
+	if (map[m_id].flag.noicewall)
+		strcat(output, "NoIcewall | ");
 	clif_displaymessage(fd, output);
-	sprintf(output, "No Save: %s", (map[m_id].flag.nosave) ? "True" : "False");
+
+	strcpy(output,"Other Flags: ");
+	if (map[m_id].flag.nobaseexp)
+		strcat(output, "NoBaseEXP | ");
+	if (map[m_id].flag.nojobexp)
+		strcat(output, "NoJobEXP | ");
+	if (map[m_id].flag.nomobloot)
+		strcat(output, "NoMobLoot | ");
+	if (map[m_id].flag.nomvploot)
+		strcat(output, "NoMVPLoot | ");
 	clif_displaymessage(fd, output);
-	sprintf(output, "No Teleport: %s", (map[m_id].flag.noteleport) ? "True" : "False");
-	clif_displaymessage(fd, output);
-	sprintf(output, "No Monster Teleport: %s", (map[m_id].flag.monster_noteleport) ? "True" : "False");
-	clif_displaymessage(fd, output);
-	sprintf(output, "No Zeny Penalty: %s", (map[m_id].flag.nozenypenalty) ? "True" : "False");
-	clif_displaymessage(fd, output);
+
 
 	switch (list) {
 	case 0:
@@ -7949,16 +8020,27 @@ atcommand_mobsearch(
  * ƒhƒƒbƒvƒAƒCƒeƒ€‚Ì‘|œ
  *------------------------------------------
  */
-int
-atcommand_cleanmap(
+/*==========================================
+ * cleanmap
+ *------------------------------------------
+ */
+static int atcommand_cleanmap_sub(struct block_list *bl, va_list ap)
+{
+	nullpo_retr(0, bl);
+	map_clearflooritem(bl->id);
+
+	return 0;
+}
+
+
+int atcommand_cleanmap(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
-	int i=0;
-	map_foreachinarea(atcommand_cleanmap_sub,sd->bl.m,
-					  sd->bl.x-AREA_SIZE*2,sd->bl.y-AREA_SIZE*2,
-					  sd->bl.x+AREA_SIZE*2,sd->bl.y+AREA_SIZE*2,
-					  BL_ITEM,sd,&i);
+	map_foreachinarea(atcommand_cleanmap_sub, sd->bl.m,
+		sd->bl.x-AREA_SIZE*2, sd->bl.y-AREA_SIZE*2,
+		sd->bl.x+AREA_SIZE*2, sd->bl.y+AREA_SIZE*2,
+		BL_ITEM);
 	clif_displaymessage(fd, "All dropped items have been cleaned up.");
 	return 0;
 }
@@ -8226,6 +8308,11 @@ int atcommand_unmute(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
+	
+	if(!battle_config.muting_players) {
+		clif_displaymessage(fd, "Please enable the muting system before using it.");
+		return 0;
+	}
 	struct map_session_data *pl_sd = NULL;
 	nullpo_retr(-1, sd);
 	if (!message || !*message)
@@ -8254,17 +8341,10 @@ atcommand_uptime(
 	const char* command, const char* message)
 {
 	char output[128];
-	long seconds = 0, day = 24*60*60, hour = 60*60,
-		minute = 60, days = 0, hours = 0, minutes = 0;
+	unsigned long days, hours, minutes,seconds;
 	nullpo_retr(-1, sd);
 
-	seconds = (gettick()-ticks)/CLOCKS_PER_SEC;
-	days = seconds/day;
-	seconds -= (seconds/day>0)?(seconds/day)*day:0;
-	hours = seconds/hour;
-	seconds -= (seconds/hour>0)?(seconds/hour)*hour:0;
-	minutes = seconds/minute;
-	seconds -= (seconds/minute>0)?(seconds/minute)*minute:0;
+	uptime::getvalues(days, hours, minutes,seconds);
 
 	snprintf(output, sizeof(output), msg_table[245], days, hours, minutes, seconds);
 	clif_displaymessage(fd,output);
@@ -8297,6 +8377,11 @@ int atcommand_mute(
 	const char* command, const char* message)
 {
 	char player_name[128]="";
+	if(!battle_config.muting_players) {
+		clif_displaymessage(fd, "Please enable the muting system before using it.");
+		return 0;
+	}
+	
 	struct map_session_data *pl_sd = NULL;
 	int manner;
 	nullpo_retr(-1, sd);
@@ -9171,6 +9256,85 @@ int atcommand_mobinfo(
 }
 
 /*==========================================
+ * Show Items DB Info   v 1.0
+ * originally by [Lupus] eAthena
+ *------------------------------------------
+ */
+int atcommand_iteminfo(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+	char *itype[12] = {"Potion/Food", "BUG!", "Usable", "Etc", "Weapon", "Protection", "Card", "Egg", "Pet Acessory", "BUG!", "Arrow", "Lure/Scroll"};
+	char output[128];
+
+	struct item_data *item_data;
+	int item_id=0;
+
+	if (!message || !*message) {
+		clif_displaymessage(fd, "Please, enter Item name or its ID (usage: @iteminfo <item_name_or_ID>).");
+		return -1;
+	}
+
+	if ((item_data = itemdb_searchname(message)) != NULL ||
+	    (item_data = itemdb_exists(atoi(message))) != NULL)
+		item_id = item_data->nameid;
+
+	if (item_id >= 500) {
+
+		sprintf(output, "Item: '%s'/'%s'[%d] (%d) Type: %s | Extra Effect: %s",
+			item_data->name,item_data->jname,item_data->flag.slot,item_id,
+			item_data->type < 12 ? itype[item_data->type] : "BUG!", 
+			(item_data->use_script==NULL && item_data->equip_script==NULL) ? "None" : (item_data->use_script==NULL ? "On Equip" : "On Usage")
+		);
+		clif_displaymessage(fd, output);
+
+		sprintf(output, "NPC Buy:%dz%s, Sell:%dz%s | Weight: %d ", item_data->value_buy, item_data->flag.value_notdc ? "(No Discount!)":"", item_data->value_sell, item_data->flag.value_notoc ? "(No Overcharge!)":"", item_data->weight );
+		clif_displaymessage(fd, output);
+
+		return 0;
+	}
+
+	clif_displaymessage(fd, "Item not found.");
+	return -1;
+/*
+struct item_data {
+	int nameid;
+	char name[24],jname[24];
+	char prefix[24],suffix[24];
+	char cardillustname[64];
+	int value_buy;
+	int value_sell;
+	int type;
+	int class_;
+	int sex;
+	int equip;
+	int weight;
+	int atk;
+	int def;
+	int range;
+	int slot;
+	int look;
+	int elv;
+	int wlv;
+	char *use_script;	// %ñ_'Æ'c'à'S"'+'Ì'+'Å'â'ë'¤'c'È'Æ
+	char *equip_script;	// _U_',-h_ä'Ì'R_<_Ý'è'à'+'Ì'+'Å%Â"\'c'È?
+	struct {
+		unsigned available : 1;
+		unsigned value_notdc : 1;
+		unsigned value_notoc : 1;
+		unsigned no_equip : 3;
+		unsigned no_use : 1;
+		unsigned no_refine : 1;	// [celest]
+		unsigned delay_consume : 1;	// Signifies items that are not consumed inmediately upon double-click [Skotlex]
+	} flag;
+	int view_id;
+};
+
+*/
+
+}
+
+/*==========================================
  * @adopt by [Veider]
  *
  * adopt a novice
@@ -9191,7 +9355,7 @@ const char* command, const char* message)
                 return -1;
 
         if (sscanf(message, "%[^,],%[^,],%[^\r\n]", player1, player2, player3) != 3) {
-                clif_displaymessage(fd, "usage: @adopt <player1> <player2> <player3>.");
+                clif_displaymessage(fd, "usage: @adopt <player1>,<player2>,<player3>.");
                 return -1;
         }
 
@@ -9273,6 +9437,12 @@ int atcommand_mutearea(
 	const int fd, struct map_session_data* sd,
 	const char* command, const char* message)
 {
+	
+	if(!battle_config.muting_players) {
+		clif_displaymessage(fd, "Please enable the muting system before using it.");
+		return 0;
+	}
+	
 	int time;
 	nullpo_retr(0, sd);
 
@@ -9341,4 +9511,36 @@ int atcommand_rates(
   clif_displaymessage(fd, buf);
 
   return 0;
+}
+
+int atcommand_battleoption(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+	char w1[128];
+	char w2[128];
+
+	nullpo_retr(0, sd);
+	memset(w1, '\0', sizeof(w1));
+	memset(w2, '\0', sizeof(w2));
+	if (!message || !*message || sscanf(message, "%99s %99s", w1, w2) < 2) {
+		clif_displaymessage(fd, "usage: @battleoption <option> <value>).");
+		return -1;
+	}
+	battle_set_value(w1,w2);
+	return 0;
+}
+
+/*==========================================
+ * @mapflag [flagap name] [1|0|on|off] [map name] by Lupus
+ * => Shows information about the map flags [map name]
+ * Also set flags
+ *------------------------------------------
+ */
+int atcommand_mapflag(
+	const int fd, struct map_session_data* sd,
+	const char* command, const char* message)
+{
+// WIP
+	return 0;
 }

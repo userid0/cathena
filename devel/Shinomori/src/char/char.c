@@ -21,10 +21,6 @@
 #include "int_party.h"
 #include "int_storage.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 struct mmo_map_server server[MAX_MAP_SERVERS];
 
 
@@ -318,7 +314,7 @@ int mmo_char_tostr(char *str, struct mmo_charstatus *p) {
 		p->last_point.map, p->last_point.x, p->last_point.y,
 		p->save_point.map, p->save_point.x, p->save_point.y,
 		p->partner_id,p->father_id,p->mother_id,p->child_id,
-		p->fame);
+		p->fame_points);
 	for(i = 0; i < 10; i++)
 		if(p->memo_point[i].map[0]) {
 			str_p += sprintf(str_p, "%s,%d,%d", p->memo_point[i].map, p->memo_point[i].x, p->memo_point[i].y);
@@ -563,7 +559,7 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	p->father_id = tmp_int[40];
 	p->mother_id = tmp_int[41];
 	p->child_id = tmp_int[42];
-	p->fame = tmp_int[43];
+	p->fame_points = tmp_int[43];
 
 	// Some checks
 	for(i = 0; i < char_num; i++) {
@@ -1000,7 +996,7 @@ int make_new_char(int fd, char *dat) {
 
 	if(dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29] != 5*6 || // stats
 	    dat[30] >= 9 || // slots (dat[30] can not be negativ)
-	    dat[33] <= 0 || dat[33] >= 20 || // hair style
+	    dat[33] <= 0 || dat[33] >= 24 || // hair style
 	    dat[31] >= 9) { // hair color (dat[31] can not be negativ)
 		char_log("Make new char error (invalid values): (connection #%d, account: %d) slot %d, name: %s, stats: %d+%d+%d+%d+%d+%d=%d, hair: %d, hair color: %d" RETCODE,
 		         fd, sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29], dat[33], dat[31]);
@@ -1014,7 +1010,15 @@ int make_new_char(int fd, char *dat) {
 			         fd, sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29], dat[33], dat[31]);
 			return -1;
 		}
-	}
+	} // now we know that every stat has proper value but we have to check if str/int agi/luk vit/dex pairs are correct
+
+	if( ((dat[24]+dat[27]) > 10) || ((dat[25]+dat[29]) > 10) || ((dat[26]+dat[28]) > 10) ) {
+		if (log_char) {
+			char_log("Make new char error (invalid stat value): (connection #%d, account: %d) slot %d, name: %s, stats: %d+%d+%d+%d+%d+%d=%d, hair: %d, hair color: %d" RETCODE,
+			         fd, sd->account_id, dat[30], dat, dat[24], dat[25], dat[26], dat[27], dat[28], dat[29], dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29], dat[33], dat[31]);
+			return -1;
+		}
+	} // now when we have passed all stat checks
 
 	for(i = 0; i < char_num; i++) {
 		if((name_ignoring_case != 0 && strcmp(char_dat[i].name, dat) == 0) ||
@@ -1658,10 +1662,10 @@ static int char_delete(struct mmo_charstatus *cs) {
 	if(cs->pet_id)
 		inter_pet_delete(cs->pet_id);
 	for (j = 0; j < MAX_INVENTORY; j++)
-		if(cs->inventory[j].card[0] == (unsigned short)0xff00)
+		if(cs->inventory[j].card[0] == 0xff00)
 			inter_pet_delete(MakeDWord(cs->inventory[j].card[1],cs->inventory[j].card[2]));
 	for (j = 0; j < MAX_CART; j++)
-		if(cs->cart[j].card[0] == (unsigned short)0xff00)
+		if(cs->cart[j].card[0] == 0xff00)
 			inter_pet_delete( MakeDWord(cs->cart[j].card[1],cs->cart[j].card[2]) );
 	// ƒMƒ‹ƒh’E‘Þ
 	if(cs->guild_id)
@@ -1689,16 +1693,15 @@ int parse_tologin(int fd)
 	struct char_session_data *sd;
 
 	// only login-server can have an access to here.
-	// so, if it isn't the login-server, we disconnect the session (fd != login_fd).
+	// so, if it isn't the login-server, we disconnect the session.
 	if(fd != login_fd)
 	{
 		session_Remove(fd);
 		return 0;
 	}
-	// else it is the login_fd
+	// else it is the login
 	if( !session_isActive(fd) )
-	{
-		// login is disconnecting
+	{	// login is disconnecting
 		ShowMessage("Connection to login-server dropped (connection #%d).\n", fd);
 		session_Remove(fd);// have it removed by do_sendrecv
 		login_fd = -1;
@@ -2179,7 +2182,7 @@ int parse_frommap(int fd) {
 		// not a map server
 		session_Remove(fd);
 		return 0;
-			}
+	}
 	// else it is a valid map server
 	if( !session_isActive(fd) ) {
 		// a map server is disconnecting
@@ -2305,7 +2308,7 @@ int parse_frommap(int fd) {
 					set_char_online(auth_fifo[i].char_id, auth_fifo[i].account_id);
 					char_dat[auth_fifo[i].char_pos].sex = auth_fifo[i].sex;
 					//memcpy(WFIFOP(fd,16), &char_dat[auth_fifo[i].char_pos], sizeof(struct mmo_charstatus));
-					mmo_charstatus_tobuffer(&char_dat[auth_fifo[i].char_pos], WFIFOP(fd,16));
+					mmo_charstatus_tobuffer(char_dat[auth_fifo[i].char_pos], WFIFOP(fd,16));
 					WFIFOSET(fd, WFIFOW(fd,2));
 					//ShowMessage("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6));
 					break;
@@ -2675,7 +2678,7 @@ int parse_frommap(int fd) {
 			for(i = 0; i < char_num; i++) {
 				id[i] = i;
 				for(j = 0; j < i; j++) {
-					if(char_dat[i].fame > char_dat[id[j]].fame) {
+					if(char_dat[i].fame_points > char_dat[id[j]].fame_points) {
 						for(k = i; k > j; k--)
 							id[k] = id[k-1];
 						id[j] = i; // id[i]
@@ -2695,7 +2698,7 @@ int parse_frommap(int fd) {
 					//WBUFL(buf, len) = dat[i].account_id;
 					//WBUFL(buf, len+4) = dat[i].fame;
 					WBUFL(buf, len) = char_dat[id[i]].char_id;
-					WBUFL(buf, len+4) = char_dat[id[i]].fame;
+					WBUFL(buf, len+4) = char_dat[id[i]].fame_points;
 					len += 8;
 					j++;
 				}
@@ -2712,7 +2715,7 @@ int parse_frommap(int fd) {
 					//WBUFL(buf, len) = dat[i].account_id;
 					//WBUFL(buf, len+4) = dat[i].fame;
 					WBUFL(buf, len) = char_dat[id[i]].account_id;
-					WBUFL(buf, len+4) = char_dat[id[i]].fame;
+					WBUFL(buf, len+4) = char_dat[id[i]].fame_points;
 					len += 8;
 					j++;
 				}
@@ -2747,27 +2750,38 @@ int parse_frommap(int fd) {
 	return 0;
 }
 
-int search_mapserver(char *map) {
-	int i, j;
+int search_mapserver(const char *map) {
+	size_t i, j;
 	char temp_map[16];
-	int temp_map_len;
+	size_t temp_map_len;
+
+	if( !map )
+		return -1;
 
 //	ShowMessage("Searching the map-server for map '%s'... ", map);
-	strncpy(temp_map, map, sizeof(temp_map));
+	temp_map_len = 1+strlen(map);
+	if( temp_map_len>sizeof(temp_map) ) temp_map_len = sizeof(temp_map);
+	memcpy(temp_map, map, temp_map_len);
 	temp_map[sizeof(temp_map)-1] = '\0';
 	if(strchr(temp_map, '.') != NULL)
 		temp_map[strchr(temp_map, '.') - temp_map + 1] = '\0'; // suppress the '.gat', but conserve the '.' to be sure of the name of the map
 
 	temp_map_len = strlen(temp_map);
 	for(i = 0; i < MAX_MAP_SERVERS; i++)
-		if(server[i].fd >= 0)
+	{
+		if( session_isActive( server[i].fd ) )
+		{
 			for (j = 0; server[i].map[j][0]; j++)
+			{
 				//ShowMessage("%s : %s = %d\n", server[i].map[j], map, strncmp(server[i].map[j], temp_map, temp_map_len));
-				if(strncmp(server[i].map[j], temp_map, temp_map_len) == 0) {
+				if(strncmp(server[i].map[j], temp_map, temp_map_len) == 0)
+				{
 //					ShowMessage("found -> server #%d.\n", i);
 					return i;
 				}
-
+			}
+		}
+	}
 //	ShowMessage("not found.\n");
 	return -1;
 }
@@ -2932,51 +2946,54 @@ int parse_char(int fd)
 					if(sd->found_char[ch] >= 0 && char_dat[sd->found_char[ch]].char_num == RFIFOB(fd,2))
 						break;
 				if(ch != 9) {
+					int j;
+
 					set_char_online(char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].account_id);
 					char_log("Character Selected, Account ID: %d, Character Slot: %d, Character ID: %ld, Name: %s." RETCODE,
 					         sd->account_id, RFIFOB(fd,2), char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].name);
 					// searching map server
-					i = search_mapserver(char_dat[sd->found_char[ch]].last_point.map);
+					j = search_mapserver(char_dat[sd->found_char[ch]].last_point.map);
 					// if map is not found, we check major cities
-					if(i < 0) {
-						if((i = search_mapserver("prontera.gat")) >= 0) { // check is done without 'gat'.
+					if(j < 0) {
+						if((j = search_mapserver("prontera.gat")) >= 0) { // check is done without 'gat'.
 							memcpy(char_dat[sd->found_char[ch]].last_point.map, "prontera.gat", 16);
 							char_dat[sd->found_char[ch]].last_point.x = 273; // savepoint coordonates
 							char_dat[sd->found_char[ch]].last_point.y = 354;
-						} else if((i = search_mapserver("geffen.gat")) >= 0) { // check is done without 'gat'.
+						} else if((j = search_mapserver("geffen.gat")) >= 0) { // check is done without 'gat'.
 							memcpy(char_dat[sd->found_char[ch]].last_point.map, "geffen.gat", 16);
 							char_dat[sd->found_char[ch]].last_point.x = 120; // savepoint coordonates
 							char_dat[sd->found_char[ch]].last_point.y = 100;
-						} else if((i = search_mapserver("morocc.gat")) >= 0) { // check is done without 'gat'.
+						} else if((j = search_mapserver("morocc.gat")) >= 0) { // check is done without 'gat'.
 							memcpy(char_dat[sd->found_char[ch]].last_point.map, "morocc.gat", 16);
 							char_dat[sd->found_char[ch]].last_point.x = 160; // savepoint coordonates
 							char_dat[sd->found_char[ch]].last_point.y = 94;
-						} else if((i = search_mapserver("alberta.gat")) >= 0) { // check is done without 'gat'.
+						} else if((j = search_mapserver("alberta.gat")) >= 0) { // check is done without 'gat'.
 							memcpy(char_dat[sd->found_char[ch]].last_point.map, "alberta.gat", 16);
 							char_dat[sd->found_char[ch]].last_point.x = 116; // savepoint coordonates
 							char_dat[sd->found_char[ch]].last_point.y = 57;
-						} else if((i = search_mapserver("payon.gat")) >= 0) { // check is done without 'gat'.
+						} else if((j = search_mapserver("payon.gat")) >= 0) { // check is done without 'gat'.
 							memcpy(char_dat[sd->found_char[ch]].last_point.map, "payon.gat", 16);
 							char_dat[sd->found_char[ch]].last_point.x = 87; // savepoint coordonates
 							char_dat[sd->found_char[ch]].last_point.y = 117;
-						} else if((i = search_mapserver("izlude.gat")) >= 0) { // check is done without 'gat'.
+						} else if((j = search_mapserver("izlude.gat")) >= 0) { // check is done without 'gat'.
 							memcpy(char_dat[sd->found_char[ch]].last_point.map, "izlude.gat", 16);
 							char_dat[sd->found_char[ch]].last_point.x = 94; // savepoint coordonates
 							char_dat[sd->found_char[ch]].last_point.y = 103;
 						} else {
-							int j;
 							// get first online server (with a map)
-							i = 0;
 							for(j = 0; j < MAX_MAP_SERVERS; j++)
-								if(server[j].fd >= 0 && server[j].map[0][0]) { // change save point to one of map found on the server (the first)
-									i = j;
+							{
+								if( session_isActive(server[j].fd) && server[j].map[0][0])
+								{	// change save point to one of map found on the server (the first)
 									memcpy(char_dat[sd->found_char[ch]].last_point.map, server[j].map[0], 16);
 									ShowMessage("Map-server #%d found with a map: '%s'.\n", j, server[j].map[0]);
 									// coordonates are unknown
 									break;
 								}
+							}
 							// if no map-server is connected, we send: server closed
-							if(j == MAX_MAP_SERVERS) {
+							if(j >= MAX_MAP_SERVERS)
+							{
 								WFIFOW(fd,0) = 0x81;
 								WFIFOL(fd,2) = 1; // 01 = Server closed
 								WFIFOSET(fd,3);
@@ -2994,8 +3011,8 @@ int parse_char(int fd)
 					if(lan_ip_check(client_ip))
 						WFIFOLIP(fd, 22) = lan_map_ip;
 					else
-						WFIFOLIP(fd, 22) = server[i].lanip;
-					WFIFOW(fd,26) = server[i].lanport;
+						WFIFOLIP(fd, 22) = server[j].lanip;
+					WFIFOW(fd,26) = server[j].lanport;
 					WFIFOSET(fd,28);
 					if(auth_fifo_pos >= AUTH_FIFO_SIZE)
 						auth_fifo_pos = 0;
@@ -3122,7 +3139,7 @@ int parse_char(int fd)
 
 			// otherwise, we delete the character
 			} else {
-				if(strcasecmp(email, sd->email) != 0) { // if it's an invalid email
+				if(email && sd->email && strcasecmp(email, sd->email) != 0) { // if it's an invalid email
 					WFIFOW(fd, 0) = 0x70;
 					WFIFOB(fd, 2) = 0; // 00 = Incorrect Email address
 					WFIFOSET(fd, 3);
@@ -3656,6 +3673,10 @@ void do_final(void) {
 	ShowStatus("Successfully terminated.\n");
 }
 
+unsigned char getServerType()
+{
+	return ATHENA_SERVER_CHAR | ATHENA_SERVER_INTER | ATHENA_SERVER_CORE;
+}
 int do_init(int argc, char **argv) {
 	int i;
 

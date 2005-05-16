@@ -19,7 +19,7 @@ time_t curtime;
 //Bits: ||
 //2 - Healing items (0)
 //3 - Etc Items(3) + Arrows (10)
-//4 - Usable Items(2)
+//4 - Usable Items(2) + Scrolls,Lures(11)
 //5 - Weapon(4)
 //6 - Shields,Armor,Headgears,Accessories,etc(5)
 //7 - Cards(6)
@@ -36,7 +36,7 @@ int should_log_item(int filter, unsigned short nameid) {
 	if ( (filter&1) || // Filter = 1, we log any item
 		(filter&2 && item_data->type == 0 ) ||	//healing items
 		(filter&4 && (item_data->type == 3 || item_data->type == 10) ) ||	//etc+arrows
-		(filter&8 && item_data->type == 2 ) ||	//usable
+		(filter&8 && (item_data->type == 2 || item_data->type == 11) ) ||	//usable
 		(filter&16 && item_data->type == 4 ) ||	//weapon
 		(filter&32 && item_data->type == 5 ) ||	//armor
 		(filter&64 && item_data->type == 6 ) ||	//cards
@@ -498,6 +498,48 @@ int log_npc(struct map_session_data *sd, const char *message)
 	return 0;
 }
 
+//ChatLogging
+int log_chat(char *type, int type_id, int src_charid, int src_accid, char *map, int x, int y, char *dst_charname, char *message){
+
+	//Check ON/OFF
+	if(log_config.chat <= 0){
+		return 0; //Deactivated
+	}
+
+#ifndef TXT_ONLY
+	if(log_config.sql_logs > 0){
+		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`time`, `type`, `type_id`, `src_charid`, `src_accountid`, `src_map`, `src_map_x`, `src_map_y`, `dst_charname`, `message`) VALUES (NOW(), '%s', '%d', '%d', '%d', '%s', '%d', '%d', '%s', '%s')", 
+		 	log_config.log_chat_db, type, type_id, src_charid, src_accid, map, x, y, dst_charname, message);
+	
+		if(mysql_query(&mmysql_handle, tmp_sql)){
+			printf("log_chat() -> SQL ERROR / FAIL: %s\n", mysql_error(&mmysql_handle));
+			return -1;	
+		}else{
+			return 0;
+		}
+	}			
+#endif
+
+#ifdef TXT_ONLY
+
+	FILE *logfp;
+	
+	if((logfp = fopen(log_config.log_chat, "a+")) != NULL){
+		time(&curtime);
+		strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+		//DATE - type,type_id,src_charid,src_accountid,src_map,src_x,src_y,dst_charname,message
+		fprintf(logfp, "%s - %s,%d,%d,%d,%s,%d,%d,%s,%s%s", 
+			timestring, type, type_id, src_charid, src_accid, map, x, y, dst_charname, message, RETCODE);
+		fclose(logfp);
+		return 0;
+	}else{
+		return -1;
+	}
+#endif
+return -1;
+}
+
+
 void log_set_defaults(void)
 {
 	memset(&log_config, 0, sizeof(log_config));
@@ -572,6 +614,8 @@ int log_config_read(const char *cfgName)
 				log_config.gm = (atoi(w2));
 			} else if(strcasecmp(w1,"log_npc") == 0) {
 				log_config.npc = (atoi(w2));
+			} else if(strcasecmp(w1, "log_chat") == 0) {
+				log_config.chat = (atoi(w2));
 			}
 
 #ifndef TXT_ONLY
@@ -627,6 +671,10 @@ int log_config_read(const char *cfgName)
 				strcpy(log_config.log_npc_db, w2);
 				if(log_config.npc > 0)
 					ShowMessage("Logging NPC 'logmes' to table `%s`\n", w2);
+			} else if(strcasecmp(w1, "log_chat_db") == 0) {
+				strcpy(log_config.log_chat_db, w2);
+				if(log_config.chat > 0)
+					printf("Logging CHAT to table `%s`\n", w2);
 			}
 #endif
 
@@ -682,6 +730,10 @@ int log_config_read(const char *cfgName)
 				strcpy(log_config.log_npc, w2);
 				if(log_config.npc > 0 && log_config.sql_logs < 1)
 					ShowMessage("Logging NPC 'logmes' to file `%s`.txt\n", w2);
+			} else if(strcasecmp(w1, "log_chat_file") == 0) {
+				if(log_config.chat > 0 && log_config.sql_logs < 1)
+					strcpy(log_config.log_chat, w2);
+					printf("Logging CHAT to file `%s`.txt\n", w2);
 			//support the import command, just like any other config
 			} else if(strcasecmp(w1,"import") == 0) {
 				log_config_read(w2);

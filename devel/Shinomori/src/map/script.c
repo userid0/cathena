@@ -8,8 +8,13 @@
 #include "timer.h"
 #include "malloc.h"
 #include "lock.h"
+#include "nullpo.h"
 #include "db.h"
-#include <math.h>
+#include "socket.h"
+#include "showmsg.h"
+#include "utils.h"
+#include "log.h"
+
 
 #include "map.h"
 #include "clif.h"
@@ -29,16 +34,6 @@
 #include "party.h"
 #include "guild.h"
 #include "atcommand.h"
-#include "socket.h"
-#include "showmsg.h"
-#include "utils.h"
-#include "log.h"
-#include "showmsg.h"
-
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 #define SCRIPT_BLOCK_SIZE 256
 
@@ -274,8 +269,10 @@ int buildin_petskillbonus(struct script_state *st); // petskillbonus [Valaris]
 int buildin_petrecovery(struct script_state *st); // pet skill for curing status [Valaris]
 int buildin_petloot(struct script_state *st); // pet looting [Valaris]
 int buildin_petheal(struct script_state *st); // pet healing [Valaris]
-int buildin_petmag(struct script_state *st); // pet magnificat [Valaris]
-int buildin_petskillattack(struct script_state *st); // pet skill attacks [Valaris]
+//int buildin_petmag(struct script_state *st); // pet magnificat [Valaris]
+int buildin_petskillattack(struct script_state *st); // pet skill attacks [Skotlex]
+int buildin_petskillattack2(struct script_state *st); // pet skill attacks [Skotlex]
+int buildin_petskillsupport(struct script_state *st); // pet support skill [Valaris]
 int buildin_skilleffect(struct script_state *st); // skill effects [Celest]
 int buildin_npcskilleffect(struct script_state *st); // skill effects for npcs [Valaris]
 int buildin_specialeffect(struct script_state *st); // special effect script [Valaris]
@@ -317,17 +314,15 @@ int buildin_globalmes(struct script_state *st);
 int buildin_jump_zero(struct script_state *st);
 int buildin_select(struct script_state *st);
 int buildin_getmapmobs(struct script_state *st); //jA addition end
-int buildin_pcstrcharinfo(struct script_state *st);// ADDITION Qamera death/disconnect/connect event mod
-int buildin_pcgetcharid(struct script_state *st);
-int buildin_disconnectevent(struct script_state *st);
-int buildin_deathevent(struct script_state *st);// END ADDITION 
+
 int buildin_defpattern(struct script_state *st); // MouseJstr
 int buildin_activatepset(struct script_state *st); // MouseJstr
 int buildin_deactivatepset(struct script_state *st); // MouseJstr
 int buildin_deletepset(struct script_state *st); // MouseJstr
+
 int buildin_unequip(struct script_state *st); // unequip [Spectre]
 
-
+int buildin_pcstrcharinfo(struct script_state *st);
 
 void push_val(struct script_stack *stack,int type,int val);
 int run_func(struct script_state *st);
@@ -522,9 +517,11 @@ struct {
 	{buildin_petskillbonus,"petskillbonus","iiii"}, // [Valaris]
 	{buildin_petrecovery,"petrecovery","ii"}, // [Valaris]
 	{buildin_petloot,"petloot","i"}, // [Valaris]
-	{buildin_petheal,"petheal","iii"}, // [Valaris]
-	{buildin_petmag,"petmag","iiii"}, // [Valaris]
-	{buildin_petskillattack,"petskillattack","iiii"}, // [Valaris]
+	{buildin_petheal,"petheal","iiii"}, // [Valaris]
+//	{buildin_petmag,"petmag","iiii"}, // [Valaris]
+	{buildin_petskillattack,"petskillattack","iiii"}, // [Skotlex]
+	{buildin_petskillattack2,"petskillattack2","iiiii"}, // [Valaris]
+	{buildin_petskillsupport,"petskillsupport","iiiii"}, // [Skotlex]
 	{buildin_skilleffect,"skilleffect","ii"}, // skill effect [Celest]
 	{buildin_npcskilleffect,"npcskilleffect","iiii"}, // npc skill effect [Valaris]
 	{buildin_specialeffect,"specialeffect","i"}, // npc skill effect [Valaris]
@@ -535,7 +532,7 @@ struct {
 	{buildin_stoptimer,"stoptimer",""},
 	{buildin_cmdothernpc,"cmdothernpc","ss"},
 	{buildin_gmcommand,"gmcommand","*"}, // [MouseJstr]
-//	{buildin_movenpc,"movenpc","siis"}, // [MouseJstr]
+	{buildin_movenpc,"movenpc","siis"}, // [MouseJstr]
 	{buildin_message,"message","s*"}, // [MouseJstr]
 	{buildin_npctalk,"npctalk","*"}, // [Valaris]
 	{buildin_hasitems,"hasitems","*"}, // [Valaris]
@@ -559,14 +556,14 @@ struct {
 	{buildin_isequipped,"isequipped","i*"}, // check whether another item/card has been equipped [Celest]
 	{buildin_isequippedcnt,"isequippedcnt","i*"}, // check how many items/cards are being equipped [Celest]
 	{buildin_cardscnt,"cardscnt","i*"}, // check how many items/cards are being equipped in the same arm [Lupus]
-	{buildin_getrefine,"getrefine",""}, // returns the refined number of the current item, or an item with index specified [celest]
+	{buildin_getrefine,"getrefine","*"}, // returns the refined number of the current item, or an item with index specified [celest]
 	{buildin_adopt,"adopt","sss"}, // allows 2 parents to adopt a child
 	{buildin_night,"night",""}, // sets the server to night time
 	{buildin_day,"day",""}, // sets the server to day time
-	{buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
-	{buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
-	{buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
-	{buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
+        {buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
+        {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
+        {buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
+        {buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
 	{buildin_dispbottom,"dispbottom","s"}, //added from jA [Lupus]
 	{buildin_getusersname,"getusersname","*"},
 	{buildin_recovery,"recovery",""},
@@ -577,6 +574,7 @@ struct {
 	{buildin_globalmes,"globalmes","s*"},
 	{buildin_getmapmobs,"getmapmobs","s"}, //end jA addition
 	{buildin_unequip,"unequip","i"}, // unequip command [Spectre]
+	{buildin_pcstrcharinfo,"pcstrcharinfo","ii"},
 	{NULL,NULL,NULL},
 };
 
@@ -696,7 +694,8 @@ static int add_str(const char *p)
  */
 static void check_script_buf(int size)
 {
-	if(script_pos+size>=script_size){
+	if(script_pos+size>=script_size)
+	{
 		script_size+=SCRIPT_BLOCK_SIZE;
 		script_buf=(char *)aRealloc(script_buf,script_size*sizeof(char));
 		memset(script_buf + (script_size - SCRIPT_BLOCK_SIZE), 0, SCRIPT_BLOCK_SIZE*sizeof(char));
@@ -828,24 +827,28 @@ static char *skip_space(char *p)
 static char *skip_word(char *str)
 {
 	unsigned char*p =(unsigned char*)str;
-	// prefix
-	if(*p=='$') p++;	// MAP鯖内共有変数用
-	if(*p=='@') p++;	// 一時的変数用(like weiss)
-	if(*p=='#') p++;	// account変数用
-	if(*p=='#') p++;	// ワールドaccount変数用
-	if(*p=='l') p++;	// 一時的変数用(like weiss)
+	if(p)
+	{
+		// prefix
+		if(*p=='$') p++;	// MAP鯖内共有変数用
+		if(*p=='@') p++;	// 一時的変数用(like weiss)
+		if(*p=='#') p++;	// account変数用
+		if(*p=='#') p++;	// ワールドaccount変数用
+		if(*p=='l') p++;	// 一時的変数用(like weiss)
 
-	// this is for skipping multibyte characters
-	// I do not modify here but just set the string pointer back to unsigned
-	while(isalnum(*p)||*p=='_'|| *p>=0x81)
-		if(*p>=0x81 && p[1]){
-			p+=2;
-		} else
-			p++;
+		// this is for skipping multibyte characters
+		// I do not modify here but just set the string pointer back to unsigned
+		while(isalnum(*p) || *p=='_' || *p>=0x81)
+		{
+			if(*p>=0x81 && p[1])
+				p+=2;
+			else
+				p++;
+		}
 
-	// postfix
-	if(*p=='$') p++;	// 文字列変数
-
+		// postfix
+		if(*p=='$') p++;	// 文字列変数
+	}
 	return (char*)p;
 }
 
@@ -1061,9 +1064,9 @@ char* parse_subexpr(char *p,int limit)
 				exit(1);
 			}
 
-			if( str_data[func].type==C_FUNC && script_config.warn_func_mismatch_paramnum){
-				const char *arg=buildin_func[str_data[func].val].arg;
-				int j=0;
+			if (str_data[func].type == C_FUNC && script_config.warn_func_mismatch_paramnum) {
+				const char *arg = buildin_func[str_data[func].val].arg;
+				int j = 0;
 				for (; arg[j]; j++) if (arg[j] == '*') break;
 				if (!(i <= 1 && j == 0) && ((arg[j] == 0 && i != j) || (arg[j] == '*' && i < j))) {
 					disp_error_message("illegal number of parameters",plist[(i<j)?i:j]);
@@ -1225,14 +1228,36 @@ char* parse_script(unsigned char *src,int line)
 {
 	char *p,*tmpp;
 	int i;
-	static int first=1;
-
-	if(first){
+	static int first = 1;
+	if(first)
+	{
 		add_buildin_func();
 		read_constdb();
 	}
 	first=0;
+
+
+	//////////////////////////////////////////////
+	// additional check on the input to filter empty scripts ("{}" and "{ }")
+	p=(char*)src;
+	p=skip_space(p);
+	if(*p!='{')
+	{
+		disp_error_message("not found '{'",p);
+		return NULL;
+	}
+	p++;
+	p=skip_space(p);
+	if(*p=='}')
+	{	// an empty function, just return
+		return NULL;
+	}
+	//////////////////////////////////////////////
+
+
+	if(script_buf) aFree(script_buf);
 	script_buf=(char *)aCallocA(SCRIPT_BLOCK_SIZE,sizeof(char));
+
 	script_pos=0;
 	script_size=SCRIPT_BLOCK_SIZE;
 	str_data[LABEL_NEXTLINE].type=C_NOP;
@@ -1247,27 +1272,24 @@ char* parse_script(unsigned char *src,int line)
 	}
 
 	// 外部用label dbの初期化
-	if(scriptlabel_db!=NULL)
-		strdb_final(scriptlabel_db,scriptlabel_final);
-	scriptlabel_db=strdb_init(50);
+	if (scriptlabel_db)
+		strdb_final (scriptlabel_db, scriptlabel_final);
+	scriptlabel_db = strdb_init(50);
 
 	// for error message
 	startptr = (char*)src;
 	startline = line;
 
-	p=(char*)src;
-	p=skip_space(p);
-	if(*p!='{'){
-		disp_error_message("not found '{'",p);
-		return NULL;
-	}
-	for(p++;p && *p && *p!='}';){
+	////////
+	// input check is above
+	while(p && *p && *p!='}')
+	{
 		p=skip_space(p);
 		// labelだけ特殊処理
 		tmpp=skip_space(skip_word(p));
-		if(*tmpp==':'){
+		if(*tmpp==':')
+		{
 			int l,c;
-
 			c=*skip_word(p);
 			*skip_word(p)=0;
 			l=add_str(p);
@@ -1280,22 +1302,21 @@ char* parse_script(unsigned char *src,int line)
 			strdb_insert(scriptlabel_db,p,script_pos);
 			*skip_word(p)=c;
 			p=tmpp+1;
-			continue;
 		}
-
-		// 他は全部一緒くた
-		p=parse_line(p);
-		p=skip_space(p);
-		add_scriptc(C_EOL);
-
-		set_label(LABEL_NEXTLINE,script_pos);
-		str_data[LABEL_NEXTLINE].type=C_NOP;
-		str_data[LABEL_NEXTLINE].backpatch=-1;
-		str_data[LABEL_NEXTLINE].label=-1;
+		else
+		{
+			// 他は全部一緒くた
+			p=parse_line(p);
+			p=skip_space(p);
+			add_scriptc(C_EOL);
+			set_label(LABEL_NEXTLINE,script_pos);
+			str_data[LABEL_NEXTLINE].type=C_NOP;
+			str_data[LABEL_NEXTLINE].backpatch=-1;
+			str_data[LABEL_NEXTLINE].label=-1;
+		}
 	}
 
 	add_scriptc(C_NOP);
-
 	script_size = script_pos;
 	script_buf=(char*)aRealloc(script_buf,(script_pos + 1)*sizeof(char));
 
@@ -1326,7 +1347,9 @@ char* parse_script(unsigned char *src,int line)
 	ShowMessage("\n");
 #endif
 
-	return (char *) script_buf;
+	char *local = script_buf;
+	script_buf = NULL;
+	return local;
 }
 
 //
@@ -1539,7 +1562,7 @@ void push_str(struct script_stack *stack, int type, char *str)
 //	if(battle_config.etc_log)
 //		ShowMessage("push (%d,%x)-> %d\n",type,str,stack->sp);
 	stack->stack_data[stack->sp].type=type;
-	stack->stack_data[stack->sp].u.str=(char *) str;
+	stack->stack_data[stack->sp].u.str=str;
 	stack->sp++;
 }
 
@@ -2418,7 +2441,7 @@ int buildin_getitem(struct script_state *st)
 			return 0;
 		if((flag = pc_additem(sd,&item_tmp,amount))) {
 			clif_additem(sd,0,0,flag);
-			if(!pc_candrop(sd,nameid))
+			if( pc_candrop(sd,nameid) )
 				map_addflooritem(&item_tmp,amount,sd->bl.m,sd->bl.x,sd->bl.y,NULL,NULL,NULL,0);
 		}
 	}
@@ -2513,7 +2536,7 @@ int buildin_getitem2(struct script_state *st)
 int buildin_makeitem(struct script_state *st)
 {
 	//!! some stupid game with signs
-	short nameid,amount;
+	short nameid, amount;
 	int flag = 0;
 	int x,y,m;
 	char *mapname;
@@ -2811,8 +2834,7 @@ char *buildin_getguildmaster_sub(int guild_id)
 		memcpy(buf,g->master, 24);//EOS included
 		return buf;
 	}
-
-	return 0;
+	return NULL;
 }
 int buildin_getguildmaster(struct script_state *st)
 {
@@ -3156,17 +3178,17 @@ int buildin_successrefitem(struct script_state *st)
 		clif_misceffect(&sd->bl,3);
 		if( sd->status.inventory[i].refine == 10 && 
 			sd->status.inventory[i].card[0] == 0x00ff && 
-			MakeDWord(sd->status.inventory[i].card[2],sd->status.inventory[i].card[3]) == sd->char_id )
+			sd->char_id == MakeDWord(sd->status.inventory[i].card[2],sd->status.inventory[i].card[3])  )
 		{	// Fame point system [DracoRPG]
 	 		switch (sd->inventory_data[i]->wlv){
 	 	 		case 1:
-		 	  		 sd->status.fame += 1; // Success to refine to +10 a lv1 weapon you forged = +1 fame point
+		 	  		 sd->status.fame_points += 1; // Success to refine to +10 a lv1 weapon you forged = +1 fame point
 		 	  		 break;
 	 	   		case 2:
-					 sd->status.fame += 25; // Success to refine to +10 a lv2 weapon you forged = +25 fame point
+					 sd->status.fame_points += 25; // Success to refine to +10 a lv2 weapon you forged = +25 fame point
 					 break;
 				case 3:
-					 sd->status.fame += 1000; // Success to refine to +10 a lv3 weapon you forged = +1000 fame point
+					 sd->status.fame_points += 1000; // Success to refine to +10 a lv3 weapon you forged = +1000 fame point
 					 break;
 	 	 	 }
 		}
@@ -3822,7 +3844,6 @@ int buildin_getexp(struct script_state *st)
 		return 0;
 	if(sd)
 		pc_gainexp(sd,base,job);
-
 	return 0;
 }
 
@@ -4017,8 +4038,11 @@ int buildin_initnpctimer(struct script_state *st)
 	else
 		nd=(struct npc_data *)map_id2bl(st->oid);
 
-	npc_settimerevent_tick(nd,0);
-	npc_timerevent_start(nd, st->rid);
+	if(nd)
+	{
+		npc_settimerevent_tick(*nd,0);
+		npc_timerevent_start(*nd, st->rid);
+	}
 	return 0;
 }
 /*==========================================
@@ -4033,7 +4057,10 @@ int buildin_startnpctimer(struct script_state *st)
 	else
 		nd=(struct npc_data *)map_id2bl(st->oid);
 
-	npc_timerevent_start(nd, st->rid);
+	if(nd)
+	{
+		npc_timerevent_start(*nd, st->rid);
+	}
 	return 0;
 }
 /*==========================================
@@ -4048,7 +4075,10 @@ int buildin_stopnpctimer(struct script_state *st)
 	else
 		nd=(struct npc_data *)map_id2bl(st->oid);
 
-	npc_timerevent_stop(nd);
+	if(nd)
+	{
+		npc_timerevent_stop(*nd);
+	}
 	return 0;
 }
 /*==========================================
@@ -4065,10 +4095,13 @@ int buildin_getnpctimer(struct script_state *st)
 	else
 		nd=(struct npc_data *)map_id2bl(st->oid);
 
-	switch(type){
-	case 0: val=npc_gettimerevent_tick(nd); break;
-	case 1: val= (nd->u.scr.nexttimer>=0); break;
-	case 2: val= nd->u.scr.timeramount; break;
+	if(nd)
+	{
+		switch(type){
+		case 0: val=npc_gettimerevent_tick(*nd); break;
+		case 1: val= (nd->u.scr.nexttimer>=0); break;
+		case 2: val= nd->u.scr.timeramount; break;
+		}
 	}
 	push_val(st->stack,C_INT,val);
 	return 0;
@@ -4087,7 +4120,10 @@ int buildin_setnpctimer(struct script_state *st)
 	else
 		nd=(struct npc_data *)map_id2bl(st->oid);
 
-	npc_settimerevent_tick(nd,tick);
+	if(nd)
+	{
+		npc_settimerevent_tick(*nd,tick);
+	}
 	return 0;
 }
 
@@ -4423,7 +4459,7 @@ int buildin_sc_start(struct script_state *st)
 	bl = map_id2bl(st->rid);
 
 	if (bl != 0) {
-		if(bl->type == BL_PC && ((struct map_session_data *)bl)->state.potionpitcher_flag)
+		if(bl->type == BL_PC && ((struct map_session_data *)bl)->state.potion_flag==1)
 			bl = map_id2bl(((struct map_session_data *)bl)->skilltarget);
 		status_change_start(bl,type,val1,0,0,0,tick,0);
 	}
@@ -4448,7 +4484,7 @@ int buildin_sc_start2(struct script_state *st)
 		bl = map_id2bl(conv_num(st,& (st->stack->stack_data[st->start+6])));
 	else
 	bl = map_id2bl(st->rid);
-	if(bl->type == BL_PC && ((struct map_session_data *)bl)->state.potionpitcher_flag)
+	if(bl->type == BL_PC && ((struct map_session_data *)bl)->state.potion_flag==1)
 		bl = map_id2bl(((struct map_session_data *)bl)->skilltarget);
 	if(rand()%10000 < per)
 	status_change_start(bl,type,val1,0,0,0,tick,0);
@@ -4465,7 +4501,10 @@ int buildin_sc_end(struct script_state *st)
 	int type;
 	type=conv_num(st,& (st->stack->stack_data[st->start+2]));
 	bl = map_id2bl(st->rid);
-	if(bl->type == BL_PC && ((struct map_session_data *)bl)->state.potionpitcher_flag)
+	
+	nullpo_retr(0,bl);  //Fixed null pointer right here [Kevin]
+
+	if(bl->type == BL_PC && ((struct map_session_data *)bl)->state.potion_flag==1)
 		bl = map_id2bl(((struct map_session_data *)bl)->skilltarget);
 	status_change_end(bl,type,-1);
 //	if(battle_config.etc_log)
@@ -5885,13 +5924,12 @@ int buildin_getitemname(struct script_state *st)
 }
 
 /*==========================================
- * petskillbonus [Valaris]
+ * petskillbonus [Valaris] //Rewritten by [Skotlex]
  *------------------------------------------
  */
 
 int buildin_petskillbonus(struct script_state *st)
 {
-	int type,val,duration,timer;
 	struct pet_data *pd;
 
 	struct map_session_data *sd=script_rid2sd(st);
@@ -5900,55 +5938,64 @@ int buildin_petskillbonus(struct script_state *st)
 		return 0;
 
 	pd=sd->pd;
+	if (pd->bonus)
+	{ //Clear previous bonus
+		if (pd->bonus->timer != -1)
+			delete_timer(pd->bonus->timer, pet_skill_bonus_timer);
+	} else //init
+		pd->bonus = (struct pet_data::pet_bonus *) aCalloc(1, sizeof(struct pet_data::pet_bonus));
 
-	if(pd==NULL)
-		return 0;
-
-	type=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	val=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	duration=conv_num(st,& (st->stack->stack_data[st->start+4]));
-	timer=conv_num(st,& (st->stack->stack_data[st->start+5]));
-
-	// initialise bonuses
-	pd->skillbonustype=type;
-	pd->skillbonusval=val;
-	pd->skillduration=duration*1000;
-	pd->skilltimer=timer*1000;
+	pd->bonus->type=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->bonus->val=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->bonus->duration=conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->bonus->delay=conv_num(st,& (st->stack->stack_data[st->start+5]));
 
 	if (pd->state.skillbonus == -1)
 		pd->state.skillbonus=0;	// waiting state
 
 	// wait for timer to start
-	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer,pet_skill_bonus_timer,sd->bl.id,0);
+	if (battle_config.pet_equip_required && pd->equip_id == 0)
+		pd->bonus->timer=-1;
+	else
+		pd->bonus->timer=add_timer(gettick()+pd->bonus->delay*1000, pet_skill_bonus_timer, sd->bl.id, 0);
 
 	return 0;
 }
 
 /*==========================================
- * pet looting [Valaris]
+ * pet looting [Valaris] //Rewritten by [Skotlex]
  *------------------------------------------
  */
 int buildin_petloot(struct script_state *st)
 {
 	int max;
 	struct pet_data *pd;
-
 	struct map_session_data *sd=script_rid2sd(st);
+	
 	if(sd==NULL || sd->pd==NULL)
-		return 0;
-
-	pd=sd->pd;
-
-	if(pd==NULL)
 		return 0;
 
 	max=conv_num(st,& (st->stack->stack_data[st->start+2]));
 
-	if(!max)
-		return 0;
+	if(max < 1)
+		max = 1;	//Let'em loot at least 1 item.
+	else if (max > MAX_PETLOOT_SIZE)
+		max = MAX_PETLOOT_SIZE;
+	
+	pd = sd->pd;
+	if(pd && pd->loot != NULL)
+	{	//Release whatever was there already and reallocate memory
+		pet_lootitem_drop(*pd, pd->msd);
+		aFree(pd->loot->item);
+	}
+	else
+		pd->loot = (struct pet_data::pet_loot *)aCalloc(1, sizeof(struct pet_data::pet_loot));
 
-	pd->loot=1;
-	pd->lootmax=max;
+	pd->loot->item = (struct item *)aCalloc(max,sizeof(struct item));
+	pd->loot->max=max;
+	pd->loot->count = 0;
+	pd->loot->weight = 0;
+	pd->loot->loottick = gettick();
 
 	return 0;
 }
@@ -6086,39 +6133,39 @@ int buildin_soundeffectall(struct script_state *st)
 	return 0;
 }
 /*==========================================
- * pet status recovery [Valaris]
+ * pet status recovery [Valaris] / Rewritten by [Skotlex]
  *------------------------------------------
  */
 int buildin_petrecovery(struct script_state *st)
 {
 	struct pet_data *pd;
-
 	struct map_session_data *sd=script_rid2sd(st);
 
 	if(sd==NULL || sd->pd==NULL)
 		return 0;
 
 	pd=sd->pd;
-
-	if(pd==NULL)
-		return 0;
-
-	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	pd->skillval     =0;
-	pd->skillduration=0;
-
-	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_recovery_timer,sd->bl.id,0);
+	
+	if (pd->recovery)
+	{ //Halt previous bonus
+		if (pd->recovery->timer != -1)
+			delete_timer(pd->recovery->timer, pet_recovery_timer);
+	}
+	else //Init
+		pd->recovery = (struct pet_data::pet_recovery *)aCalloc(1, sizeof(struct pet_data::pet_recovery));
+		
+	pd->recovery->type=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->recovery->delay=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->recovery->timer=-1;
 
 	return 0;
 }
 
 /*==========================================
- * pet healing [Valaris]
+ * pet healing [Valaris] //Rewritten by [Skotlex]
  *------------------------------------------
  */
 int buildin_petheal(struct script_state *st)
-
 {
 	struct pet_data *pd;
 	struct map_session_data *sd=script_rid2sd(st);
@@ -6127,16 +6174,25 @@ int buildin_petheal(struct script_state *st)
 		return 0;
 
 	pd=sd->pd;
+	if (pd->s_skill)
+	{ //Clear previous skill
+		if (pd->s_skill->timer != -1)
+			delete_timer(pd->s_skill->timer, pet_skill_support_timer);
+	} else //init memory
+		pd->s_skill = (struct pet_data::pet_skill_support *) aCalloc(1, sizeof(struct pet_data::pet_skill_support)); 
+	
+	pd->s_skill->id=0; //This id identifies that it IS petheal rather than pet_skillsupport
+	//Use the lv as the amount to heal
+	pd->s_skill->lv=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->s_skill->delay=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->s_skill->hp=conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->s_skill->sp=conv_num(st,& (st->stack->stack_data[st->start+5]));
 
-	if(pd==NULL)
-		return 0;
-
-	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skillval=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+4]));
-	pd->skillduration=0;
-
-	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_heal_timer,sd->bl.id,0);
+	//Use delay as initial offset to avoid skill/heal exploits
+	if (battle_config.pet_equip_required && pd->equip_id == 0)
+		pd->s_skill->timer=-1;
+	else
+		pd->s_skill->timer=add_timer(gettick()+pd->s_skill->delay*1000,pet_heal_timer,sd->bl.id,0);
 
 	return 0;
 }
@@ -6145,6 +6201,7 @@ int buildin_petheal(struct script_state *st)
  * pet magnificat [Valaris]
  *------------------------------------------
  */
+/*
 int buildin_petmag(struct script_state *st)
 {
 	struct pet_data *pd;
@@ -6167,9 +6224,9 @@ int buildin_petmag(struct script_state *st)
 
 	return 0;
 }
-
+*/
 /*==========================================
- * pet attack skills [Valaris]
+ * pet attack skills [Valaris] //Rewritten by [Skotlex]
  *------------------------------------------
  */
 int buildin_petskillattack(struct script_state *st)
@@ -6181,16 +6238,74 @@ int buildin_petskillattack(struct script_state *st)
 		return 0;
 
 	pd=sd->pd;
+	if (pd->a_skill == NULL)
+		pd->a_skill = (struct pet_data::pet_skill_attack *)aCalloc(1, sizeof(struct pet_data::pet_skill_attack));
+				
+	pd->a_skill->id=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->a_skill->lv=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->a_skill->div_ = 0;
+	pd->a_skill->rate=conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->a_skill->bonusrate=conv_num(st,& (st->stack->stack_data[st->start+5]));
 
-	if(pd==NULL)
+	return 0;
+}
+
+/*==========================================
+ * pet attack skills [Valaris]
+ *------------------------------------------
+ */
+int buildin_petskillattack2(struct script_state *st)
+{
+	struct pet_data *pd;
+	struct map_session_data *sd=script_rid2sd(st);
+
+	if(sd==NULL || sd->pd==NULL)
 		return 0;
 
-	pd->skilltype=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	pd->skillval=conv_num(st,& (st->stack->stack_data[st->start+3]));
-	pd->skillduration=conv_num(st,& (st->stack->stack_data[st->start+4]));
-	pd->skilltimer=conv_num(st,& (st->stack->stack_data[st->start+5]));
+	pd=sd->pd;
+	if (pd->a_skill == NULL)
+		pd->a_skill = (struct pet_data::pet_skill_attack *)aCalloc(1, sizeof(struct pet_data::pet_skill_attack));
+				
+	pd->a_skill->id=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->a_skill->lv=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->a_skill->div_ = conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->a_skill->rate=conv_num(st,& (st->stack->stack_data[st->start+5]));
+	pd->a_skill->bonusrate=conv_num(st,& (st->stack->stack_data[st->start+6]));
 
-	pd->skillbonustimer=add_timer(gettick()+100,pet_skillattack_timer,sd->bl.id,0);
+	return 0;
+}
+
+/*==========================================
+ * pet support skills [Skotlex]
+ *------------------------------------------
+ */
+int buildin_petskillsupport(struct script_state *st)
+{
+	struct pet_data *pd;
+	struct map_session_data *sd=script_rid2sd(st);
+
+	if(sd==NULL || sd->pd==NULL)
+		return 0;
+
+	pd=sd->pd;
+	if (pd->s_skill)
+	{ //Clear previous skill
+		if (pd->s_skill->timer != -1)
+			delete_timer(pd->s_skill->timer, pet_skill_support_timer);
+	} else //init memory
+		pd->s_skill = (struct pet_data::pet_skill_support *) aCalloc(1, sizeof(struct pet_data::pet_skill_support)); 
+	
+	pd->s_skill->id=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	pd->s_skill->lv=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	pd->s_skill->delay=conv_num(st,& (st->stack->stack_data[st->start+4]));
+	pd->s_skill->hp=conv_num(st,& (st->stack->stack_data[st->start+5]));
+	pd->s_skill->sp=conv_num(st,& (st->stack->stack_data[st->start+6]));
+
+	//Use delay as initial offset to avoid skill/heal exploits
+	if (battle_config.pet_equip_required && pd->equip_id == 0)
+		pd->s_skill->timer=-1;
+	else
+		pd->s_skill->timer=add_timer(gettick()+pd->s_skill->delay*1000,pet_skill_support_timer,sd->bl.id,0);
 
 	return 0;
 }
@@ -6291,6 +6406,8 @@ int buildin_gmcommand(struct script_state *st)
 	char *cmd;
 
 	sd = script_rid2sd(st);
+	if (!sd)
+		return 0;
 	cmd = conv_str(st,& (st->stack->stack_data[st->start+2]));
         is_atcommand(sd->fd, sd, cmd, 99);
 	return 0;
@@ -6628,7 +6745,7 @@ int buildin_npcwalkto(struct script_state *st)
 	y=conv_num(st,& (st->stack->stack_data[st->start+3]));
 
 	if(nd) {
-		npc_walktoxy(nd,x,y,0);
+		npc_walktoxy(*nd,x,y,0);
 	}
 
 	return 0;
@@ -6639,7 +6756,7 @@ int buildin_npcstop(struct script_state *st)
 	struct npc_data *nd=(struct npc_data *)map_id2bl(st->oid);
 
 	if( (nd) && (nd->state.state==MS_WALK) ){
-			npc_stop_walking(nd,1);
+			npc_stop_walking(*nd,1);
 	}
 	return 0;
 }
@@ -7212,7 +7329,7 @@ int buildin_cardscnt(struct script_state *st)
 				for(k=0; k<sd->inventory_data[index]->flag.slot; k++) {
 					if (sd->status.inventory[index].card[0]!=0x00ff &&
 						sd->status.inventory[index].card[0]!=0x00fe &&
-						sd->status.inventory[index].card[0]!=(unsigned short)0xff00 &&
+						sd->status.inventory[index].card[0]!=0xff00 &&
 						sd->status.inventory[index].card[k] == id) {
 						ret++;
 					}
@@ -7295,6 +7412,45 @@ int buildin_unequip(struct script_state *st)
 		i=pc_checkequip(sd,equip[num]);
 		pc_unequipitem(sd,i,2);
 		return 0;
+	}
+	return 0;
+}
+
+
+int buildin_pcstrcharinfo(struct script_state *st)
+{
+	int aid,num;
+	struct map_session_data *sd;
+	
+	aid=conv_num(st,& (st->stack->stack_data[st->start+2]));
+	num=conv_num(st,& (st->stack->stack_data[st->start+3]));
+	
+	sd=map_id2sd(aid);
+	if(sd==NULL){
+		push_str(st->stack,C_CONSTSTR,"");
+		num=-1;
+	}
+	if(num==0){
+		char *buf;
+		buf=(char*)aMalloc(24 * sizeof(char));
+		strncpy(buf,sd->status.name, 24);
+		push_str(st->stack,C_STR,buf);
+	}
+	else if(num==1){
+		char *buf;
+		buf=buildin_getpartyname_sub(sd->status.party_id);
+		if(buf!=0)
+			push_str(st->stack,C_STR,buf);
+		else
+			push_str(st->stack,C_CONSTSTR,"");
+	}
+	if(num==2){
+		char *buf;
+		buf=buildin_getguildname_sub(sd->status.guild_id);
+		if(buf!=0)
+			push_str(st->stack,C_STR,buf);
+		else
+			push_str(st->stack,C_CONSTSTR,"");
 	}
 	return 0;
 }
@@ -7661,6 +7817,9 @@ int run_script_main(char *script,int pos,int rid,int oid,struct script_state *st
 	int cmdcount=script_config.check_cmdcount;
 	int gotocount=script_config.check_gotocount;
 	struct script_stack *stack=st->stack;
+
+	if(!script)
+		return 0;
 
 	st->defsp=stack->sp;
 	st->script=script;
@@ -8090,8 +8249,6 @@ int do_final_script()
 {
 	if(mapreg_dirty>=0)
 		script_save_mapreg();
-//	if(script_buf)
-//		aFree(script_buf);
 
 	if(mapreg_db)
 		numdb_final(mapreg_db,mapreg_db_final);

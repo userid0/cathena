@@ -161,7 +161,7 @@ int search_partyname_sub(void *key,void *data,va_list ap) {
 
 	str = va_arg(ap, char *);
 	dst = va_arg(ap, struct party **);
-	if (strcasecmp(p->name, str) == 0)
+	if(dst && p && p->name && str && strcasecmp(p->name, str) == 0)
 		*dst = p;
 
 	return 0;
@@ -309,16 +309,19 @@ int mapif_party_noinfo(int fd, int party_id)
 int mapif_party_info(int fd, struct party *pparty) {
 	unsigned char buf[2048];
 
-	WBUFW(buf,0) = 0x3821;
-	WBUFW(buf,2) = 4 + sizeof(struct party);
-	//memcpy(buf + 4, pparty, sizeof(struct party));
-	party_tobuffer(pparty, buf+4);
+	if(pparty)
+	{
+		WBUFW(buf,0) = 0x3821;
+		WBUFW(buf,2) = 4 + sizeof(struct party);
+		//memcpy(buf + 4, pparty, sizeof(struct party));
+		party_tobuffer(*pparty, buf+4);
 
-	if( !session_isActive(fd) )
-		mapif_sendall(buf, WBUFW(buf,2));
-	else
-		mapif_send(fd, buf, WBUFW(buf,2));
-//	ShowMessage("int_party: info %d %s\n", p->party_id, p->name);
+		if( !session_isActive(fd) )
+			mapif_sendall(buf, WBUFW(buf,2));
+		else
+			mapif_send(fd, buf, WBUFW(buf,2));
+		//ShowMessage("int_party: info %d %s\n", p->party_id, p->name);
+	}
 
 	return 0;
 }

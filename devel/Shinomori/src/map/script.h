@@ -37,7 +37,8 @@ struct script_state {
 	size_t end;
 	size_t pos;
 	int state;
-	unsigned long rid,oid;
+	unsigned long rid;
+	unsigned long oid;
 	char *script,*new_script;
 	int defsp,new_pos,new_defsp;
 };

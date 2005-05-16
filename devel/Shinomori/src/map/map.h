@@ -89,6 +89,36 @@ struct vending {
 	unsigned long value;
 };
 
+struct weapon_data {
+	long watk;
+	long watk2;
+
+	long overrefine;
+	long star;
+	long atk_ele;
+	long atkmods[3];
+	long addsize[3];
+	long addele[10];
+	long addrace[12];
+	long addrace2[12];
+	long ignore_def_ele;
+	long ignore_def_race;
+	short ignore_def_mob;
+	long def_ratio_atk_ele;
+	long def_ratio_atk_race;
+	long add_damage_class_count;
+	short add_damage_classid[10];
+	long add_damage_classrate[10];
+	short hp_drain_rate;
+	short hp_drain_per;
+	short hp_drain_value;
+	short sp_drain_rate;
+	short sp_drain_per;
+	short sp_drain_value;
+
+	unsigned fameflag : 1;
+};
+
 struct skill_unit_group;
 
 struct skill_unit
@@ -121,7 +151,8 @@ struct skill_unit_group
 	char *valstr;
 	unsigned char unit_id;
 	long group_id;
-	long unit_count,alive_count;
+	long unit_count;
+	long alive_count;
 	struct skill_unit *unit;
 };
 struct skill_unit_group_tickset
@@ -166,35 +197,33 @@ struct map_session_data
 		unsigned skill_flag : 1;					// 15 - byte 2
 		unsigned gangsterparadise : 1;				// 16 
 		unsigned produce_flag : 1;					// 17
-		unsigned make_arrow_flag : 1;				// 18
-		unsigned potionpitcher_flag : 1;			// 19
-		unsigned storage_flag : 1;					// 20
-		unsigned snovice_flag : 4;					// 21,22,23,24 - byte 3
+		unsigned autoloot : 1; //by Upa-Kun			// 18
+		unsigned storage_flag : 1;					// 19
+		unsigned snovice_flag : 4;					// 20,21,22,23 - byte 3
 
 		// originally by Qamera, adapted by celest
-		unsigned event_death : 1;					// 25
-		unsigned event_kill : 1;					// 26
-		unsigned event_disconnect : 1;				// 27
-		unsigned event_onconnect : 1;				// 28
+		unsigned event_death : 1;					// 24
+		unsigned event_kill : 1;					// 25
+		unsigned event_disconnect : 1;				// 26
+		unsigned event_onconnect : 1;				// 27
 
-		unsigned killer : 1;						// 29
-		unsigned killable : 1;						// 30
-		unsigned restart_full_recover : 1;			// 31 - byte 4
-		unsigned no_castcancel : 1;					// 32
-		unsigned no_castcancel2 : 1;				// 33
-		unsigned no_sizefix : 1;					// 34
-		unsigned no_magic_damage : 1;				// 35
-		unsigned no_weapon_damage : 1;				// 36
-		unsigned no_gemstone : 1;					// 37
-		unsigned infinite_endure : 1;				// 38
-		unsigned autoloot : 1; //by Upa-Kun			// 39  - byte 5
-													
-		unsigned intravision : 1;					// 40
-		unsigned ignoreAll : 1;						// 41
-		unsigned nodelay :1;						// 42
-		unsigned noexp :1;							// 43
-		unsigned detach :1;							// 44
-		unsigned __unused : 3;						// 3 bit left
+		unsigned killer : 1;						// 28
+		unsigned killable : 1;						// 29
+		unsigned restart_full_recover : 1;			// 30
+		unsigned no_castcancel : 1;					// 31 - byte 4
+		unsigned no_castcancel2 : 1;				// 32
+		unsigned no_sizefix : 1;					// 33
+		unsigned no_magic_damage : 1;				// 34
+		unsigned no_weapon_damage : 1;				// 35
+		unsigned no_gemstone : 1;					// 36
+		unsigned infinite_endure : 1;				// 37
+		unsigned intravision : 1;					// 38
+		unsigned ignoreAll : 1;						// 39  - byte 5
+		unsigned nodelay :1;						// 40
+		unsigned noexp :1;							// 41
+		unsigned detach :1;							// 42
+		unsigned potion_flag : 2;					// 43,44
+		unsigned _unused : 3;						// 3 bit left
 	} state;
 	
 	unsigned long char_id;
@@ -208,8 +237,9 @@ struct map_session_data
 	struct mmo_charstatus status;
 
 	struct item_data *inventory_data[MAX_INVENTORY];
+	short itemindex;
 
-	short equip_index[11];
+	short equip_index[MAX_EQUIP];
 	unsigned short unbreakable_equip;
 	unsigned short unbreakable;	// chance to prevent equipment breaking [celest]
 
@@ -263,12 +293,10 @@ struct map_session_data
 	unsigned long attackabletime;
 
         int followtimer; // [MouseJstr]
-        int followtarget;
+	unsigned long followtarget;
 
 	time_t emotionlasttime; // to limit flood with emotion packets
 
-	unsigned short attackrange;
-	unsigned short attackrange_;
 	int skilltimer;
 	unsigned long skilltarget;
 	unsigned short skillx;
@@ -305,24 +333,29 @@ struct map_session_data
 	unsigned long inchealspiritsptick;
 
 	unsigned short view_class;
+	unsigned short disguise_id; // [Valaris]
+
+
 	unsigned short weapontype1;
 	unsigned short weapontype2;
-	
-	unsigned short disguise_id; // [Valaris]
+	unsigned short attackrange;
+	unsigned short attackrange_;
+
+	struct weapon_data right_weapon;
+	struct weapon_data left_weapon;
+
 
 	long paramb[6];
 	long paramc[6];
 	long parame[6];
 	long paramcard[6];
-	unsigned short  hit;
-	unsigned short  flee;
-	unsigned short  flee2;
-	long aspd;
-	long amotion;
-	long dmotion;
-	unsigned short watk;
-	unsigned short watk2;
-	long atkmods[3];
+	unsigned short hit;
+	unsigned short flee;
+	unsigned short flee2;
+	unsigned long aspd;
+	unsigned long amotion;
+	unsigned long dmotion;
+
 	unsigned short  def;
 	unsigned short  def2;
 	unsigned short  mdef;
@@ -330,32 +363,19 @@ struct map_session_data
 	long critical;
 	unsigned short  matk1;
 	unsigned short  matk2;
-	long atk_ele;
+
 	long def_ele;
-	long star;
-	long overrefine;
 	long castrate;
 	long delayrate;
 	long hprate;
 	long sprate;
 	long dsprate;
-	long addele[10];
-	long addrace[12];
-	long addsize[3];
+
 	long subele[10];
 	long subrace[12];
 	long addeff[10];
 	long addeff2[10];
 	long reseff[10];
-	long watk_;
-	long watk_2;
-	long atkmods_[3];
-	long addele_[10];
-	long addrace_[12];
-	long addsize_[3];	//二刀流のために追加
-	long atk_ele_;
-	long star_;
-	long overrefine_;				//二刀流のために追加
 	unsigned short base_atk;
 	long atk_rate;
 	long weapon_atk[16];
@@ -365,22 +385,52 @@ struct map_session_data
 	long arrow_cri;
 	long arrow_hit;
 	unsigned short arrow_range;
-	long arrow_addele[10],arrow_addrace[12],arrow_addsize[3],arrow_addeff[10],arrow_addeff2[10];
-	long nhealhp,nhealsp,nshealhp,nshealsp,nsshealhp,nsshealsp;
-	long aspd_rate,speed_rate,hprecov_rate,sprecov_rate,critical_def,double_rate;
-	long near_attack_def_rate,long_attack_def_rate,magic_def_rate,misc_def_rate;
-	long matk_rate,ignore_def_ele,ignore_def_race,ignore_def_ele_,ignore_def_race_;
-	long ignore_mdef_ele,ignore_mdef_race;
-	long magic_addele[10],magic_addrace[12],magic_subrace[12];
-	long perfect_hit,get_zeny_num;
-	long critical_rate,hit_rate,flee_rate,flee2_rate,def_rate,def2_rate,mdef_rate,mdef2_rate;
-	long def_ratio_atk_ele,def_ratio_atk_ele_,def_ratio_atk_race,def_ratio_atk_race_;
-	long add_damage_class_count,add_damage_class_count_,add_magic_damage_class_count;
-	short add_damage_classid[10],add_damage_classid_[10],add_magic_damage_classid[10];
-	long add_damage_classrate[10],add_damage_classrate_[10],add_magic_damage_classrate[10];
-	short add_def_class_count,add_mdef_class_count;
-	short add_def_classid[10],add_mdef_classid[10];
-	long add_def_classrate[10],add_mdef_classrate[10];
+	long arrow_addele[10];
+	long arrow_addrace[12];
+	long arrow_addsize[3];
+	long arrow_addeff[10];
+	long arrow_addeff2[10];
+	long nhealhp;
+	long nhealsp;
+	long nshealhp;
+	long nshealsp;
+	long nsshealhp;
+	long nsshealsp;
+	long aspd_rate;
+	long speed_rate;
+	long hprecov_rate;
+	long sprecov_rate;
+	long critical_def;
+	long double_rate;
+	long near_attack_def_rate;
+	long long_attack_def_rate;
+	long magic_def_rate;
+	long misc_def_rate;
+	long matk_rate;
+	long ignore_mdef_ele;
+	long ignore_mdef_race;
+	long magic_addele[10];
+	long magic_addrace[12];
+	long magic_subrace[12];
+	long perfect_hit;
+	long get_zeny_num;
+	long critical_rate;
+	long hit_rate;
+	long flee_rate;
+	long flee2_rate;
+	long def_rate;
+	long def2_rate;
+	long mdef_rate;
+	long mdef2_rate;
+	long add_magic_damage_class_count;
+	short add_magic_damage_classid[10];
+	long add_magic_damage_classrate[10];
+	short add_def_class_count;
+	short add_mdef_class_count;
+	short add_def_classid[10];
+	short add_mdef_classid[10];
+	long add_def_classrate[10];
+	short add_mdef_classrate[10];
 	short monster_drop_item_count;
 	short monster_drop_itemid[10];
 	long monster_drop_race[10];
@@ -395,18 +445,6 @@ struct map_session_data
 	short autospell_id[10];
 	short autospell_lv[10];
 	short autospell_rate[10];
-	short hp_drain_rate;
-	short hp_drain_per;
-	short sp_drain_rate;
-	short sp_drain_per;
-	short hp_drain_rate_;
-	short hp_drain_per_;
-	short sp_drain_rate_;
-	short sp_drain_per_;
-	short hp_drain_value;
-	short sp_drain_value;
-	short hp_drain_value_;
-	short sp_drain_value_;
 	long short_weapon_damage_return;
 	long long_weapon_damage_return;
 	long weapon_coma_ele[10];
@@ -420,14 +458,17 @@ struct map_session_data
 	short no_regen;
 	long addeff3[10];
 	short addeff3_type[10];
-	short autospell2_id[10],autospell2_lv[10],autospell2_rate[10];
+	short autospell2_id[10];
+	short autospell2_lv[10];
+	short autospell2_rate[10];
 	long skillatk[2];
 	unsigned short unstripable_equip;
-	short add_damage_classid2[10],add_damage_class_count2;
+	short add_damage_classid2[10];
+	short add_damage_class_count2;
 	long add_damage_classrate2[10];
-	short sp_gain_value, hp_gain_value;
+	short sp_gain_value;
+	short hp_gain_value;
 	short sp_drain_type;
-	short ignore_def_mob, ignore_def_mob_;
 
 	unsigned long hp_loss_tick;
 	unsigned long hp_loss_rate;
@@ -442,7 +483,7 @@ struct map_session_data
 	long subsize[3];
 	short unequip_losehp[11];
 	short unequip_losesp[11];
-	long itemid;
+	short itemid;
 	long itemhealrate[7];
 	//--- 03/15's new card effects
 	long expaddrace[12];
@@ -460,7 +501,7 @@ struct map_session_data
 	long random_attack_increase_per; // [Valaris]
 	long perfect_hiding; // [Valaris]
 	long classchange; // [Valaris]
-	
+
 	long die_counter;
 	short doridori_counter;
 	char potion_success_counter;
@@ -627,7 +668,8 @@ struct mob_data {
 		unsigned walk_easy : 1;
 		unsigned soul_change_flag : 1; // Celest
 		unsigned special_mob_ai : 3;
-		unsigned _unused : 5;
+		unsigned idle_skill_flag : 1;	// signals if the pet can do a skill while in idle state [Skotlex]
+		unsigned _unused : 4;
 	} state;
 	unsigned long provoke_id; // Celest
 	int timer;
@@ -695,17 +737,23 @@ struct pet_data {
 	short class_;
 	short dir;
 	short speed;
-	char name[24];
+	//char name[24];
+	char *namep;
 	struct {
 		unsigned state : 8 ;
 		unsigned skillstate : 8 ;
 		unsigned change_walk_target : 1 ;
-		short skillbonus;
+		
+		unsigned casting_flag : 1; //Skotlex: Used to identify when we are casting. I want a state.state value for that....
+
+		signed skillbonus : 2;
 	} state;
+
 	int timer;
-	short to_x;
-	short to_y;
-	short equip;
+
+	unsigned short to_x;
+	unsigned short to_y;
+	unsigned short equip_id;
 	struct walkpath_data walkpath;
 	unsigned long target_id;
 	short target_lv;
@@ -713,20 +761,58 @@ struct pet_data {
 	unsigned int attackabletime;
 	unsigned int next_walktime;
 	unsigned int last_thinktime;
-	int skilltype;
-	int skillval;
-	int skilltimer;
-	int skillduration; // [Valaris]
-	int skillbonustype;
-	int skillbonusval;
-	int skillbonustimer;
-//	int skillbonusduration; // [Valaris]
-	struct item *lootitem;
-	short loot; // [Valaris]
-	short lootmax; // [Valaris]
-	short lootitem_count;
-	short lootitem_weight;
-	int lootitem_timer;
+
+	struct pet_status { //Pet Status data
+		unsigned short level;
+		unsigned short atk1;
+		unsigned short atk2;
+		unsigned short str;
+		unsigned short agi;
+		unsigned short vit;
+		unsigned short int_;
+		unsigned short dex;
+		unsigned short luk;
+	} *status;  //[Skotlex]
+
+	struct pet_recovery { //Stat recovery
+		unsigned short type;	//Status Change id
+		unsigned short delay; //How long before curing (secs).
+		int timer;
+	} *recovery; //[Valaris] / Reimplemented by [Skotlex]
+	
+	struct pet_bonus {
+		unsigned short type; //bStr, bVit?
+		unsigned short val;	//Qty
+		unsigned short duration; //in secs
+		unsigned short delay;	//Time before recasting (secs)
+		int timer;
+	} *bonus; //[Valaris] / Reimplemented by [Skotlex]
+	
+	struct pet_skill_attack { //Attack Skill
+		unsigned short id;
+		unsigned short lv;
+		unsigned short div_; //0 = Normal skill. >0 = Fixed damage (lv), fixed div_.
+		unsigned short rate; //Base chance of skill ocurrance (10 = 10% of attacks)
+		unsigned short bonusrate; //How being 100% loyal affects cast rate (10 = At 1000 intimacy->rate+10%
+	} *a_skill;	//[Skotlex]
+	
+	struct pet_skill_support { //Support Skill
+		unsigned short id;
+		unsigned short lv;
+		unsigned short hp; //Max HP% for skill to trigger (50 -> 50% for Magnificat)
+		unsigned short sp; //Max SP% for skill to trigger (100 = no check)
+		unsigned short delay; //Time (secs) between being able to recast.
+		int timer;
+	} *s_skill;	//[Skotlex]
+
+	struct pet_loot {
+		struct item *item;
+		unsigned long weight;
+		unsigned short count;
+		unsigned short max;
+		unsigned long loottick;
+	} *loot; //[Valaris] / Rewritten by [Skotlex]
+
 	struct skill_timerskill skilltimerskill[MAX_MOBSKILLTIMERSKILL]; // [Valaris]
 	struct skill_unit_group skillunit[MAX_MOBSKILLUNITGROUP]; // [Valaris]
 	struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET]; // [Valaris]
@@ -737,7 +823,7 @@ enum { MS_IDLE,MS_WALK,MS_ATTACK,MS_DEAD,MS_DELAY };
 
 enum { NONE_ATTACKABLE,ATTACKABLE };
 
-enum { ATK_LUCKY=1,ATK_FLEE,ATK_DEF };	// 囲まれペナルティ計算用
+enum { ATK_LUCKY=1,ATK_FLEE,ATK_DEF};	// 囲まれペナルティ計算用
 
 // 装備コード
 enum {
@@ -834,38 +920,42 @@ struct map_data {
 	size_t npc_num;
 	size_t users;
 	struct {
-//		unsigned alias : 1;
-		unsigned nomemo : 1;
-		unsigned noteleport : 1;
-		unsigned noreturn : 1;
-		unsigned monster_noteleport : 1;
-		unsigned nosave : 1;
-		unsigned nobranch : 1;
-		unsigned nopenalty : 1;
-		unsigned pvp : 1;
-		unsigned pvp_noparty : 1;
-		unsigned pvp_noguild : 1;
-		unsigned pvp_nightmaredrop :1;
-		unsigned pvp_nocalcrank : 1;
-		unsigned gvg : 1;
-		unsigned gvg_noparty : 1;
-		unsigned gvg_dungeon : 1; // celest
-		unsigned nozenypenalty : 1;
-		unsigned notrade : 1;
-		unsigned noskill : 1;
-		unsigned nowarp : 1;
-		unsigned nowarpto : 1;
-		unsigned nopvp : 1;
-		unsigned noicewall : 1;
-		unsigned snow : 1;
-		unsigned clouds : 1;
-		unsigned fog : 1;
-		unsigned fireworks : 1;
-		unsigned sakura : 1;
-		unsigned leaves : 1;
-		unsigned rain : 1;
-		unsigned indoors : 1;
-		unsigned nogo : 1;
+		unsigned nomemo : 1;					//  0
+		unsigned noteleport : 1;				//  1
+		unsigned noreturn : 1;					//  2
+		unsigned monster_noteleport : 1;		//  3
+		unsigned nosave : 1;					//  4
+		unsigned nobranch : 1;					//  5
+		unsigned nopenalty : 1;					//  6
+		unsigned pvp : 1;						//  7 (byte 1)
+		unsigned pvp_noparty : 1;				//  8
+		unsigned pvp_noguild : 1;				//  9
+		unsigned pvp_nightmaredrop :1;			// 10
+		unsigned pvp_nocalcrank : 1;			// 11
+		unsigned gvg : 1;						// 12
+		unsigned gvg_noparty : 1;				// 13
+		unsigned gvg_dungeon : 1;				// 14 // celest
+		unsigned nozenypenalty : 1;				// 15 (byte 2)
+		unsigned notrade : 1;					// 16
+		unsigned noskill : 1;					// 17
+		unsigned nowarp : 1;					// 18
+		unsigned nowarpto : 1;					// 19
+		unsigned nopvp : 1;						// 20
+		unsigned noicewall : 1;					// 21
+		unsigned snow : 1;						// 22
+		unsigned rain : 1;						// 28
+		unsigned sakura : 1;					// 26
+		unsigned leaves : 1;					// 27
+		unsigned clouds : 1;					// 23 (byte 3)
+		unsigned fog : 1;						// 24
+		unsigned fireworks : 1;					// 25
+		unsigned indoors : 1;					// 29
+		unsigned nogo : 1;						// 30
+		unsigned nobaseexp	: 1;				// 31 (byte 4) // [Lorky] added by Lupus
+		unsigned nojobexp	: 1;				// 32 // [Lorky]
+		unsigned nomobloot	: 1;				// 33 // [Lorky]				
+		unsigned nomvploot	: 1;				// 34 // [Lorky]		
+		unsigned _unused : 5;					// 35-39 (byte 5)
 	} flag;
 	struct point save;
 	struct npc_data *npc[MAX_NPC_PER_MAP];
@@ -979,7 +1069,7 @@ extern int night_flag; // 0=day, 1=night [Yor]
 
 // gat?ﾖｧ
 int map_getcell(unsigned short m,unsigned short x, unsigned short y,cell_t cellchk);
-int map_getcellp(struct map_data* m,unsigned short x, unsigned short y,cell_t cellchk);
+int map_getcellp(struct map_data& m,unsigned short x, unsigned short y,cell_t cellchk);
 void map_setcell(unsigned short m,unsigned short x, unsigned short y,int cellck);
 
 
@@ -1008,14 +1098,14 @@ int map_freeblock_unlock(void);
 // block関連
 int map_addblock(struct block_list *);
 int map_delblock(struct block_list *);
-void map_foreachinarea(int (*)(struct block_list*,va_list),int,int,int,int,int,int,...);
+void map_foreachinarea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...);
 // -- moonsoul (added map_foreachincell)
-void map_foreachincell(int (*)(struct block_list*,va_list),int,int,int,int,...);
-void map_foreachinmovearea(int (*)(struct block_list*,va_list),int,int,int,int,int,int,int,int,...);
-void map_foreachinpath(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int range,int type,...); // Celest
+void map_foreachincell(int (*func)(struct block_list*,va_list),unsigned short m,int x,int y,int type,...);
+void map_foreachinmovearea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...);
+void map_foreachinpath(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...); // Celest
 int map_countnearpc(int,int,int);
 //block関連に追加
-int map_count_oncell(int m,int x,int y);
+int map_count_oncell(unsigned short m,int x,int y);
 struct skill_unit *map_find_skill_unit_oncell(struct block_list *,int x,int y,unsigned short skill_id,struct skill_unit *);
 // 一時的object関連
 int map_addobject(struct block_list *);
@@ -1025,7 +1115,7 @@ void map_foreachobject(int (*)(struct block_list*,va_list),int,...);
 //
 int map_quit(struct map_session_data *);
 // npc
-int map_addnpc(size_t m, struct npc_data *nd);
+int map_addnpc(unsigned short m, struct npc_data *nd);
 
 // 床アイテム関連
 int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data);
@@ -1059,9 +1149,9 @@ int map_check_dir(int s_dir,int t_dir);
 int map_calc_dir( struct block_list *src,int x,int y);
 
 // path.cより
-int path_search(struct walkpath_data*,int,int,int,int,int,int);
-int path_search_long(struct shootpath_data *spd,unsigned short m,unsigned short x0,unsigned short y0,unsigned short x1,unsigned short y1);
-int path_blownpos(int m,int x0,int y0,int dx,int dy,int count);
+int path_search(struct walkpath_data &wpd,unsigned short m,int x0,int y0,int x1,int y1,int flag);
+bool path_search_long(struct shootpath_data *spd,unsigned short m,unsigned short x0,unsigned short y0,unsigned short x1,unsigned short y1);
+int path_blownpos(unsigned short m,int x0,int y0,int dx,int dy,int count);
 
 int map_who(int fd);
 

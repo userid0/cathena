@@ -7,7 +7,7 @@
 
 int addon_event_trigger (char *);
 
-void dll_open (const char *);
+void dll_load (const char *);
 void dll_init (void);
 void dll_final (void);
 

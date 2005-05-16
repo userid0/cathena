@@ -38,11 +38,11 @@ int inter_pet_tosql(int pet_id, struct s_pet *p) {
 		//row reside -> updating
 		sprintf(tmp_sql, "UPDATE `%s` SET `class`='%d',`name`='%s',`account_id`='%d',`char_id`='%d',`level`='%d',`egg_id`='%d',`equip`='%d',`intimate`='%d',`hungry`='%d',`rename_flag`='%d',`incuvate`='%d' WHERE `pet_id`='%d'",
 			pet_db, p->class_, t_name, p->account_id, p->char_id, p->level, p->egg_id,
-			p->equip, p->intimate, p->hungry, p->rename_flag, p->incuvate, p->pet_id);
+			p->equip_id, p->intimate, p->hungry, p->rename_flag, p->incuvate, p->pet_id);
 	else //no row -> insert
 		sprintf(tmp_sql,"INSERT INTO `%s` (`pet_id`, `class`,`name`,`account_id`,`char_id`,`level`,`egg_id`,`equip`,`intimate`,`hungry`,`rename_flag`,`incuvate`) VALUES ('%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')",
 			pet_db, pet_id, p->class_, t_name, p->account_id, p->char_id, p->level, p->egg_id,
-			p->equip, p->intimate, p->hungry, p->rename_flag, p->incuvate);
+			p->equip_id, p->intimate, p->hungry, p->rename_flag, p->incuvate);
 	mysql_free_result(sql_res) ; //resource free
 	if(mysql_query(&mysql_handle, tmp_sql) ) {
 		ShowMessage("DB server Error (inset/update `pet`)- %s\n", mysql_error(&mysql_handle) );
@@ -76,7 +76,7 @@ int inter_pet_fromsql(int pet_id, struct s_pet *p){
 		p->char_id = atoi(sql_row[4]);
 		p->level = atoi(sql_row[5]);
 		p->egg_id = atoi(sql_row[6]);
-		p->equip = atoi(sql_row[7]);
+		p->equip_id = atoi(sql_row[7]);
 		p->intimate = atoi(sql_row[8]);
 		p->hungry = atoi(sql_row[9]);
 		p->rename_flag = atoi(sql_row[10]);
@@ -174,14 +174,16 @@ int mapif_pet_info(int fd, unsigned long account_id, struct s_pet *p)
 	if( !session_isActive(fd) )
 		return 0;
 
-	WFIFOW(fd, 0) =0x3881;
-	WFIFOW(fd, 2) =sizeof(struct s_pet) + 9;
-	WFIFOL(fd, 4) =account_id;
-	WFIFOB(fd, 8)=0;
-	//memcpy(WFIFOP(fd, 9), p, sizeof(struct s_pet));
-	s_pet_tobuffer(p, WFIFOP(fd, 9));
-	WFIFOSET(fd, WFIFOW(fd, 2));
-
+	if(p)
+	{
+		WFIFOW(fd, 0) =0x3881;
+		WFIFOW(fd, 2) =sizeof(struct s_pet) + 9;
+		WFIFOL(fd, 4) =account_id;
+		WFIFOB(fd, 8)=0;
+		//memcpy(WFIFOP(fd, 9), p, sizeof(struct s_pet));
+		s_pet_tobuffer(*p, WFIFOP(fd, 9));
+		WFIFOSET(fd, WFIFOW(fd, 2));
+	}
 	return 0;
 }
 
@@ -240,7 +242,7 @@ int mapif_create_pet(int fd, unsigned long account_id, unsigned long char_id, sh
 	pet_pt->class_ = pet_class;
 	pet_pt->level = pet_lv;
 	pet_pt->egg_id = pet_egg_id;
-	pet_pt->equip = pet_equip;
+	pet_pt->equip_id = pet_equip;
 	pet_pt->intimate = intimate;
 	pet_pt->hungry = hungry;
 	pet_pt->rename_flag = rename_flag;
@@ -295,7 +297,7 @@ int mapif_save_pet(int fd, unsigned long account_id, unsigned char* buf) {
 	}
 
 	else{
-		s_pet_frombuffer(&pet, buf);
+		s_pet_frombuffer(pet, buf);
 		if(pet.hungry < 0)
 			pet.hungry = 0;
 		else if(pet.hungry > 100)

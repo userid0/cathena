@@ -18,6 +18,7 @@
 #include "intif.h"
 #include "npc.h"
 #include "pc.h"
+#include "grfio.h"
 #include "status.h"
 #include "mob.h"
 #include "chat.h"
@@ -34,11 +35,6 @@
 #include "charcommand.h"
 #include "log.h"
 #include "mail.h"
-
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 
 #ifndef TXT_ONLY
@@ -96,15 +92,15 @@ char char_db[32] = "char";
 
 #endif//TXT_OMLY
 
-char *INTER_CONF_NAME;
-char *LOG_CONF_NAME;
-char *MAP_CONF_NAME;
-char *BATTLE_CONF_FILENAME;
-char *ATCOMMAND_CONF_FILENAME;
-char *CHARCOMMAND_CONF_FILENAME;
-char *SCRIPT_CONF_NAME;
-char *MSG_CONF_NAME;
-char *GRF_PATH_FILENAME;
+char *INTER_CONF_NAME="conf/inter_athena.conf";
+char *LOG_CONF_NAME="conf/log_athena.conf";
+char *MAP_CONF_NAME = "conf/map_athena.conf";
+char *BATTLE_CONF_FILENAME = "conf/battle_athena.conf";
+char *ATCOMMAND_CONF_FILENAME = "conf/atcommand_athena.conf";
+char *CHARCOMMAND_CONF_FILENAME = "conf/charcommand_athena.conf";
+char *SCRIPT_CONF_NAME = "conf/script_athena.conf";
+char *MSG_CONF_NAME = "conf/msg_athena.conf";
+char *GRF_PATH_FILENAME = "conf/grf-files.txt";
 
 #define USE_AFM
 #define USE_AF2
@@ -293,9 +289,7 @@ int map_addblock(struct block_list *bl)
 	m=bl->m;
 	x=bl->x;
 	y=bl->y;
-	if(m<0 || m>=map_num ||
-	   x<0 || x>=map[m].xs ||
-	   y<0 || y>=map[m].ys)
+	if( m>=map_num || x>=map[m].xs || y>=map[m].ys )
 		return 1;
 
 	if(bl->type==BL_MOB){
@@ -367,12 +361,13 @@ int map_delblock(struct block_list *bl)
  * 周?のPC人?を?える (現在未使用)
  *------------------------------------------
  */
-int map_countnearpc(int m, int x, int y) {
-	int bx,by,c=0;
+int map_countnearpc(unsigned short m, int x, int y) {
+	unsigned int bx,by,c=0;
 	struct block_list *bl=NULL;
 
-	if(map[m].users==0)
+	if( m>MAX_MAP_PER_SERVER || map[m].users==0 )
 		return 0;
+
 	for(by=y/BLOCK_SIZE-AREA_SIZE/BLOCK_SIZE-1;by<=y/BLOCK_SIZE+AREA_SIZE/BLOCK_SIZE+1;by++){
 		if(by<0 || by>=map[m].bys)
 			continue;
@@ -393,7 +388,7 @@ int map_countnearpc(int m, int x, int y) {
  * セル上のPCとMOBの?を?える (グランドクロス用)
  *------------------------------------------
  */
-int map_count_oncell(int m, int x, int y) {
+int map_count_oncell(unsigned short m, int x, int y) {
 	int bx,by;
 	struct block_list *bl=NULL;
 	int i,c;
@@ -454,13 +449,13 @@ struct skill_unit *map_find_skill_unit_oncell(struct block_list *target,int x,in
  * type!=0 ならその種類のみ
  *------------------------------------------
  */
-void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int type,...) {
+void map_foreachinarea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...) {
 	va_list ap;
 	int bx,by;
 	struct block_list *bl=NULL;
 	int blockcount=bl_list_count,i,c;
 
-	if(m < 0)
+	if(m >= MAX_MAP_PER_SERVER)
 		return;
 	
 	if(x0>x1) swap(x0,x1);
@@ -522,7 +517,7 @@ void map_foreachinarea(int (*func)(struct block_list*,va_list),int m,int x0,int 
  * dx,dyは-1,0,1のみとする（どんな値でもいいっぽい？）
  *------------------------------------------
  */
-void map_foreachinmovearea(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...) {
+void map_foreachinmovearea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...) {
 	int bx,by;
 	struct block_list *bl=NULL;
 	va_list ap;
@@ -631,7 +626,7 @@ void map_foreachinmovearea(int (*func)(struct block_list*,va_list),int m,int x0,
 //			 which only checks the exact single x/y passed to it rather than an
 //			 area radius - may be more useful in some instances)
 //
-void map_foreachincell(int (*func)(struct block_list*,va_list),int m,int x,int y,int type,...) {
+void map_foreachincell(int (*func)(struct block_list*,va_list),unsigned short m,int x,int y,int type,...) {
 	int bx,by;
 	struct block_list *bl=NULL;
 	va_list ap;
@@ -687,7 +682,7 @@ void map_foreachincell(int (*func)(struct block_list*,va_list),int m,int x,int y
 * For checking a path between two points (x0, y0) and (x1, y1)
 *------------------------------------------------------------
  */
-void map_foreachinpath(int (*func)(struct block_list*,va_list),int m,int x0,int y0,int x1,int y1,int range,int type,...)
+void map_foreachinpath(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...)
 {
 /*	va_list ap;
 	double deltax = 0.0;
@@ -697,7 +692,7 @@ void map_foreachinpath(int (*func)(struct block_list*,va_list),int m,int x0,int 
 	int blockcount = bl_list_count, i, c;
 	struct block_list *bl = NULL;
 	
-	if(m < 0)
+	if(m >= MAX_MAP_PER_SERVER)
 		return;
 	va_start(ap,type);
 	if (x0 < 0) x0 = 0;
@@ -853,7 +848,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	int bx,by,bx0,bx1,by0,by1;
 //////////////
 	// no map
-	if(m < 0) return;
+	if(m >=MAX_MAP_PER_SERVER ) return;
 
 	// xy out of range
 	if (x0 < 0) x0 = 0;
@@ -1031,7 +1026,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	int t, tmax;
 
 	// no map
-	if(m < 0) return;
+	if(m >= MAX_MAP_PER_SERVER) return;
 
 	// xy out of range
 	if (x0 < 0) x0 = 0;
@@ -1156,7 +1151,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	int save_x[BLOCK_SIZE],save_y[BLOCK_SIZE],save_cnt=0;
 
 	// no map
-	if(m < 0) return;
+	if(m >= MAX_MAP_PER_SERVER) return;
 
 	// xy out of range
 	if (x0 < 0) x0 = 0;
@@ -1402,6 +1397,7 @@ int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data) {
 	return 0;
 }
 
+
 /*==========================================
  * (m,x,y)の周?rangeマス?の空き(=侵入可能)cellの
  * ?から適?なマス目の座標をx+(y<<16)で返す
@@ -1525,23 +1521,23 @@ int map_addflooritem(struct item *item_data,int amount,int m,int x,int y,struct 
  */
 void map_addchariddb(unsigned long charid, char *name) {
 	struct charid2nick *p;
-	int req=0;
+	int req = 0;
 
 	p = (struct charid2nick*)numdb_search(charid_db,charid);
-	if(p==NULL){	// デ?タベ?スにない
-		p = (struct charid2nick *)aCallocA(1,sizeof(struct charid2nick));
+	if (p == NULL){	// デ?タベ?スにない
+		p = (struct charid2nick *)aCallocA(1, sizeof(struct charid2nick));		
 	} else {
-		numdb_erase(charid_db,charid);
+		numdb_erase(charid_db, charid);
 		req = p->req_id;
 	}
 
 	p->req_id = 0;
-	memcpy(p->nick,name,24);
-	numdb_insert(charid_db,charid,p);
+	memcpy(p->nick, name, 24);
+	numdb_insert(charid_db, charid, p);
 
-	if(req){	// 返信待ちがあれば返信
+	if (req) {	// 返信待ちがあれば返信
 		struct map_session_data *sd = map_id2sd(req);
-		if(sd!=NULL)
+		if (sd != NULL)
 			clif_solved_charname(sd,charid);
 	}
 }
@@ -1620,85 +1616,82 @@ int map_quit(struct map_session_data *sd)
 		{
 			ShowStatus("%d '"CL_WHITE"%s"CL_RESET"' events executed.\n",
 					npc_event_doall_id(script_config.logout_event_name, sd->bl.id), script_config.logout_event_name);
-			}
-
-		if(sd->chatID)	// チャットから出る
-			chat_leavechat(sd);
-
-		if(sd->trade_partner)	// 取引を中?する
-			trade_tradecancel(sd);
-
-		if(sd->party_invite>0)	// パ?ティ?誘を拒否する
-			party_reply_invite(sd,sd->party_invite_account,0);
-
-		if(sd->guild_invite>0)	// ギルド?誘を拒否する
-			guild_reply_invite(sd,sd->guild_invite,0);
-		if(sd->guild_alliance>0)	// ギルド同盟?誘を拒否する
-			guild_reply_reqalliance(sd,sd->guild_alliance_account,0);
-
-		party_send_logout(sd);	// パ?ティのログアウトメッセ?ジ送信
-
-		guild_send_memberinfoshort(sd,0);	// ギルドのログアウトメッセ?ジ送信
-
-		pc_cleareventtimer(sd);	// イベントタイマを破棄する
-
-		if(sd->state.storage_flag)
-			storage_guild_storage_quit(sd,0);
-		else
-			storage_storage_quit(sd);	// 倉庫を開いてるなら保存する
-
-		// check if we've been authenticated [celest]
-		if (sd->state.auth)
-			skill_castcancel(&sd->bl,0);	// 詠唱を中?する
-
-		skill_stop_dancing(&sd->bl,1);// ダンス/演奏中?
-
-		if(sd->sc_data && sd->sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中の終了はHPを100に
-			sd->status.hp = 100;
-
-		status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
-		skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
-		skill_cleartimerskill(&sd->bl);
-
-//		// check if we've been authenticated [celest]
-//		if (sd->state.auth) {
-			pc_stop_walking(sd,0);
-			pc_stopattack(sd);
-			pc_delinvincibletimer(sd);
-//		}
-		pc_delspiritball(sd,sd->spiritball,1);
-		skill_gangsterparadise(sd,0);
-		skill_unit_move(&sd->bl,gettick(),0);
-
-		if (sd->state.auth)
-			status_calc_pc(sd,4);
-
-		if (!(sd->status.option & OPTION_HIDE))
-			clif_clearchar_area(&sd->bl,2);
-
-		if(sd->status.pet_id && sd->pd) {
-			pet_lootitem_drop(sd->pd,sd);
-			pet_remove_map(sd);
-			if(sd->pet.intimate <= 0) {
-				intif_delete_petdata(sd->status.pet_id);
-				sd->status.pet_id = 0;
-				sd->pd = NULL;
-				sd->petDB = NULL;
-			}
-			else
-				intif_save_petdata(sd->status.account_id,&sd->pet);
 		}
-		if(pc_isdead(sd))
-			pc_setrestartvalue(sd,2);
-
-		pc_clean_skilltree(sd);
-		pc_makesavestatus(sd);
-		chrif_save(sd);
-		storage_storage_dirty(sd);
-		storage_storage_save(sd);
-		map_delblock(&sd->bl);
 	}
 
+	if(sd->chatID)	// チャットから出る
+		chat_leavechat(sd);
+
+	if(sd->trade_partner)	// 取引を中?する
+		trade_tradecancel(sd);
+
+	if(sd->party_invite>0)	// パ?ティ?誘を拒否する
+		party_reply_invite(sd,sd->party_invite_account,0);
+
+	if(sd->guild_invite>0)	// ギルド?誘を拒否する
+		guild_reply_invite(sd,sd->guild_invite,0);
+	if(sd->guild_alliance>0)	// ギルド同盟?誘を拒否する
+		guild_reply_reqalliance(sd,sd->guild_alliance_account,0);
+
+	party_send_logout(sd);	// パ?ティのログアウトメッセ?ジ送信
+
+	guild_send_memberinfoshort(sd,0);	// ギルドのログアウトメッセ?ジ送信
+
+	pc_cleareventtimer(sd);	// イベントタイマを破棄する
+
+	if(sd->state.storage_flag)
+		storage_guild_storage_quit(sd,0);
+	else
+		storage_storage_quit(sd);	// 倉庫を開いてるなら保存する
+
+	// check if we've been authenticated [celest]
+	if (sd->state.auth)
+		skill_castcancel(&sd->bl,0);	// 詠唱を中?する
+
+	skill_stop_dancing(&sd->bl,1);// ダンス/演奏中?
+
+	if(sd->sc_data && sd->sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中の終了はHPを100に
+		sd->status.hp = 100;
+
+	status_change_clear(&sd->bl,1);	// ステ?タス異常を解除する
+	skill_clear_unitgroup(&sd->bl);	// スキルユニットグル?プの削除
+	skill_cleartimerskill(&sd->bl);
+
+	pc_stop_walking(sd,0);
+	pc_stopattack(sd);
+	pc_delinvincibletimer(sd);
+
+	pc_delspiritball(sd,sd->spiritball,1);
+	skill_gangsterparadise(sd,0);
+	skill_unit_move(&sd->bl,gettick(),0);
+
+	if (sd->state.auth)
+		status_calc_pc(sd,4);
+
+	if (!(sd->status.option & OPTION_HIDE))
+		clif_clearchar_area(&sd->bl,2);
+
+	if(sd->status.pet_id && sd->pd) {
+		pet_lootitem_drop(*(sd->pd),sd);
+		pet_remove_map(sd);
+		if(sd->pet.intimate <= 0) {
+			intif_delete_petdata(sd->status.pet_id);
+			sd->status.pet_id = 0;
+			sd->pd = NULL;
+			sd->petDB = NULL;
+		}
+		else
+			intif_save_petdata(sd->status.account_id,sd->pet);
+	}
+	if(pc_isdead(sd))
+	pc_setrestartvalue(sd,2);
+
+	pc_clean_skilltree(sd);
+	pc_makesavestatus(sd);
+	chrif_save(sd);
+	storage_storage_dirty(sd);
+	storage_storage_save(sd);
+	map_delblock(&sd->bl);
 
 	if( sd->npc_stackbuf != NULL) {
 		aFree( sd->npc_stackbuf );
@@ -1728,8 +1721,7 @@ int map_quit(struct map_session_data *sd)
 			numdb_erase(charid_db,sd->status.char_id);
 			aFree(p);
 		}
-	} 
-
+	}
 	return 0;
 }
 
@@ -1859,10 +1851,10 @@ int map_foreachiddb(int (*func)(void*,void*,va_list),...) {
  * map.npcへ追加 (warp等の領域持ちのみ)
  *------------------------------------------
  */
-int map_addnpc(size_t m, struct npc_data *nd)
+int map_addnpc(unsigned short m, struct npc_data *nd)
 {
 	size_t i;
-	if(m<0 || m>=map_num)
+	if(m>=map_num)
 		return -1;
 	for(i=0;i<map[m].npc_num && i<MAX_NPC_PER_MAP;i++)
 		if(map[m].npc[i]==NULL)
@@ -2048,20 +2040,19 @@ int map_calc_dir( struct block_list *src,int x,int y) {
 
 int map_getcell(unsigned short m,unsigned short x, unsigned short y,cell_t cellchk)
 {
-	return (m >= MAX_MAP_PER_SERVER) ? 0 : map_getcellp(&map[m],x,y,cellchk);
+	return (m >= MAX_MAP_PER_SERVER) ? 0 : map_getcellp(map[m],x,y,cellchk);
 }
 
-int map_getcellp(struct map_data* m,unsigned short x, unsigned short y,cell_t cellchk)
+int map_getcellp(struct map_data& m,unsigned short x, unsigned short y,cell_t cellchk)
 {
 	struct mapgat *mg;
-	nullpo_ret(m);
 
-	if(x>=m->xs || y>=m->ys)
+	if(x>=m.xs || y>=m.ys)
 	{
 		if(cellchk==CELL_CHKNOPASS) return 1;
 		return 0;
 	}
-	mg = m->gat+x+y*m->xs;
+	mg = m.gat + x + y*m.xs;
 
 	switch(cellchk)
 	{
@@ -2224,7 +2215,7 @@ int map_eraseallipport(void)
  * 他鯖管理のマップをdbから削除
  *------------------------------------------
  */
-int map_eraseipport(char *name,unsigned long ip,int port)
+int map_eraseipport(char *name, unsigned long ip,unsigned short port)
 {
 	struct map_data *md;
 	struct map_data_other_server *mdos;
@@ -3067,12 +3058,6 @@ int map_config_read(const char *cfgName) {
 				////////////////////////////////////////
 			} else if (strcasecmp(w1, "delnpc") == 0) {
 				npc_delsrcfile(w2);
-			} else if (strcasecmp(w1, "data_grf") == 0) {
-				grfio_setdatafile(w2);
-			} else if (strcasecmp(w1, "sdata_grf") == 0) {
-				grfio_setsdatafile(w2);
-			} else if (strcasecmp(w1, "adata_grf") == 0) {
-				grfio_setadatafile(w2);
 			} else if (strcasecmp(w1, "autosave_time") == 0) {
 				autosave_interval = atoi(w2) * 1000;
 				if (autosave_interval <= 0)
@@ -3092,6 +3077,8 @@ int map_config_read(const char *cfgName) {
 					map_read_flag = READ_FROM_GAT;
 			}else if(strcasecmp(w1,"map_cache_file")==0){
 				strncpy(map_cache_file,w2,255);
+			} else if(strcasecmp(w1,"afm_dir") == 0) {
+				strcpy(afm_dir, w2);
 			} else if (strcasecmp(w1, "import") == 0) {
 				map_config_read(w2);
 			} else if (strcasecmp(w1, "console") == 0) {
@@ -3388,10 +3375,10 @@ void do_final(void)
 	///////////////////////////////////////////////////////////////////////////
 
     grfio_final();
-
+	map_eraseallipport();
     for (i = 0; i < map_num; i++)
-		if(map[i].m)
-			map_foreachinarea(cleanup_sub, i, 0, 0, map[i].xs, map[i].ys, 0, 0);
+		if (map[i].m >= 0)
+			map_foreachinarea(cleanup_sub, i, 0, 0, map[i].xs, map[i].ys, 0);
 
     chrif_char_reset_offline();
     chrif_flush_fifo();
@@ -3485,24 +3472,18 @@ void map_versionscreen(int flag) {
  * Map-Server Init and Command-line Arguments [Valaris]
  *------------------------------------------------------
  */
+unsigned char getServerType()
+{
+	return ATHENA_SERVER_MAP | ATHENA_SERVER_CORE;
+}
+
 int do_init(int argc, char *argv[]) {
 	int i;
-	FILE *data_conf;
-	char line[1024], w1[1024], w2[1024];
 
 #ifdef GCOLLECT
 	GC_enable_incremental();
 #endif
 
-	INTER_CONF_NAME="conf/inter_athena.conf";
-	LOG_CONF_NAME="conf/log_athena.conf";
-	MAP_CONF_NAME = "conf/map_athena.conf";
-	BATTLE_CONF_FILENAME = "conf/battle_athena.conf";
-	ATCOMMAND_CONF_FILENAME = "conf/atcommand_athena.conf";
-	CHARCOMMAND_CONF_FILENAME = "conf/charcommand_athena.conf";
-	SCRIPT_CONF_NAME = "conf/script_athena.conf";
-	MSG_CONF_NAME = "conf/msg_athena.conf";
-	GRF_PATH_FILENAME = "conf/grf-files.txt";
 
 	// just clear all maps
 	memset(map, 0, MAX_MAP_PER_SERVER*sizeof(struct map_data));
@@ -3581,19 +3562,6 @@ int do_init(int argc, char *argv[]) {
 #endif /* not TXT_ONLY */
 
 	grfio_init(GRF_PATH_FILENAME);
-
-	data_conf = savefopen(GRF_PATH_FILENAME, "r");
-	// It will read, if there is grf-files.txt.
-	if (data_conf) {
-		while(fgets(line, 1020, data_conf)) {
-			if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) == 2) {
-				if(strcmp(w1,"afm_dir") == 0)
-					strcpy(afm_dir, w2);
-			}
-		}
-		fclose(data_conf);
-	} // end of reading grf-files.txt for AFMs
-
 
 	map_readallmap();
 
