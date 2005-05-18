@@ -121,12 +121,6 @@
 				RelativePath="..\src\char\char.c">
 			</File>
 			<File
-				RelativePath="..\src\common\core.c">
-			</File>
-			<File
-				RelativePath="..\src\common\db.c">
-			</File>
-			<File
 				RelativePath="..\src\char\int_guild.c">
 			</File>
 			<File
@@ -141,40 +135,113 @@
 			<File
 				RelativePath="..\src\char\inter.c">
 			</File>
-			<File
-				RelativePath="..\src\common\lock.c">
-			</File>
-			<File
-				RelativePath="..\src\common\malloc.c">
-			</File>
-			<File
-				RelativePath="..\src\common\nullpo.c">
-			</File>
-			<File
-				RelativePath="..\src\common\showmsg.c">
-			</File>
-			<File
-				RelativePath="..\src\common\socket.c">
-			</File>
-			<File
-				RelativePath="..\src\common\strlib.c">
-			</File>
-			<File
-				RelativePath="..\src\common\timer.c">
-			</File>
-			<File
-				RelativePath="..\src\common\utils.c">
-			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
+			<File
+				RelativePath="..\src\char\char.h">
+			</File>
+			<File
+				RelativePath="..\src\char\int_guild.h">
+			</File>
+			<File
+				RelativePath="..\src\char\int_party.h">
+			</File>
+			<File
+				RelativePath="..\src\char\int_pet.h">
+			</File>
+			<File
+				RelativePath="..\src\char\int_storage.h">
+			</File>
+			<File
+				RelativePath="..\src\char\inter.h">
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
+		</Filter>
+		<Filter
+			Name="Common Files"
+			Filter="">
+			<File
+				RelativePath="..\src\common\core.c">
+			</File>
+			<File
+				RelativePath="..\src\common\core.h">
+			</File>
+			<File
+				RelativePath="..\src\common\db.c">
+			</File>
+			<File
+				RelativePath="..\src\common\db.h">
+			</File>
+			<File
+				RelativePath="..\src\common\dll.c">
+			</File>
+			<File
+				RelativePath="..\src\common\dll.h">
+			</File>
+			<File
+				RelativePath="..\src\common\lock.c">
+			</File>
+			<File
+				RelativePath="..\src\common\lock.h">
+			</File>
+			<File
+				RelativePath="..\src\common\malloc.c">
+			</File>
+			<File
+				RelativePath="..\src\common\malloc.h">
+			</File>
+			<File
+				RelativePath="..\src\common\mmo.h">
+			</File>
+			<File
+				RelativePath="..\src\common\nullpo.c">
+			</File>
+			<File
+				RelativePath="..\src\common\nullpo.h">
+			</File>
+			<File
+				RelativePath="..\src\common\showmsg.c">
+			</File>
+			<File
+				RelativePath="..\src\common\showmsg.h">
+			</File>
+			<File
+				RelativePath="..\src\common\socket.c">
+			</File>
+			<File
+				RelativePath="..\src\common\socket.h">
+			</File>
+			<File
+				RelativePath="..\src\common\strlib.c">
+			</File>
+			<File
+				RelativePath="..\src\common\strlib.h">
+			</File>
+			<File
+				RelativePath="..\src\common\svnversion.h">
+			</File>
+			<File
+				RelativePath="..\src\common\timer.c">
+			</File>
+			<File
+				RelativePath="..\src\common\timer.h">
+			</File>
+			<File
+				RelativePath="..\src\common\utils.c">
+			</File>
+			<File
+				RelativePath="..\src\common\utils.h">
+			</File>
+			<File
+				RelativePath="..\src\common\version.h">
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

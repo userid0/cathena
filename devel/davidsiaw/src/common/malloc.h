@@ -12,11 +12,11 @@
 #endif
 #define ALC_MARK __FILE__, __LINE__, __func__
 
-//////////////////////////////////////////////////////////////////////
-// Whether to use Athena's built-in Memory Manager (enabled by default)
-// To disable just comment the following line
+/**********************************************************************/
+/* Whether to use Athena's built-in Memory Manager (enabled by default) */
+/* To disable just comment the following line */
 #define USE_MEMMGR
-// Whether to enable Memory Manager's logging
+/* Whether to enable Memory Manager's logging */
 #define LOG_MEMMGR
 
 #ifdef USE_MEMMGR
@@ -55,7 +55,7 @@
 
 #endif
 
-////////////// Memory Managers //////////////////
+/********** Memory Managers **********/
 
 #ifdef MEMWATCH
 

@@ -91,9 +91,16 @@ char* aStrdup_ (const void *p, const char *file, int line, const char *func)
 	}
 	return ret;
 }
+
+#ifndef MEMWATCH
+void aFree_ (void *p, int line, const char *func)
+#else
 void aFree_ (void *p, const char *file, int line, const char *func)
+#endif
 {
-	// ShowMessage("%s:%d: in func %s: free %p\n",file,line,func,p);
+
+	/* ShowMessage("%s:%d: in func %s: free %p\n",file,line,func,p); */
+	
 	if (p)
 	#ifndef MEMWATCH
 		FREE(p);
@@ -302,7 +309,7 @@ void* _mmalloc(size_t size, const char *file, int line, const char *func ) {
 	memmgr_info();
 	exit(1);
 	return NULL;
-};
+}
 
 void* _mcalloc(size_t num, size_t size, const char *file, int line, const char *func ) {
 	void *p = _mmalloc(num * size,file,line,func);

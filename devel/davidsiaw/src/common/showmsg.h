@@ -1,17 +1,18 @@
 #ifndef _SHOWMSG_H_
 #define _SHOWMSG_H_
 
-//davidsiaw, 'lookee' here!
-//ok thanks MC I see it
+/* davidsiaw, 'lookee' here! */
+/* ok thanks MC I see it */
 #define SHOW_DEBUG_MSG 1
 
-// for help with the console colors look here:
+/* for help with the console colors look here:
 // http://www.edoceo.com/liberum/?doc=printf-with-color
 // some code explanation (used here):
 // \033[2J : clear screen and go up/left (0, 0 position)
 // \033[K  : clear line from actual position to end of the line
 // \033[0m : reset color parameter
 // \033[1m : use bold for font
+*/
 
 #ifdef _WIN32
 	#define	CL_RESET	""
@@ -37,7 +38,7 @@
 	#define CL_CLS		"\033[2J"
 	#define CL_CLL		"\033[K"
 
-	// font settings
+	/* font settings */
 	#define	CL_BOLD		"\033[1m"
 	#define CL_NORMAL	CL_RESET
 	#define CL_NONE		CL_RESET

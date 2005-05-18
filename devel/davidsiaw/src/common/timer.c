@@ -52,6 +52,7 @@ static struct timer_func_list* tfl_root;
 void gettimeofday (struct timeval *t, void *dummy)
 {
 	DWORD millisec = GetTickCount();
+	dummy = NULL;
 
 	t->tv_sec = (int) (millisec / 1000);
 	t->tv_usec = (millisec % 1000) * 1000;
@@ -118,8 +119,9 @@ unsigned int gettick(void)
  */
 static void push_timer_heap(int index)
 {
-	int i, j;
-	int min, max, pivot; // for sorting
+	int i=0;
+	unsigned int j=0;
+	int min=0, max=0, pivot=0; // for sorting
 
 	// check number of element
 	if (timer_heap_num >= timer_heap_max) {
@@ -252,10 +254,14 @@ int delete_timer(int id, int (*func)(int,unsigned int,int,int))
 		printf("delete_timer error : no such timer %d\n", id);
 		return -1;
 	}
+
 	if (timer_data[id].func != func) {
-		printf("delete_timer error : function mismatch %08x(%s) != %08x(%s)\n",
-			 (int)timer_data[id].func, search_timer_func_list(timer_data[id].func),
-			 (int)func, search_timer_func_list(func));
+		/* printf("delete_timer error : function mismatch %08x(%s) != %08x(%s)\n", */
+		printf("delete_timer error : function mismatch %p(%s) != %p(%s)\n",
+			/* (int)timer_data[id].func, search_timer_func_list(timer_data[id].func),
+			 (int)func, search_timer_func_list(func)); */
+			 timer_data[id].func, search_timer_func_list(timer_data[id].func),
+			 func, search_timer_func_list(func));
 		return -2;
 	}
 	// ÇªÇÃÇ§Çøè¡Ç¶ÇÈÇ…Ç‹Ç©ÇπÇÈ

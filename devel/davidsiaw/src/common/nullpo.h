@@ -3,8 +3,8 @@
 
 
 #define NULLPO_CHECK 1
-		// 全体のスイッチを宣言しているヘッダがあれば
-		// そこに移動していただけると
+		/* 全体のスイッチを宣言しているヘッダがあれば
+		// そこに移動していただけると */
 
 #ifndef __NETBSD__
 #if __STDC_VERSION__ < 199901L
@@ -91,7 +91,7 @@
 #define nullpo_retb(t) \
 	if (nullpo_chk(NLP_MARK, (void *)(t))) {break;}
 
-// 可変引数マクロに関する条件コンパイル
+/* 可変引数マクロに関する条件コンパイル */
 #if __STDC_VERSION__ >= 199901L
 /* C99に対応 */
 #define nullpo_ret_f(t, fmt, ...) \
@@ -129,16 +129,16 @@
 #else /* NULLPO_CHECK */
 /* No Nullpo check */
 
-// if((t)){;}
-// 良い方法が思いつかなかったので・・・苦肉の策です。
-// 一応ワーニングは出ないはず
+/* if((t)){;} */
+/* 良い方法が思いつかなかったので・・・苦肉の策です。 */
+/* 一応ワーニングは出ないはず */
 
 #define nullpo_ret(t) if((t)){;}
 #define nullpo_retv(t) if((t)){;}
 #define nullpo_retr(ret, t) if((t)){;}
 #define nullpo_retb(t) if((t)){;}
 
-// 可変引数マクロに関する条件コンパイル
+/* 可変引数マクロに関する条件コンパイル */
 #if __STDC_VERSION__ >= 199901L
 /* C99に対応 */
 #define nullpo_ret_f(t, fmt, ...) if((t)){;}

@@ -49,7 +49,7 @@ int _vShowMessage(enum msg_type flag, const char *string, va_list ap)
 			return 1;
 	}
 
-	if (!(flag == MSG_DEBUG && !SHOW_DEBUG_MSG)) {
+	if (flag != MSG_DEBUG && flag != SHOW_DEBUG_MSG) {
 		if (flag != MSG_NONE)
 			printf ("%s ", prefix);
 		vprintf (string, ap);
