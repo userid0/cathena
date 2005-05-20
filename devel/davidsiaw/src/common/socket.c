@@ -218,7 +218,7 @@ static int connect_client(int listen_fd)
 
 	len=sizeof(client_address);
 
-	fd = accept(listen_fd,(struct sockaddr*)&client_address,(socklen_t*)&len);
+	fd = (int)accept(listen_fd,(struct sockaddr*)&client_address,(socklen_t*)&len);
 	if(fd_max<=fd) fd_max=fd+1;
 
 	setsocketopts(fd);
@@ -263,7 +263,7 @@ int make_listen_port(int port)
 	int fd;
 	int result;
 
-	fd = socket( AF_INET, SOCK_STREAM, 0 );
+	fd = (int)socket( AF_INET, SOCK_STREAM, 0 );
 	if(fd_max<=fd) fd_max=fd+1;
 
 #ifdef _WIN32
@@ -324,7 +324,7 @@ int make_listen_bind(long ip,int port)
 	int fd;
 	int result;
 
-	fd = socket( AF_INET, SOCK_STREAM, 0 );
+	fd = (int)socket( AF_INET, SOCK_STREAM, 0 );
 	if(fd_max<=fd) fd_max=fd+1;
 
 #ifdef _WIN32
@@ -432,7 +432,7 @@ int make_connection(long ip,int port)
 	int fd;
 	int result;
 
-	fd = socket( AF_INET, SOCK_STREAM, 0 );
+	fd = (int)socket( AF_INET, SOCK_STREAM, 0 );
 	if (fd_max <= fd)
 		fd_max = fd + 1;
 

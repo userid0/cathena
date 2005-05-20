@@ -81,7 +81,9 @@ static void sig_proc(int sn)
 	static int is_called = 0;
 
 	switch (sn) {
+#if (SIGPIPE != SIGINT)
 	case SIGINT:
+#endif
 	case SIGTERM:
 		if (++is_called > 3)
 			exit(0);
@@ -261,7 +263,7 @@ void pid_delete(void) {
 
 void pid_create (void) {
 	FILE *fp;
-	int len = strlen(argp);
+	int len = (int)strlen(argp);
 	strcpy(pid_file, argp);
 	if(len > 4 && pid_file[len - 4] == '.') {
 		pid_file[len - 4] = 0;

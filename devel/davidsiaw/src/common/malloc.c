@@ -93,7 +93,7 @@ char* aStrdup_ (const void *p, const char *file, int line, const char *func)
 }
 
 #ifndef MEMWATCH
-void aFree_ (void *p, int line, const char *func)
+void aFree_ (void *p, char *file, int line, char *func)
 #else
 void aFree_ (void *p, const char *file, int line, const char *func)
 #endif
@@ -103,6 +103,9 @@ void aFree_ (void *p, const char *file, int line, const char *func)
 	
 	if (p)
 	#ifndef MEMWATCH
+		file = NULL;
+		func = NULL;
+		line = 0;
 		FREE(p);
 	#else
 		mwFree(p, file, line);
@@ -211,11 +214,13 @@ static void memmgr_info(void);
 static char memmer_logfile[128];
 static FILE *log_fp;
 
-void* _mmalloc(size_t size, const char *file, int line, const char *func ) {
+void* _mmalloc(size_t size, const char *file, int line, char *func ) {
 	int i;
 	struct block *block;
-	int size_hash = (size+BLOCK_ALIGNMENT-1) / BLOCK_ALIGNMENT;
+	int size_hash = (int)((size+BLOCK_ALIGNMENT-1) / BLOCK_ALIGNMENT);
 	size = size_hash * BLOCK_ALIGNMENT; /* ƒAƒ‰ƒCƒƒ“ƒg‚Ì”{”‚ÉØ‚èã‚° */
+
+	func = NULL;
 
 	if(size == 0) {
 		return NULL;
@@ -231,7 +236,7 @@ void* _mmalloc(size_t size, const char *file, int line, const char *func ) {
 #endif
 		if(p != NULL) {
 			p->unit_head.block = NULL;
-			p->unit_head.size  = size;
+			p->unit_head.size  = (int)size;
 			p->unit_head.file  = file;
 			p->unit_head.line  = line;
 			if(unit_head_large_first == NULL) {
@@ -270,7 +275,7 @@ void* _mmalloc(size_t size, const char *file, int line, const char *func ) {
 			unit_last[size_hash] = block;
 		}
 		unit_unfill[size_hash] = block;
-		block->unit_size  = size + sizeof(struct unit_head);
+		block->unit_size  = (int)(size + sizeof(struct unit_head));
 		block->unit_count = BLOCK_DATA_SIZE / block->unit_size;
 		block->unit_used  = 0;
 		block->unit_hash  = size_hash;
@@ -298,7 +303,7 @@ void* _mmalloc(size_t size, const char *file, int line, const char *func ) {
 		struct unit_head *head = (struct unit_head*)(&block->data[block->unit_size * i]);
 		if(head->block == NULL) {
 			head->block = block;
-			head->size  = size;
+			head->size  = (int)size;
 			head->line  = line;
 			head->file  = file;
 			return (char *)head + sizeof(struct unit_head);
@@ -311,13 +316,13 @@ void* _mmalloc(size_t size, const char *file, int line, const char *func ) {
 	return NULL;
 }
 
-void* _mcalloc(size_t num, size_t size, const char *file, int line, const char *func ) {
+void* _mcalloc(size_t num, size_t size,char *file, int line,char *func ) {
 	void *p = _mmalloc(num * size,file,line,func);
 	memset(p,0,num * size);
 	return p;
 }
 
-void* _mrealloc(void *memblock, size_t size, const char *file, int line, const char *func ) {
+void* _mrealloc(void *memblock, size_t size, char *file, int line, char *func ) {
 	size_t old_size;
 	if(memblock == NULL) {
 		return _mmalloc(size,file,line,func);
@@ -338,19 +343,20 @@ void* _mrealloc(void *memblock, size_t size, const char *file, int line, const c
 	}
 }
 
-char* _mstrdup(const void *p, const char *file, int line, const char *func ) {
+char* _mstrdup(const void *p, char *file, int line, char *func ) {
 	if(p == NULL) {
 		return NULL;
 	} else {
-		int  len = strlen(p);
+		size_t len = strlen(p);
 		char *string  = (char *)_mmalloc(len + 1,file,line,func);
 		memcpy(string,p,len+1);
 		return string;
 	}
 }
 
-void _mfree(void *ptr, const char *file, int line, const char *func ) {
+void _mfree(void *ptr, const char *file, int line, char *func ) {
 	struct unit_head *head = (struct unit_head *)((char *)ptr - sizeof(struct unit_head));
+	func = NULL;
 	if(ptr == NULL) {
 		return;
 	} else if(head->block == NULL && head->size > BLOCK_DATA_SIZE - sizeof(struct unit_head)) {

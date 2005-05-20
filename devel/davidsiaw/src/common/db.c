@@ -116,12 +116,12 @@ struct dbt* strdb_init_(int maxlen,const char *file,int line)
 	return table;
 }
 
-static int numdb_cmp(struct dbt* table,void* a,void* b)
+static void* numdb_cmp(struct dbt* table,void* a,void* b)
 {
 	int ia,ib;
 
-	ia=(int)a;
-	ib=(int)b;
+	ia= (int)a;
+	ib= (int)b;
 
 	if((ia^ib) & 0x80000000)
 		return ia<0 ? -1 : 1;
@@ -172,7 +172,7 @@ void * db_search2(struct dbt *table, const char *key)
 {
 	int i,sp;
 	struct dbn *p,*pn,*stack[64];
-    int slen = strlen(key);
+    int slen = (int)strlen(key);
 
 	for(i=0;i<HASH_SIZE;i++){
 		if((p=table->ht[i])==NULL)

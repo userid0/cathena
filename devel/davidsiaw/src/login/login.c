@@ -1794,7 +1794,7 @@ int parse_fromchar(int fd) {
 					sex = 0;
 				for(i = 0; i < auth_num; i++) {
 					if (auth_dat[i].account_id == acc) {
-						unsigned char buf[16];
+						unsigned z buf[16];
 						login_log("Char-server '%s': Sex change (account: %d, new sex %c, ip: %s)." RETCODE,
 						          server[id].name, acc, (sex == 2) ? 'S' : (sex ? 'M' : 'F'), ip);
 						auth_fifo[i].login_id1++; // to avoid reconnection error when come back from map-server (char-server will ask again the authentification)

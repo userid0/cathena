@@ -29,11 +29,11 @@
 #	define aStrdup(p)		_mstrdup(p,ALC_MARK)
 #	define aFree(p)			_mfree(p,ALC_MARK)
 
-	void* _mmalloc	(size_t, const char *, int, const char *);
-	void* _mcalloc	(size_t, size_t, const char *, int, const char *);
-	void* _mrealloc	(void *, size_t, const char *, int, const char *);
-	char* _mstrdup	(const void *, const char *, int, const char *);
-	void  _mfree	(void *, const char *, int, const char *);	
+	void* _mmalloc	(size_t, const char *, int, char *);
+	void* _mcalloc	(size_t, size_t,char *, int,char *);
+	void* _mrealloc	(void *, size_t, char *, int, char *);
+	char* _mstrdup	(const void *, char *, int, char *);
+	void  _mfree	(void *, const char *, int, char *);	
 
 #else
 
