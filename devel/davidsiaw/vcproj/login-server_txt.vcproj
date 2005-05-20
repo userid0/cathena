@@ -33,7 +33,7 @@
 				ForceConformanceInForLoopScope="TRUE"
 				RuntimeTypeInfo="TRUE"
 				UsePrecompiledHeader="0"
-				WarningLevel="4"
+				WarningLevel="3"
 				WarnAsError="TRUE"
 				Detect64BitPortabilityProblems="TRUE"
 				DebugInformationFormat="4"
