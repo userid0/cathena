@@ -41,19 +41,14 @@ typedef enum CharCommandType CharCommandType;
 typedef struct CharCommandInfo {
 	CharCommandType type;
 	const char* command;
-	int level;
-	int (*proc)(const int, struct map_session_data*,
-		const char* command, const char* message);
+	unsigned char level;
+	bool (*proc)(int fd, struct map_session_data &sd, const char* command, const char* message);
 } CharCommandInfo;
 
-CharCommandType
-is_charcommand(const int fd, struct map_session_data* sd, const char* message, int gmlvl);
+CharCommandType is_charcommand(int fd, struct map_session_data &sd, const char* message, unsigned char gmlvl);
+unsigned char get_charcommand_level(const CharCommandType type);
 
-CharCommandType charcommand(
-	const int level, const char* message, CharCommandInfo* info);
-int get_charcommand_level(const CharCommandType type);
-
-int charcommand_config_read(const char *cfgName);
+bool charcommand_config_read(const char *cfgName);
 
 #endif
 

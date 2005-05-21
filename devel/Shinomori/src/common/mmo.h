@@ -7,6 +7,7 @@
 #include "base.h"
 #include "socket.h"
 
+
 #define FIFOSIZE_SERVERLINK	128*1024
 
 // set to 0 to not check IP of player between each server.
@@ -25,6 +26,7 @@
 #define MAX_FAME 1000000000 // 1G fame point [DracoRPG]
 #define MAX_CART 100
 #define MAX_SKILL 650
+#define MAX_REFINE 10
 #define GLOBAL_REG_NUM 96
 #define ACCOUNT_REG_NUM 16
 #define ACCOUNT_REG2_NUM 16
@@ -454,10 +456,10 @@ struct s_pet
 	unsigned long pet_id;
 	short class_;
 	short level;
-	short egg_id;					//pet egg id
+	short egg_id;//pet egg id
 	unsigned short equip_id;		//pet equip name_id
-	short intimate;					//pet friendly
-	short hungry;					//pet hungry
+	short intimate;//pet friendly
+	short hungry;//pet hungry
 	char name[24];
 	char rename_flag;
 	char incuvate;

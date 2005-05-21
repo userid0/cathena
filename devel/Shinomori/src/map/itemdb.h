@@ -81,9 +81,9 @@ int itemdb_searchrandomgroup(unsigned short groupid);
 #define itemdb_value_notoc(n) itemdb_search(n)->flag.value_notoc
 #define itemdb_canrefine(n) itemdb_search(n)->flag.no_refine
 
-int itemdb_isequip(unsigned short nameid);
-int itemdb_isequip2(struct item_data *);
-int itemdb_isequip3(unsigned short nameid);
+bool itemdb_isequip(unsigned short nameid);
+bool itemdb_isequip2(struct item_data &data);
+bool itemdb_isequip3(unsigned short nameid);
 bool itemdb_isdropable(unsigned short nameid);
 
 // itemdb_equipƒ}ƒNƒ‚Æitemdb_equippoint‚Æ‚Ìˆá‚¢‚Í

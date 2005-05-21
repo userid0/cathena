@@ -98,13 +98,13 @@ enum {
 
 int mobdb_searchname(const char *str);
 int mobdb_checkid(const unsigned long id);
-int mob_once_spawn(struct map_session_data *sd,char *mapname,
+int mob_once_spawn(struct map_session_data *sd,const char *mapname,
 	int x,int y,const char *mobname,int class_,int amount,const char *event);
-int mob_once_spawn_area(struct map_session_data *sd,char *mapname,
+int mob_once_spawn_area(struct map_session_data *sd,const char *mapname,
 	int x0,int y0,int x1,int y1,
 	const char *mobname,int class_,int amount,const char *event);
 
-int mob_spawn_guardian(struct map_session_data *sd,char *mapname,	// Spawning Guardians [Valaris]
+int mob_spawn_guardian(struct map_session_data *sd,const char *mapname,	// Spawning Guardians [Valaris]
 	int x,int y,const char *mobname,int class_,int amount,const char *event,int guardian);	// Spawning Guardians [Valaris]
 
 int mob_walktoxy(struct mob_data &md,int x,int y,int easy);
@@ -152,7 +152,7 @@ int mobskill_castend_pos( int tid, unsigned long tick, int id,int data );
 int mob_summonslave(struct mob_data &md2,int *value,int amount,int flag);
 unsigned int mob_countslave(struct mob_data &md);
 
-int mob_gvmobcheck(struct map_session_data *sd, struct block_list *bl);
+int mob_gvmobcheck(struct map_session_data &sd, struct block_list *bl);
 void mob_reload(void);
 
 #endif

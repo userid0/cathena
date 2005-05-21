@@ -187,7 +187,7 @@ struct map_session_data
 		unsigned change_walk_target : 1;			// 1
 		unsigned attack_continue : 1;				// 2
 		unsigned menu_or_input : 1;					// 3
-		unsigned dead_sit : 2;						// 4,5
+		unsigned dead_sit : 2;						// 4, 5
 		unsigned skillcastcancel : 1;				// 6
 		unsigned waitingdisconnect : 1;				// 7 - byte 1
 		unsigned lr_flag : 2;						// 8,9 
@@ -225,16 +225,19 @@ struct map_session_data
 		unsigned potion_flag : 2;					// 43,44
 		unsigned _unused : 3;						// 3 bit left
 	} state;
-	
-	unsigned long char_id;
+
+	struct mmo_charstatus status;
+
+//	unsigned long char_id;
+//	unsigned char sex;
+
 	unsigned long login_id1;
 	unsigned long login_id2;
-	unsigned char sex;
 	unsigned long packet_ver;  // 5: old, 6: 7july04, 7: 13july04, 8: 26july04, 9: 9aug04/16aug04/17aug04, 10: 6sept04, 11: 21sept04, 12: 18oct04, 13: 25oct04 (by [Yor])
 
 	struct guild * gmaster_flag;
 
-	struct mmo_charstatus status;
+
 
 	struct item_data *inventory_data[MAX_INVENTORY];
 	short itemindex;
@@ -273,11 +276,15 @@ struct map_session_data
 	unsigned long npc_pos;
 	unsigned long npc_menu;
 	unsigned long npc_amount;
+
 	unsigned long npc_stack;
 	unsigned long npc_stackmax;
+	char *npc_stackbuf;
+
 	char *npc_script;
 	char *npc_scriptroot;
-	char *npc_stackbuf;
+
+
 	char npc_str[256];
 	unsigned long chatID;
 	time_t idletime;
@@ -559,9 +566,7 @@ struct map_session_data
 
 	unsigned short change_level;	// [celest]
 
-#ifndef TXT_ONLY
 	unsigned long mail_counter;	// mail counter for mail system [Valaris]
-#endif
 };
 
 struct npc_timerevent_list {
@@ -671,13 +676,17 @@ struct mob_data {
 		unsigned idle_skill_flag : 1;	// signals if the pet can do a skill while in idle state [Skotlex]
 		unsigned _unused : 4;
 	} state;
-	unsigned long provoke_id; // Celest
+	
 	int timer;
 	short to_x;
 	short to_y;
 	short target_dir;
 	short speed;
-	int hp;
+
+	long hp;
+	long max_hp;
+
+	unsigned long provoke_id; // Celest
 	unsigned long target_id;
 	unsigned long attacked_id;
 	short attacked_count;
@@ -1046,18 +1055,18 @@ enum {
 
 
 
-struct chat_data {
-	struct block_list bl;
+struct chat_data
+{
+	struct block_list bl;	// block of the chatwindow
 
-	char pass[8];   /* password */
-	char title[61]; /* room title MAX 60 */
-	unsigned char limit;     /* join limit */
+	char pass[9];			// password (max 8)
+	char title[61];			// room title (max 60)
+	unsigned short limit;	// join limit
+	unsigned short users;	// current users
 	unsigned char trigger;
-	unsigned char users;     /* current users */
-	unsigned char pub;       /* room attribute */
+	unsigned char pub;		// room attribute
 	struct map_session_data *usersd[20];
-	struct block_list *owner_;
-	struct block_list **owner;
+	struct block_list *owner;
 	char npc_event[50];
 };
 
@@ -1096,8 +1105,8 @@ int map_freeblock( void *bl );
 int map_freeblock_lock(void);
 int map_freeblock_unlock(void);
 // block関連
-int map_addblock(struct block_list *);
-int map_delblock(struct block_list *);
+int map_addblock(struct block_list &bl);
+int map_delblock(struct block_list &bl);
 void map_foreachinarea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...);
 // -- moonsoul (added map_foreachincell)
 void map_foreachincell(int (*func)(struct block_list*,va_list),unsigned short m,int x,int y,int type,...);
@@ -1108,49 +1117,49 @@ int map_countnearpc(int,int,int);
 int map_count_oncell(unsigned short m,int x,int y);
 struct skill_unit *map_find_skill_unit_oncell(struct block_list *,int x,int y,unsigned short skill_id,struct skill_unit *);
 // 一時的object関連
-int map_addobject(struct block_list *);
+int map_addobject(struct block_list &bl);
 int map_delobject(int);
 int map_delobjectnofree(int id);
 void map_foreachobject(int (*)(struct block_list*,va_list),int,...);
 //
-int map_quit(struct map_session_data *);
+int map_quit(struct map_session_data &sd);
 // npc
 int map_addnpc(unsigned short m, struct npc_data *nd);
 
 // 床アイテム関連
 int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data);
 #define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
-int map_addflooritem(struct item *,int,int,int,int,struct map_session_data *,struct map_session_data *,struct map_session_data *,int);
+int map_addflooritem(struct item &item_data,unsigned short amount,unsigned short m,unsigned short x,unsigned short y,struct map_session_data *first_sd,struct map_session_data *second_sd,struct map_session_data *third_sd,int type);
 int map_searchrandfreecell(int,int,int,int);
 
 // キャラid＝＞キャラ名 変換関連
-void map_addchariddb(unsigned long charid,char *name);
+void map_addchariddb(unsigned long charid,const char *name);
 void map_delchariddb(unsigned long charid);
-int map_reqchariddb(struct map_session_data * sd,unsigned long charid);
-char * map_charid2nick(int);
+int map_reqchariddb(struct map_session_data &sd,unsigned long charid);
+char * map_charid2nick(unsigned long id);
 struct map_session_data * map_charid2sd(unsigned long id);
 struct map_session_data * map_id2sd(unsigned long id);
 struct block_list * map_id2bl(unsigned long id);
 
-int map_mapname2mapid(char*);
-int map_mapname2ipport(char *name, unsigned long *ip,unsigned short *port);
-int map_setipport(char *name, unsigned long ip, unsigned short port);
-int map_eraseipport(char *name, unsigned long ip,unsigned short port);
+int map_mapname2mapid(const char *name);
+bool map_mapname2ipport(const char *name, unsigned long &ip,unsigned short &port);
+int map_setipport(const char *name, unsigned long ip, unsigned short port);
+int map_eraseipport(const char *name, unsigned long ip,unsigned short port);
 int map_eraseallipport(void);
-void map_addiddb(struct block_list *);
-void map_deliddb(struct block_list *bl);
+void map_addiddb(struct block_list &bl);
+void map_deliddb(struct block_list &bl);
 int map_foreachiddb(int (*)(void*,void*,va_list),...);
-void map_addnickdb(struct map_session_data *);
-struct map_session_data * map_nick2sd(char*);
+void map_addnickdb(struct map_session_data &sd);
+struct map_session_data * map_nick2sd(const char *nick);
 int compare_item(struct item *a, struct item *b);
 
 // その他
 int map_check_dir(int s_dir,int t_dir);
-int map_calc_dir( struct block_list *src,int x,int y);
+int map_calc_dir( struct block_list &src,int x,int y);
 
 // path.cより
 int path_search(struct walkpath_data &wpd,unsigned short m,int x0,int y0,int x1,int y1,int flag);
-bool path_search_long(struct shootpath_data *spd,unsigned short m,unsigned short x0,unsigned short y0,unsigned short x1,unsigned short y1);
+bool path_search_long(unsigned short m,unsigned short x0,unsigned short y0,unsigned short x1,unsigned short y1);
 int path_blownpos(unsigned short m,int x0,int y0,int dx,int dy,int count);
 
 int map_who(int fd);
@@ -1158,7 +1167,7 @@ int map_who(int fd);
 int cleanup_sub(struct block_list *bl, va_list ap);
 
 void map_helpscreen(); // [Valaris]
-int map_delmap(char *mapname);
+int map_delmap(const char *mapname);
 
 extern char *INTER_CONF_NAME;
 extern char *LOG_CONF_NAME;
@@ -1170,17 +1179,30 @@ extern char *SCRIPT_CONF_NAME;
 extern char *MSG_CONF_NAME;
 extern char *GRF_PATH_FILENAME;
 
-#ifndef TXT_ONLY
-
-// MySQL
-#ifdef __WIN32
-#include <my_global.h>
-#include <my_sys.h>
-#endif
-#include <mysql.h>
 
 void char_online_check(void); // [Valaris]
 void char_offline(struct map_session_data *sd);
+
+
+#ifndef TXT_ONLY
+
+// MySQL
+#include <mysql.h>
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// mysql access function
+//
+///////////////////////////////////////////////////////////////////////////////
+extern inline int mysql_SendQuery(MYSQL *mysql, const char* q)
+{
+#ifdef TWILIGHT
+	ShowSQL("%s:%d# %s\n", __FILE__, __LINE__, q);
+#endif
+	return mysql_real_query(mysql, q, strlen(q));
+}
+
+
 
 extern MYSQL mmysql_handle;
 extern char tmp_sql[65535];

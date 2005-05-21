@@ -1,12 +1,11 @@
-#include "core.h"
-#include "socket.h"
-#include "timer.h"
-#include "mmo.h"
-#include "version.h"
-#include "db.h"
+
 
 #ifndef _CHAR_H_
 #define _CHAR_H_
+
+#include "mmo.h"
+
+
 
 #define MAX_MAP_SERVERS 30
 
@@ -73,12 +72,8 @@ extern int lowest_gm_level;
 extern size_t GM_num;
 extern struct gm_account *gm_account;
 
-extern int debug_mysql_query(char *file, int line, void *mysql, const char *q);
 
-#endif
 
-#include "inter.h"
-#include "int_pet.h"
-#include "int_guild.h"
-#include "int_party.h"
-#include "int_storage.h"
+
+#endif//_CHAR_H_
+

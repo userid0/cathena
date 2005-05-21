@@ -2,35 +2,35 @@
 #ifndef _CHRIF_H_
 #define _CHRIF_H_
 
-void chrif_setuserid(char*);
-void chrif_setpasswd(char*);
-void chrif_setip(unsigned long);
+void chrif_setuserid(const char* user);
+void chrif_setpasswd(const char *pwd);
+void chrif_setip(unsigned long ip);
 unsigned long chrif_getip();
-void chrif_setport(int);
+void chrif_setport(unsigned short port);
 
 int chrif_isconnect(void);
 
 //extern int chrif_connected;
 
-int chrif_authreq(struct map_session_data *);
-int chrif_save(struct map_session_data*);
-int chrif_charselectreq(struct map_session_data *);
+int chrif_authreq(struct map_session_data &sd);
+int chrif_save(struct map_session_data &sd);
+int chrif_charselectreq(struct map_session_data &sd);
 
-int chrif_changemapserver(struct map_session_data *sd,char *name,int x,int y,unsigned long ip, unsigned short port);
+int chrif_changemapserver(struct map_session_data &sd, const char *name, unsigned short x, unsigned short y, unsigned long ip, unsigned short port);
 
-int chrif_searchcharid(int char_id);
+int chrif_searchcharid(unsigned long id);
 int chrif_changegm(unsigned long id,const char *pass,size_t len);
 int chrif_changeemail(unsigned long id, const char *actual_email, const char *new_email);
-int chrif_char_ask_name(long id, char * character_name, short operation_type, int year, int month, int day, int hour, int minute, int second);
-int chrif_saveaccountreg2(struct map_session_data *sd);
+int chrif_char_ask_name(long id, const char *character_name, unsigned short operation_type, unsigned short year, unsigned short month, unsigned short day, unsigned short hour, unsigned short minute, unsigned short second);
+int chrif_saveaccountreg2(struct map_session_data &sd);
 int chrif_reloadGMdb(void);
 int chrif_reqfamelist(void);
-int chrif_ragsrvinfo(int base_rate,int job_rate, int drop_rate);
-int chrif_char_offline(struct map_session_data *sd);
+int chrif_ragsrvinfo(unsigned short base_rate, unsigned short job_rate, unsigned short drop_rate);
+int chrif_char_offline(struct map_session_data &sd);
 int chrif_char_reset_offline(void);
-int chrif_char_online(struct map_session_data *sd);
+int chrif_char_online(struct map_session_data &sd);
 int chrif_changesex(unsigned long id, unsigned char sex);
-int chrif_chardisconnect(struct map_session_data *sd);
+int chrif_chardisconnect(struct map_session_data &sd);
 int check_connect_char_server(int tid, unsigned long tick, int id, int data);
 
 int do_final_chrif(void);

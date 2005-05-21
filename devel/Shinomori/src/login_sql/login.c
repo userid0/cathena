@@ -21,6 +21,18 @@
 #endif
 
 #include <mysql.h>
+///////////////////////////////////////////////////////////////////////////////
+//
+// mysql access function
+//
+///////////////////////////////////////////////////////////////////////////////
+extern inline int mysql_SendQuery(MYSQL *mysql, const char* q)
+{
+#ifdef TWILIGHT
+	ShowSQL("%s:%d# %s\n", __FILE__, __LINE__, q);
+#endif
+	return mysql_real_query(mysql, q, strlen(q));
+}
 
 
 //-----------------------------------------------------
@@ -167,7 +179,7 @@ int isGM(unsigned long account_id) {
 	MYSQL_ROW	sql_row;
 	level = 0;
 	sprintf(tmpsql,"SELECT `%s` FROM `%s` WHERE `%s`='%d'", login_db_level, login_db, login_db_account_id, account_id);
-	if (mysql_query(&mysql_handle, tmpsql)) {
+	if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 		ShowMessage("DB server Error (select GM Level to Memory)- %s\n", mysql_error(&mysql_handle));
 	}
 	sql_res = mysql_store_result(&mysql_handle);
@@ -213,7 +225,7 @@ int mmo_auth_sqldb_init(void) {
 	sprintf(tmpsql, "INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '', 'lserver', '100','login server started')", loginlog_db);
 
 	//query
-	if (mysql_query(&mysql_handle, tmpsql)) {
+	if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 	}
 
@@ -238,14 +250,14 @@ void mmo_db_close(void) {
 	sprintf(tmpsql,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '', 'lserver','100', 'login server shutdown')", loginlog_db);
 
 	//query
-	if (mysql_query(&mysql_handle, tmpsql)) {
+	if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 	}
 
 	//delete all server status
 	sprintf(tmpsql,"DELETE FROM `sstatus`");
 	//query
-	if (mysql_query(&mysql_handle, tmpsql)) {
+	if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 	}
 
@@ -317,7 +329,7 @@ int mmo_auth( struct mmo_account* account , int fd)
                           if (new_account_flag == 1) 
                                         account->userid[len] = '\0';                       	                                        
                                       	sprintf(tmp_sql, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", login_db_userid, login_db, account->userid);
-					if(mysql_query(&mysql_handle, tmp_sql)){
+					if(mysql_SendQuery(&mysql_handle, tmp_sql)){
 			ShowMessage("SQL error (_M/_F reg): %s", mysql_error(&mysql_handle));
 					}else{
 					sql_res = mysql_store_result(&mysql_handle);
@@ -325,7 +337,7 @@ int mmo_auth( struct mmo_account* account , int fd)
 						//ok no existing acc,
 				ShowMessage("Adding a new account user: %s with passwd: %s sex: %c (ip: %s)\n", account->userid, account->passwd, account->userid[len+1], ip_str);
 							sprintf(tmp_sql, "INSERT INTO `%s` (`%s`, `%s`, `sex`, `email`) VALUES ('%s', '%s', '%c', '%s')", login_db, login_db_userid, login_db_user_pass, account->userid, account->passwd, account->userid[len+1], "a@a.com");
-							if(mysql_query(&mysql_handle, tmp_sql)){
+							if(mysql_SendQuery(&mysql_handle, tmp_sql)){
 								//Failed to insert new acc :/
 					ShowMessage("SQL Error (_M/_F reg) .. insert ..: %s", mysql_error(&mysql_handle));
 							}//sql query check to insert
@@ -348,7 +360,7 @@ int mmo_auth( struct mmo_account* account , int fd)
 	//login {0-account_id/1-userid/2-user_pass/3-lastlogin/4-logincount/5-sex/6-connect_untl/7-last_ip/8-ban_until/9-state}
 
 	// query
-	if (mysql_query(&mysql_handle, tmpsql)) {
+	if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 	}
 	sql_res = mysql_store_result(&mysql_handle) ;
@@ -501,7 +513,7 @@ int mmo_auth( struct mmo_account* account , int fd)
 			} else //it was a permanent ban + temp ban. So we leave STATE = 5, but clear the temp ban
 				sprintf(tmpsql, "UPDATE `%s` SET `ban_until`='0' WHERE %s `%s`='%s'", login_db, case_sensitive ? "BINARY" : "", login_db_userid, t_uid);
 
-			if (mysql_query(&mysql_handle, tmpsql)) {
+			if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
 		}
@@ -549,7 +561,7 @@ int mmo_auth( struct mmo_account* account , int fd)
 	sprintf(tmpsql, "UPDATE `%s` SET `lastlogin` = NOW(), `logincount`=`logincount` +1, `last_ip`='%s'  WHERE %s  `%s` = '%s'",
 	        login_db, ip_str, case_sensitive ? "BINARY" : "", login_db_userid, sql_row[1]);
 	mysql_free_result(sql_res) ; //resource free
-	if (mysql_query(&mysql_handle, tmpsql)) {
+	if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 	}
 
@@ -604,7 +616,7 @@ int parse_fromchar(int fd){
 			// server delete
 			sprintf(tmpsql, "DELETE FROM `sstatus` WHERE `index`='%d'", id);
 			// query
-		if (mysql_query(&mysql_handle, tmpsql))
+		if (mysql_SendQuery(&mysql_handle, tmpsql))
 		{
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
@@ -648,7 +660,7 @@ int parse_fromchar(int fd){
 				char email[40] = "";
 				account_id=RFIFOL(fd,2);
 				sprintf(tmpsql, "SELECT `email`,`connect_until` FROM `%s` WHERE `%s`='%ld'", login_db, login_db_account_id, account_id);
-				if (mysql_query(&mysql_handle, tmpsql)) {
+				if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
 				sql_res = mysql_store_result(&mysql_handle) ;
@@ -660,7 +672,7 @@ int parse_fromchar(int fd){
 				mysql_free_result(sql_res);
 				if (account_id > 0) {
 					sprintf(tmpsql, "SELECT `str`,`value` FROM `global_reg_value` WHERE `type`='1' AND `account_id`='%ld'",account_id);
-					if (mysql_query(&mysql_handle, tmpsql)) {
+					if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 					}
 					sql_res = mysql_store_result(&mysql_handle) ;
@@ -705,7 +717,7 @@ int parse_fromchar(int fd){
 
 				sprintf(tmpsql,"UPDATE `sstatus` SET `user` = '%d' WHERE `index` = '%d'", server[id].users, id);
 				// query
-				if (mysql_query(&mysql_handle, tmpsql)) {
+				if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
 			}
@@ -727,7 +739,7 @@ int parse_fromchar(int fd){
 			char email[40] = "";
 			account_id=RFIFOL(fd,2);
 			sprintf(tmpsql,"SELECT `email`,`connect_until` FROM `%s` WHERE `%s`='%d'",login_db, login_db_account_id, account_id);
-			if(mysql_query(&mysql_handle, tmpsql)) {
+			if(mysql_SendQuery(&mysql_handle, tmpsql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
 			sql_res = mysql_store_result(&mysql_handle) ;
@@ -794,7 +806,7 @@ int parse_fromchar(int fd){
 				          server[id].name, acc, ip_str);
 			else {
 				sprintf(tmpsql, "SELECT `%s`,`email` FROM `%s` WHERE `%s` = '%d'", login_db_userid, login_db, login_db_account_id, acc);
-				if (mysql_query(&mysql_handle, tmpsql))
+				if (mysql_SendQuery(&mysql_handle, tmpsql))
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				sql_res = mysql_store_result(&mysql_handle);
 				if (sql_res) {
@@ -803,7 +815,7 @@ int parse_fromchar(int fd){
 					if (strcasecmp(sql_row[1], actual_email) == 0) {
 						sprintf(tmpsql, "UPDATE `%s` SET `email` = '%s' WHERE `%s` = '%d'", login_db, new_email, login_db_account_id, acc);
 						// query
-						if (mysql_query(&mysql_handle, tmpsql)) {
+						if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 							ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 						}
 						ShowMessage("Char-server '%s': Modify an e-mail on an account (@email GM command) (account: %d (%s), new e-mail: %s, ip: %s)." RETCODE,
@@ -824,7 +836,7 @@ int parse_fromchar(int fd){
 			acc = RFIFOL(fd,2);
 			statut = RFIFOL(fd,6);
 			sprintf(tmpsql, "SELECT `state` FROM `%s` WHERE `%s` = '%d'", login_db, login_db_account_id, acc);
-			if (mysql_query(&mysql_handle, tmpsql)) {
+			if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
 			sql_res = mysql_store_result(&mysql_handle);
@@ -841,7 +853,7 @@ int parse_fromchar(int fd){
 			}
 			sprintf(tmpsql,"UPDATE `%s` SET `state` = '%d' WHERE `%s` = '%d'", login_db, statut,login_db_account_id,acc);
 			//query
-			if(mysql_query(&mysql_handle, tmpsql)) {
+			if(mysql_SendQuery(&mysql_handle, tmpsql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
 			RFIFOSKIP(fd,10);
@@ -857,7 +869,7 @@ int parse_fromchar(int fd){
 			time_t timestamp, tmptime;
 			acc = RFIFOL(fd,2);
 			sprintf(tmpsql, "SELECT `ban_until` FROM `%s` WHERE `%s` = '%d'",login_db,login_db_account_id,acc);
-			if (mysql_query(&mysql_handle, tmpsql)) {
+			if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
 			sql_res = mysql_store_result(&mysql_handle);
@@ -892,7 +904,7 @@ int parse_fromchar(int fd){
 					ShowMessage("Account: %d Banned until: %ld\n", acc, timestamp);
 					sprintf(tmpsql, "UPDATE `%s` SET `ban_until` = '%ld', `state`='7' WHERE `%s` = '%d'", login_db, timestamp, login_db_account_id, acc);
 					// query
-					if (mysql_query(&mysql_handle, tmpsql)) {
+					if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 					}
 				}
@@ -911,7 +923,7 @@ int parse_fromchar(int fd){
 				acc=RFIFOL(fd,4);
 				sprintf(tmpsql,"SELECT `sex` FROM `%s` WHERE `%s` = '%d'",login_db,login_db_account_id,acc);
 
-				if(mysql_query(&mysql_handle, tmpsql)) 
+				if(mysql_SendQuery(&mysql_handle, tmpsql)) 
 				{
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
                 }
@@ -930,7 +942,7 @@ int parse_fromchar(int fd){
 							sprintf(tmpsql,"UPDATE `%s` SET `sex` = '%c' WHERE `%s` = '%d'", 
 								login_db, (sex==0?'M':'F'), login_db_account_id, acc);
 				//query
-				if(mysql_query(&mysql_handle, tmpsql)) {
+				if(mysql_SendQuery(&mysql_handle, tmpsql)) {
 								ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
 				WBUFW(buf,0) = 0x2723;
@@ -960,11 +972,11 @@ int parse_fromchar(int fd){
 						memcpy(str,RFIFOP(fd,p),32);
 						value=RFIFOL(fd,p+32);
 						sprintf(tmpsql,"DELETE FROM `global_reg_value` WHERE `type`='1' AND `account_id`='%d' AND `str`='%s';",acc,jstrescapecpy(temp_str,str));
-						if(mysql_query(&mysql_handle, tmpsql)) {
+						if(mysql_SendQuery(&mysql_handle, tmpsql)) {
 							ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 						}
 						sprintf(tmpsql,"INSERT INTO `global_reg_value` (`type`, `account_id`, `str`, `value`) VALUES ( 1 , '%d' , '%s' , '%d');",  acc, jstrescapecpy(temp_str,str), value);
-						if(mysql_query(&mysql_handle, tmpsql)) {
+						if(mysql_SendQuery(&mysql_handle, tmpsql)) {
 							ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 						}
 					}
@@ -986,7 +998,7 @@ int parse_fromchar(int fd){
 				int acc;
 				acc = RFIFOL(fd,2);
 				sprintf(tmpsql,"SELECT `ban_until` FROM `%s` WHERE `%s` = '%d'",login_db,login_db_account_id,acc);
-                if(mysql_query(&mysql_handle, tmpsql)) {
+                if(mysql_SendQuery(&mysql_handle, tmpsql)) {
                     ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
                 }
                 sql_res = mysql_store_result(&mysql_handle) ;
@@ -996,7 +1008,7 @@ int parse_fromchar(int fd){
 				if (atol(sql_row[0]) != 0) {
 				    sprintf(tmpsql,"UPDATE `%s` SET `ban_until` = '0', `state`='0' WHERE `%s` = '%d'", login_db,login_db_account_id,acc);
                     //query
-                    if(mysql_query(&mysql_handle, tmpsql)) {
+                    if(mysql_SendQuery(&mysql_handle, tmpsql)) {
                         ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
                     }
 					break;
@@ -1066,7 +1078,7 @@ int parse_login(int fd) {
 		//check
 		sprintf(tmpsql, "SELECT count(*) FROM `ipbanlist` WHERE `list` = '%d.*.*.*' OR `list` = '%d.%d.*.*' OR `list` = '%d.%d.%d.*' OR `list` = '%d.%d.%d.%d'",
 		  p[0], p[0], p[1], p[0], p[1], p[2], p[0], p[1], p[2], p[3]);
-		if (mysql_query(&mysql_handle, tmpsql)) {
+		if (mysql_SendQuery(&mysql_handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 		}
 
@@ -1079,7 +1091,7 @@ int parse_login(int fd) {
 			sprintf(tmpsql,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '%d.%d.%d.%d', 'unknown','-3', 'ip banned')", loginlog_db, p[0], p[1], p[2], p[3]);
 
 			// query
-			if(mysql_query(&mysql_handle, tmpsql)) {
+			if(mysql_SendQuery(&mysql_handle, tmpsql)) {
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
 			ShowMessage ("close session connection...\n");
@@ -1149,7 +1161,7 @@ int parse_login(int fd) {
 					{
                          sprintf(tmpsql,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '%d.%d.%d.%d', '%s','100', 'login ok')", loginlog_db, p[0], p[1], p[2], p[3], t_uid);
                          //query
-						if(mysql_query(&mysql_handle, tmpsql))
+						if(mysql_SendQuery(&mysql_handle, tmpsql))
 						{
 							ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
                          }
@@ -1263,7 +1275,7 @@ int parse_login(int fd) {
 		break;
 			}
 			//query
-				if(mysql_query(&mysql_handle, tmpsql))
+				if(mysql_SendQuery(&mysql_handle, tmpsql))
 				{
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 			}
@@ -1271,7 +1283,7 @@ int parse_login(int fd) {
 				{	// failed password
 				sprintf(tmpsql,"SELECT count(*) FROM `%s` WHERE `ip` = '%d.%d.%d.%d' AND `rcode` = '1' AND `time` > NOW() - INTERVAL %d MINUTE",
 				  loginlog_db, p[0], p[1], p[2], p[3], dynamic_pass_failure_ban_time);	//how many times filed account? in one ip.
-					if(mysql_query(&mysql_handle, tmpsql))
+					if(mysql_SendQuery(&mysql_handle, tmpsql))
 					{
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
@@ -1282,7 +1294,7 @@ int parse_login(int fd) {
 					if (atoi(sql_row[0]) >= dynamic_pass_failure_ban_how_many )
 					{
 					sprintf(tmpsql,"INSERT INTO `ipbanlist`(`list`,`btime`,`rtime`,`reason`) VALUES ('%d.%d.%d.*', NOW() , NOW() +  INTERVAL %d MINUTE ,'Password error ban: %s')", p[0], p[1], p[2], dynamic_pass_failure_ban_how_long, t_uid);
-						if(mysql_query(&mysql_handle, tmpsql))
+						if(mysql_SendQuery(&mysql_handle, tmpsql))
 						{
 							ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 					}
@@ -1292,7 +1304,7 @@ int parse_login(int fd) {
 				else if (result == -2)
 				{	//dynamic banned - add ip to ban list.
 				sprintf(tmpsql,"INSERT INTO `ipbanlist`(`list`,`btime`,`rtime`,`reason`) VALUES ('%d.%d.%d.*', NOW() , NOW() +  INTERVAL 1 MONTH ,'Dynamic banned user id : %s')", p[0], p[1], p[2], t_uid);
-					if(mysql_query(&mysql_handle, tmpsql))
+					if(mysql_SendQuery(&mysql_handle, tmpsql))
 					{
 						ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
@@ -1304,7 +1316,7 @@ int parse_login(int fd) {
 			}
 
 			sprintf(tmpsql,"SELECT `ban_until` FROM `%s` WHERE %s `%s` = '%s'",login_db, case_sensitive ? "BINARY" : "",login_db_userid, t_uid);
-				if(mysql_query(&mysql_handle, tmpsql))
+				if(mysql_SendQuery(&mysql_handle, tmpsql))
 				{
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
             }
@@ -1359,7 +1371,7 @@ int parse_login(int fd) {
 				unsigned char* server_name;
 			sprintf(tmpsql,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '%d.%d.%d.%d', '%s@%s','100', 'charserver - %s@%d.%d.%d.%d:%d')", loginlog_db, p[0], p[1], p[2], p[3], RFIFOP(fd, 2),RFIFOP(fd, 60),RFIFOP(fd, 60), RFIFOB(fd, 54), RFIFOB(fd, 55), RFIFOB(fd, 56), RFIFOB(fd, 57), (unsigned short)RFIFOW(fd, 58));
 					//query
-			if(mysql_query(&mysql_handle, tmpsql))
+			if(mysql_SendQuery(&mysql_handle, tmpsql))
 			{
 				ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 					}
@@ -1388,7 +1400,7 @@ int parse_login(int fd) {
 
 					sprintf(tmpsql,"DELETE FROM `sstatus` WHERE `index`='%ld'", account.account_id);
 					//query
-				if(mysql_query(&mysql_handle, tmpsql))
+				if(mysql_SendQuery(&mysql_handle, tmpsql))
 				{
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 					}
@@ -1397,7 +1409,7 @@ int parse_login(int fd) {
 					sprintf(tmpsql,"INSERT INTO `sstatus`(`index`,`name`,`user`) VALUES ( '%ld', '%s', '%d')",
 						account.account_id, server[account.account_id].name,0);
 					//query
-				if(mysql_query(&mysql_handle, tmpsql))
+				if(mysql_SendQuery(&mysql_handle, tmpsql))
 				{
 					ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 					}
@@ -1516,7 +1528,7 @@ int login_lan_config_read(const char *lancfgName){
 int ip_ban_check(int tid, unsigned long tick, int id, int data){
 
 	//query
-	if(mysql_query(&mysql_handle, "DELETE FROM `ipbanlist` WHERE `rtime` <= NOW()")) {
+	if(mysql_SendQuery(&mysql_handle, "DELETE FROM `ipbanlist` WHERE `rtime` <= NOW()")) {
 		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
 	}
 

@@ -288,16 +288,16 @@ int status_change_clear(struct block_list *bl,int type);
 int status_change_clear_buffs(struct block_list *bl);
 int status_change_clear_debuffs(struct block_list *bl);
 
-int status_calc_pet(struct map_session_data* sd, int first); // [Skotlex]
+int status_calc_pet(struct map_session_data &sd, bool first); // [Skotlex]
 // ステータス計算 pc.c から分離
 // pc_calcstatus
-int status_calc_pc(struct map_session_data* sd,int first);
-int status_calc_speed(struct map_session_data*); // [Celest]
+int status_calc_pc(struct map_session_data &sd,int first);
+int status_calc_speed(struct map_session_data &sd); // [Celest]
 // int status_calc_skilltree(struct map_session_data *sd);
 int status_getrefinebonus(int lv,int type);
-int status_percentrefinery(struct map_session_data *sd,struct item *item);
+int status_percentrefinery(struct map_session_data &sd,struct item &item);
 //Use this to refer the max refinery level [Skotlex]
-#define MAX_REFINE 10
+
 extern int percentrefinery[5][MAX_REFINE+1]; //The last slot always has a 0% success chance [Skotlex]
 
 int status_readdb(void);

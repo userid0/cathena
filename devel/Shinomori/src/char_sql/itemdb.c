@@ -66,27 +66,19 @@ struct item_data* itemdb_search(unsigned short nameid)
  *
  *------------------------------------------
  */
-int itemdb_isequip(unsigned short nameid)
+bool itemdb_isequip(unsigned short nameid)
 {
 	int type=itemdb_type(nameid);
-	if(type==0 || type==2 || type==3 || type==6 || type==10)
-		return 0;
-	return 1;
+	return (type!=0 && type!=2 && type!=3 && type!=6 && type!=10);
 }
 /*==========================================
  *
  *------------------------------------------
  */
-int itemdb_isequip2(struct item_data *data)
+bool itemdb_isequip2(struct item_data &data)
 {
-	if(data) {
-		int type=data->type;
-		if(type==0 || type==2 || type==3 || type==6 || type==10)
-			return 0;
-		else
-			return 1;
-	}
-	return 0;
+	int type=data.type;
+	return (type!=0 && type!=2 && type!=3 && type!=6 && type!=10);
 }
 
 
@@ -150,7 +142,7 @@ static int itemdb_read_sqldb(void) // sql item_db read, shortened version of map
 	sprintf(tmp_sql, "SELECT * FROM `%s`", item_db_db);
 
 	// Execute the query; if the query execution fails, output an error
-	if (mysql_query(&mysql_handle, tmp_sql)) {
+	if (mysql_SendQuery(&mysql_handle, tmp_sql)) {
 		ShowMessage("Database server error (executing query for %s): %s\n", item_db_db, mysql_error(&mysql_handle));
 	}
 

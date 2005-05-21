@@ -82,12 +82,12 @@ int guild_skill_get_max(unsigned short id) { // Modified for new skills [Sara]
 }
 
 // ギルドスキルがあるか確認
-int guild_checkskill(struct guild *g,unsigned short skillid)
+int guild_checkskill(struct guild &g,unsigned short skillid)
 {
-	int idx = skillid-GD_SKILLBASE;
-	if(!g || idx < 0 || idx >= MAX_GUILDSKILL)
+	unsigned short idx = skillid-GD_SKILLBASE;
+	if(idx >= MAX_GUILDSKILL)
 		return 0;
-	return g->skill[idx].lv;
+	return g.skill[idx].lv;
 }
 
 static int guild_read_castledb(void)
@@ -172,7 +172,7 @@ int guild_searchname_sub(void *key,void *data,va_list ap)
 	return 0;
 }
 // ギルド名検索
-struct guild* guild_searchname(char *str)
+struct guild* guild_searchname(const char *str)
 {
 	struct guild *g=NULL;
 	numdb_foreach(guild_db,guild_searchname_sub,str,&g);
@@ -184,7 +184,7 @@ struct guild_castle *guild_castle_search(unsigned long gcid)
 }
 
 // mapnameに対応したアジトのgcを返す
-struct guild_castle *guild_mapname2gc(char *mapname)
+struct guild_castle *guild_mapname2gc(const char *mapname)
 {
 	int i;
 	struct guild_castle *gc=NULL;
@@ -197,72 +197,58 @@ struct guild_castle *guild_mapname2gc(char *mapname)
 }
 
 // ログイン中のギルドメンバーの１人のsdを返す
-struct map_session_data *guild_getavailablesd(struct guild *g)
+struct map_session_data *guild_getavailablesd(struct guild &g)
 {
 	int i;
-
-	nullpo_retr(NULL, g);
-
-	for(i=0;i<g->max_member;i++)
-		if(g->member[i].sd!=NULL)
-			return g->member[i].sd;
+	for(i=0;i<g.max_member;i++)
+		if(g.member[i].sd!=NULL)
+			return g.member[i].sd;
 	return NULL;
 }
 
 // ギルドメンバーのインデックスを返す
-int guild_getindex(struct guild *g,unsigned long account_id,unsigned long char_id)
+int guild_getindex(struct guild &g,unsigned long account_id,unsigned long char_id)
 {
-	int i;
-	if(g==NULL)
-		return -1;
-	for(i=0;i<g->max_member;i++)
-		if( g->member[i].account_id==account_id &&
-			g->member[i].char_id==char_id )
+	size_t i;
+	for(i=0;i<g.max_member;i++)
+		if( g.member[i].account_id==account_id &&
+			g.member[i].char_id==char_id )
 			return i;
 	return -1;
 }
 // ギルドメンバーの役職を返す
-int guild_getposition(struct map_session_data *sd,struct guild *g)
+int guild_getposition(struct map_session_data &sd,struct guild &g)
 {
-	int i;
-	nullpo_retr(-1, sd);
-	if(g==NULL && (g=guild_search(sd->status.guild_id))==NULL)
-		return -1;
-	for(i=0;i<g->max_member;i++)
-		if( g->member[i].account_id==sd->status.account_id &&
-			g->member[i].char_id==sd->status.char_id )
-			return g->member[i].position;
+	size_t i;
+	for(i=0; i<g.max_member;i++)
+		if( g.member[i].account_id==sd.status.account_id &&
+			g.member[i].char_id==sd.status.char_id )
+			return g.member[i].position;
 	return -1;
 }
 
 // メンバー情報の作成
-void guild_makemember(struct guild_member &m,struct map_session_data *sd)
+void guild_makemember(struct guild_member &m,struct map_session_data &sd)
 {
-	nullpo_retv(sd);
-
 	memset(&m,0,sizeof(struct guild_member));
-	m.account_id	=sd->status.account_id;
-	m.char_id		=sd->status.char_id;
-	m.hair			=sd->status.hair;
-	m.hair_color	=sd->status.hair_color;
-	m.gender		=sd->sex;
-	m.class_		=sd->status.class_;
-	m.lv			=sd->status.base_level;
+	m.account_id	=sd.status.account_id;
+	m.char_id		=sd.status.char_id;
+	m.hair			=sd.status.hair;
+	m.hair_color	=sd.status.hair_color;
+	m.gender		=sd.status.sex;
+	m.class_		=sd.status.class_;
+	m.lv			=sd.status.base_level;
 	m.exp			=0;
 	m.exp_payper	=0;
 	m.online		=1;
 	m.position		=MAX_GUILDPOSITION-1;
-	memcpy(m.name,sd->status.name,24);
+	memcpy(m.name,sd.status.name,24);
 	return;
 }
 // ギルド競合確認
-int guild_check_conflict(struct map_session_data *sd)
+int guild_check_conflict(struct map_session_data &sd)
 {
-	nullpo_retr(0, sd);
-
-	intif_guild_checkconflict(sd->status.guild_id,
-		sd->status.account_id,sd->status.char_id);
-	return 0;
+	return intif_guild_checkconflict(sd.status.guild_id,sd.status.account_id,sd.status.char_id);
 }
 
 // ギルドのEXPキャッシュをinter鯖にフラッシュする
@@ -280,7 +266,7 @@ int guild_payexp_timer_sub(void *key,void *data,va_list ap)
 
 	if (*delp >= GUILD_PAYEXP_LIST ||
 		(g = guild_search(c->guild_id)) == NULL ||
-		(i = guild_getindex(g, c->account_id, c->char_id)) < 0)
+		(i = guild_getindex(*g, c->account_id, c->char_id)) < 0)
 		return 0;
 
 	// It is *already* fixed... this would be more appropriate ^^; [celest]
@@ -313,20 +299,22 @@ int guild_payexp_timer(int tid,unsigned long tick,int id,int data)
 //------------------------------------------------------------------------
 
 // 作成要求
-int guild_create(struct map_session_data *sd,char *name)
+int guild_create(struct map_session_data &sd,const char *name)
 {
-	nullpo_retr(0, sd);
-
-	if(sd->status.guild_id==0){
-		if(!battle_config.guild_emperium_check || pc_search_inventory(sd,714) >= 0) {
+	if(sd.status.guild_id==0)
+	{
+		if(!battle_config.guild_emperium_check || pc_search_inventory(sd,714) >= 0)
+		{
 			struct guild_member m;
 			guild_makemember(m,sd);
 			m.position=0;
 			intif_guild_create(name,m);
-		} else
-			clif_guild_created(sd,3);	// エンペリウムがいない
-	}else
-		clif_guild_created(sd,1);	// すでに所属している
+		}
+		else
+			clif_guild_created(&sd,3);	// エンペリウムがいない
+	}
+	else
+		clif_guild_created(&sd,1);	// すでに所属している
 
 	return 0;
 }
@@ -338,18 +326,23 @@ int guild_created(unsigned long account_id,unsigned long guild_id)
 
 	if(sd==NULL)
 		return 0;
-	if(guild_id>0) {
-			struct guild *g;
-			sd->status.guild_id=guild_id;
-			sd->guild_sended=0;
-			if((g=(struct guild *) numdb_search(guild_db,guild_id))!=NULL){
-				ShowMessage("guild: id already exists!\n");
-				exit(1);
-			}
-			clif_guild_created(sd,0);
-			if(battle_config.guild_emperium_check)
-				pc_delitem(sd,pc_search_inventory(sd,714),1,0);	// エンペリウム消耗
-	} else {
+
+	if(guild_id>0)
+	{
+		struct guild *g;
+		sd->status.guild_id = guild_id;
+		sd->guild_sended=0;
+		if((g=(struct guild *) numdb_search(guild_db,guild_id))!=NULL)
+		{
+			ShowMessage("guild: id already exists!\n");
+			return 0;
+		}
+		clif_guild_created(sd,0);
+		if(battle_config.guild_emperium_check)
+			pc_delitem(*sd,pc_search_inventory(*sd,714),1,0);	// エンペリウム消耗
+	}
+	else
+	{
 		clif_guild_created(sd,2);	// 作成失敗（同名ギルド存在）
 	}
 	return 0;
@@ -384,33 +377,39 @@ int guild_npc_request_info(unsigned long guild_id,const char *event)
 }
 
 // 所属キャラの確認
-int guild_check_member(const struct guild *g)
+bool guild_check_member(const struct guild &g)
 {
 	size_t i;
 	struct map_session_data *sd;
 
-	nullpo_retr(0, g);
-
-	for(i=0;i<fd_max;i++){
-		if(session[i] && (sd=(struct map_session_data *)session[i]->session_data) && sd->state.auth){
-			if(sd->status.guild_id==g->guild_id){
-				int j,f=1;
-				for(j=0;j<MAX_GUILD;j++){	// データがあるか
-					if(	g->member[j].account_id==sd->status.account_id &&
-						g->member[j].char_id==sd->status.char_id)
-						f=0;
+	for(i=0;i<fd_max;i++)
+	{
+		if( session[i] && 
+			(sd=(struct map_session_data *)session[i]->session_data) && 
+			sd->state.auth &&
+			sd->status.guild_id==g.guild_id
+		  )
+		{
+			size_t j;
+			for(j=0;j<MAX_GUILD;j++)
+			{	// データがあるか
+				if(	g.member[j].account_id==sd->status.account_id &&
+					g.member[j].char_id==sd->status.char_id)
+				{	// found it
+					return true;
 				}
-				if(f){
-					sd->status.guild_id=0;
-					sd->guild_sended=0;
-					sd->guild_emblem_id=0;
-					if(battle_config.error_log)
-						ShowMessage("guild: check_member %d[%s] is not member\n",sd->status.account_id,sd->status.name);
-				}
+			}
+			if(j>=MAX_GUILD)// always valid
+			{
+				sd->status.guild_id=0;
+				sd->guild_sended=0;
+				sd->guild_emblem_id=0;
+				if(battle_config.error_log)
+					ShowMessage("guild: check_member %d[%s] is not member\n",sd->status.account_id,sd->status.name);
 			}
 		}
 	}
-	return 0;
+	return false;
 }
 // 情報所得失敗（そのIDのキャラを全部未所属にする）
 int guild_recv_noinfo(unsigned long guild_id)
@@ -426,59 +425,72 @@ int guild_recv_noinfo(unsigned long guild_id)
 	return 0;
 }
 // 情報所得
-int guild_recv_info(struct guild *sg)
+int guild_recv_info(struct guild &sg)
 {
-	struct guild *g,before;
+	struct guild *g, before;
 	int i,bm,m;
 	struct eventlist *ev,*ev2;
 
-	nullpo_retr(0, sg);
 
-	if((g=(struct guild *) numdb_search(guild_db,sg->guild_id))==NULL){
-		g=(struct guild *)aCalloc(1,sizeof(struct guild));
-		numdb_insert(guild_db,sg->guild_id,g);
-		before=*sg;
-
-		// 最初のロードなのでユーザーのチェックを行う
+	if((g=(struct guild *) numdb_search(guild_db,sg.guild_id))==NULL)
+	{	// 最初のロードなのでユーザーのチェックを行う
 		guild_check_member(sg);
-	}else
-		memcpy(&before,g,sizeof(struct guild));//before=*g;
-	memcpy(g,sg,sizeof(struct guild));
+		memcpy(&before, &sg, sizeof(struct guild)); //before=sg;
 
-	for(i=bm=m=0;i<g->max_member;i++){	// sdの設定と人数の確認
-		if(g->member[i].account_id>0){
+		g=(struct guild *)aCalloc(1,sizeof(struct guild));
+		numdb_insert(guild_db,sg.guild_id,g);
+	
+	}
+	else
+	{
+		memcpy(&before, g, sizeof(struct guild)); //before=*g;
+	}
+	memcpy(g,&sg,sizeof(struct guild));
+
+	for(i=bm=m=0;i<g->max_member;i++)
+	{	// sdの設定と人数の確認
+		if(g->member[i].account_id>0)
+		{
 			struct map_session_data *sd = map_id2sd(g->member[i].account_id);
-			if (sd && sd->status.char_id == g->member[i].char_id &&
+			if(sd && sd->status.char_id == g->member[i].char_id &&
 				sd->status.guild_id == g->guild_id &&
 				!sd->state.waitingdisconnect)
+			{
 				g->member[i].sd = sd;
-			else g->member[i].sd = NULL;
+			}
+			else
+				g->member[i].sd = NULL;
 			m++;
-		}else
+		}
+		else
 			g->member[i].sd=NULL;
 		if(before.member[i].account_id>0)
 			bm++;
 	}
 
-	for(i=0;i<g->max_member;i++){	// 情報の送信
+	for(i=0;i<g->max_member;i++)
+	{	// 情報の送信
 		struct map_session_data *sd = g->member[i].sd;
 		if( sd==NULL )
 			continue;
 
 		if(	before.guild_lv!=g->guild_lv || bm!=m ||
-			before.max_member!=g->max_member ){
+			before.max_member!=g->max_member )
+		{
 			clif_guild_basicinfo(sd);	// 基本情報送信
 			clif_guild_emblem(sd,g);	// エンブレム送信
 		}
 
-		if(bm!=m){		// メンバー情報送信
+		if(bm!=m)
+		{	// メンバー情報送信
 			clif_guild_memberlist(g->member[i].sd);
 		}
 
 		if( before.skill_point!=g->skill_point)
 			clif_guild_skillinfo(sd);	// スキル情報送信
 
-		if( sd->guild_sended==0){	// 未送信なら所属情報も送る
+		if( sd->guild_sended==0)
+		{	// 未送信なら所属情報も送る
 			clif_guild_belonginfo(sd,g);
 			clif_guild_notice(sd,g);
 			sd->guild_emblem_id=g->emblem_id;
@@ -487,9 +499,11 @@ int guild_recv_info(struct guild *sg)
 	}
 
 	// イベントの発生
-	if( (ev=(struct eventlist *)numdb_search(guild_infoevent_db,sg->guild_id))!=NULL ){
-		numdb_erase(guild_infoevent_db,sg->guild_id);
-		while(ev){
+	if( (ev=(struct eventlist *)numdb_search(guild_infoevent_db,sg.guild_id))!=NULL )
+	{
+		numdb_erase(guild_infoevent_db,sg.guild_id);
+		while(ev)
+		{
 			npc_event_do(ev->name);
 			ev2=ev->next;
 			aFree(ev);
@@ -502,27 +516,27 @@ int guild_recv_info(struct guild *sg)
 
 
 // ギルドへの勧誘
-int guild_invite(struct map_session_data *sd,unsigned long account_id)
+int guild_invite(struct map_session_data &sd,unsigned long account_id)
 {
 	struct map_session_data *tsd;
 	struct guild *g;
-	int i;
-
-	nullpo_retr(0, sd);
+	size_t i;
 
 	tsd= map_id2sd(account_id);
-	g=guild_search(sd->status.guild_id);
-
+	g=guild_search(sd.status.guild_id);
 	if(tsd==NULL || g==NULL)
 		return 0;
-	if(!battle_config.invite_request_check) {
-		if (tsd->party_invite>0 || tsd->trade_partner) {	// 相手が取引中かどうか
-			clif_guild_inviteack(sd,0);
+
+	if(!battle_config.invite_request_check)
+	{
+		if (tsd->party_invite>0 || tsd->trade_partner)
+		{	// 相手が取引中かどうか
+			clif_guild_inviteack(&sd,0);
 			return 0;
 		}
 	}
 	if( tsd->status.guild_id>0 || tsd->guild_invite>0 ){	// 相手の所属確認
-		clif_guild_inviteack(sd,0);
+		clif_guild_inviteack(&sd,0);
 		return 0;
 	}
 
@@ -531,54 +545,56 @@ int guild_invite(struct map_session_data *sd,unsigned long account_id)
 		if(g->member[i].account_id==0)
 			break;
 	if(i==g->max_member){
-		clif_guild_inviteack(sd,3);
+		clif_guild_inviteack(&sd,3);
 		return 0;
 	}
 
-	tsd->guild_invite=sd->status.guild_id;
-	tsd->guild_invite_account=sd->status.account_id;
+	tsd->guild_invite=sd.status.guild_id;
+	tsd->guild_invite_account=sd.status.account_id;
 
 	clif_guild_invite(tsd,g);
 	return 0;
 }
 // ギルド勧誘への返答
-int guild_reply_invite(struct map_session_data *sd,unsigned long guild_id,int flag)
+int guild_reply_invite(struct map_session_data &sd,unsigned long guild_id,int flag)
 {
 	struct map_session_data *tsd;
 
-	nullpo_retr(0, sd);
-	nullpo_retr(0, tsd= map_id2sd( sd->guild_invite_account ));
+	nullpo_retr(0, tsd= map_id2sd( sd.guild_invite_account ));
 
-	if(sd->guild_invite!=guild_id)	// 勧誘とギルドIDが違う
+	if(sd.guild_invite!=guild_id)	// 勧誘とギルドIDが違う
 		return 0;
 
-	if(flag==1){	// 承諾
+	if(flag==1)
+	{	// 承諾
 		struct guild_member m;
 		struct guild *g;
-		int i;
+		size_t i;
 
 		// 定員確認
 		if( (g=guild_search(tsd->status.guild_id))==NULL ){
-			sd->guild_invite=0;
-			sd->guild_invite_account=0;
+			sd.guild_invite=0;
+			sd.guild_invite_account=0;
 			return 0;
 		}
 		for(i=0;i<g->max_member;i++)
 			if(g->member[i].account_id==0)
 				break;
 		if(i==g->max_member){
-			sd->guild_invite=0;
-			sd->guild_invite_account=0;
+			sd.guild_invite=0;
+			sd.guild_invite_account=0;
 			clif_guild_inviteack(tsd,3);
 			return 0;
 		}
 		//inter鯖へ追加要求
 		guild_makemember(m,sd);
-		intif_guild_addmember( sd->guild_invite, m );
+		intif_guild_addmember( sd.guild_invite, m );
 		return 0;
-	}else{		// 拒否
-		sd->guild_invite=0;
-		sd->guild_invite_account=0;
+	}
+	else
+	{		// 拒否
+		sd.guild_invite=0;
+		sd.guild_invite_account=0;
 		if(tsd==NULL)
 			return 0;
 		clif_guild_inviteack(tsd,1);
@@ -619,54 +635,50 @@ int guild_member_added(unsigned long guild_id,unsigned long account_id,unsigned 
 		clif_guild_inviteack(sd2,2);
 
 	// いちおう競合確認
-	guild_check_conflict(sd);
+	guild_check_conflict(*sd);
 
 	return 0;
 }
 
 // ギルド脱退要求
-int guild_leave(struct map_session_data *sd,unsigned long guild_id,unsigned long account_id,unsigned long char_id,const char *mes)
+int guild_leave(struct map_session_data &sd,unsigned long guild_id,unsigned long account_id,unsigned long char_id,const char *mes)
 {
 	struct guild *g;
 	int i;
 
-	nullpo_retr(0, sd);
-
-	g = guild_search(sd->status.guild_id);
+	g = guild_search(sd.status.guild_id);
 
 	if(g==NULL)
 		return 0;
 
-	if(	sd->status.account_id!=account_id ||
-		sd->status.char_id!=char_id || sd->status.guild_id!=guild_id)
+	if(	sd.status.account_id!=account_id ||
+		sd.status.char_id!=char_id || sd.status.guild_id!=guild_id)
 		return 0;
 
 	for(i=0;i<g->max_member;i++){	// 所属しているか
-		if(	g->member[i].account_id==sd->status.account_id &&
-			g->member[i].char_id==sd->status.char_id ){
-			intif_guild_leave(g->guild_id,sd->status.account_id,sd->status.char_id,0,mes);
+		if(	g->member[i].account_id==sd.status.account_id &&
+			g->member[i].char_id==sd.status.char_id ){
+			intif_guild_leave(g->guild_id,sd.status.account_id,sd.status.char_id,0,mes);
 			return 0;
 		}
 	}
 	return 0;
 }
 // ギルド追放要求
-int guild_explusion(struct map_session_data *sd,unsigned long guild_id,unsigned long account_id,unsigned long char_id,const char *mes)
+int guild_explusion(struct map_session_data &sd,unsigned long guild_id,unsigned long account_id,unsigned long char_id,const char *mes)
 {
 	struct guild *g;
 	int i,ps;
 
-	nullpo_retr(0, sd);
-
-	g = guild_search(sd->status.guild_id);
+	g = guild_search(sd.status.guild_id);
 
 	if(g==NULL)
 		return 0;
 
-	if(	sd->status.guild_id!=guild_id)
+	if(	sd.status.guild_id!=guild_id)
 		return 0;
 
-	if( (ps=guild_getposition(sd,g))<0 || !(g->position[ps].mode&0x0010) )
+	if( (ps=guild_getposition(sd,*g))<0 || !(g->position[ps].mode&0x0010) )
 		return 0;	// 処罰権限無し
 
 	for(i=0;i<g->max_member;i++){	// 所属しているか
@@ -693,7 +705,7 @@ int guild_member_leaved(unsigned long guild_id,unsigned long account_id,unsigned
 				g->member[i].char_id==char_id ){
 				struct map_session_data *sd2=sd;
 				if(sd2==NULL)
-					sd2=guild_getavailablesd(g);
+					sd2=guild_getavailablesd(*g);
 				else
 				{
 					if(flag==0)
@@ -719,42 +731,40 @@ int guild_member_leaved(unsigned long guild_id,unsigned long account_id,unsigned
 	return 0;
 }
 // ギルドメンバのオンライン状態/Lv更新送信
-int guild_send_memberinfoshort(struct map_session_data *sd,int online)
+int guild_send_memberinfoshort(struct map_session_data &sd,int online)
 {
 	struct guild *g;
 
-	nullpo_retr(0, sd);
-
-	if(sd->status.guild_id<=0)
+	if(sd.status.guild_id<=0)
 		return 0;
-	g=guild_search(sd->status.guild_id);
+	g=guild_search(sd.status.guild_id);
 	if(g==NULL)
 		return 0;
 
 	intif_guild_memberinfoshort(g->guild_id,
-		sd->status.account_id,sd->status.char_id,online,sd->status.base_level,sd->status.class_);
+		sd.status.account_id,sd.status.char_id,online,sd.status.base_level,sd.status.class_);
 
 	if( !online ){	// ログアウトするならsdをクリアして終了
-		int i=guild_getindex(g,sd->status.account_id,sd->status.char_id);
+		int i=guild_getindex(*g,sd.status.account_id,sd.status.char_id);
 		if(i>=0)
 			g->member[i].sd=NULL;
 		return 0;
 	}
 
-	if( sd->guild_sended!=0 )	// ギルド初期送信データは送信済み
+	if( sd.guild_sended!=0 )	// ギルド初期送信データは送信済み
 		return 0;
 
 	// 競合確認
 	guild_check_conflict(sd);
 
 	// あるならギルド初期送信データ送信
-	if( (g=guild_search(sd->status.guild_id))!=NULL ){
-		guild_check_member(g);	// 所属を確認する
-		if(sd->status.guild_id==g->guild_id){
-			clif_guild_belonginfo(sd,g);
-			clif_guild_notice(sd,g);
-			sd->guild_sended=1;
-			sd->guild_emblem_id=g->emblem_id;
+	if( (g=guild_search(sd.status.guild_id))!=NULL ){
+		guild_check_member(*g);	// 所属を確認する
+		if(sd.status.guild_id==g->guild_id){
+			clif_guild_belonginfo(&sd,g);
+			clif_guild_notice(&sd,g);
+			sd.guild_sended=1;
+			sd.guild_emblem_id=g->emblem_id;
 		}
 	}
 	return 0;
@@ -807,23 +817,21 @@ int guild_recv_memberinfoshort(unsigned long guild_id,unsigned long account_id,u
 	return 0;
 }
 // ギルド会話送信
-int guild_send_message(struct map_session_data *sd,char *mes,size_t len)
+int guild_send_message(struct map_session_data &sd,const char *mes, size_t len)
 {
-	nullpo_retr(0, sd);
-
-	if(sd->status.guild_id==0)
+	if(sd.status.guild_id==0)
 		return 0;
-	intif_guild_message(sd->status.guild_id,sd->status.account_id,mes,len);
-	guild_recv_message(sd->status.guild_id,sd->status.account_id,mes,len);
+	intif_guild_message(sd.status.guild_id,sd.status.account_id,mes,len);
+	guild_recv_message(sd.status.guild_id,sd.status.account_id,mes,len);
 
 	//Chatlogging type 'G'
-	log_chat("G", sd->status.guild_id, sd->status.char_id, sd->status.account_id, (char*)sd->mapname, sd->bl.x, sd->bl.y, NULL, mes);
+	log_chat("G", sd.status.guild_id, sd.status.char_id, sd.status.account_id, sd.mapname, sd.bl.x, sd.bl.y, "", mes);
 	
 
 	return 0;
 }
 // ギルド会話受信
-int guild_recv_message(unsigned long guild_id,unsigned long account_id,char *mes,size_t len)
+int guild_recv_message(unsigned long guild_id,unsigned long account_id,const char *mes,size_t len)
 {
 	struct guild *g;
 	if( (g=guild_search(guild_id))==NULL)
@@ -837,45 +845,42 @@ int guild_change_memberposition(unsigned long guild_id,unsigned long account_id,
 	return intif_guild_change_memberinfo(guild_id,account_id,char_id,GMI_POSITION,idx);
 }
 // ギルドメンバの役職変更通知
-int guild_memberposition_changed(struct guild *g,int idx,int pos)
+int guild_memberposition_changed(struct guild &g,unsigned short idx,unsigned short pos)
 {
-	nullpo_retr(0, g);
-
-	g->member[idx].position=pos;
-	clif_guild_memberpositionchanged(g,idx);
+	if(idx<MAX_GUILD)
+	{
+		g.member[idx].position=pos;
+		clif_guild_memberpositionchanged(&g,idx);
+	}
 	return 0;
 }
 // ギルド役職変更
-int guild_change_position(struct map_session_data *sd,int idx,int mode,int exp_mode,const char *name)
+int guild_change_position(struct map_session_data &sd,int idx,int mode,int exp_mode,const char *name)
 {
 	struct guild_position p;
-
-	nullpo_retr(0, sd);
-
 	if(exp_mode > (int)battle_config.guild_exp_limit)
 		exp_mode=battle_config.guild_exp_limit;
 	if(exp_mode<0) exp_mode=0;
 	p.mode=mode;
 	p.exp_mode=exp_mode;
 	memcpy(p.name,name,24);
-	return intif_guild_position(sd->status.guild_id,idx,p);
+	return intif_guild_position(sd.status.guild_id,idx,p);
 }
 // ギルド役職変更通知
-int guild_position_changed(unsigned long guild_id,int idx,struct guild_position *p)
+int guild_position_changed(unsigned long guild_id,int idx,struct guild_position &p)
 {
 	struct guild *g=guild_search(guild_id);
-	if(g==NULL)
-		return 0;
-	memcpy(&g->position[idx],p,sizeof(struct guild_position));
-	clif_guild_positionchanged(g,idx);
+	if(g!=NULL)
+	{
+		memcpy(&g->position[idx],&p,sizeof(struct guild_position));
+		clif_guild_positionchanged(g,idx);
+	}
 	return 0;
 }
 // ギルド告知変更
-int guild_change_notice(struct map_session_data *sd,unsigned long guild_id,const char *mes1,const char *mes2)
+int guild_change_notice(struct map_session_data &sd,unsigned long guild_id,const char *mes1,const char *mes2)
 {
-	nullpo_retr(0, sd);
-
-	if(guild_id!=sd->status.guild_id)
+	if(guild_id!=sd.status.guild_id)
 		return 0;
 	return intif_guild_notice(guild_id,mes1,mes2);
 }
@@ -898,18 +903,17 @@ int guild_notice_changed(unsigned long guild_id,const char *mes1,const char *mes
 	return 0;
 }
 // ギルドエンブレム変更
-int guild_change_emblem(struct map_session_data *sd,int len,const char *data)
+int guild_change_emblem(struct map_session_data &sd,int len,const unsigned char *data)
 {
 	struct guild *g;
-	nullpo_retr(0, sd);
-
-	if (battle_config.require_glory_guild &&
-		!((g = guild_search(sd->status.guild_id)) && guild_checkskill(g, GD_GLORYGUILD)>0)) {
-		clif_skill_fail(sd,GD_GLORYGUILD,0,0);
+	if( battle_config.require_glory_guild &&
+		!((g = guild_search(sd.status.guild_id)) &&
+		guild_checkskill(*g, GD_GLORYGUILD)>0) )
+	{
+		clif_skill_fail(&sd,GD_GLORYGUILD,0,0);
 		return 0;
 	}
-
-	return intif_guild_emblem(sd->status.guild_id,data,len);
+	return intif_guild_emblem(sd.status.guild_id,data,len);
 }
 // ギルドエンブレム変更通知
 int guild_emblem_changed(unsigned short len,unsigned long guild_id,unsigned long emblem_id,const unsigned char *data)
@@ -935,17 +939,15 @@ int guild_emblem_changed(unsigned short len,unsigned long guild_id,unsigned long
 }
 
 // ギルドのEXP上納
-int guild_payexp(struct map_session_data *sd,int exp)
+int guild_payexp(struct map_session_data &sd,int exp)
 {
 	struct guild *g;
 	struct guild_expcache *c;
 	int per,exp2;
 
-	nullpo_retr(0, sd);
-
-	if (sd->status.guild_id == 0 ||
-		(g = guild_search(sd->status.guild_id)) == NULL ||
-		(per = g->position[guild_getposition(sd,g)].exp_mode) <= 0)
+	if (sd.status.guild_id == 0 ||
+		(g = guild_search(sd.status.guild_id)) == NULL ||
+		(per = g->position[guild_getposition(sd,*g)].exp_mode) <= 0)
 		return 0;
 
 	if( per>100 )per=100;
@@ -953,11 +955,11 @@ int guild_payexp(struct map_session_data *sd,int exp)
 	if( (exp2=exp*per/100)<=0 )
 		return 0;
 
-	if( (c=(struct guild_expcache *) numdb_search(guild_expcache_db,sd->status.char_id))==NULL ){
+	if( (c=(struct guild_expcache *) numdb_search(guild_expcache_db,sd.status.char_id))==NULL ){
 		c=(struct guild_expcache *)aCallocA(1,sizeof(struct guild_expcache));
-		c->guild_id=sd->status.guild_id;
-		c->account_id=sd->status.account_id;
-		c->char_id=sd->status.char_id;
+		c->guild_id=sd.status.guild_id;
+		c->account_id=sd.status.account_id;
+		c->char_id=sd.status.char_id;
 		c->exp=exp2;
 		numdb_insert(guild_expcache_db,c->char_id,c);
 	}else{
@@ -968,21 +970,20 @@ int guild_payexp(struct map_session_data *sd,int exp)
 }
 
 // Celest
-int guild_getexp(struct map_session_data *sd,int exp)
+int guild_getexp(struct map_session_data &sd,int exp)
 {
 	struct guild *g;
 	struct guild_expcache *c;
 
-	nullpo_retr(0, sd);
-
-	if(sd->status.guild_id==0 || (g=guild_search(sd->status.guild_id))==NULL )
+	if(sd.status.guild_id==0 || (g=guild_search(sd.status.guild_id))==NULL )
 		return 0;
 
-	if( (c=(struct guild_expcache *) numdb_search(guild_expcache_db,sd->status.char_id))==NULL ){
+	if( (c=(struct guild_expcache *) numdb_search(guild_expcache_db,sd.status.char_id))==NULL )
+	{
 		c=(struct guild_expcache *)aCallocA(1,sizeof(struct guild_expcache));
-		c->guild_id=sd->status.guild_id;
-		c->account_id=sd->status.account_id;
-		c->char_id=sd->status.char_id;
+		c->guild_id=sd.status.guild_id;
+		c->account_id=sd.status.account_id;
+		c->char_id=sd.status.char_id;
 		c->exp=exp;
 		numdb_insert(guild_expcache_db,c->char_id,c);
 	}else{
@@ -993,25 +994,24 @@ int guild_getexp(struct map_session_data *sd,int exp)
 }
 
 // スキルポイント割り振り
-int guild_skillup(struct map_session_data *sd, unsigned short skillid,int flag)
+int guild_skillup(struct map_session_data &sd, unsigned short skillid,int flag)
 {
 	struct guild *g;
-	int idx = skillid - GD_SKILLBASE;
+	unsigned short idx = skillid - GD_SKILLBASE;
 
-	nullpo_retr(0, sd);
-
-	if(idx < 0 || idx >= MAX_GUILDSKILL)
-
+	if(idx >= MAX_GUILDSKILL)
 		return 0;
-	if(sd->status.guild_id==0 || (g=guild_search(sd->status.guild_id))==NULL)
+
+	if(sd.status.guild_id==0 || (g=guild_search(sd.status.guild_id))==NULL)
 		return 0;
-	if(strcmp(sd->status.name,g->master))
+	if( 0 != strcmp(sd.status.name,g->master) )
 		return 0;
 
 	if( (g->skill_point>0 || flag&1) &&
 		g->skill[idx].id!=0 &&
-		g->skill[idx].lv < guild_skill_get_max(skillid) ){
-		intif_guild_skillup(g->guild_id, skillid, sd->status.account_id, flag);
+		g->skill[idx].lv < guild_skill_get_max(skillid) )
+	{
+		intif_guild_skillup(g->guild_id, skillid, sd.status.account_id, flag);
 	}
 	status_calc_pc (sd, 0); // Celest
 
@@ -1066,106 +1066,104 @@ int guild_check_alliance(unsigned long guild_id1, unsigned long guild_id2, int f
 	return 0;
 }
 // ギルド同盟要求
-int guild_reqalliance(struct map_session_data *sd,unsigned long account_id)
+int guild_reqalliance(struct map_session_data &sd,unsigned long account_id)
 {
 	struct map_session_data *tsd= map_id2sd(account_id);
 	struct guild *g[2];
 	int i;
 
 	if(agit_flag)	{	// Disable alliance creation during woe [Valaris]
-		clif_displaymessage(sd->fd,"Alliances cannot be made during Guild Wars!");
+		clif_displaymessage(sd.fd,"Alliances cannot be made during Guild Wars!");
 		return 0;
 	}	// end addition [Valaris]
-
-
-	nullpo_retr(0, sd);
 
 	if(tsd==NULL || tsd->status.guild_id<=0)
 		return 0;
 
-	g[0]=guild_search(sd->status.guild_id);
+	g[0]=guild_search(sd.status.guild_id);
 	g[1]=guild_search(tsd->status.guild_id);
 
 	if(g[0]==NULL || g[1]==NULL)
 		return 0;
 
 	if( guild_get_alliance_count(g[0],0)>3 )	// 同盟数確認
-		clif_guild_allianceack(sd,4);
+		clif_guild_allianceack(&sd,4);
 	if( guild_get_alliance_count(g[1],0)>3 )
-		clif_guild_allianceack(sd,3);
+		clif_guild_allianceack(&sd,3);
 
-	if( tsd->guild_alliance>0 ){	// 相手が同盟要請状態かどうか確認
-		clif_guild_allianceack(sd,1);
+	if( tsd->guild_alliance>0 )
+	{	// 相手が同盟要請状態かどうか確認
+		clif_guild_allianceack(&sd,1);
 		return 0;
 	}
 
 	for(i=0;i<MAX_GUILDALLIANCE;i++){	// すでに同盟状態か確認
 		if(	g[0]->alliance[i].guild_id==tsd->status.guild_id &&
-			g[0]->alliance[i].opposition==0){
-			clif_guild_allianceack(sd,0);
+			g[0]->alliance[i].opposition==0)
+		{
+			clif_guild_allianceack(&sd,0);
 			return 0;
 		}
 	}
 
-	tsd->guild_alliance=sd->status.guild_id;
-	tsd->guild_alliance_account=sd->status.account_id;
+	tsd->guild_alliance=sd.status.guild_id;
+	tsd->guild_alliance_account=sd.status.account_id;
 
-	clif_guild_reqalliance(tsd,sd->status.account_id,g[0]->name);
+	clif_guild_reqalliance(tsd,sd.status.account_id,g[0]->name);
 	return 0;
 }
 // ギルド勧誘への返答
-int guild_reply_reqalliance(struct map_session_data *sd,unsigned long account_id,int flag)
+int guild_reply_reqalliance(struct map_session_data &sd,unsigned long account_id,int flag)
 {
 	struct map_session_data *tsd;
-
-	nullpo_retr(0, sd);
 	nullpo_retr(0, tsd= map_id2sd( account_id ));
 
-	if(sd->guild_alliance!=tsd->status.guild_id)	// 勧誘とギルドIDが違う
+	if(sd.guild_alliance!=tsd->status.guild_id)	// 勧誘とギルドIDが違う
 		return 0;
 
-	if(flag==1){	// 承諾
-		int i;
+	if(flag==1)
+	{	// 承諾
+		size_t i;
 
 		struct guild *g;	// 同盟数再確認
-		if( (g=guild_search(sd->status.guild_id))==NULL ||
+		if( (g=guild_search(sd.status.guild_id))==NULL ||
 			guild_get_alliance_count(g,0)>3 ){
-			clif_guild_allianceack(sd,4);
+			clif_guild_allianceack(&sd,4);
 			clif_guild_allianceack(tsd,3);
 			return 0;
 		}
 		if( (g=guild_search(tsd->status.guild_id))==NULL ||
 			guild_get_alliance_count(g,0)>3 ){
-			clif_guild_allianceack(sd,3);
+			clif_guild_allianceack(&sd,3);
 			clif_guild_allianceack(tsd,4);
 			return 0;
 		}
 
 		// 敵対関係なら敵対を止める
-		if((g=guild_search(sd->status.guild_id)) == NULL)
+		if((g=guild_search(sd.status.guild_id)) == NULL)
 			return 0;
 		for(i=0;i<MAX_GUILDALLIANCE;i++){
 			if(	g->alliance[i].guild_id==tsd->status.guild_id &&
 				g->alliance[i].opposition==1)
-				intif_guild_alliance( sd->status.guild_id,tsd->status.guild_id,
-					sd->status.account_id,tsd->status.account_id,9 );
+				intif_guild_alliance( sd.status.guild_id,tsd->status.guild_id,
+					sd.status.account_id,tsd->status.account_id,9 );
 		}
 		if((g=guild_search(tsd->status.guild_id)) == NULL)
 			return 0;
 		for(i=0;i<MAX_GUILDALLIANCE;i++){
-			if(	g->alliance[i].guild_id==sd->status.guild_id &&
+			if(	g->alliance[i].guild_id==sd.status.guild_id &&
 				g->alliance[i].opposition==1)
-				intif_guild_alliance( tsd->status.guild_id,sd->status.guild_id,
-					tsd->status.account_id,sd->status.account_id,9 );
+				intif_guild_alliance( tsd->status.guild_id,sd.status.guild_id,
+					tsd->status.account_id,sd.status.account_id,9 );
 		}
 
 		// inter鯖へ同盟要請
-		intif_guild_alliance( sd->status.guild_id,tsd->status.guild_id,
-			sd->status.account_id,tsd->status.account_id,0 );
+		intif_guild_alliance( sd.status.guild_id,tsd->status.guild_id,
+			sd.status.account_id,tsd->status.account_id,0 );
 		return 0;
 	}else{		// 拒否
-		sd->guild_alliance=0;
-		sd->guild_alliance_account=0;
+		sd.guild_alliance=0;
+		sd.guild_alliance_account=0;
 		if(tsd!=NULL)
 			clif_guild_allianceack(tsd,3);
 	}
@@ -1324,7 +1322,7 @@ int guild_broken(unsigned long guild_id,int flag)
 	for(i=0;i<g->max_member;i++){	// ギルド解散を通知
 		if((sd=g->member[i].sd)!=NULL){
 			if(sd->state.storage_flag)
-				storage_guild_storage_quit(sd,1);
+				storage_guild_storage_quit(*sd,1);
 			sd->status.guild_id=0;
 			sd->guild_sended=0;
 			clif_guild_broken(g->member[i].sd,0);
@@ -1339,30 +1337,28 @@ int guild_broken(unsigned long guild_id,int flag)
 }
 
 // ギルド解散
-int guild_break(struct map_session_data *sd,char *name)
+int guild_break(struct map_session_data &sd, const char *name)
 {
 	struct guild *g;
 	int i;
 
-	nullpo_retr(0, sd);
-
-	if( (g=guild_search(sd->status.guild_id))==NULL )
+	if( (g=guild_search(sd.status.guild_id))==NULL )
 		return 0;
 	if(strcmp(g->name,name)!=0)
 		return 0;
-	if(strcmp(sd->status.name,g->master)!=0)
+	if( 0 != strcmp(sd.status.name,g->master) )
 		return 0;
 	for(i=0;i<g->max_member;i++){
 		if(	g->member[i].account_id>0 && (
-			g->member[i].account_id!=sd->status.account_id ||
-			g->member[i].char_id!=sd->status.char_id ))
+			g->member[i].account_id!=sd.status.account_id ||
+			g->member[i].char_id!=sd.status.char_id ))
 			break;
 	}
-	if(i<g->max_member){
-		clif_guild_broken(sd,2);
+	if(i<g->max_member)
+	{
+		clif_guild_broken(&sd,2);
 		return 0;
 	}
-
 	intif_guild_break(g->guild_id);
 	return 0;
 }

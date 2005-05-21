@@ -36,7 +36,7 @@ extern int char_fd;		// inter serverのfdはchar_fdを使う
 
 // pet
 int intif_create_pet(unsigned long account_id,unsigned long char_id,short pet_class,short pet_lv,short pet_egg_id,
-	short pet_equip,short intimate,short hungry,char rename_flag,char incuvate,char *pet_name)
+	short pet_equip,short intimate,short hungry,char rename_flag,char incuvate,const char *pet_name)
 {
 	if( !session_isActive(char_fd) )
 		return 0;
@@ -97,7 +97,7 @@ int intif_delete_petdata(unsigned long pet_id)
 }
 
 // GMメッセージを送信
-int intif_GMmessage(char* mes, int flag)
+int intif_GMmessage(const char* mes, int flag)
 {
 	if(mes)
 	{
@@ -118,20 +118,20 @@ int intif_GMmessage(char* mes, int flag)
 }
 
 // The transmission of Wisp/Page to inter-server (player not found on this server)
-int intif_wis_message(struct map_session_data *sd, char *nick, char *mes, size_t len) {
-	nullpo_retr(0, sd);
+int intif_wis_message(struct map_session_data &sd, const char *nick, const char *mes, size_t len)
+{
 	if( !session_isActive(char_fd) )
 		return 0;
 
 	WFIFOW(char_fd,0) = 0x3001;
 	WFIFOW(char_fd,2) = len + 52;
-	memcpy(WFIFOP(char_fd,4), sd->status.name, 24);
+	memcpy(WFIFOP(char_fd,4), sd.status.name, 24);
 	memcpy(WFIFOP(char_fd,28), nick, 24);
 	memcpy(WFIFOP(char_fd,52), mes, len);
 	WFIFOSET(char_fd, len + 52);
 
 	if(battle_config.etc_log)
-		ShowMessage("intif_wis_message from %s to %s (message: '%s')\n", sd->status.name, nick, mes);
+		ShowMessage("intif_wis_message from %s to %s (message: '%s')\n", sd.status.name, nick, mes);
 
 	return 0;
 }
@@ -153,7 +153,7 @@ int intif_wis_replay(int id, int flag)
 }
 
 // The transmission of GM only Wisp/Page from server to inter-server
-int intif_wis_message_to_gm(char *Wisp_name, int min_gm_level, char *mes)
+int intif_wis_message_to_gm(const char *Wisp_name, int min_gm_level, const char *mes)
 {
 	int mes_len;
 	if( !session_isActive(char_fd) )
@@ -173,40 +173,37 @@ int intif_wis_message_to_gm(char *Wisp_name, int min_gm_level, char *mes)
 }
 
 // アカウント変数送信
-int intif_saveaccountreg(struct map_session_data *sd)
+int intif_saveaccountreg(struct map_session_data &sd)
 {
 	size_t j;
 	unsigned short p;
 	if( !session_isActive(char_fd) )
 		return 0;
 
-	nullpo_retr(0, sd);
-
-	if( sd->status.account_reg_num == 0xFFFFFFFF )
+	if( sd.status.account_reg_num == 0xFFFFFFFF )
 		return 0;
 
 	WFIFOW(char_fd,0) = 0x3004;
-	WFIFOL(char_fd,4) = sd->bl.id;
-	for(j=0,p=8;j<sd->status.account_reg_num;j++,p+=36){
-		memcpy(WFIFOP(char_fd,p),sd->status.account_reg[j].str,32);
-		WFIFOL(char_fd,p+32)=sd->status.account_reg[j].value;
+	WFIFOL(char_fd,4) = sd.bl.id;
+	for(j=0,p=8;j<sd.status.account_reg_num;j++,p+=36){
+		memcpy(WFIFOP(char_fd,p),sd.status.account_reg[j].str,32);
+		WFIFOL(char_fd,p+32)=sd.status.account_reg[j].value;
 	}
 	WFIFOW(char_fd,2)=p;
 	WFIFOSET(char_fd,p);
 	return 0;
 }
 // アカウント変数要求
-int intif_request_accountreg(struct map_session_data *sd)
+int intif_request_accountreg(struct map_session_data &sd)
 {
-	nullpo_retr(0, sd);
 	if( !session_isActive(char_fd) )
 		return 0;
 
 	WFIFOW(char_fd,0) = 0x3005;
-	WFIFOL(char_fd,2) = sd->bl.id;
+	WFIFOL(char_fd,2) = sd.bl.id;
 	WFIFOSET(char_fd,6);
 
-	sd->status.account_reg_num = 0xFFFFFFFF;
+	sd.status.account_reg_num = 0xFFFFFFFF;
 
 	return 0;
 }
@@ -262,18 +259,16 @@ int intif_send_guild_storage(unsigned long account_id,struct guild_storage &gsto
 }
 
 // パーティ作成要求
-int intif_create_party(struct map_session_data *sd,const char *name,int item,int item2)
+int intif_create_party(struct map_session_data &sd,const char *name,int item,int item2)
 {
 	if( !session_isActive(char_fd) )
 		return 0;
-	nullpo_retr(0, sd);
-
 	WFIFOW(char_fd,0) = 0x3020;
-	WFIFOL(char_fd,2) = sd->status.account_id;
+	WFIFOL(char_fd,2) = sd.status.account_id;
 	memcpy(WFIFOP(char_fd, 6),name,24);
-	memcpy(WFIFOP(char_fd,30),sd->status.name,24);
-	memcpy(WFIFOP(char_fd,54),map[sd->bl.m].mapname,16);
-	WFIFOW(char_fd,70)= sd->status.base_level;
+	memcpy(WFIFOP(char_fd,30),sd.status.name,24);
+	memcpy(WFIFOP(char_fd,54),map[sd.bl.m].mapname,16);
+	WFIFOW(char_fd,70)= sd.status.base_level;
 	WFIFOB(char_fd,72)= item;
 	WFIFOB(char_fd,73)= item2;
 	WFIFOSET(char_fd,74);
@@ -368,7 +363,7 @@ int intif_break_party(int party_id)
 	return 0;
 }
 // パーティ会話送信
-int intif_party_message(unsigned long party_id,unsigned long account_id,char *mes,size_t len)
+int intif_party_message(unsigned long party_id,unsigned long account_id,const char *mes,size_t len)
 {
 	if( !session_isActive(char_fd) )
 		return 0;
@@ -482,7 +477,7 @@ int intif_guild_break(unsigned long guild_id)
 	return 0;
 }
 // ギルド会話送信
-int intif_guild_message(unsigned long guild_id,unsigned long account_id,char *mes,size_t len)
+int intif_guild_message(unsigned long guild_id,unsigned long account_id,const char *mes,size_t len)
 {
 	if( !session_isActive(char_fd) )
 		return 0;
@@ -597,11 +592,11 @@ int intif_guild_notice(unsigned long guild_id,const char *mes1,const char *mes2)
 	return 0;
 }
 // ギルドエンブレム変更要求
-int intif_guild_emblem(unsigned long guild_id,const char *data,size_t len)
+int intif_guild_emblem(unsigned long guild_id,const unsigned char *data, size_t len)
 {
 	if( !session_isActive(char_fd) )
 		return 0;
-	if(guild_id<=0 || len<0 || len>2000)
+	if(guild_id<=0 || len>2000)
 		return 0;
 	WFIFOW(char_fd,0)=0x303f;
 	WFIFOW(char_fd,2)=len+12;
@@ -640,7 +635,8 @@ int intif_guild_castle_datasave(unsigned short castle_id,int index, int value)
 // Packets receive from inter server
 
 // Wisp/Page reception
-int intif_parse_WisMessage(int fd) { // rewritten by [Yor]
+int intif_parse_WisMessage(int fd)
+{	// rewritten by [Yor]
 	struct map_session_data* sd;
 	int id=RFIFOL(fd,4);
 	int i=0;
@@ -672,7 +668,8 @@ int intif_parse_WisMessage(int fd) { // rewritten by [Yor]
 }
 
 // Wisp/page transmission result reception
-int intif_parse_WisEnd(int fd) {
+int intif_parse_WisEnd(int fd)
+{
 	struct map_session_data* sd;
 
 	if(battle_config.etc_log)
@@ -685,7 +682,8 @@ int intif_parse_WisEnd(int fd) {
 }
 
 // Received wisp message from map-server via char-server for ALL gm
-int mapif_parse_WisToGM(int fd) { // 0x3003/0x3803 <packet_len>.w <wispname>.24B <min_gm_level>.w <message>.?B
+int mapif_parse_WisToGM(int fd)
+{	// 0x3003/0x3803 <packet_len>.w <wispname>.24B <min_gm_level>.w <message>.?B
 	size_t i;
 	int min_gm_level;
 	struct map_session_data *pl_sd;
@@ -701,7 +699,7 @@ int mapif_parse_WisToGM(int fd) { // 0x3003/0x3803 <packet_len>.w <wispname>.24B
 	// information is sended to all online GM
 	for (i = 0; i < fd_max; i++)
 		if(session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth)
-			if(pc_isGM(pl_sd) >= min_gm_level)
+			if(pc_isGM(*pl_sd) >= min_gm_level)
 				clif_wis_message(i, Wisp_name, message, strlen(message) + 1);
 
         if(message != mbuf)
@@ -852,8 +850,7 @@ int intif_parse_PartyInfo(int fd)
 		struct party par;
 //		memcpy(&p, RFIFOP(fd,4), sizeof(struct party));
 		party_frombuffer(par, RFIFOP(fd,4));
-
-		party_recv_info(&par);
+		party_recv_info(par);
 	}
 	return 0;
 }
@@ -928,7 +925,7 @@ int intif_parse_GuildInfo(int fd)
 		struct guild g;
 //		memcpy(&g, RFIFOP(fd,4),sizeof(struct guild));
 		guild_frombuffer(g, RFIFOP(fd,4));
-		guild_recv_info(&g);
+		guild_recv_info(g);
 	}
 	return 0;
 }
@@ -992,11 +989,11 @@ int intif_parse_GuildMemberInfoChanged(int fd)
 	unsigned short dd = (unsigned short)RFIFOL(fd,18);
 	if( g==NULL )
 		return 0;
-	idx=guild_getindex(g,account_id,char_id);
+	idx=guild_getindex(*g,account_id,char_id);
 	switch(type){
 	case GMI_POSITION:
 		g->member[idx].position=dd;
-		guild_memberposition_changed(g,idx,dd);
+		guild_memberposition_changed(*g,idx,dd);
 		break;
 	case GMI_EXP:
 		g->member[idx].exp=dd;
@@ -1017,7 +1014,7 @@ int intif_parse_GuildPosition(int fd)
 //		memcpy(&p,RFIFOP(fd,12),sizeof(struct guild_position));
 		guild_position_frombuffer(pos, RFIFOP(fd,12));
 
-		guild_position_changed(RFIFOL(fd,4),RFIFOL(fd,8),&pos);
+		guild_position_changed(RFIFOL(fd,4),RFIFOL(fd,8),pos);
 	}
 	return 0;
 }

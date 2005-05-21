@@ -1,6 +1,6 @@
 my personal kingdom
 
-based on svn1770
+based on svn1805
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
@@ -9,6 +9,7 @@ and testing some new gimmicks
 start converting function call parameters from pointers
 to references as far as possible, 
 will reduce the amount of NULL checks dramatically
+still converting but almost done, one more week maybe
 ///////////////////////////////////////////////////////////
 keep on updating with branch but do not copy any enhancement
 ///////////////////////////////////////////////////////////

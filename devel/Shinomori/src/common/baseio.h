@@ -229,6 +229,18 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 
 #include <mysql.h>
+///////////////////////////////////////////////////////////////////////////////
+//
+// mysql access function
+//
+///////////////////////////////////////////////////////////////////////////////
+extern inline int mysql_SendQuery(MYSQL *mysql, const char* q)
+{
+#ifdef TWILIGHT
+	ShowSQL("%s:%d# %s\n", __FILE__, __LINE__, q);
+#endif
+	return mysql_real_query(mysql, q, strlen(q));
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -387,7 +399,7 @@ protected:
 
 		sprintf(tmpsql, "INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '', 'lserver', '100','login server started')", def.table_loginlog);
 		//query
-		if (mysql_query(&handle, tmpsql)) {
+		if (mysql_SendQuery(&handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&handle));
 			ret = false;
 		}
@@ -401,7 +413,7 @@ protected:
 		sprintf(tmpsql,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '', 'lserver','100', 'login server shutdown')", def.table_loginlog);
 
 		//query
-		if (mysql_query(&handle, tmpsql)) {
+		if (mysql_SendQuery(&handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&handle));
 			ret = false;
 		}
@@ -410,7 +422,7 @@ protected:
 		sprintf(tmpsql,"DELETE FROM `sstatus`");
 
 		//query
-		if (mysql_query(&handle, tmpsql)) {
+		if (mysql_SendQuery(&handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&handle));
 			ret = false;
 		}
@@ -471,7 +483,7 @@ public:
 		sprintf(tmpsql,"SELECT `%s` FROM `%s` WHERE `%s`='%d'", 
 			def.column_level, def.table_login, def.column_account_id, account_id);
 
-		if (mysql_query(&handle, tmpsql)) {
+		if (mysql_SendQuery(&handle, tmpsql)) {
 			ShowMessage("DB server Error (select GM Level to Memory)- %s\n", mysql_error(&handle));
 		}
 		sql_res = mysql_store_result(&handle);
@@ -499,7 +511,7 @@ public:
 		sprintf(tmpsql, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", 
 			def.column_userid, def.table_login, t_uid);
 
-		if(mysql_query(&handle, tmpsql))
+		if(mysql_SendQuery(&handle, tmpsql))
 		{
 			ShowError("SQL error (NewAccount): %s", mysql_error(&handle));
 		}
@@ -516,7 +528,7 @@ public:
 					def.table_login, def.column_userid, def.column_user_pass, 
 					t_uid, t_pass, sex, "a@a.com");
 
-				if(mysql_query(&handle, tmpsql))
+				if(mysql_SendQuery(&handle, tmpsql))
 				{
 					//Failed to insert new acc :/
 					ShowMessage("SQL error (NewAccount): %s", mysql_error(&handle));
@@ -679,7 +691,7 @@ public:
 		snprintf(tmpsql, sizeof(tmpsql), "SELECT `%s`,`%s` FROM `%s` WHERE `%s`>='%d'",
 			def.column_account_id, def.column_level, def.table_login, def.column_level, def.lowest_gm_level);
 
-		if( mysql_query(&handle, tmpsql) ) 
+		if( mysql_SendQuery(&handle, tmpsql) ) 
 		{
 			ShowMessage("DB server Error (select %s to Memory)- %s\n",def.table_login,mysql_error(&handle));
 		}

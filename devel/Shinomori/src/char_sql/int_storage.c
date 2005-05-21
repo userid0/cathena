@@ -6,16 +6,16 @@
 #include "showmsg.h"
 
 #include "char.h"
+#include "inter.h"
 #include "itemdb.h"
 #include "int_storage.h"
+
 
 #define STORAGE_MEMINC	16
 
 // reset by inter_config_read()
 struct pc_storage *storage_pt=NULL;
 struct guild_storage *guild_storage_pt=NULL;
-
-#define mysql_query(_x, _y)  debug_mysql_query(__FILE__, __LINE__, _x, _y)
 
 // storage data -> DB conversion
 int storage_tosql(unsigned long account_id,struct pc_storage *p){
@@ -58,7 +58,7 @@ int storage_fromsql(unsigned long account_id, struct pc_storage *p){
 
 	// storage {`account_id`/`id`/`nameid`/`amount`/`equip`/`identify`/`refine`/`attribute`/`card0`/`card1`/`card2`/`card3`}
 	sprintf(tmp_sql,"SELECT `id`,`nameid`,`amount`,`equip`,`identify`,`refine`,`attribute`,`card0`,`card1`,`card2`,`card3` FROM `%s` WHERE `account_id`='%d'",storage_db, account_id);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle) );
 	}
 	sql_res = mysql_store_result(&mysql_handle) ;
@@ -128,7 +128,7 @@ int guild_storage_fromsql(int guild_id, struct guild_storage *p){
 
 	// storage {`guild_id`/`id`/`nameid`/`amount`/`equip`/`identify`/`refine`/`attribute`/`card0`/`card1`/`card2`/`card3`}
 	sprintf(tmp_sql,"SELECT `id`,`nameid`,`amount`,`equip`,`identify`,`refine`,`attribute`,`card0`,`card1`,`card2`,`card3` FROM `%s` WHERE `guild_id`='%d'",guild_storage_db, guild_id);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle) );
 	}
 	sql_res = mysql_store_result(&mysql_handle) ;
@@ -180,7 +180,7 @@ void inter_storage_sql_final()
 int inter_storage_delete(unsigned long account_id)
 {
 		sprintf(tmp_sql, "DELETE FROM `%s` WHERE `account_id`='%d'",storage_db, account_id);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 		ShowMessage("DB server Error (delete `storage`)- %s\n", mysql_error(&mysql_handle) );
 	}
 	return 0;
@@ -188,7 +188,7 @@ int inter_storage_delete(unsigned long account_id)
 int inter_guild_storage_delete(unsigned long guild_id)
 {
 	sprintf(tmp_sql, "DELETE FROM `%s` WHERE `guild_id`='%d'",guild_storage_db, guild_id);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 		ShowMessage("DB server Error (delete `guild_storage`)- %s\n", mysql_error(&mysql_handle) );
 	}
 	return 0;
@@ -240,7 +240,7 @@ int mapif_load_guild_storage(int fd,unsigned long account_id,unsigned long guild
 	// Check if guild exists, I may write a function for this later, coz I use it several times.
 	//ShowMessage("- Check if guild %d exists\n",g->guild_id);
 	sprintf(tmp_sql, "SELECT count(*) FROM `%s` WHERE `guild_id`='%d'",guild_db, guild_id);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 		ShowMessage("DB server Error (delete `guild`)- %s\n", mysql_error(&mysql_handle) );
 	}
 	sql_res = mysql_store_result(&mysql_handle) ;
@@ -343,7 +343,7 @@ int mapif_parse_SaveGuildStorage(int fd)
 		// Check if guild exists, I may write a function for this later, coz I use it several times.
 		//ShowMessage("- Check if guild %d exists\n",g->guild_id);
 		sprintf(tmp_sql, "SELECT count(*) FROM `%s` WHERE `guild_id`='%d'",guild_db, guild_id);
-		if(mysql_query(&mysql_handle, tmp_sql) ) {
+		if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 			ShowMessage("DB server Error (delete `guild`)- %s\n", mysql_error(&mysql_handle) );
 		}
 		sql_res = mysql_store_result(&mysql_handle) ;

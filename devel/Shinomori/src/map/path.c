@@ -26,7 +26,7 @@ struct tmp_path
  * Œo˜H’Tõ•â•heap push
  *------------------------------------------
  */
-static void push_heap_path(int *heap,struct tmp_path *tp,int index)
+static void push_heap_path(int heap[],struct tmp_path tp[],int index)
 {
 	int i,h;
 
@@ -49,7 +49,7 @@ static void push_heap_path(int *heap,struct tmp_path *tp,int index)
  * cost‚ªŒ¸‚Á‚½‚Ì‚Åª‚Ì•û‚ÖˆÚ“®
  *------------------------------------------
  */
-static void update_heap_path(int *heap,struct tmp_path *tp,int index)
+static void update_heap_path(int heap[],struct tmp_path tp[],int index)
 {
 	int i,h;
 
@@ -74,7 +74,7 @@ static void update_heap_path(int *heap,struct tmp_path *tp,int index)
  * Œo˜H’Tõ•â•heap pop
  *------------------------------------------
  */
-static int pop_heap_path(int *heap,struct tmp_path *tp)
+static int pop_heap_path(int heap[],struct tmp_path tp[])
 {
 	int i,h,k;
 	int ret,last;
@@ -109,24 +109,22 @@ static int pop_heap_path(int *heap,struct tmp_path *tp)
  * Œ»Ý‚Ì“_‚ÌcostŒvŽZ
  *------------------------------------------
  */
-static int calc_cost(struct tmp_path *p,int x1,int y1)
+static int calc_cost(struct tmp_path &tp,int x1,int y1)
 {
 	int xd,yd;
 
-	nullpo_retr(0, p);
-
-	xd=x1-p->x;
+	xd=x1 - tp.x;
 	if(xd<0) xd=-xd;
-	yd=y1-p->y;
+	yd=y1 - tp.y;
 	if(yd<0) yd=-yd;
-	return (xd+yd)*10+p->dist;
+	return (xd+yd)*10 + tp.dist;
 }
 
 /*==========================================
  * •K—v‚È‚çpath‚ð’Ç‰Á/C³‚·‚é
  *------------------------------------------
  */
-static int add_path(int *heap,struct tmp_path *tp,int x,int y,int dist,int dir,int before,int x1,int y1)
+static int add_path(int heap[],struct tmp_path tp[],int x,int y,int dist,int dir,int before,int x1,int y1)
 {
 	int i;
 
@@ -140,7 +138,7 @@ static int add_path(int *heap,struct tmp_path *tp,int x,int y,int dist,int dir,i
 			tp[i].dist=dist;
 			tp[i].dir=dir;
 			tp[i].before=before;
-			tp[i].cost=calc_cost(&tp[i],x1,y1);
+			tp[i].cost=calc_cost(tp[i],x1,y1);
 			if(tp[i].flag)
 				push_heap_path(heap,tp,i);
 			else
@@ -158,7 +156,7 @@ static int add_path(int *heap,struct tmp_path *tp,int x,int y,int dist,int dir,i
 	tp[i].dist=dist;
 	tp[i].dir=dir;
 	tp[i].before=before;
-	tp[i].cost=calc_cost(&tp[i],x1,y1);
+	tp[i].cost=calc_cost(tp[i],x1,y1);
 	tp[i].flag=0;
 	push_heap_path(heap,tp,i);
 
@@ -245,7 +243,7 @@ int path_blownpos(unsigned short m,int x0,int y0,int dx,int dy,int count)
  *------------------------------------------
  */
 
-bool path_search_long(struct shootpath_data *spd,unsigned short m,unsigned short x0,unsigned short y0,unsigned short x1,unsigned short y1)
+bool path_search_long(unsigned short m,unsigned short x0,unsigned short y0,unsigned short x1,unsigned short y1)
 {
 	int dx, dy;
 	int wx = 0, wy = 0;
@@ -262,24 +260,24 @@ bool path_search_long(struct shootpath_data *spd,unsigned short m,unsigned short
 	}
 	dy = ((int)y1 - (int)y0);
 
-	if (spd) {
-		spd->rx = spd->ry = 0;
-		spd->len = 1;
-		spd->x[0] = x0;
-		spd->y[0] = y0;
-	}
+//	if (spd) {
+//		spd->rx = spd->ry = 0;
+//		spd->len = 1;
+//		spd->x[0] = x0;
+//		spd->y[0] = y0;
+//	}
 
 	if (map_getcellp(map[m],x1,y1,CELL_CHKWALL))
 		return false;
 
 	if (dx > abs(dy)) {
 		weight = dx;
-		if (spd)
-			spd->ry=1;
+//		if (spd)
+//			spd->ry=1;
 	} else {
 		weight = abs(y1 - y0);
-		if (spd)
-			spd->rx=1;
+//		if (spd)
+//			spd->rx=1;
 	}
 
 	while (x0 != x1 || y0 != y1) {
@@ -298,11 +296,11 @@ bool path_search_long(struct shootpath_data *spd,unsigned short m,unsigned short
 			wy += weight;
 			y0 --;
 		}
-		if (spd && spd->len<MAX_WALKPATH) {
-			spd->x[spd->len] = x0;
-			spd->y[spd->len] = y0;
-			spd->len++;
-		}
+//		if (spd && spd->len<MAX_WALKPATH) {
+//			spd->x[spd->len] = x0;
+//			spd->y[spd->len] = y0;
+//			spd->len++;
+//		}
 	}
 	return true;
 }
@@ -551,7 +549,7 @@ int path_search(struct walkpath_data &wpd,unsigned short m,int x0,int y0,int x1,
 	tp[i].dist=0;
 	tp[i].dir=0;
 	tp[i].before=0;
-	tp[i].cost=calc_cost(&tp[i],x1,y1);
+	tp[i].cost=calc_cost(tp[i],x1,y1);
 	tp[i].flag=0;
 	heap[0]=0;
 	push_heap_path(heap,tp,calc_index(x0,y0));

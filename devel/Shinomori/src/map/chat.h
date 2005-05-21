@@ -4,18 +4,18 @@
 
 #include "map.h"
 
-int chat_createchat(struct map_session_data *,int,int,char*,char*,int);
-int chat_joinchat(struct map_session_data *,int,char*);
-int chat_leavechat(struct map_session_data* );
-int chat_changechatowner(struct map_session_data *,char *);
-int chat_changechatstatus(struct map_session_data *,int,int,char*,char*,int);
-int chat_kickchat(struct map_session_data *,char *);
+int chat_createchat(struct map_session_data &sd,unsigned short limit,unsigned char pub,char* pass,char* title,size_t titlelen);
+int chat_joinchat(struct map_session_data &sd,unsigned long chatid,const char* pass);
+int chat_leavechat(struct map_session_data &sd);
+int chat_changechatowner(struct map_session_data &sd,const char *nextownername);
+int chat_changechatstatus(struct map_session_data &sd,unsigned short limit,unsigned char pub,const char* pass,const char* title, size_t titlelen);
+int chat_kickchat(struct map_session_data &sd,const char *kickusername);
 
-int chat_createnpcchat(struct npc_data *nd,int limit,int pub,int trigger,char* title,int titlelen,const char *ev);
-int chat_deletenpcchat(struct npc_data *nd);
-int chat_enableevent(struct chat_data *cd);
-int chat_disableevent(struct chat_data *cd);
-int chat_npckickall(struct chat_data *cd);
+int chat_createnpcchat(struct npc_data &nd,unsigned short limit,unsigned char pub, int trigger,const char* title, unsigned short titlelen,const char *ev);
+int chat_deletenpcchat(struct npc_data &nd);
+int chat_enableevent(struct chat_data &cd);
+int chat_disableevent(struct chat_data &cd);
+int chat_npckickall(struct chat_data &cd);
 
 int do_final_chat(void);
 

@@ -7,10 +7,13 @@
 #include "strlib.h"
 #include "showmsg.h"
 
+
+#include "inter.h"
+#include "int_pet.h"
+
+
 struct s_pet *pet_pt;
 static int pet_newid = 100;
-
-#define mysql_query(_x, _y)  debug_mysql_query(__FILE__, __LINE__, _x, _y)
 
 //---------------------------------------------------------
 int inter_pet_tosql(int pet_id, struct s_pet *p) {
@@ -30,7 +33,7 @@ int inter_pet_tosql(int pet_id, struct s_pet *p) {
 	else if(p->intimate > 1000)
 		p->intimate = 1000;
 	sprintf(tmp_sql,"SELECT * FROM `%s` WHERE `pet_id`='%d'",pet_db, pet_id);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle) );
 	}
 	sql_res = mysql_store_result(&mysql_handle) ;
@@ -44,7 +47,7 @@ int inter_pet_tosql(int pet_id, struct s_pet *p) {
 			pet_db, pet_id, p->class_, t_name, p->account_id, p->char_id, p->level, p->egg_id,
 			p->equip_id, p->intimate, p->hungry, p->rename_flag, p->incuvate);
 	mysql_free_result(sql_res) ; //resource free
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 		ShowMessage("DB server Error (inset/update `pet`)- %s\n", mysql_error(&mysql_handle) );
 	}
 
@@ -61,7 +64,7 @@ int inter_pet_fromsql(int pet_id, struct s_pet *p){
 	//`pet` (`pet_id`, `class`,`name`,`account_id`,`char_id`,`level`,`egg_id`,`equip`,`intimate`,`hungry`,`rename_flag`,`incuvate`)
 
 	sprintf(tmp_sql,"SELECT `pet_id`, `class`,`name`,`account_id`,`char_id`,`level`,`egg_id`,`equip`,`intimate`,`hungry`,`rename_flag`,`incuvate` FROM `%s` WHERE `pet_id`='%d'",pet_db, pet_id);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 			ShowMessage("DB server Error (select `pet`)- %s\n", mysql_error(&mysql_handle) );
 			return 0;
 	}
@@ -106,7 +109,7 @@ int inter_pet_sql_init(){
 	pet_pt = (struct s_pet*)aCalloc(sizeof(struct s_pet), 1);
 
 	sprintf (tmp_sql , "SELECT count(*) FROM `%s`", pet_db);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle) );
 		exit(0);
 	}
@@ -119,7 +122,7 @@ int inter_pet_sql_init(){
 	if (i > 0) {
 		//set pet_newid
 		sprintf (tmp_sql , "SELECT max(`pet_id`) FROM `%s`",pet_db );
-		if(mysql_query(&mysql_handle, tmp_sql) ) {
+		if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle) );
 		}
 
@@ -143,7 +146,7 @@ int inter_pet_delete(int pet_id){
 	ShowMessage("request delete pet: %d.......\n",pet_id);
 
 	sprintf(tmp_sql,"DELETE FROM `%s` WHERE `pet_id`='%d'",pet_db, pet_id);
-	if(mysql_query(&mysql_handle, tmp_sql) ) {
+	if(mysql_SendQuery(&mysql_handle, tmp_sql) ) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle) );
 	}
 	return 0;

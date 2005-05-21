@@ -3,26 +3,28 @@
 #define _SCRIPT_H_
 
 extern struct Script_Config {
-	int warn_func_no_comma;
-	int warn_cmd_no_comma;
-	int warn_func_mismatch_paramnum;
-	int warn_cmd_mismatch_paramnum;
+	unsigned verbose_mode : 1;
+	unsigned warn_func_no_comma : 1;
+	unsigned warn_cmd_no_comma : 1;
+	unsigned warn_func_mismatch_paramnum : 1;
+	unsigned warn_cmd_mismatch_paramnum : 1;
 	int check_cmdcount;
 	int check_gotocount;
 
-	int event_script_type;
-	char* die_event_name;
-	char* kill_event_name;
-	char* login_event_name;
-	char* logout_event_name;
-	int event_requires_trigger;
+	unsigned event_script_type : 1;
+	char die_event_name[24];
+	char kill_event_name[24];
+	char login_event_name[24];
+	char logout_event_name[24];
+	char mapload_event_name[24];
+	unsigned event_requires_trigger : 1;
 } script_config;
 
 struct script_data {
 	int type;
 	union {
 		int num;
-		char *str;
+		const char *str;
 	} u;
 };
 
@@ -30,25 +32,32 @@ struct script_stack {
 	int sp;
 	size_t sp_max;
 	struct script_data *stack_data;
+	script_stack() : sp(0),sp_max(0),stack_data(NULL)	{}
 };
-struct script_state {
-	struct script_stack *stack;
+struct script_state
+{
+	struct script_stack stack;
 	size_t start;
 	size_t end;
 	size_t pos;
 	int state;
 	unsigned long rid;
 	unsigned long oid;
-	char *script,*new_script;
-	int defsp,new_pos,new_defsp;
+	const char *script;
+	const char *new_script;
+	int defsp;
+	int new_pos;
+	int new_defsp;
+
+//	script_state(struct script_stack s) : stack(s)	{}
 };
 
 char * parse_script(unsigned char *src,int line);
 int run_script(char *,int,int,int);
 
-int set_var(struct map_session_data *sd, char *name, void *val);
+int set_var(struct map_session_data &sd, const char *name, void *val);
 int conv_num(struct script_state *st,struct script_data *data);
-char* conv_str(struct script_state *st,struct script_data *data);
+const char* conv_str(struct script_state &st,struct script_data &data);
 
 struct dbt* script_get_label_db();
 struct dbt* script_get_userfunc_db();

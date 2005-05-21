@@ -1,7 +1,7 @@
 // Logging functions by Azndragon & Codemaster
 #include "base.h"
-#include "../common/strlib.h"
-#include "../common/nullpo.h"
+#include "strlib.h"
+#include "nullpo.h"
 #include "itemdb.h"
 #include "map.h"
 #include "showmsg.h"
@@ -10,8 +10,6 @@
 
 struct LogConfig log_config;
 
-char timestring[255];
-time_t curtime;
 
 //FILTER OPTIONS
 //0 = Don't log
@@ -30,7 +28,8 @@ time_t curtime;
 //12 - Log rare items (if their drop chance <= rare_log )
 
 //check if this item should be logger according the settings
-int should_log_item(int filter, unsigned short nameid) {
+int should_log_item(int filter, unsigned short nameid)
+{
 	struct item_data *item_data;
 	if (nameid<512 || (item_data= itemdb_search(nameid)) == NULL) return 0;
 	if ( (filter&1) || // Filter = 1, we log any item
@@ -48,7 +47,7 @@ int should_log_item(int filter, unsigned short nameid) {
 	return 0;
 }
 
-int log_branch(struct map_session_data *sd)
+int log_branch(struct map_session_data &sd)
 {
 #ifndef TXT_ONLY
 		char t_name[100];
@@ -57,20 +56,23 @@ int log_branch(struct map_session_data *sd)
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
+
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`branch_date`, `account_id`, `char_id`, `char_name`, `map`) VALUES (NOW(), '%d', '%d', '%s', '%s')",
-			log_config.log_branch_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), sd->mapname);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+			log_config.log_branch_db, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), sd.mapname);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_branch,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld:%ld]\t%s"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, sd->mapname);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%s"RETCODE, timestring, sd.status.name, sd.status.account_id, sd.status.char_id, sd.mapname);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -79,14 +81,14 @@ int log_branch(struct map_session_data *sd)
 	return 0;
 }
 
-int log_drop(struct map_session_data *sd, int monster_id, int *log_drop)
+int log_drop(struct map_session_data &sd, unsigned long monster_id, int log_drop[])
 {
 	FILE *logfp;
 	int i,flag = 0;
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
+
 	for (i = 0; i<10; i++) { //Should we log these items? [Lupus]
 		flag += should_log_item(log_config.drop,log_drop[i]);
 	}
@@ -95,18 +97,17 @@ int log_drop(struct map_session_data *sd, int monster_id, int *log_drop)
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
-		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`drop_date`, `kill_char_id`, `monster_id`, `item1`, `item2`, `item3`, `item4`, `item5`, `item6`, `item7`, `item8`, `item9`, `itemCard`, `map`) VALUES (NOW(), '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%s') ", log_config.log_drop_db, sd->status.char_id, monster_id, log_drop[0], log_drop[1], log_drop[2], log_drop[3], log_drop[4], log_drop[5], log_drop[6], log_drop[7], log_drop[8], log_drop[9], sd->mapname);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`drop_date`, `kill_char_id`, `monster_id`, `item1`, `item2`, `item3`, `item4`, `item5`, `item6`, `item7`, `item8`, `item9`, `itemCard`, `map`) VALUES (NOW(), '%ld', '%ld', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%s') ", log_config.log_drop_db, sd.status.char_id, monster_id, log_drop[0], log_drop[1], log_drop[2], log_drop[3], log_drop[4], log_drop[5], log_drop[6], log_drop[7], log_drop[8], log_drop[9], sd.mapname);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_drop,"a+")) != NULL) {
-			
-
+			char timestring[128];
 			time_t curtime;
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d,%d,%d,%d,%d,%d,%d,%d,%d,%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, monster_id, log_drop[0], log_drop[1], log_drop[2], log_drop[3], log_drop[4], log_drop[5], log_drop[6], log_drop[7], log_drop[8], log_drop[9]);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%ld\t%d,%d,%d,%d,%d,%d,%d,%d,%d,%d"RETCODE, timestring, sd.status.name, sd.status.account_id, sd.status.char_id, monster_id, log_drop[0], log_drop[1], log_drop[2], log_drop[3], log_drop[4], log_drop[5], log_drop[6], log_drop[7], log_drop[8], log_drop[9]);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -115,25 +116,28 @@ int log_drop(struct map_session_data *sd, int monster_id, int *log_drop)
 	return 1; //Logged
 }
 
-int log_mvpdrop(struct map_session_data *sd, int monster_id, int *log_mvp)
+int log_mvpdrop(struct map_session_data &sd, unsigned long monster_id, int log_mvp[])
 {
 	FILE *logfp;
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
+
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
-		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`mvp_date`, `kill_char_id`, `monster_id`, `prize`, `mvpexp`, `map`) VALUES (NOW(), '%d', '%d', '%d', '%d', '%s') ", log_config.log_mvpdrop_db, sd->status.char_id, monster_id, log_mvp[0], log_mvp[1], sd->mapname);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`mvp_date`, `kill_char_id`, `monster_id`, `prize`, `mvpexp`, `map`) VALUES (NOW(), '%ld', '%ld', '%d', '%d', '%s') ", log_config.log_mvpdrop_db, sd.status.char_id, monster_id, log_mvp[0], log_mvp[1], sd.mapname);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_mvpdrop,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d,%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, monster_id, log_mvp[0], log_mvp[1]);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%ld\t%d,%d"RETCODE, timestring, sd.status.name, sd.status.account_id, sd.status.char_id, monster_id, log_mvp[0], log_mvp[1]);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -142,7 +146,7 @@ int log_mvpdrop(struct map_session_data *sd, int monster_id, int *log_mvp)
 	return 0;
 }
 
-int log_present(struct map_session_data *sd, int source_type, unsigned short nameid)
+int log_present(struct map_session_data &sd, int source_type, unsigned short nameid)
 {
 	FILE *logfp;
 #ifndef TXT_ONLY
@@ -151,21 +155,24 @@ int log_present(struct map_session_data *sd, int source_type, unsigned short nam
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
+
 	if(!should_log_item(log_config.present,nameid)) return 0;	//filter [Lupus]
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`present_date`, `src_id`, `account_id`, `char_id`, `char_name`, `nameid`, `map`) VALUES (NOW(), '%d', '%d', '%d', '%s', '%d', '%s') ",
-			log_config.log_present_db, source_type, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), nameid, sd->mapname);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+			log_config.log_present_db, source_type, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), nameid, sd.mapname);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_present,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, source_type, nameid);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d"RETCODE, timestring, sd.status.name, sd.status.account_id, sd.status.char_id, source_type, nameid);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -174,7 +181,7 @@ int log_present(struct map_session_data *sd, int source_type, unsigned short nam
 	return 0;
 }
 
-int log_produce(struct map_session_data *sd, unsigned short nameid, int slot1, int slot2, int slot3, int success)
+int log_produce(struct map_session_data &sd, unsigned short nameid, int slot1, int slot2, int slot3, int success)
 {
 	FILE *logfp;
 #ifndef TXT_ONLY
@@ -183,21 +190,24 @@ int log_produce(struct map_session_data *sd, unsigned short nameid, int slot1, i
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
+
 	if(!should_log_item(log_config.produce,nameid)) return 0;	//filter [Lupus]
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`produce_date`, `account_id`, `char_id`, `char_name`, `nameid`, `slot1`, `slot2`, `slot3`, `map`, `success`) VALUES (NOW(), '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%s', '%d') ",
-			log_config.log_produce_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), nameid, slot1, slot2, slot3, sd->mapname, success);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+			log_config.log_produce_db, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), nameid, slot1, slot2, slot3, sd.mapname, success);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_produce,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d,%d,%d\t%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, nameid, slot1, slot2, slot3, success);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%d\t%d,%d,%d\t%d"RETCODE, timestring, sd.status.name, sd.status.account_id, sd.status.char_id, nameid, slot1, slot2, slot3, success);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -206,7 +216,7 @@ int log_produce(struct map_session_data *sd, unsigned short nameid, int slot1, i
 	return 0;
 }
 
-int log_refine(struct map_session_data *sd, int n, int success)
+int log_refine(struct map_session_data &sd, int n, int success)
 {
 	FILE *logfp;
 	int log_card[4];
@@ -219,29 +229,30 @@ int log_refine(struct map_session_data *sd, int n, int success)
 	if(log_config.enable_logs <= 0)
 		return 0;
 
-	nullpo_retr(0, sd);
-
 	if(success == 0)
 		item_level = 0;
 	else
-		item_level = sd->status.inventory[n].refine + 1;
-	if(!should_log_item(log_config.refine,sd->status.inventory[n].nameid)) return 0;	//filter [Lupus]
+		item_level = sd.status.inventory[n].refine + 1;
+	if(!should_log_item(log_config.refine,sd.status.inventory[n].nameid)) return 0;	//filter [Lupus]
 	for(i=0;i<4;i++)
-		log_card[i] = sd->status.inventory[n].card[i];
+		log_card[i] = sd.status.inventory[n].card[i];
 
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`refine_date`, `account_id`, `char_id`, `char_name`, `nameid`, `refine`, `card0`, `card1`, `card2`, `card3`, `map`, `success`, `item_level`) VALUES (NOW(), '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%d', '%d')",
-			log_config.log_refine_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), sd->status.inventory[n].nameid, sd->status.inventory[n].refine, log_card[0], log_card[1], log_card[2], log_card[3], sd->mapname, success, item_level);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+			log_config.log_refine_db, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), sd.status.inventory[n].nameid, sd.status.inventory[n].refine, log_card[0], log_card[1], log_card[2], log_card[3], sd.mapname, success, item_level);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_refine,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld:%ld]\t%d,%d\t%d%d%d%d\t%d,%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, sd->status.inventory[n].nameid, sd->status.inventory[n].refine, log_card[0], log_card[1], log_card[2], log_card[3], success, item_level);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%d,%d\t%d%d%d%d\t%d,%d"RETCODE, timestring, sd.status.name, sd.status.account_id, sd.status.char_id, sd.status.inventory[n].nameid, sd.status.inventory[n].refine, log_card[0], log_card[1], log_card[2], log_card[3], success, item_level);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -250,69 +261,73 @@ int log_refine(struct map_session_data *sd, int n, int success)
 	return 0;
 }
 
-int log_tostorage(struct map_session_data *sd,int n, int guild) 
+int log_tostorage(struct map_session_data &sd,int n, int guild) 
 {
 	FILE *logfp;
-	nullpo_retr(0, sd);
 
 	if(log_config.enable_logs <= 0 || log_config.storage == 0 || log_config.log_storage[0] == '\0')
 		return 0;
-	if(sd->status.inventory[n].nameid==0 || sd->inventory_data[n] == NULL)
+	if(sd.status.inventory[n].nameid==0 || sd.inventory_data[n] == NULL)
 		return 1;
 
-	if( sd->status.inventory[n].amount > MAX_AMOUNT )//sd->status.inventory[n].amount < 0 )
+	if( sd.status.inventory[n].amount > MAX_AMOUNT )//sd.status.inventory[n].amount < 0 )
 		return 1;
 
 	if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
+		char timestring[128];
+		time_t curtime;
+
 		time(&curtime);
-		strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+		strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
 		fprintf(logfp,"%s - to %s: %s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d"RETCODE, 
 			timestring, guild ? "guild_storage": "storage", 
-			sd->status.name, sd->status.account_id, sd->status.char_id, 
-			sd->status.inventory[n].nameid,
-			sd->status.inventory[n].amount,
-			sd->status.inventory[n].refine,
-			sd->status.inventory[n].card[0],
-			sd->status.inventory[n].card[1],
-			sd->status.inventory[n].card[2],
-			sd->status.inventory[n].card[3] );
+			sd.status.name, sd.status.account_id, sd.status.char_id, 
+			sd.status.inventory[n].nameid,
+			sd.status.inventory[n].amount,
+			sd.status.inventory[n].refine,
+			sd.status.inventory[n].card[0],
+			sd.status.inventory[n].card[1],
+			sd.status.inventory[n].card[2],
+			sd.status.inventory[n].card[3] );
 		fclose(logfp);
 	}
 	return 0;
 }
 
-int log_fromstorage(struct map_session_data *sd,int n, int guild) 
+int log_fromstorage(struct map_session_data &sd,int n, int guild) 
 {
 	FILE *logfp;
 
-	nullpo_retr(0, sd);
 	if(log_config.enable_logs <= 0 || log_config.storage == 0 || log_config.log_storage[0] == '\0')
 		return 0;
-	if(sd->status.inventory[n].nameid==0 || sd->inventory_data[n] == NULL)
+	if(sd.status.inventory[n].nameid==0 || sd.inventory_data[n] == NULL)
 		return 1;
 
-	if( sd->status.inventory[n].amount > MAX_AMOUNT )//sd->status.inventory[n].amount < 0 )
+	if( sd.status.inventory[n].amount > MAX_AMOUNT )//sd.status.inventory[n].amount < 0 )
 		return 1;
 	
 	if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
+		char timestring[128];
+		time_t curtime;
+
 		time(&curtime);
-		strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+		strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
 		fprintf(logfp,"%s - from %s: %s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d"RETCODE, 
 			timestring, guild ? "guild_storage": "storage", 
-			sd->status.name, sd->status.account_id, sd->status.char_id, 
-			sd->status.inventory[n].nameid,
-			sd->status.inventory[n].amount,
-			sd->status.inventory[n].refine,
-			sd->status.inventory[n].card[0],
-			sd->status.inventory[n].card[1],
-			sd->status.inventory[n].card[2],
-			sd->status.inventory[n].card[3]);
+			sd.status.name, sd.status.account_id, sd.status.char_id, 
+			sd.status.inventory[n].nameid,
+			sd.status.inventory[n].amount,
+			sd.status.inventory[n].refine,
+			sd.status.inventory[n].card[0],
+			sd.status.inventory[n].card[1],
+			sd.status.inventory[n].card[2],
+			sd.status.inventory[n].card[3]);
 		fclose(logfp);
 	}
 	return 0;
 }
 
-int log_trade(struct map_session_data *sd, struct map_session_data *target_sd, int n,int amount)
+int log_trade(struct map_session_data &sd, struct map_session_data &target_sd, int n,int amount)
 {
 	FILE *logfp;
 	int log_nameid, log_amount, log_refine, log_card[4];
@@ -323,34 +338,36 @@ int log_trade(struct map_session_data *sd, struct map_session_data *target_sd, i
 	if(log_config.enable_logs <= 0)
 		return 0;
 
-	nullpo_retr(0, sd);
 
-	if(sd->status.inventory[n].nameid==0 || amount <= 0 || sd->status.inventory[n].amount<amount || sd->inventory_data[n] == NULL)
+	if(sd.status.inventory[n].nameid==0 || amount <= 0 || sd.status.inventory[n].amount<amount || sd.inventory_data[n] == NULL)
 		return 1;
 
-	if( sd->status.inventory[n].amount > MAX_AMOUNT )//sd->status.inventory[n].amount < 0 )
+	if( sd.status.inventory[n].amount > MAX_AMOUNT )//sd.status.inventory[n].amount < 0 )
 		return 1;
-	if(!should_log_item(log_config.trade,sd->status.inventory[n].nameid)) return 0;	//filter [Lupus]
-	log_nameid = sd->status.inventory[n].nameid;
-	log_amount = sd->status.inventory[n].amount;
-	log_refine = sd->status.inventory[n].refine;
+	if(!should_log_item(log_config.trade,sd.status.inventory[n].nameid)) return 0;	//filter [Lupus]
+	log_nameid = sd.status.inventory[n].nameid;
+	log_amount = sd.status.inventory[n].amount;
+	log_refine = sd.status.inventory[n].refine;
 
 	for(i=0;i<4;i++)
-		log_card[i] = sd->status.inventory[n].card[i];
+		log_card[i] = sd.status.inventory[n].card[i];
 
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`trade_date`, `src_account_id`, `src_char_id`, `src_char_name`, `des_account_id`, `des_char_id`, `des_char_name`, `nameid`, `amount`, `refine`, `card0`, `card1`, `card2`, `card3`, `map`) VALUES (NOW(), '%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%s')",
-			log_config.log_trade_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), target_sd->status.account_id, target_sd->status.char_id, jstrescapecpy(t_name2, target_sd->status.name), log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], sd->mapname);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+			log_config.log_trade_db, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), target_sd.status.account_id, target_sd.status.char_id, jstrescapecpy(t_name2, target_sd.status.name), log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], sd.mapname);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld:%ld]\t%s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, target_sd->status.name, target_sd->status.account_id, target_sd->status.char_id, log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3]);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d"RETCODE, timestring, sd.status.name, sd.status.account_id, sd.status.char_id, target_sd.status.name, target_sd.status.account_id, target_sd.status.char_id, log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3]);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -359,7 +376,7 @@ int log_trade(struct map_session_data *sd, struct map_session_data *target_sd, i
 	return 0;
 }
 
-int log_vend(struct map_session_data *sd,struct map_session_data *vsd,int n,int amount, int zeny)
+int log_vend(struct map_session_data &sd,struct map_session_data &vsd,int n,int amount, int zeny)
 {
 	FILE *logfp;
 	int log_nameid, log_amount, log_refine, log_card[4];
@@ -370,32 +387,34 @@ int log_vend(struct map_session_data *sd,struct map_session_data *vsd,int n,int 
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
 
-	if(sd->status.inventory[n].nameid==0 || amount <= 0 || sd->status.inventory[n].amount<amount || sd->inventory_data[n] == NULL)
+	if(sd.status.inventory[n].nameid==0 || amount <= 0 || sd.status.inventory[n].amount<amount || sd.inventory_data[n] == NULL)
 		return 1;
-	if( sd->status.inventory[n].amount > MAX_AMOUNT )//sd->status.inventory[n].amount < 0 )
+	if( sd.status.inventory[n].amount > MAX_AMOUNT )//sd.status.inventory[n].amount < 0 )
 		return 1;
-	if(!should_log_item(log_config.vend,sd->status.inventory[n].nameid)) return 0;	//filter [Lupus]
-	log_nameid = sd->status.inventory[n].nameid;
-	log_amount = sd->status.inventory[n].amount;
-	log_refine = sd->status.inventory[n].refine;
+	if(!should_log_item(log_config.vend,sd.status.inventory[n].nameid)) return 0;	//filter [Lupus]
+	log_nameid = sd.status.inventory[n].nameid;
+	log_amount = sd.status.inventory[n].amount;
+	log_refine = sd.status.inventory[n].refine;
 	for(i=0;i<4;i++)
-		log_card[i] = sd->status.inventory[n].card[i];
+		log_card[i] = sd.status.inventory[n].card[i];
 
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 			sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`vend_date`, `vend_account_id`, `vend_char_id`, `vend_char_name`, `buy_account_id`, `buy_char_id`, `buy_char_name`, `nameid`, `amount`, `refine`, `card0`, `card1`, `card2`, `card3`, `map`, `zeny`) VALUES (NOW(), '%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%d')",
-				log_config.log_vend_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), vsd->status.account_id, vsd->status.char_id, jstrescapecpy(t_name2, vsd->status.name), log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], sd->mapname, zeny);
-			if(mysql_query(&mmysql_handle, tmp_sql))
+				log_config.log_vend_db, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), vsd.status.account_id, vsd.status.char_id, jstrescapecpy(t_name2, vsd.status.name), log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], sd.mapname, zeny);
+			if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 				ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_vend,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld:%ld]\t%s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d\t%d"RETCODE, timestring, sd->status.name, sd->status.account_id, sd->status.char_id, vsd->status.name, vsd->status.account_id, vsd->status.char_id, log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], zeny);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld:%ld]\t%s[%ld:%ld]\t%d\t%d\t%d\t%d,%d,%d,%d\t%d"RETCODE, timestring, sd.status.name, sd.status.account_id, sd.status.char_id, vsd.status.name, vsd.status.account_id, vsd.status.char_id, log_nameid, log_amount, log_refine, log_card[0], log_card[1], log_card[2], log_card[3], zeny);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -404,7 +423,7 @@ int log_vend(struct map_session_data *sd,struct map_session_data *vsd,int n,int 
 	return 0;
 }
 
-int log_zeny(struct map_session_data *sd, struct map_session_data *target_sd,int amount)
+int log_zeny(struct map_session_data &sd, struct map_session_data &target_sd,int amount)
 {
 	FILE *logfp;
 #ifndef TXT_ONLY
@@ -413,20 +432,23 @@ int log_zeny(struct map_session_data *sd, struct map_session_data *target_sd,int
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
+
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql,"INSERT DELAYED INTO `%s` (`trade_date`, `src_account_id`, `src_char_id`, `src_char_name`, `des_account_id`, `des_char_id`, `des_char_name`, `map`, `zeny`) VALUES (NOW(), '%d', '%d', '%s', '%d', '%d', '%s', '%s', '%d')",
-			log_config.log_trade_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), target_sd->status.account_id, target_sd->status.char_id, jstrescapecpy(t_name2, target_sd->status.name), sd->mapname, sd->deal_zeny);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+			log_config.log_trade_db, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), target_sd.status.account_id, target_sd.status.char_id, jstrescapecpy(t_name2, target_sd.status.name), sd.mapname, sd.deal_zeny);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_trade,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld]\t%s[%ld]\t%ld"RETCODE, timestring, sd->status.name, sd->status.account_id, target_sd->status.name, target_sd->status.account_id, sd->deal_zeny);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld]\t%s[%ld]\t%ld"RETCODE, timestring, sd.status.name, sd.status.account_id, target_sd.status.name, target_sd.status.account_id, sd.deal_zeny);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -435,7 +457,7 @@ int log_zeny(struct map_session_data *sd, struct map_session_data *target_sd,int
 	return 0;
 }
 
-int log_atcommand(struct map_session_data *sd, const char *message)
+int log_atcommand(struct map_session_data &sd, const char *message)
 {
 	FILE *logfp;
 #ifndef TXT_ONLY
@@ -445,20 +467,23 @@ int log_atcommand(struct map_session_data *sd, const char *message)
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
+
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`atcommand_date`, `account_id`, `char_id`, `char_name`, `map`, `command`) VALUES(NOW(), '%d', '%d', '%s', '%s', '%s') ",
-			log_config.log_gm_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), sd->mapname, jstrescapecpy(t_msg, (char *)message));
-		if(mysql_query(&mmysql_handle, tmp_sql))
+			log_config.log_gm_db, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), sd.mapname, jstrescapecpy(t_msg, (char *)message));
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_gm,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld]: %s"RETCODE,timestring,sd->status.name,sd->status.account_id,message);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld]: %s"RETCODE,timestring,sd.status.name,sd.status.account_id,message);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -467,7 +492,7 @@ int log_atcommand(struct map_session_data *sd, const char *message)
 	return 0;
 }
 
-int log_npc(struct map_session_data *sd, const char *message)
+int log_npc(struct map_session_data &sd, const char *message)
 {	//[Lupus]
 	FILE *logfp;
 	#ifndef TXT_ONLY
@@ -476,20 +501,23 @@ int log_npc(struct map_session_data *sd, const char *message)
 
 	if(log_config.enable_logs <= 0)
 		return 0;
-	nullpo_retr(0, sd);
+
 #ifndef TXT_ONLY
 	if(log_config.sql_logs > 0)
 	{
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`npc_date`, `account_id`, `char_id`, `char_name`, `map`, `mes`) VALUES(NOW(), '%d', '%d', '%s', '%s', '%s') ",
-			log_config.log_npc_db, sd->status.account_id, sd->status.char_id, jstrescapecpy(t_name, sd->status.name), sd->mapname, message);
-		if(mysql_query(&mmysql_handle, tmp_sql))
+			log_config.log_npc_db, sd.status.account_id, sd.status.char_id, jstrescapecpy(t_name, sd.status.name), sd.mapname, message);
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql))
 			ShowMessage("DB server Error - %s\n",mysql_error(&mmysql_handle));
 	} else {
 #endif
 		if((logfp=savefopen(log_config.log_npc,"a+")) != NULL) {
+			char timestring[128];
+			time_t curtime;
+
 			time(&curtime);
-			strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-			fprintf(logfp,"%s - %s[%ld]: %s"RETCODE,timestring,sd->status.name,sd->status.account_id,message);
+			strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+			fprintf(logfp,"%s - %s[%ld]: %s"RETCODE,timestring,sd.status.name,sd.status.account_id,message);
 			fclose(logfp);
 		}
 #ifndef TXT_ONLY
@@ -499,7 +527,8 @@ int log_npc(struct map_session_data *sd, const char *message)
 }
 
 //ChatLogging
-int log_chat(char *type, int type_id, int src_charid, int src_accid, char *map, int x, int y, char *dst_charname, char *message){
+int log_chat(const char *type, int type_id, int src_charid, int src_accid, const char *map, int x, int y, const char *dst_charname, const char *message)
+{
 
 	//Check ON/OFF
 	if(log_config.chat <= 0){
@@ -511,7 +540,7 @@ int log_chat(char *type, int type_id, int src_charid, int src_accid, char *map, 
 		sprintf(tmp_sql, "INSERT DELAYED INTO `%s` (`time`, `type`, `type_id`, `src_charid`, `src_accountid`, `src_map`, `src_map_x`, `src_map_y`, `dst_charname`, `message`) VALUES (NOW(), '%s', '%d', '%d', '%d', '%s', '%d', '%d', '%s', '%s')", 
 		 	log_config.log_chat_db, type, type_id, src_charid, src_accid, map, x, y, dst_charname, message);
 	
-		if(mysql_query(&mmysql_handle, tmp_sql)){
+		if(mysql_SendQuery(&mmysql_handle, tmp_sql)){
 			printf("log_chat() -> SQL ERROR / FAIL: %s\n", mysql_error(&mmysql_handle));
 			return -1;	
 		}else{
@@ -525,8 +554,10 @@ int log_chat(char *type, int type_id, int src_charid, int src_accid, char *map, 
 	FILE *logfp;
 	
 	if((logfp = fopen(log_config.log_chat, "a+")) != NULL){
+		char timestring[128];
+		time_t curtime;
 		time(&curtime);
-		strftime(timestring, 254, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
+		strftime(timestring, 127, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
 		//DATE - type,type_id,src_charid,src_accountid,src_map,src_x,src_y,dst_charname,message
 		fprintf(logfp, "%s - %s,%d,%d,%d,%s,%d,%d,%s,%s%s", 
 			timestring, type, type_id, src_charid, src_accid, map, x, y, dst_charname, message, RETCODE);

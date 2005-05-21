@@ -90,18 +90,17 @@
 #ifdef WIN32
 //////////////////////////////
 #pragma warning(disable : 4996)	// disable deprecated warnings
-
-
 #pragma warning(disable : 4100) // unreferenced formal parameter
 #pragma warning(disable : 4244) // converting type on return will shorten
 #pragma warning(disable : 4310)	// converting constant will shorten
 #pragma warning(disable : 4706) // assignment within conditional
 #pragma warning(disable : 4127)	// constant assignment
+#pragma warning(disable : 4710)	// is no inline function
 
 #include <windows.h>
 #include <winsock2.h>
 #include <conio.h>
-
+//#include <crtdbg.h>
 //////////////////////////////
 #else
 //////////////////////////////
@@ -146,13 +145,12 @@
 //////////////////////////////////////////////////////////////////////////
 // useful typedefs
 //////////////////////////////////////////////////////////////////////////
-
 typedef unsigned int    uint;
 typedef unsigned long   ulong;
 typedef unsigned short  ushort;
 typedef unsigned char   uchar;
 typedef signed char     schar;
-typedef char*           pchar;
+typedef char*           pchar;	//conflict with shitty declarations from mysql
 typedef unsigned char*  puchar;
 typedef const char*     cchar;
 typedef void*           ptr;

@@ -21,6 +21,22 @@ extern inline FILE* savefopen(const char*name, const char*option)
 }
 
 
+extern inline const char *tolower(char *str)
+{
+	char *p=str;
+	if(p)
+	while(*p) *p++ = tolower(*p);
+	return str;
+}
+extern inline const char *strcpytolower(char *tar, const char *str)
+{
+	char *p=tar;
+	if(str && p)
+	while(*str) *p++ = tolower(*str++);
+	*p=0;
+	return tar;
+}
+
 
 struct StringBuf {
 	char *buf_;

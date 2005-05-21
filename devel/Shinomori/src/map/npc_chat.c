@@ -376,6 +376,7 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
     pcreset = npcParse->active_;
 
     // interate across all active sets
+	if(sd)
     while (pcreset != NULL) {
         struct pcrematch_entry *e = pcreset->head_;
         // interate across all patterns in that set
@@ -391,7 +392,7 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
                 case 10:
                     memcpy(buf, &msg[offsets[18]], offsets[19]);
                     buf[offsets[19]] = '\0';
-                    set_var(sd, "$p9$", buf);
+                    set_var(*sd, "$p9$", buf);
                 case 9:
                     memcpy(buf, &msg[offsets[16]], offsets[17]);
                     buf[offsets[17]] = '\0';
@@ -399,35 +400,35 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
                 case 8:
                     memcpy(buf, &msg[offsets[14]], offsets[15]);
                     buf[offsets[15]] = '\0';
-                    set_var(sd, "$p7$", buf);
+                    set_var(*sd, "$p7$", buf);
                 case 7:
                     memcpy(buf, &msg[offsets[12]], offsets[13]);
                     buf[offsets[13]] = '\0';
-                    set_var(sd, "$p6$", buf);
+                    set_var(*sd, "$p6$", buf);
                 case 6:
                     memcpy(buf, &msg[offsets[10]], offsets[11]);
                     buf[offsets[11]] = '\0';
-                    set_var(sd, "$p5$", buf);
+                    set_var(*sd, "$p5$", buf);
                 case 5:
                     memcpy(buf, &msg[offsets[8]], offsets[9]);
                     buf[offsets[9]] = '\0';
-                    set_var(sd, "$p4$", buf);
+                    set_var(*sd, "$p4$", buf);
                 case 4:
                     memcpy(buf, &msg[offsets[6]], offsets[7]);
                     buf[offsets[7]] = '\0';
-                    set_var(sd, "$p3$", buf);
+                    set_var(*sd, "$p3$", buf);
                 case 3:
                     memcpy(buf, &msg[offsets[4]], offsets[5]);
                     buf[offsets[5]] = '\0';
-                    set_var(sd, "$p2$", buf);
+                    set_var(*sd, "$p2$", buf);
                 case 2:
                     memcpy(buf, &msg[offsets[2]], offsets[3]);
                     buf[offsets[3]] = '\0';
-                    set_var(sd, "$p1$", buf);
+                    set_var(*sd, "$p1$", buf);
                 case 1:
                     memcpy(buf, &msg[offsets[0]], offsets[1]);
                     buf[offsets[1]] = '\0';
-                    set_var(sd, "$p0$", buf);
+                    set_var(*sd, "$p0$", buf);
                 }
 
                 // find the target label.. this sucks..
@@ -461,39 +462,39 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
 }
 
 // Various script builtins used to support these functions
-int buildin_defpattern(struct script_state *st)
+int buildin_defpattern(struct script_state &st)
 {
-    int setid=conv_num(st,& (st->stack->stack_data[st->start+2]));
-    char *pattern=conv_str(st,& (st->stack->stack_data[st->start+3]));
-    char *label=conv_str(st,& (st->stack->stack_data[st->start+4]));
-    struct npc_data *nd=(struct npc_data *)map_id2bl(st->oid);
+    int setid=conv_num(st,(st.stack->stack_data[st.start+2]));
+    char *pattern=conv_str(st,(st.stack->stack_data[st.start+3]));
+    char *label=conv_str(st,(st.stack->stack_data[st.start+4]));
+    struct npc_data *nd=(struct npc_data *)map_id2bl(st.oid);
     
     npc_chat_def_pattern(nd, setid, pattern, label);
 
     return 0;
 }
-int buildin_activatepset(struct script_state *st)
+int buildin_activatepset(struct script_state &st)
 {
-    int setid=conv_num(st,& (st->stack->stack_data[st->start+2]));
-    struct npc_data *nd=(struct npc_data *)map_id2bl(st->oid);
+    int setid=conv_num(st,(st.stack->stack_data[st->start+2]));
+    struct npc_data *nd=(struct npc_data *)map_id2bl(st.oid);
 
     activate_pcreset(nd, setid);
 
     return 0;
 }
-int buildin_deactivatepset(struct script_state *st)
+int buildin_deactivatepset(struct script_state &st)
 {
-    int setid=conv_num(st,& (st->stack->stack_data[st->start+2]));
-    struct npc_data *nd=(struct npc_data *)map_id2bl(st->oid);
+    int setid=conv_num(st,(st.stack->stack_data[st->start+2]));
+    struct npc_data *nd=(struct npc_data *)map_id2bl(st.oid);
 
     deactivate_pcreset(nd, setid);
 
     return 0;
 }
-int buildin_deletepset(struct script_state *st)
+int buildin_deletepset(struct script_state &st)
 {
-    int setid=conv_num(st,& (st->stack->stack_data[st->start+2]));
-    struct npc_data *nd=(struct npc_data *)map_id2bl(st->oid);
+    int setid=conv_num(st,(st.stack->stack_data[st->start+2]));
+    struct npc_data *nd=(struct npc_data *)map_id2bl(st.oid);
 
     delete_pcreset(nd, setid);
     return 0;
@@ -503,10 +504,10 @@ int buildin_deletepset(struct script_state *st)
 
 void npc_chat_finalize(struct npc_data *nd)			{}
 int npc_chat_sub(struct block_list *bl, va_list ap)	{ return 0; }
-int buildin_defpattern(struct script_state *st)		{ return 0; }
-int buildin_activatepset(struct script_state *st)	{ return 0; }
-int buildin_deactivatepset(struct script_state *st)	{ return 0; }
-int buildin_deletepset(struct script_state *st)		{ return 0; }
+int buildin_defpattern(struct script_state &st)		{ return 0; }
+int buildin_activatepset(struct script_state &st)	{ return 0; }
+int buildin_deactivatepset(struct script_state &st)	{ return 0; }
+int buildin_deletepset(struct script_state &st)		{ return 0; }
 
 
 #endif

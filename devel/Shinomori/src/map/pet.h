@@ -32,28 +32,28 @@ extern struct pet_db pet_db[MAX_PET_DB];
 
 enum { PET_CLASS,PET_CATCH,PET_EGG,PET_EQUIP,PET_FOOD };
 
-int pet_hungry_val(struct map_session_data *sd);
-int pet_target_check(struct map_session_data *sd,struct block_list *bl,int type);
-int pet_sc_check(struct map_session_data *sd, int type); //Skotlex
+int pet_hungry_val(struct map_session_data &sd);
+int pet_target_check(struct map_session_data &sd,struct block_list *bl,int type);
+int pet_sc_check(struct map_session_data &sd, int type); //Skotlex
 int pet_stopattack(struct pet_data &pd);
 int pet_changestate(struct pet_data &pd,int state,int type);
 int pet_walktoxy(struct pet_data &pd,int x,int y);
 int pet_stop_walking(struct pet_data &pd,int type);
 int search_petDB_index(int key,int type);
-int pet_hungry_timer_delete(struct map_session_data *sd);
-int pet_remove_map(struct map_session_data *sd);
-int pet_data_init(struct map_session_data *sd);
-int pet_birth_process(struct map_session_data *sd);
+int pet_hungry_timer_delete(struct map_session_data &sd);
+int pet_remove_map(struct map_session_data &sd);
+int pet_data_init(struct map_session_data &sd);
+int pet_birth_process(struct map_session_data &sd);
 int pet_recv_petdata(unsigned long account_id,struct s_pet &p,int flag);
-int pet_select_egg(struct map_session_data *sd,short egg_index);
-int pet_catch_process1(struct map_session_data *sd,int target_class);
-int pet_catch_process2(struct map_session_data *sd,int target_id);
+int pet_select_egg(struct map_session_data &sd,short egg_index);
+int pet_catch_process1(struct map_session_data &sd,int target_class);
+int pet_catch_process2(struct map_session_data &sd,int target_id);
 int pet_get_egg(unsigned long account_id,unsigned long pet_id,int flag);
-int pet_menu(struct map_session_data *sd,int menunum);
-int pet_change_name(struct map_session_data *sd,char *name);
-int pet_equipitem(struct map_session_data *sd,int index);
-int pet_unequipitem(struct map_session_data *sd);
-int pet_food(struct map_session_data *sd);
+int pet_menu(struct map_session_data &sd,int menunum);
+int pet_change_name(struct map_session_data &sd, const char *name);
+int pet_equipitem(struct map_session_data &sd,int index);
+int pet_unequipitem(struct map_session_data &sd);
+int pet_food(struct map_session_data &sd);
 int pet_lootitem_drop(struct pet_data &pd,struct map_session_data *sd);
 int pet_delay_item_drop2(int tid,unsigned long tick,int id,int data);
 int pet_ai_sub_hard_lootsearch(struct block_list *bl,va_list ap);

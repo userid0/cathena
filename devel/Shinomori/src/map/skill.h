@@ -199,7 +199,7 @@ int skill_check_cloaking(struct block_list *bl);
 
 // ステ?タス異常
 int skill_enchant_elemental_end(struct block_list *bl, int type);
-int skillnotok(int skillid, struct map_session_data *sd);
+int skillnotok(int skillid, struct map_session_data &sd);
 
 // アイテム作成
 int skill_can_produce_mix( struct map_session_data *sd, unsigned short nameid, int trigger );

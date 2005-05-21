@@ -17,37 +17,32 @@
  * 露店閉鎖
  *------------------------------------------
 */
-void vending_closevending(struct map_session_data *sd)
+void vending_closevending(struct map_session_data &sd)
 {
-
-	nullpo_retv(sd);
-
-	sd->vender_id=0;
-	clif_closevendingboard(&sd->bl,0);
+	sd.vender_id=0;
+	clif_closevendingboard(&sd.bl,0);
 }
 
 /*==========================================
  * 露店アイテムリスト要求
  *------------------------------------------
  */
-void vending_vendinglistreq(struct map_session_data *sd,unsigned long id)
+void vending_vendinglistreq(struct map_session_data &sd, unsigned long id)
 {
 	struct map_session_data *vsd;
-
-	nullpo_retv(sd);
 
 	if( (vsd=map_id2sd(id)) == NULL )
 		return;
 	if(vsd->vender_id==0)
 		return;
-	clif_vendinglist(sd,id,vsd->vending);
+	clif_vendinglist(&sd,id,vsd->vending);
 }
 
 /*==========================================
  * 露店アイテム購入
  *------------------------------------------
  */
-void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned long id,unsigned char *p)
+void vending_purchasereq(struct map_session_data &sd,unsigned short len,unsigned long id,unsigned char *buffer)
 {
 	size_t i, j, w;
 	long z, new_ = 0;
@@ -55,12 +50,11 @@ void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned
 	unsigned short amount, index;
 	struct map_session_data *vsd = map_id2sd(id);
 
-	nullpo_retv(sd);
 	if(vsd == NULL)
 		return;
 	if(vsd->vender_id == 0)
 		return;
-	if(vsd->vender_id == sd->bl.id)
+	if(vsd->vender_id == sd.bl.id)
 		return;
 	if( vsd->vend_num>MAX_VENDING )
 		vsd->vend_num=MAX_VENDING;
@@ -69,8 +63,8 @@ void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned
 	blank = pc_inventoryblank(sd);
 
 	for(i = 0, w = z = 0; 8 + 4 * i < len; i++) {
-		amount = RBUFW(p, 4 * i);
-		index =  RBUFW(p, 2 + 4 * i) - 2;
+		amount = RBUFW(buffer, 4 * i);
+		index =  RBUFW(buffer, 2 + 4 * i) - 2;
 
 		if(amount > MAX_AMOUNT) return; // exploit
 			
@@ -79,7 +73,7 @@ void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned
 			{
 				if (amount > vsd->vending[j].amount)
 				{	
-					clif_buyvending(sd,index,vsd->vending[j].amount, 4);
+					clif_buyvending(&sd,index,vsd->vending[j].amount, 4);
 					return;
 				}
 				else 
@@ -91,13 +85,13 @@ void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned
 
 		vend_list[i] = j;
 		z += vsd->vending[j].value * amount;
-		if (z > sd->status.zeny){
-			clif_buyvending(sd, index, amount, 1);
+		if (z > sd.status.zeny){
+			clif_buyvending(&sd, index, amount, 1);
 			return; // zeny不足
 		}
 		w += itemdb_weight(vsd->status.cart[index].nameid) * amount;
-		if (w + sd->weight > sd->max_weight) {
-			clif_buyvending(sd, index, amount, 2);
+		if (w + sd.weight > sd.max_weight) {
+			clif_buyvending(&sd, index, amount, 2);
 			return; // 重量超過
 		}
 		switch(pc_checkadditem(sd, vsd->status.cart[index].nameid, amount)) {
@@ -113,25 +107,25 @@ void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned
 		}
 	}
 	if (z < 0 || z > MAX_ZENY) { // Zeny Bug Fixed by Darkchild
-		clif_tradecancelled(sd);
+		clif_tradecancelled(&sd);
 		clif_tradecancelled(vsd);
 		return;
 	}
 
 	pc_payzeny(sd, z);
-	pc_getzeny(vsd, z);
+	pc_getzeny(*vsd, z);
 	for(i = 0; 8 + 4 * i < len; i++) {
-		amount = RBUFW(p, 4 *i);
-		index =  RBUFW(p, 2 + 4 * i) - 2;
+		amount = RBUFW(buffer, 4 *i);
+		index =  RBUFW(buffer, 2 + 4 * i) - 2;
 		//if (amount < 0) break; // tested at start of the function
-		pc_additem(sd,&vsd->status.cart[index],amount);
+		pc_additem(sd,vsd->status.cart[index],amount);
 		vsd->vending[vend_list[i]].amount -= amount;
-		pc_cart_delitem(vsd, index, amount, 0);
+		pc_cart_delitem(*vsd, index, amount, 0);
 		clif_vendingreport(vsd, index, amount);
 
 		//log added by Lupus
 		if(log_config.vend > 0) {
-			log_vend(sd,vsd, index, amount, z); // for Item + Zeny. log.
+			log_vend(sd, *vsd, index, amount, z); // for Item + Zeny. log.
 			//we log ZENY only with the 1st item. Then zero it for the rest items 8).
 			z = 0;
 		}
@@ -142,39 +136,37 @@ void vending_purchasereq(struct map_session_data *sd,unsigned short len,unsigned
  * 露店開設
  *------------------------------------------
  */
-void vending_openvending(struct map_session_data *sd,unsigned short len,char *message,int flag,unsigned char *p)
+void vending_openvending(struct map_session_data &sd,unsigned short len,const char *message,int flag, unsigned char *buffer)
 {
-	int i;
-
-	nullpo_retv(sd);
+	size_t i;
 
 	if(!pc_checkskill(sd,MC_VENDING) || !pc_iscarton(sd)) {	// cart skill and cart check [Valaris]
-		clif_skill_fail(sd,MC_VENDING,0,0);
+		clif_skill_fail(&sd,MC_VENDING,0,0);
 		return;
 	}
 
 	if (flag) {
 		for(i = 0; (85 + 8 * i < len) && (i < MAX_VENDING); i++) {
-			sd->vending[i].index = RBUFW(p,8*i) - 2;
-			sd->vending[i].amount= RBUFW(p,2+8*i);
-			sd->vending[i].value = RBUFL(p,4+8*i);
-			if(sd->vending[i].value>(unsigned long)battle_config.vending_max_value)
-				sd->vending[i].value=(unsigned long)battle_config.vending_max_value;
-			else if(sd->vending[i].value == 0)
-				sd->vending[i].value = 1000000;	// auto set to 1 million [celest]
+			sd.vending[i].index = RBUFW(buffer,8*i) - 2;
+			sd.vending[i].amount= RBUFW(buffer,2+8*i);
+			sd.vending[i].value = RBUFL(buffer,4+8*i);
+			if(sd.vending[i].value>battle_config.vending_max_value)
+				sd.vending[i].value=battle_config.vending_max_value;
+			else if(sd.vending[i].value == 0)
+				sd.vending[i].value = 1000000;	// auto set to 1 million [celest]
 			// カート内のアイテム数と販売するアイテム数に相違があったら中止
-			if(pc_cartitem_amount(sd, sd->vending[i].index, sd->vending[i].amount) < 0 || sd->vending[i].value < 0) { // fixes by Valaris and fritz
-				clif_skill_fail(sd, MC_VENDING, 0, 0);
+			if(pc_cartitem_amount(sd, sd.vending[i].index, sd.vending[i].amount) < 0 || sd.vending[i].value < 0) { // fixes by Valaris and fritz
+				clif_skill_fail(&sd, MC_VENDING, 0, 0);
 				return;
 			}
 		}
-		sd->vender_id = sd->bl.id;
-		sd->vend_num = i;
-		strcpy(sd->message,message);
-		if (clif_openvending(sd,sd->vender_id,sd->vending) > 0)
-			clif_showvendingboard(&sd->bl,message,0);
+		sd.vender_id = sd.bl.id;
+		sd.vend_num = i;
+		strcpy(sd.message,message);
+		if (clif_openvending(&sd,sd.vender_id,sd.vending) > 0)
+			clif_showvendingboard(&sd.bl,message,0);
 		else
-			sd->vender_id = 0;
+			sd.vender_id = 0;
 	}
 }
 

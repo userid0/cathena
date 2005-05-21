@@ -207,9 +207,7 @@ enum AtCommandType {
 	AtCommand_NpcTalk,
 	AtCommand_PetTalk,
 	AtCommand_Users,
-	AtCommand_StatusUp,
-	// SQL-only commands start
-#ifndef TXT_ONLY 
+
 	AtCommand_CheckMail, // [Valaris]
 	AtCommand_ListMail, // [Valaris]
 	AtCommand_ListNewMail, // [Valaris]
@@ -217,10 +215,8 @@ enum AtCommandType {
 	AtCommand_SendMail, // [Valaris]
 	AtCommand_DeleteMail, // [Valaris]
 	AtCommand_SendPriorityMail, // [Valaris]
-//	AtCommand_Sound, // [Valaris]	
 	AtCommand_RefreshOnline, // [Valaris]
-	// SQL-only commands end
-#endif
+
 	AtCommand_SkillTree, // by MouseJstr
 	AtCommand_Marry, // by MouseJstr
 	AtCommand_Divorce, // by MouseJstr
@@ -269,38 +265,31 @@ typedef enum AtCommandType AtCommandType;
 struct AtCommandInfo {
 	AtCommandType type;
 	const char* command;
-	int level;
-	int (*proc)(const int, struct map_session_data*,
-		const char* command, const char* message);
+	unsigned char level;
+	bool (*proc)(int, struct map_session_data&, const char* command, const char* message);
 };
 typedef struct AtCommandInfo AtCommandInfo;
 
-AtCommandType
-is_atcommand(const int fd, struct map_session_data* sd, const char* message, int gmlvl);
+AtCommandType is_atcommand(int fd, struct map_session_data &sd, const char* message, unsigned char gmlvl);
+unsigned char get_atcommand_level(const AtCommandType type);
 
-AtCommandType atcommand(
-	struct map_session_data *sd,
-	const int level, const char* message, AtCommandInfo* info);
-int get_atcommand_level(const AtCommandType type);
+bool atcommand_config_read(const char *cfgName);
 
-char * msg_txt(int msg_number); // [Yor]
+bool atcommand_item(int fd, struct map_session_data &sd, const char* command, const char* message); // [Valaris]
+bool atcommand_rura(int fd, struct map_session_data &sd, const char* command, const char* message); // [Yor]
+bool atcommand_spawn(int fd, struct map_session_data &sd, const char* command, const char* message); // [Valaris]
+bool atcommand_jumpto(int fd, struct map_session_data &sd, const char* command, const char* message); // [Yor]
+bool atcommand_recall(int fd, struct map_session_data &sd, const char* command, const char* message); // [Yor]
 
-int atcommand_item(const int fd, struct map_session_data* sd,const char* command, const char* message); // [Valaris]
-int atcommand_rura(const int fd, struct map_session_data* sd,const char* command, const char* message); // [Yor]
-int atcommand_spawn(const int fd, struct map_session_data* sd, const char* command, const char* message); // [Valaris]
-int atcommand_jumpto(const int fd, struct map_session_data* sd, const char* command, const char* message); // [Yor]
-int atcommand_recall(const int fd, struct map_session_data* sd, const char* command, const char* message); // [Yor]
 
-int atcommand_config_read(const char *cfgName);
-int msg_config_read(const char *cfgName);
-void do_final_msg();
-
-char *estr_lower(char *str);
-
-char * job_name(int class_);
+const char* job_name(int class_);
 
 #define MAX_MSG 1000
-extern char *msg_table[MAX_MSG];
+const char *msg_txt(size_t msg_number); // [Yor]
+bool msg_config_read(const char *cfgName);
+void do_final_msg();
+
+
 
 #endif
 

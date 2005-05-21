@@ -608,9 +608,9 @@ int guild_check_conflict_sub(void *key, void *data, va_list ap) {
 	return 0;
 }
 // キャラの競合がないかチェック
-int guild_check_conflict(unsigned long guild_id, unsigned long account_id, unsigned long char_id) {
+int guild_check_conflict(unsigned long guild_id, unsigned long account_id, unsigned long char_id)
+{
 	numdb_foreach(guild_db, guild_check_conflict_sub, guild_id, account_id, char_id);
-
 	return 0;
 }
 
@@ -622,15 +622,12 @@ int guild_nextexp(int level) {
 }
 
 // ギルドスキルがあるか確認
-int guild_checkskill(struct guild *g, int id) {
-	int idx = id - GD_SKILLBASE;
-
-
-	if(idx < 0 || idx >= MAX_GUILDSKILL)
-
+int guild_checkskill(struct guild &g, unsigned short id)
+{
+	unsigned short idx = id - GD_SKILLBASE;
+	if(idx >= MAX_GUILDSKILL)
 		return 0;
-
-	return g->skill[idx].lv;
+	return g.skill[idx].lv;
 }
 
 // ギルドの情報の再計算
@@ -660,7 +657,7 @@ int guild_calcinfo(struct guild *g) {
 	g->next_exp = guild_nextexp(g->guild_lv);
 
 	// メンバ上限（ギルド拡張適用）
-	g->max_member = 16 + guild_checkskill(g, GD_EXTENSION) * 6; //Lupus 2 -> 6
+	g->max_member = 16 + guild_checkskill(*g, GD_EXTENSION) * 6; //Lupus 2 -> 6
 
 	// 平均レベルとオンライン人数
 	g->average_lv = 0;

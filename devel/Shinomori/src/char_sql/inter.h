@@ -3,6 +3,28 @@
 
 #include <mysql.h>
 
+///////////////////////////////////////////////////////////////////////////////
+//
+// mysql access function
+//
+///////////////////////////////////////////////////////////////////////////////
+extern inline int mysql_SendQuery(MYSQL *mysql, const char* q)
+{
+#ifdef TWILIGHT
+	ShowSQL("%s:%d# %s\n", __FILE__, __LINE__, q);
+#endif
+	return mysql_real_query(mysql, q, strlen(q));
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
 int inter_init(const char *file);
 void inter_final();
 int inter_parse_frommap(int fd);

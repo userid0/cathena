@@ -210,38 +210,28 @@ struct item_data* itemdb_search(unsigned short nameid)
  *
  *------------------------------------------
  */
-int itemdb_isequip(unsigned short nameid)
+bool itemdb_isequip(unsigned short nameid)
 {
 	int type=itemdb_type(nameid);
-	if(type==0 || type==2 || type==3 || type==6 || type==10)
-		return 0;
-	return 1;
+	return (type!=0 && type!=2 && type!=3 && type!=6 && type!=10);
 }
 /*==========================================
  *
  *------------------------------------------
  */
-int itemdb_isequip2(struct item_data *data)
+bool itemdb_isequip2(struct item_data &data)
 {
-	if(data) {
-		int type=data->type;
-		if(type==0 || type==2 || type==3 || type==6 || type==10)
-			return 0;
-		else
-			return 1;
-	}
-	return 0;
+	int type=data.type;
+	return (type!=0 && type!=2 && type!=3 && type!=6 && type!=10);
 }
 /*==========================================
  *
  *------------------------------------------
  */
-int itemdb_isequip3(unsigned short nameid)
+bool itemdb_isequip3(unsigned short nameid)
 {
 	int type=itemdb_type(nameid);
-	if(type==4 || type==5 || type == 8)
-		return 1;
-	return 0;
+	return (type!=4 && type!=5 && type!=8);
 }
 
 /*==========================================
@@ -536,7 +526,7 @@ static int itemdb_read_itemslottable(void)
 		struct item_data* item;
 		sscanf(p, "%d#%d#", &nameid, &equip);
 		item = itemdb_search(nameid);
-		if (item && itemdb_isequip2(item))			
+		if (item && itemdb_isequip2(*item))			
 			item->equip = equip;
 		p = strchr(p, 10);
 		if(!p) break;
@@ -675,7 +665,7 @@ static int itemdb_read_sqldb(void)
 		sprintf(tmp_sql, "SELECT * FROM `%s`", item_db_name[i]);
 
 		// Execute the query; if the query execution succeeded...
-		if (mysql_query(&mmysql_handle, tmp_sql) == 0)
+		if (mysql_SendQuery(&mmysql_handle, tmp_sql) == 0)
 		{
 			sql_res = mysql_store_result(&mmysql_handle);
 			// If the storage of the query result succeeded...

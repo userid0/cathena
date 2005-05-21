@@ -5,9 +5,9 @@
 
 
 #ifdef DUMPSTACK
-	#if !defined(CYGWIN) && !defined(WIN32) && !defined(__NETBSD__)	// HAVE_EXECINFO_H
-		#include <execinfo.h>
-	#endif
+#if !defined(CYGWIN) && !defined(WIN32) && !defined(__NETBSD__)	// HAVE_EXECINFO_H
+	#include <execinfo.h>
+#endif
 #endif
 
 
@@ -130,28 +130,25 @@ void log_uptime(void)
 // Programming in the UNIX Environment_.
 //
 
-#ifdef WIN32	// windows don't have SIGPIPE others don't define them
-#define SIGPIPE SIGINT
-#endif
 
 #ifndef POSIX
 #define compat_signal(signo, func) signal(signo, func)
 #else
 sigfunc *compat_signal(int signo, sigfunc *func)
 {
-  struct sigaction sact, oact;
+	struct sigaction sact, oact;
 
-  sact.sa_handler = func;
-  sigemptyset(&sact.sa_mask);
-  sact.sa_flags = 0;
+	sact.sa_handler = func;
+	sigemptyset(&sact.sa_mask);
+	sact.sa_flags = 0;
 #ifdef SA_INTERRUPT
   sact.sa_flags |= SA_INTERRUPT;	// SunOS
 #endif
 
-  if (sigaction(signo, &sact, &oact) < 0)
-    return (SIG_ERR);
+	if (sigaction(signo, &sact, &oact) < 0)
+		return (SIG_ERR);
 
-  return (oact.sa_handler);
+	return (oact.sa_handler);
 }
 #endif
 
@@ -165,21 +162,25 @@ static void sig_proc(int sn)
 	//////////////////////////////////
 	// force shut down
 	static int is_called = 0;
-	if(++is_called > 3)
-		exit(0);
-
 	switch(sn)
 	{
 	case SIGINT:
 	case SIGTERM:
-		//////////////////////////////////
-		// shut down main loop
-                runflag = 0;
+		if (++is_called > 3)
+			exit(0);
+		runflag = 0;
+		break;
+#ifndef WIN32
+	case SIGXFSZ:
+		// ignore and allow it to set errno to EFBIG
+		ShowWarning ("Max file size reached!\n");
+		//run_flag = 0;	// should we quit?
+		break;
+	case SIGPIPE:
+		ShowMessage ("Broken pipe found... closing socket\n");	// set to eof in socket.c
+		break;	// does nothing here
+#endif
 	}
-}
-static void sig_pipe(int sn) {
-	ShowMessage ("Broken pipe found... closing socket\n");	// set to eof in socket.c
-	return;	// does nothing here
 }
 /*=========================================
  *	Dumps the stack using glibc's backtrace
@@ -194,7 +195,7 @@ void sig_dump(int sn)
 		size_t size;
 	int no = 0;
 	char tmp[256];
-
+	
 	// search for a usable filename
 	do {
 		sprintf(tmp,"log/stackdump_%04d.txt", ++no);
@@ -236,7 +237,8 @@ void init_signal()
 	compat_signal(SIGFPE, sig_dump);
 	compat_signal(SIGILL, sig_dump);
  #ifndef WIN32
-	compat_signal(SIGPIPE, sig_pipe);
+	compat_signal(SIGXFSZ, sig_proc);
+	compat_signal(SIGPIPE, sig_proc);
 	compat_signal(SIGBUS, sig_dump);
 	compat_signal(SIGTRAP, SIG_DFL);
  #endif
@@ -244,19 +246,18 @@ void init_signal()
 #else
 	///////////////////////////////////////////////////////////////////////////
 	// normal dump
-	compat_signal(SIGTERM,sig_proc);
-	compat_signal(SIGINT,sig_proc);
+	compat_signal(SIGTERM, sig_proc);
+	compat_signal(SIGINT, sig_proc);
 
-	// Signal to create coredumps by system when necessary (crash)
 	compat_signal(SIGSEGV, SIG_DFL);
 	compat_signal(SIGFPE, SIG_DFL);
 	compat_signal(SIGILL, SIG_DFL);
  #ifndef WIN32
-	compat_signal(SIGPIPE,sig_pipe);
+	compat_signal(SIGXFSZ, sig_proc);
+	compat_signal(SIGPIPE, sig_proc);
 	compat_signal(SIGBUS, SIG_DFL);
-	compat_signal(SIGTRAP, SIG_DFL); 
- #endif
-
+	compat_signal(SIGTRAP, SIG_DFL);
+ #endif	
 	///////////////////////////////////////////////////////////////////////////
 #endif
 }
@@ -357,7 +358,7 @@ int main(int argc,char **argv)
 	// run loop
 	while(runflag)
 	{
-		next=do_timer(gettick_nocache());
+		next = do_timer(gettick_nocache());
 		do_sendrecv(next);
 	}
 	///////////////////////////////////////////////////////////////////////////
@@ -369,7 +370,7 @@ int main(int argc,char **argv)
 
 	///////////////////////////////////////////////////////////////////////////
 	// user module termination
-	do_final();
+	do_final();	
 
 	///////////////////////////////////////////////////////////////////////////
 	// core module termination

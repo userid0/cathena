@@ -52,7 +52,7 @@ enum {	// 最終計算のフラグ
 };
 
 // 実際にHPを増減
-int battle_delay_damage(unsigned long tick,struct block_list *src,struct block_list *target,int damage,int flag);
+int battle_delay_damage(unsigned long tick, struct block_list &src, struct block_list &target, int damage, int flag);
 int battle_damage(struct block_list *bl,struct block_list *target,int damage,int flag);
 int battle_heal(struct block_list *bl,struct block_list *target,int hp,int sp,int flag);
 
@@ -65,7 +65,7 @@ int battle_weapon_attack( struct block_list *bl,struct block_list *target,unsign
 
 // 各種パラメータを得る
 unsigned int battle_counttargeted(struct block_list *bl,struct block_list *src,int target_lv);
-struct block_list* battle_gettargeted(struct block_list *target);
+struct block_list* battle_gettargeted(struct block_list &target);
 
 enum {
 	BCT_NOENEMY	=0x00000,
