@@ -143,6 +143,9 @@ struct Addon_Event_List *event_head = NULL;
 struct Addon *addon_head = NULL;
 
 
+void **call_table = NULL;
+size_t call_table_size	= 0;
+size_t max_call_table	= 0;
 
 
 //////////////////////////////////////////////
@@ -177,6 +180,12 @@ struct Addon_Event_List *search_addon_func (char *name)
 int register_addon_event (void (*func)(), char* name)
 {
 	struct Addon_Event_List *evl = search_addon_func(name);
+	if (!evl) {
+		// register event if it doesn't exist already
+		register_addon_func(name);
+		// relocate the new event list
+		evl = search_addon_func(name);
+	}
 	if (evl) {
 		struct Addon_Event *ev;
 
@@ -217,6 +226,32 @@ int addon_event_trigger (char *name)
 	return c;
 }
 
+////// Plugins Call Table Functions /////////
+
+int export_symbol(void *var, int offset)
+{
+	// add to the end of the list
+	if (offset < 0)
+		offset = call_table_size;
+
+	// realloc if not large enough
+	if((size_t)offset >= max_call_table)
+	{
+		max_call_table = 1+offset;
+		call_table = (void**)aRealloc(call_table, max_call_table*sizeof(void*) );
+		// clear the new alloced block
+		memset(call_table+call_table_size, 0, (max_call_table-call_table_size)*sizeof(void*));
+	}
+
+	// the new table size is delimited by the new element at the end
+	if( (size_t)offset > call_table_size )
+		call_table_size = offset+1;
+
+	// put the pointer at the selected place
+	call_table[offset] = var;
+	return 0;
+}
+
 ////// Plugins Core /////////////////////////
 
 void dll_close(Addon *addon)
@@ -234,6 +269,7 @@ Addon *dll_open (const char *filename, bool force=false)
 	struct Addon *addon;
 	struct Addon_Info *info;
 	struct Addon_Event_Table *events;
+	void **procs;
 	int init_flag = 1;
 
 	//printf ("loading %s\n", filename);
@@ -279,6 +315,10 @@ Addon *dll_open (const char *filename, bool force=false)
 	addon->filename = (char *) aMalloc (strlen(filename) + 1);
 	strcpy(addon->filename, filename);
 	
+	// Initialise plugin call table (For exporting procedures)
+	procs = (void**)GetProcAddress(addon->dll, "addon_call_table");
+	if(procs) *procs = call_table;
+	
 	// Register plugin events
 	events = (struct Addon_Event_Table*)GetProcAddress(addon->dll, "addon_event_table");
 	if (events) {
@@ -317,6 +357,31 @@ void dll_load (const char *filename)
 }
 
 
+// Find a previously loaded plugin
+Addon *dll_findloaded (const char *name)
+{
+	char path[256];
+	Addon *addon = addon_head;
+	sprintf (path, "addons%c%s%s", PATHSEP,name, DLL_EXT);
+
+	while (addon) {
+		if (addon->state && strcasecmp(addon->filename, path) == 0)
+			return addon;
+		addon = addon->next;
+	}
+
+	return NULL;
+}
+
+#ifdef _WIN32
+char *DLL_ERROR(void)
+{
+	static char dllbuf[80];
+	DWORD dw = GetLastError();
+	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, dw, 0, dllbuf, 80, NULL);
+	return dllbuf;
+}
+#endif
 
 ////// Initialize/Finalize ////////////////////
 
@@ -355,12 +420,26 @@ int dll_config_read(const char *cfgName)
 
 void dll_init (void)
 {
+	static unsigned char st = getServerType();
+	static char *argp="";
 	char *DLL_CONF_FILENAME = "conf/addon_athena.conf";
 	register_addon_func("DLL_Init");
 	register_addon_func("DLL_Final");
 	register_addon_func("Athena_Init");
 	register_addon_func("Athena_Final");
 
+	// on first access the symbol array is alloced with correct size
+	// and the following access can just put in the values
+
+	export_symbol((void*)delete_timer, 7);
+	export_symbol((void*)add_timer_func_list, 6);
+	export_symbol((void*)add_timer_interval, 5);
+	export_symbol((void*)add_timer, 4);
+	export_symbol((void*)get_svn_revision, 3);
+	export_symbol((void*)gettick, 2);
+
+	export_symbol(argp, 1);
+	export_symbol(&st, 0);
 	dll_config_read (DLL_CONF_FILENAME);
 
 	if (auto_search)
@@ -396,6 +475,8 @@ void dll_final (void)
 		dll_close(addon);
 		addon = addon2;
 	}
+
+	aFree(call_table);
 
 	return;
 }

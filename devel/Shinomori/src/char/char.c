@@ -46,6 +46,7 @@ unsigned long	subnet_mask	= INADDR_BROADCAST;	//255.255.255.255
 
 int char_maintenance = 0;
 int char_new = 0;
+int char_new_display;
 int email_creation = 0; // disabled by default
 char char_txt[1024]="save/athena.txt";
 char backup_txt[1024]="save/backup.txt"; //By zanetheinsane
@@ -2379,7 +2380,9 @@ int parse_frommap(int fd) {
 					break;
 			}
 			if (i != char_num)
-				memcpy(&char_dat[i], RFIFOP(fd,12), sizeof(struct mmo_charstatus));
+				//memcpy(&char_dat[i], RFIFOP(fd,12), sizeof(struct mmo_charstatus));
+				mmo_charstatus_frombuffer(char_dat[i], RFIFOP(fd,12));
+
 			RFIFOSKIP(fd,RFIFOW(fd,2));
 			break;
 
@@ -2663,22 +2666,17 @@ int parse_frommap(int fd) {
 			if (RFIFOREST(fd) < 2)
 				return 0;
 		{
-			size_t i, j, k, len = 6;
-			unsigned char buf[32000];
-			//struct mmo_charstatus *dat;
-			//dat = (struct mmo_charstatus *)aCalloc(char_num, sizeof(struct mmo_charstatus *));
+			register size_t k;
+			register size_t j;
+			register size_t i;
+			size_t len = 6;
+			unsigned char buf[256]; // sending max 6 + 2*10*(4+4) bytes
 			CREATE_BUFFER(id, int, char_num);
-			
-			// copy character list into buffer
-			//for (i = 0; i < char_num; i++)
-			//	dat[i] = char_dat[i];
-			// sort according to fame
-			// qsort(dat, char_num, sizeof(struct mmo_charstatus *), sort_fame);
 
 			for(i = 0; i < char_num; i++) {
 				id[i] = i;
 				for(j = 0; j < i; j++) {
-					if(char_dat[i].fame_points > char_dat[id[j]].fame_points) {
+					if (char_dat[i].fame_points > char_dat[id[j]].fame_points) {
 						for(k = i; k > j; k--)
 							id[k] = id[k-1];
 						id[j] = i; // id[i]
@@ -2690,13 +2688,11 @@ int parse_frommap(int fd) {
 			// starting to send to map
 			WBUFW(buf,0) = 0x2b1b;
 			// send first list for blacksmiths
-			for (i = 0, j = 0; i < char_num && j < 10; i++) {
+			for (i = 0, j = 0; i < char_num && j < MAX_FAMELIST; i++) {
 				if (char_dat[id[i]].class_ == 10 ||
 					char_dat[id[i]].class_ == 4011 ||
 					char_dat[id[i]].class_ == 4033)
 				{
-					//WBUFL(buf, len) = dat[i].account_id;
-					//WBUFL(buf, len+4) = dat[i].fame;
 					WBUFL(buf, len) = char_dat[id[i]].char_id;
 					WBUFL(buf, len+4) = char_dat[id[i]].fame_points;
 					len += 8;
@@ -2707,7 +2703,7 @@ int parse_frommap(int fd) {
 			WBUFW(buf, 4) = len;
 			
 			// adding second list for alchemists
-			for (i = 0, j = 0; i < char_num && j < 10; i++) {
+			for (i = 0, j = 0; i < char_num && j < MAX_FAMELIST; i++) {
 				if (char_dat[id[i]].class_ == 18 ||
 					char_dat[id[i]].class_ == 4019 ||
 					char_dat[id[i]].class_ == 4041)
@@ -2726,7 +2722,6 @@ int parse_frommap(int fd) {
 			// sending to all maps
 			mapif_sendall(buf, len);
 			// done!
-			//aFree(dat);
 			DELETE_BUFFER(id);
 			RFIFOSKIP(fd,2);
 			break;
@@ -2817,7 +2812,7 @@ int parse_char(int fd)
 			login_fd = -1;
 		session_Remove(fd);// have it removed by do_sendrecv
 		return 0;
-	}
+}
 
 	unsigned short cmd;
 	char email[40];
@@ -3049,28 +3044,28 @@ int parse_char(int fd)
 				
 			if(ret == -1)
 			{	//already exists
-				WFIFOW(fd,0) = 0x6e;
-				WFIFOB(fd,2) = 0x00;
-				WFIFOSET(fd,3);
-				RFIFOSKIP(fd,37);
-				break;
+                            WFIFOW(fd, 0) = 0x6e;
+                            WFIFOB(fd, 2) = 0x00;
+                            WFIFOSET(fd, 3);
+                            RFIFOSKIP(fd, 37);
+                            break;
 			}
 			else if(ret == -2)
 			{	//denied
-				WFIFOW(fd, 0) = 0x6e;
-				WFIFOB(fd, 2) = 0x02;
-				WFIFOSET(fd, 3);
-				RFIFOSKIP(fd, 37);
-				break;
+                            WFIFOW(fd, 0) = 0x6e;
+                            WFIFOB(fd, 2) = 0x02;
+                            WFIFOSET(fd, 3); 
+                            RFIFOSKIP(fd, 37);                           
+                            break;
 			}
 			else if(ret == -3)
 			{	//underaged XD
-				WFIFOW(fd, 0) = 0x6e;
-				WFIFOB(fd, 2) = 0x01;
-				WFIFOSET(fd, 3);
-				RFIFOSKIP(fd, 37);
-				break;
-			}
+                            WFIFOW(fd, 0) = 0x6e;
+                            WFIFOB(fd, 2) = 0x01;
+                            WFIFOSET(fd, 3);
+                            RFIFOSKIP(fd, 37);
+                            break;
+                        }
 			else
 			{
 				for(ch = 0; ch < 9; ch++) {
@@ -3080,8 +3075,8 @@ int parse_char(int fd)
 					}
 				}
 
-				WFIFOW(fd,0) = 0x6d;
-				memset(WFIFOP(fd,2), 0, 106);
+			WFIFOW(fd,0) = 0x6d;
+			memset(WFIFOP(fd,2), 0, 106);
 
 				WFIFOL(fd,2) = char_dat[ret].char_id;
 				WFIFOL(fd,2+4) = char_dat[ret].base_exp;
@@ -3092,12 +3087,12 @@ int parse_char(int fd)
 				WFIFOL(fd,2+28) = char_dat[ret].karma;
 				WFIFOL(fd,2+32) = char_dat[ret].manner;
 
-				WFIFOW(fd,2+40) = 0x30;
+			WFIFOW(fd,2+40) = 0x30;
 				WFIFOW(fd,2+42) = (unsigned short)((char_dat[ret].hp > 0x7fff) ? 0x7fff : char_dat[ret].hp);
 				WFIFOW(fd,2+44) = (unsigned short)((char_dat[ret].max_hp > 0x7fff) ? 0x7fff : char_dat[ret].max_hp);
 				WFIFOW(fd,2+46) = (unsigned short)((char_dat[ret].sp > 0x7fff) ? 0x7fff : char_dat[ret].sp);
 				WFIFOW(fd,2+48) = (unsigned short)((char_dat[ret].max_sp > 0x7fff) ? 0x7fff : char_dat[ret].max_sp);
-				WFIFOW(fd,2+50) = DEFAULT_WALK_SPEED; // char_dat[i].speed;
+			WFIFOW(fd,2+50) = DEFAULT_WALK_SPEED; // char_dat[i].speed;
 				WFIFOW(fd,2+52) = char_dat[ret].class_;
 				WFIFOW(fd,2+54) = char_dat[ret].hair;
 
@@ -3119,11 +3114,11 @@ int parse_char(int fd)
 				WFIFOB(fd,2+103) = (char_dat[ret].luk > 255) ? 255 : char_dat[ret].luk;
 				WFIFOB(fd,2+104) = char_dat[ret].char_num;
 
-				WFIFOSET(fd,108);
+			WFIFOSET(fd,108);
 			}
 			RFIFOSKIP(fd,37);
-			break;
-		}
+					break;
+				}
 		case 0x68:	// delete char //Yor's Fix
 		{
 			size_t i, ch;
@@ -3178,7 +3173,7 @@ int parse_char(int fd)
 						RFIFOSKIP(fd,46);
 					}
 				}
-			
+
 			}
 			else
 			{	// otherwise, we delete the character
@@ -3205,21 +3200,21 @@ int parse_char(int fd)
 								struct char_session_data *sd2;
 								for (j = 0; j < fd_max; j++)
 								{
-									if (session[j] && (sd2 = (struct char_session_data*)session[j]->session_data) &&
+										if (session[j] && (sd2 = (struct char_session_data*)session[j]->session_data) &&
 										sd2->account_id == char_dat[char_num-1].account_id)
 									{
 										for (k = 0; k < 9; k++)
 										{
 											if (sd2->found_char[k] == char_num-1)
 											{
-												sd2->found_char[k] = sd->found_char[i];
-												break;
+													sd2->found_char[k] = sd->found_char[i];
+													break;
+												}
 											}
+											break;
 										}
-										break;
 									}
 								}
-							}
 							char_num--;
 							for(ch = i; ch < 9-1; ch++)
 								sd->found_char[ch] = sd->found_char[ch+1];
@@ -3431,7 +3426,9 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
 		WFIFOW(login_fd,80) = 0;
 		WFIFOW(login_fd,82) = char_maintenance;
-		WFIFOW(login_fd,84) = char_new;
+
+		WFIFOW(login_fd,84) = char_new_display; //only display (New) if they want to [Kevin]
+		
 		WFIFOSET(login_fd,86);
 	}
 	}
@@ -3566,7 +3563,9 @@ int char_config_read(const char *cfgName) {
 			char_maintenance = atoi(w2);
 		} else if(strcasecmp(w1, "char_new") == 0) {
 			char_new = atoi(w2);
-		} else if(strcasecmp(w1, "email_creation") == 0) {
+		} else if (strcasecmp(w1, "char_new_display") == 0) {
+			char_new_display = atoi(w2);
+		} else if (strcasecmp(w1, "email_creation") == 0) {
 			email_creation = config_switch(w2);
 		} else if(strcasecmp(w1, "char_txt") == 0) {
 			strcpy(char_txt, w2);
@@ -3789,12 +3788,16 @@ int do_init(int argc, char **argv) {
 	add_timer_interval(gettick() + autosave_interval, autosave_interval, mmo_char_sync_timer, 0, 0);
 
 	//Added for Mugendais I'm Alive mod
-	if (imalive_on)
+	if (imalive_on) {
+		add_timer_func_list(imalive_timer, "imalive_timer");
 		add_timer_interval(gettick()+10,imalive_time*1000, imalive_timer,0,0);
+	}
 
 	//Added by Mugendai for GUI support
-	if (flush_on)
+	if (flush_on) {
+		add_timer_func_list(flush_timer, "flush_timer");
 		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
+	}
 
 
 	if(console) {

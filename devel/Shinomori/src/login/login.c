@@ -1584,9 +1584,9 @@ int parse_fromchar(int fd) {
 				if (auth_fifo[i].account_id == acc &&
 					auth_fifo[i].login_id1 == RFIFOL(fd,6) &&
 #if CMP_AUTHFIFO_LOGIN2 != 0
-				    auth_fifo[i].login_id2 == RFIFOL(fd,10) && // relate to the versions higher than 18
+					auth_fifo[i].login_id2 == RFIFOL(fd,10) && // relate to the versions higher than 18
 #endif
-				    auth_fifo[i].sex == RFIFOB(fd,14) &&
+					auth_fifo[i].sex == RFIFOB(fd,14) &&
 				    (!check_ip_flag || auth_fifo[i].ip == RFIFOLIP(fd,15)) &&
 				    !auth_fifo[i].delflag) 
 				{
@@ -4204,12 +4204,16 @@ int do_init(int argc, char **argv) {
 
 
 	//Added for Mugendais I'm Alive mod
-	if(imalive_on)
+	if(imalive_on) {
+		add_timer_func_list(imalive_timer, "imalive_timer");
 		add_timer_interval(gettick()+10,imalive_time*1000, imalive_timer,0,0);
+	}
 
 	//Added by Mugendai for GUI support
-	if(flush_on)
+	if(flush_on) {
+		add_timer_func_list(flush_timer, "flush_timer");
 		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
+	}
 
 
 	// add timer to check GM accounts file modification

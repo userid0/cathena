@@ -117,7 +117,7 @@ int mob_stop_walking(struct mob_data &md,int type);
 int mob_stopattack(struct mob_data &md);
 int mob_spawn(unsigned long id);
 int mob_setdelayspawn(unsigned long id);
-int mob_damage(struct block_list *src,struct mob_data &md,int damage,int type);
+int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src);
 int mob_changestate(struct mob_data &md,int state,int type);
 int mob_heal(struct mob_data &md,int heal);
 int mob_exclusion_add(struct mob_data &md,int type,unsigned long id);

@@ -48,8 +48,8 @@ int guild_reqalliance(struct map_session_data &sd,unsigned long account_id);
 int guild_reply_reqalliance(struct map_session_data &sd,unsigned long account_id,int flag);
 int guild_alliance(unsigned long guild_id1,unsigned long guild_id2,unsigned long account_id1,unsigned long account_id2);
 int guild_allianceack(unsigned long guild_id1,unsigned long guild_id2,unsigned long account_id1,unsigned long account_id2,int flag,const char *name1,const char *name2);
-int guild_delalliance(struct map_session_data *sd,unsigned long guild_id,int flag);
-int guild_opposition(struct map_session_data *sd,unsigned long char_id);
+int guild_delalliance(struct map_session_data &sd,unsigned long guild_id,int flag);
+int guild_opposition(struct map_session_data &sd,unsigned long char_id);
 int guild_check_alliance(unsigned long guild_id1, unsigned long guild_id2, int flag);
 
 int guild_send_memberinfoshort(struct map_session_data &sd,int online);

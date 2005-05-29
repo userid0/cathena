@@ -343,9 +343,9 @@ bool charcommand_jobchange(int fd, struct map_session_data &sd,const char *comma
 				}
 				for (j=0; j < MAX_INVENTORY; j++) {
 					if(pl_sd->status.inventory[j].nameid>0 && pl_sd->status.inventory[j].equip!=0)
-						pc_unequipitem(pl_sd, j, 3);
+						pc_unequipitem(*pl_sd, j, 3);
 				}
-				if (pc_jobchange(pl_sd, job, upper) == 0)
+				if (pc_jobchange(*pl_sd, job, upper) == 0)
 					clif_displaymessage(fd, msg_txt(48)); // Character's job changed.
 				else {
 					clif_displaymessage(fd, msg_txt(192)); // Impossible to change the character's job.
@@ -388,7 +388,7 @@ bool charcommand_petrename(int fd, struct map_session_data &sd,const char *comma
 			if (pl_sd->pet.rename_flag != 0) {
 				pl_sd->pet.rename_flag = 0;
 				intif_save_petdata(pl_sd->status.account_id, pl_sd->pet);
-				clif_send_petstatus(pl_sd);
+				clif_send_petstatus(*pl_sd);
 				clif_displaymessage(fd, msg_txt(189)); // This player can now rename his/her pet.
 			} else {
 				clif_displaymessage(fd, msg_txt(190)); // This player can already rename his/her pet.
@@ -431,8 +431,8 @@ bool charcommand_petfriendly(int fd, struct map_session_data &sd,const char *com
 				if (friendly != pl_sd->pet.intimate) {
 					t = pl_sd->pet.intimate;
 					pl_sd->pet.intimate = friendly;
-					clif_send_petstatus(pl_sd);
-					clif_pet_emotion(pl_sd->pd,0);
+					clif_send_petstatus(*pl_sd);
+					clif_pet_emotion(*pl_sd->pd,0);
 					if (battle_config.pet_status_support) {
 						if ((pl_sd->pet.intimate > 0 && t <= 0) ||
 						    (pl_sd->pet.intimate <= 0 && t > 0)) {
@@ -539,8 +539,8 @@ bool charcommand_reset(int fd, struct map_session_data &sd,const char *command, 
 
 	if ((pl_sd = map_nick2sd(character)) != NULL) {
 		if (pc_isGM(sd) >= pc_isGM(*pl_sd)) { // you can reset a character only for lower or same GM level
-			pc_resetstate(pl_sd);
-			pc_resetskill(pl_sd);
+			pc_resetstate(*pl_sd);
+			pc_resetskill(*pl_sd);
 			sprintf(output, msg_txt(208), character); // '%s' skill and stats points reseted!
 			clif_displaymessage(fd, output);
 		} else {
@@ -738,9 +738,9 @@ bool charcommand_spiritball(int fd, struct map_session_data &sd,const char *comm
 		if (spirit >= 0 && spirit <= 0x7FFF) {
 			if (pl_sd->spiritball != spirit || spirit > 999) {
 				if (pl_sd->spiritball > 0)
-					pc_delspiritball(pl_sd, pl_sd->spiritball, 1);
+					pc_delspiritball(*pl_sd, pl_sd->spiritball, 1);
 				pl_sd->spiritball = spirit;
-				clif_spiritball(pl_sd);
+				clif_spiritball(*pl_sd);
 				// no message, player can look the difference
 				if (spirit > 1000)
 					clif_displaymessage(fd, msg_txt(204)); // WARNING: more than 1000 spiritballs can CRASH your server and/or client!
@@ -889,7 +889,7 @@ bool charcommand_effect(int fd, struct map_session_data &sd,const char *command,
 	if((pl_sd=map_nick2sd((char *) target)) == NULL)
 		return false;
 
-	clif_specialeffect(&pl_sd->bl, type, 0);
+	clif_specialeffect(pl_sd->bl, type, 0);
 	clif_displaymessage(fd, msg_txt(229)); // Your effect has changed.
 
 	return true;
@@ -993,7 +993,7 @@ charcommand_giveitem_sub(struct map_session_data &sd,struct item_data &item_data
 		item_tmp.nameid = item_data.nameid;
 		item_tmp.identify = 1;
 		if( (flag = pc_additem(sd, item_tmp, get_count)) )
-			clif_additem(&sd, 0, 0, flag);
+			clif_additem(sd, 0, 0, flag);
 	}
 
 }
@@ -1054,7 +1054,7 @@ bool charcommand_item(int fd, struct map_session_data &sd,const char *command, c
 						item_tmp.nameid = item_id;
 						item_tmp.identify = 1;
 						if ((flag = pc_additem(*pl_sd, item_tmp, get_count)))
-							clif_additem(pl_sd, 0, 0, flag);
+							clif_additem(*pl_sd, 0, 0, flag);
 					}
 				}
 				clif_displaymessage(fd, msg_txt(18)); // Item created.
@@ -1162,9 +1162,9 @@ bool charcommand_warp(int fd, struct map_session_data &sd,const char *command, c
 bool charcommand_zeny(int fd, struct map_session_data &sd,const char *command, const char *message)
 {
 	struct map_session_data *pl_sd;
-	char character[100];
-	long zeny = 0, new_zeny;
-	memset(character, '\0', sizeof(character));
+	char character[128]="";
+	long zeny;
+	unsigned long new_zeny;
 
 	if (!message || !*message || sscanf(message, "%ld %99[^\n]", &zeny, character) < 2 || zeny == 0) {
 		clif_displaymessage(fd, "Please, enter a number and a player name (usage: #zeny <zeny> <name>).");
@@ -1173,15 +1173,16 @@ bool charcommand_zeny(int fd, struct map_session_data &sd,const char *command, c
 
 	if ((pl_sd = map_nick2sd(character)) != NULL)
 	{
-		new_zeny = pl_sd->status.zeny + zeny;
-		if (zeny > 0 && (zeny > MAX_ZENY || new_zeny > MAX_ZENY)) // fix positiv overflow
+		new_zeny = sd.status.zeny + zeny;
+		if( zeny>0 && (new_zeny<sd.status.zeny || new_zeny>MAX_ZENY) ) // pos overflow & max
 			new_zeny = MAX_ZENY;
-		else if (zeny < 0 && (zeny < -MAX_ZENY || new_zeny < 0)) // fix negativ overflow
+		else if( new_zeny>sd.status.zeny ) // neg overflow
 			new_zeny = 0;
+
 		if (new_zeny != pl_sd->status.zeny)
 		{
 			pl_sd->status.zeny = new_zeny;
-			clif_updatestatus(pl_sd, SP_ZENY);
+			clif_updatestatus(*pl_sd, SP_ZENY);
 			clif_displaymessage(fd, msg_txt(211)); // Character's number of zenys changed!
 		}
 		else

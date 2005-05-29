@@ -27,7 +27,7 @@ int chat_createchat(struct map_session_data &sd,unsigned short limit,unsigned ch
 	cd->bl.id	= map_addobject(cd->bl);
 	if(cd->bl.id==0)
 	{
-		clif_createchat(&sd,1);
+		clif_createchat(sd,1);
 		aFree(cd);
 		return 0;
 	}
@@ -53,8 +53,8 @@ int chat_createchat(struct map_session_data &sd,unsigned short limit,unsigned ch
 
 
 	pc_setchatid(sd,cd->bl.id);
-	clif_createchat(&sd,0);
-	clif_dispchat(cd,0);
+	clif_createchat(sd,0);
+	clif_dispchat(*cd,0);
 
 	return 0;
 }
@@ -72,17 +72,17 @@ int chat_joinchat(struct map_session_data &sd,unsigned long chatid,const char* p
 		return 1;
 
 	if(cd->bl.m != sd.bl.m || cd->limit <= cd->users){
-		clif_joinchatfail(&sd,0);
+		clif_joinchatfail(sd,0);
 		return 0;
 	}
 	if(cd->pub==0 && (!pass || 0!=strcmp(pass,cd->pass)) )
 	{
-		clif_joinchatfail(&sd,1);
+		clif_joinchatfail(sd,1);
 		return 0;
 	}
 	if(chatid == sd.chatID) //Double Chat fix by Alex14, thx CHaNGeTe 
 	{
-		clif_joinchatfail(&sd,1);
+		clif_joinchatfail(sd,1);
 		return 0;
 	}
 
@@ -91,9 +91,9 @@ int chat_joinchat(struct map_session_data &sd,unsigned long chatid,const char* p
 
 	pc_setchatid(sd,cd->bl.id);
 
-	clif_joinchatok(&sd,cd);	// 新たに参加した人には全員のリスト
-	clif_addchat(cd,&sd);	// 既に中に居た人には追加した人の報告
-	clif_dispchat(cd,0);	// 周囲の人には人数変化報告
+	clif_joinchatok(sd,*cd);	// 新たに参加した人には全員のリスト
+	clif_addchat(*cd,sd);	// 既に中に居た人には追加した人の報告
+	clif_dispchat(*cd,0);	// 周囲の人には人数変化報告
 
 	chat_triggerevent(*cd); // イベント
 	
@@ -125,19 +125,19 @@ int chat_leavechat(struct map_session_data &sd)
 
 	if(leavechar==0 && cd->users>1 && cd->owner && cd->owner->type==BL_PC)
 	{	// 所有者だった&他に人が居る&PCのチャット
-		clif_changechatowner(cd,cd->usersd[1]);
-		clif_clearchat(cd,0);
+		clif_changechatowner(*cd,*cd->usersd[1]);
+		clif_clearchat(*cd,0);
 	}
 
 	// 抜けるPCにも送るのでusersを減らす前に実行
-	clif_leavechat(cd,&sd);
+	clif_leavechat(*cd,sd);
 
 	cd->users--;
 	pc_setchatid(sd,0);
 
 	if(cd->users == 0 && cd->owner && cd->owner->type==BL_PC)
 	{	// 全員居なくなった&PCのチャットなので消す
-		clif_clearchat(cd,0);
+		clif_clearchat(*cd,0);
 		map_delobject(cd->bl.id);	// freeまでしてくれる
 	}
 	else
@@ -150,7 +150,7 @@ int chat_leavechat(struct map_session_data &sd)
 			cd->bl.x = cd->owner->x;
 			cd->bl.y = cd->owner->y;
 		}
-		clif_dispchat(cd,0);
+		clif_dispchat(*cd,0);
 	}
 	return 0;
 }
@@ -177,9 +177,9 @@ int chat_changechatowner(struct map_session_data &sd, const char *nextownername)
 	if(nextowner>=cd->users) // そんな人は居ない
 		return -1;
 
-	clif_changechatowner(cd,cd->usersd[nextowner]);
+	clif_changechatowner(*cd,*cd->usersd[nextowner]);
 	// 一旦消す
-	clif_clearchat(cd,0);
+	clif_clearchat(*cd,0);
 
 	// userlistの順番変更 (0が所有者なので)
 	if( (tmp_sd = cd->usersd[0]) == NULL )
@@ -192,7 +192,7 @@ int chat_changechatowner(struct map_session_data &sd, const char *nextownername)
 	cd->bl.y=cd->usersd[0]->bl.y;
 
 	// 再度表示
-	clif_dispchat(cd,0);
+	clif_dispchat(*cd,0);
 
 	return 0;
 }
@@ -216,8 +216,8 @@ int chat_changechatstatus(struct map_session_data &sd,unsigned short limit,unsig
 	memcpy(cd->title,title,titlelen);
 	cd->title[titlelen]=0;
 
-	clif_changechatstatus(cd);
-	clif_dispchat(cd,0);
+	clif_changechatstatus(*cd);
+	clif_dispchat(*cd,0);
 
 	return 0;
 }
@@ -282,7 +282,7 @@ int chat_createnpcchat(struct npc_data &nd,unsigned short limit,unsigned char pu
 	}
 	nd.chat_id=cd->bl.id;
 
-	clif_dispchat(cd,0);
+	clif_dispchat(*cd,0);
 
 	return 0;
 }
@@ -297,7 +297,7 @@ int chat_deletenpcchat(struct npc_data &nd)
 	nullpo_retr(0, cd=(struct chat_data*)map_id2bl(nd.chat_id));
 	
 	chat_npckickall(*cd);
-	clif_clearchat(cd,0);
+	clif_clearchat(*cd,0);
 	map_delobject(cd->bl.id);	// freeまでしてくれる
 	nd.chat_id=0;
 	

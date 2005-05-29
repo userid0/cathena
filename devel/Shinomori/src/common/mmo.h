@@ -24,6 +24,7 @@
 #define MAX_AMOUNT 30000
 #define MAX_ZENY 1000000000	// 1G zeny
 #define MAX_FAME 1000000000 // 1G fame point [DracoRPG]
+#define MAX_FAMELIST 10
 #define MAX_CART 100
 #define MAX_SKILL 650
 #define MAX_REFINE 10
@@ -516,13 +517,13 @@ struct mmo_charstatus
 	unsigned long mother_id;
 	unsigned long child_id;
 
-	long base_exp;
-	long job_exp;
-	long zeny;
+	unsigned long base_exp;
+	unsigned long job_exp;
+	unsigned long zeny;
 
 	unsigned short class_;
-	short status_point;
-	short skill_point;
+	unsigned short status_point;
+	unsigned short skill_point;
 
 	long hp;
 	long max_hp;

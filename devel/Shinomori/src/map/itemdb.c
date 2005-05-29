@@ -613,6 +613,7 @@ static int itemdb_read_noequip(void)
  * Whether the item can be refined or not [Celest]
  *------------------------------------------------
  */
+/* Function no longer needed [Skotlex]
 static int itemdb_read_norefine(void)
 {
 	int i, nameid;
@@ -642,7 +643,7 @@ static int itemdb_read_norefine(void)
 
 	return 1;
 }
-
+*/
 #ifndef TXT_ONLY
 
 /*======================================
@@ -675,9 +676,9 @@ static int itemdb_read_sqldb(void)
 				while ((sql_row = mysql_fetch_row(sql_res)))
 				{
 					/* +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+
-					   |  0 |            1 |             2 |    3 |         4 |          5 |      6 |      7 |       8 |     9 |    10 |         11 |            12 |              13 |           14 |          15 |   16 |         17 |           18 |
+					   |  0 |            1 |             2 |    3 |         4 |          5 |      6 |      7 |       8 |     9 |    10 |         11 |            12 |              13 |           14 |          15 |   16       |   17 |         18 |           19 |
 					   +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+
-					   | id | name_english | name_japanese | type | price_buy | price_sell | weight | attack | defence | range | slots | equip_jobs | equip_genders | equip_locations | weapon_level | equip_level | view | script_use | script_equip |
+					   | id | name_english | name_japanese | type | price_buy | price_sell | weight | attack | defence | range | slots | equip_jobs | equip_genders | equip_locations | weapon_level | equip_level | refineable | view | script_use | script_equip |
 					   +----+--------------+---------------+------+-----------+------------+--------+--------+---------+-------+-------+------------+---------------+-----------------+--------------+-------------+------+------------+--------------+ */
 
 					nameid = atoi(sql_row[0]);
@@ -735,30 +736,29 @@ static int itemdb_read_sqldb(void)
 					id->equip	= (sql_row[13] != NULL) ? atoi(sql_row[13]) : 0;
 					id->wlv		= (sql_row[14] != NULL) ? atoi(sql_row[14]) : 0;
 					id->elv		= (sql_row[15] != NULL)	? atoi(sql_row[15]) : 0;
-					id->look	= (sql_row[16] != NULL) ? atoi(sql_row[16]) : 0;
+					id->flag.no_refine = (sql_row[16] == NULL || atoi(sql_row[16]) == 1)?0:1;
+					id->look	= (sql_row[17] != NULL) ? atoi(sql_row[17]) : 0;
 					id->view_id	= 0;
 					// ----------
 
-					if (sql_row[17] != NULL)
-					{
-						if (sql_row[17][0] == '{')
-							id->use_script = parse_script((unsigned char *) sql_row[17], 0);
+					if (sql_row[18] != NULL) {
+						if (sql_row[18][0] == '{')
+							id->use_script = parse_script((unsigned char *) sql_row[18], 0);
 						else
 						{
-							sprintf(script, "{%s}", sql_row[17]);
+							sprintf(script, "{%s}", sql_row[18]);
 							id->use_script = parse_script((unsigned char *) script, 0);
 						}
 					}
 					else
 						id->use_script = NULL;
 
-					if (sql_row[18] != NULL)
-					{
-						if (sql_row[18][0] == '{')
-							id->equip_script = parse_script((unsigned char *) sql_row[18], 0);
+					if (sql_row[19] != NULL) {
+						if (sql_row[19][0] == '{')
+							id->equip_script = parse_script((unsigned char *) sql_row[19], 0);
 						else
 						{
-							sprintf(script, "{%s}", sql_row[18]);
+							sprintf(script, "{%s}", sql_row[19]);
 							id->equip_script = parse_script((unsigned char *) script, 0);
 						}
 					}
@@ -828,7 +828,7 @@ static int itemdb_readdb(void)
 			if(line[0]=='/' && line[1]=='/')
 				continue;
 			memset(str,0,sizeof(str));
-			for(j=0,np=p=line;j<17 && p;j++){
+			for(j=0,np=p=line;j<18 && p;j++){
 				str[j]=p;
 				p=strchr(p,',');
 				if(p){ *p++=0; np=p; }
@@ -841,7 +841,7 @@ static int itemdb_readdb(void)
 				continue;
 			ln++;
 
-			//ID,Name,Jname,Type,Price,Sell,Weight,ATK,DEF,Range,Slot,Job,Gender,Loc,wLV,eLV,View
+			//ID,Name,Jname,Type,Price,Sell,Weight,ATK,DEF,Range,Slot,Job,Gender,Loc,wLV,eLV,refineable,View
 			id=itemdb_search(nameid);
 			if(!id)
 				continue;
@@ -891,7 +891,8 @@ static int itemdb_readdb(void)
 			}
 			id->wlv=atoi(str[14]);
 			id->elv=atoi(str[15]);
-			id->look=atoi(str[16]);
+			id->flag.no_refine = atoi(str[16])?0:1;	//If the refine column is 1, no_refine is 0
+			id->look=atoi(str[17]);
 			id->flag.available=1;
 			id->flag.value_notdc=0;
 			id->flag.value_notoc=0;
@@ -939,7 +940,7 @@ static void itemdb_read(void)
 	itemdb_read_randomitem();
 	itemdb_read_itemavail();
 	itemdb_read_noequip();
-	itemdb_read_norefine();
+//	itemdb_read_norefine();
 	if (battle_config.cardillust_read_grffile)
 		itemdb_read_cardillustnametable();
 	if (battle_config.item_equip_override_grffile)

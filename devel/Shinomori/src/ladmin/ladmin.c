@@ -4091,19 +4091,30 @@ int parse_fromlogin(int fd) {
 //------------------------------------
 // Function to connect to login-server
 //------------------------------------
-int Connect_login_server() {
-	if (defaultlanguage == 'F') {
+int Connect_login_server()
+{
+
+	
+	if (defaultlanguage == 'F')
+	{
 		ShowMessage("Essai de connection au server de logins...\n");
 		ladmin_log("Essai de connection au server de logins..." RETCODE);
-	} else {
+	}
+	else
+	{
 		ShowMessage("Attempt to connect to login-server...\n");
 		ladmin_log("Attempt to connect to login-server..." RETCODE);
 	}
 
-	login_fd = make_connection(login_ip, loginserverport);
+	while( !session_isActive(login_fd) )
+	{
+		login_fd = make_connection(login_ip, loginserverport);
+		if(login_fd<0) sleep(2000); 
+	}
 
 #ifdef PASSWORDENC
-	if (passenc == 0) {
+	if (passenc == 0)
+	{
 #endif
 		WFIFOW(login_fd,0) = 0x7918; // Request for administation login
 		WFIFOW(login_fd,2) = 0; // no encrypted
@@ -4118,7 +4129,9 @@ int Connect_login_server() {
 			ladmin_log("Sending of the password..." RETCODE);
 		}
 #ifdef PASSWORDENC
-	} else {
+	}
+	else
+	{
 		WFIFOW(login_fd,0) = 0x791a; // Sending request about the coding key
 		WFIFOSET(login_fd,2);
 		bytes_to_read = 1;
@@ -4131,7 +4144,6 @@ int Connect_login_server() {
 		}
 	}
 #endif
-
 	return 0;
 }
 

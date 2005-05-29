@@ -39,8 +39,8 @@ int storage_tosql(unsigned long account_id,struct pc_storage *p){
 			mapitem[count].card[2] = p->storage[i].card[2];
 			mapitem[count].card[3] = p->storage[i].card[3];
 			count++;
-			}
-			}
+		}
+	}
 
 	memitemdata_to_sql(mapitem, count, account_id,TABLE_STORAGE);
 
@@ -107,8 +107,8 @@ int guild_storage_tosql(int guild_id, struct guild_storage *p){
 			mapitem[count].card[2] = p->storage[i].card[2];
 			mapitem[count].card[3] = p->storage[i].card[3];
 			count++;
-			}
-			}
+		}
+	}
 
 	memitemdata_to_sql(mapitem, count, guild_id,TABLE_GUILD_STORAGE);
 
@@ -207,12 +207,12 @@ int mapif_load_storage(int fd,unsigned long account_id)
 	storage_fromsql(account_id, storage_pt);
 	if(storage_pt)
 	{
-		WFIFOW(fd,0)=0x3810;
+	WFIFOW(fd,0)=0x3810;
 		WFIFOW(fd,2)=sizeof(struct pc_storage)+8;
-		WFIFOL(fd,4)=account_id;
+	WFIFOL(fd,4)=account_id;
 		//memcpy(WFIFOP(fd,8),storage_pt,sizeof(struct pc_storage));
 		pc_storage_tobuffer(*storage_pt,WFIFOP(fd,8));
-		WFIFOSET(fd,WFIFOW(fd,2));
+	WFIFOSET(fd,WFIFOW(fd,2));
 	}
 	return 0;
 }
@@ -255,19 +255,19 @@ int mapif_load_guild_storage(int fd,unsigned long account_id,unsigned long guild
 		guild_storage_fromsql(guild_id,guild_storage_pt);
 		if(guild_storage_pt)
 		{
-			WFIFOW(fd,2)=sizeof(struct guild_storage)+12;
-			WFIFOL(fd,4)=account_id;
-			WFIFOL(fd,8)=guild_id;
+		WFIFOW(fd,2)=sizeof(struct guild_storage)+12;
+		WFIFOL(fd,4)=account_id;
+		WFIFOL(fd,8)=guild_id;
 			//memcpy(WFIFOP(fd,12),guild_storage_pt,sizeof(struct guild_storage));
 			guild_storage_tobuffer(*guild_storage_pt,WFIFOP(fd,12));
 			WFIFOSET(fd,sizeof(struct guild_storage)+12);
 			return 0;
-		}
+	}
 	}
 	// failed
-	WFIFOW(fd,2)=12;
-	WFIFOL(fd,4)=account_id;
-	WFIFOL(fd,8)=0;
+		WFIFOW(fd,2)=12;
+		WFIFOL(fd,4)=account_id;
+		WFIFOL(fd,8)=0;
 	WFIFOSET(fd,12);
 	return 0;
 }

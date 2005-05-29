@@ -759,9 +759,9 @@ int intif_parse_LoadStorage(int fd) {
 		stor->dirty=0;
 		stor->storage_status=1;
 		sd->state.storage_flag = 0;
-		clif_storageitemlist(sd,stor);
-		clif_storageequiplist(sd,stor);
-		clif_updatestorageamount(sd,stor);
+		clif_storageitemlist(*sd,*stor);
+		clif_storageequiplist(*sd,*stor);
+		clif_updatestorageamount(*sd,*stor);
 	}
 
 	return 0;
@@ -809,9 +809,9 @@ int intif_parse_LoadGuildStorage(int fd)
 
 		gstor->storage_status = 1;
 		sd->state.storage_flag = 1;
-		clif_guildstorageitemlist(sd,gstor);
-		clif_guildstorageequiplist(sd,gstor);
-		clif_updateguildstorageamount(sd,gstor);
+		clif_guildstorageitemlist(*sd,*gstor);
+		clif_guildstorageequiplist(*sd,*gstor);
+		clif_updateguildstorageamount(*sd,*gstor);
 	}
 	return 0;
 }

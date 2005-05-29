@@ -8,5 +8,8 @@ ladmin: ladmin.o $(COMMON_OBJ)
 ladmin.o: ladmin.c ladmin.h $(COMMON_H)
 $(COMMON_OBJ): $(COMMON_H)
 
+../common/obj/minicore.o: ../common/core.c ../common/core.h
+	$(COMPILE.c) -DMINICORE $(OUTPUT_OPTION) $<
+
 clean:
 	rm -rf *.o ../../ladmin

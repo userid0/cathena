@@ -169,11 +169,11 @@ void map_setusers(int fd)
 {
 	if( session_isActive(fd) )
 	{
-		users = RFIFOL(fd,2);
-		// send some anser
-		WFIFOW(fd,0) = 0x2718;
-		WFIFOSET(fd,2);
-	}
+	users = RFIFOL(fd,2);
+	// send some anser
+	WFIFOW(fd,0) = 0x2718;
+	WFIFOSET(fd,2);
+}
 }
 
 /*==========================================
@@ -198,23 +198,22 @@ int map_freeblock( void *bl )
 	if(bl)
 	if(block_free_lock==0){
 		aFree(bl);
-	}
-	else{
+	} else{
 		if( block_free_count>=block_free_max ) {
 			if(battle_config.error_log)
-				ShowMessage("map_freeblock: *WARNING* too many aFree block! %d %d\n",
+				ShowWarning("map_freeblock: too many free block! %d %d\n",
 			block_free_count,block_free_lock);
+		} else block_free[block_free_count++] = bl;
 		}
-		else
-			block_free[block_free_count++]=bl;
-	}
+
 	return block_free_lock;
 }
 /*==========================================
  * blockのfreeを一市Iに禁止する
  *------------------------------------------
  */
-int map_freeblock_lock(void) {
+int map_freeblock_lock (void)
+{
 	return ++block_free_lock;
 }
 
@@ -224,13 +223,10 @@ int map_freeblock_lock(void) {
  * バッファにたまっていたblockを全部削除
  *------------------------------------------
  */
-int map_freeblock_unlock(void) {
+int map_freeblock_unlock (void)
+{
 	if ((--block_free_lock) == 0) {
 		int i;
-//		if(block_free_count>0) {
-//			if(battle_config.error_log)
-//				ShowMessage("map_freeblock_unlock: aFree %d object\n",block_free_count);
-//		}
 		for(i=0;i<block_free_count;i++){
 			aFree(block_free[i]);
 			block_free[i] = NULL;
@@ -238,9 +234,10 @@ int map_freeblock_unlock(void) {
 		block_free_count=0;
 	}else if(block_free_lock<0){
 		if(battle_config.error_log)
-			ShowMessage("map_freeblock_unlock: lock count < 0 !\n");
+			ShowError("map_freeblock_unlock: lock count < 0 !\n");
 		block_free_lock = 0; // 次回以降のロックに支障が出てくるのでリセット
 	}
+
 	return block_free_lock;
 }
 
@@ -249,15 +246,14 @@ int map_freeblock_unlock(void) {
 // この関数は、do_timer() のトップレベルから呼ばれるので、
 // block_free_lock を直接いじっても支障無いはず。
 
-int map_freeblock_timer(int tid,unsigned long tick,int id,int data) {
+int map_freeblock_timer (int tid, unsigned long tick, int id, int data)
+{
 	if(block_free_lock > 0) {
-		ShowMessage("map_freeblock_timer: block_free_lock(%d) is invalid.\n",block_free_lock);
+		ShowError("map_freeblock_timer: block_free_lock(%d) is invalid.\n", block_free_lock);
 		block_free_lock = 1;
 		map_freeblock_unlock();
 	}
-	// else {
-	// 	ShowMessage("map_freeblock_timer: check ok\n");
-	// }
+
 	return 0;
 }
 
@@ -280,7 +276,7 @@ static struct block_list bl_head;
  */
 int map_addblock(struct block_list &bl)
 {
-	size_t m,x,y;
+	size_t m,x,y,pos;
 
 	if(bl.prev != NULL){
 			if(battle_config.error_log)
@@ -294,18 +290,19 @@ int map_addblock(struct block_list &bl)
 	if( m>=map_num || x>=map[m].xs || y>=map[m].ys )
 		return 1;
 
-	if(bl.type==BL_MOB){
-		bl.next = map[m].block_mob[x/BLOCK_SIZE+(y/BLOCK_SIZE)*map[m].bxs];
+	pos = x/BLOCK_SIZE+(y/BLOCK_SIZE)*map[m].bxs;
+	if (bl.type == BL_MOB) {
+		bl.next = map[m].block_mob[pos];
 		bl.prev = &bl_head;
 		if(bl.next) bl.next->prev = &bl;
-		map[m].block_mob[x/BLOCK_SIZE+(y/BLOCK_SIZE)*map[m].bxs] = &bl;
-		map[m].block_mob_count[x/BLOCK_SIZE+(y/BLOCK_SIZE)*map[m].bxs]++;
+		map[m].block_mob[pos] = &bl;
+		map[m].block_mob_count[pos]++;
 	} else {
-		bl.next = map[m].block[x/BLOCK_SIZE+(y/BLOCK_SIZE)*map[m].bxs];
+		bl.next = map[m].block[pos];
 		bl.prev = &bl_head;
-		if(bl.next) bl.next->prev = &bl;
-		map[m].block[x/BLOCK_SIZE+(y/BLOCK_SIZE)*map[m].bxs] = &bl;
-		map[m].block_count[x/BLOCK_SIZE+(y/BLOCK_SIZE)*map[m].bxs]++;
+		if (bl.next) bl.next->prev = &bl;
+		map[m].block[pos] = &bl;
+		map[m].block_count[pos]++;
 		if(bl.type==BL_PC)
 			map[m].users++;
 	}
@@ -358,11 +355,12 @@ int map_delblock(struct block_list &bl)
 }
 
 /*==========================================
- * 周?のPC人?を?える (現在未使用)
+ * 周?のPC人?を?える (unused)
  *------------------------------------------
  */
-int map_countnearpc(unsigned short m, int x, int y) {
-	unsigned int bx,by,c=0;
+int map_countnearpc (unsigned short m, size_t x, size_t y)
+{
+	size_t bx, by, c = 0;
 	struct block_list *bl=NULL;
 
 	if( m>MAX_MAP_PER_SERVER || map[m].users==0 )
@@ -385,6 +383,7 @@ int map_countnearpc(unsigned short m, int x, int y) {
 			}
 		}
 	}
+
 	return c;
 }
 
@@ -453,7 +452,7 @@ struct skill_unit *map_find_skill_unit_oncell(struct block_list *target,int x,in
  * type!=0 ならその種類のみ
  *------------------------------------------
  */
-void map_foreachinarea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...) {
+void map_foreachinarea(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...) {
 	va_list ap;
 	int bx,by;
 	struct block_list *bl=NULL;
@@ -505,7 +504,7 @@ void map_foreachinarea(int (*func)(struct block_list*,va_list),unsigned short m,
 
 	for(i=blockcount;i<bl_list_count;i++)
 		if(bl_list[i]->prev)	// 有?かどうかチェック
-			func(bl_list[i],ap);
+			func(*bl_list[i],ap);
 
 	map_freeblock_unlock();	// 解放を許可する
 	va_end(ap);
@@ -686,7 +685,7 @@ void map_foreachincell(int (*func)(struct block_list*,va_list),unsigned short m,
 * For checking a path between two points (x0, y0) and (x1, y1)
 *------------------------------------------------------------
  */
-void map_foreachinpath(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...)
+void map_foreachinpath(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...)
 {
 /*	va_list ap;
 	double deltax = 0.0;
@@ -1175,7 +1174,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	{
 		dx = ((double)(x1-x0)) / ((double)tmax);
 		dy = ((double)(y1-y0)) / ((double)tmax);
-	}
+}
 	// go along the index t from 0 to tmax
 	t=0;
 	do {	
@@ -1253,7 +1252,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 	for(i=blockcount;i<bl_list_count;i++)
 		if(bl_list[i]->prev)	// 有?かどうかチェック
-			func(bl_list[i],ap);
+			func(*bl_list[i],ap);
 
 	map_freeblock_unlock();	// 解放を許可する
 	va_end(ap);
@@ -1396,7 +1395,7 @@ int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data)
 		delete_timer(fitem->cleartimer,map_clearflooritem_timer);
 	else if(fitem->item_data.card[0] == 0xff00)
 		intif_delete_petdata( MakeDWord(fitem->item_data.card[1],fitem->item_data.card[2]) );
-	clif_clearflooritem(fitem);
+	clif_clearflooritem(*fitem);
 	map_delobject(fitem->bl.id);
 
 	return 0;
@@ -1515,7 +1514,7 @@ int map_addflooritem(struct item &item_data,unsigned short amount,unsigned short
 	fitem->cleartimer=add_timer(gettick()+battle_config.flooritem_lifetime,map_clearflooritem_timer,fitem->bl.id,0);
 
 	map_addblock(fitem->bl);
-	clif_dropflooritem(fitem);
+	clif_dropflooritem(*fitem);
 
 	return fitem->bl.id;
 }
@@ -1549,7 +1548,7 @@ void map_addchariddb(unsigned long charid, const char *name)
 	{	// 返信待ちがあれば返信
 		struct map_session_data *sd = map_id2sd(req);
 		if (sd != NULL)
-			clif_solved_charname(sd,charid);
+			clif_solved_charname(*sd,charid);
 	}
 }
 
@@ -1562,9 +1561,9 @@ int map_reqchariddb(struct map_session_data &sd, unsigned long charid)
 	struct charid2nick *p= (struct charid2nick*)numdb_search(charid_db,charid);
 	if(p==NULL)
 	{	// not in database -> create new
-		p = (struct charid2nick *)aCalloc(1,sizeof(struct charid2nick));
+	p = (struct charid2nick *)aCalloc(1,sizeof(struct charid2nick));
 		p->req_id=sd.bl.id;
-		numdb_insert(charid_db,charid,p);
+	numdb_insert(charid_db,charid,p);
 	}
 	return 0;
 }
@@ -1614,7 +1613,7 @@ int map_quit(struct map_session_data &sd)
 				run_script(npc->u.scr.ref->script,0,sd.bl.id,npc->bl.id); // PCLogoutNPC
 				ShowStatus ("Event '"CL_WHITE"%s"CL_RESET"' executed.\n", script_config.logout_event_name);
 				}
-		}
+			}
 		else 
 		{
 			ShowStatus("%d '"CL_WHITE"%s"CL_RESET"' events executed.\n",
@@ -1623,10 +1622,10 @@ int map_quit(struct map_session_data &sd)
 	}
 
 	if(sd.chatID)	// チャットから出る
-		chat_leavechat(sd);
+			chat_leavechat(sd);
 
 	if(sd.trade_partner)	// 取引を中?する
-		trade_tradecancel(sd);
+			trade_tradecancel(sd);
 
 	if(sd.party_invite>0)	// パ?ティ?誘を拒否する
 		party_reply_invite(sd,sd.party_invite_account,0);
@@ -1636,20 +1635,20 @@ int map_quit(struct map_session_data &sd)
 	if(sd.guild_alliance>0)	// ギルド同盟?誘を拒否する
 		guild_reply_reqalliance(sd,sd.guild_alliance_account,0);
 
-	party_send_logout(sd);	// パ?ティのログアウトメッセ?ジ送信
+		party_send_logout(sd);	// パ?ティのログアウトメッセ?ジ送信
 		
-	party_send_dot_remove(sd);//minimap dot fix [Kevin]
+		party_send_dot_remove(sd);//minimap dot fix [Kevin]
 
-	guild_send_memberinfoshort(sd,0);	// ギルドのログアウトメッセ?ジ送信
+		guild_send_memberinfoshort(sd,0);	// ギルドのログアウトメッセ?ジ送信
 
-	pc_cleareventtimer(&sd);	// イベントタイマを破棄する
+		pc_cleareventtimer(sd);	// イベントタイマを破棄する
 
 	if(sd.state.storage_flag)
-		storage_guild_storage_quit(sd,0);
-	else
-		storage_storage_quit(sd);	// 倉庫を開いてるなら保存する
+			storage_guild_storage_quit(sd,0);
+		else
+			storage_storage_quit(sd);	// 倉庫を開いてるなら保存する
 
-	// check if we've been authenticated [celest]
+		// check if we've been authenticated [celest]
 	if (sd.state.auth)
 		skill_castcancel(&sd.bl,0);	// 詠唱を中?する
 
@@ -1662,40 +1661,40 @@ int map_quit(struct map_session_data &sd)
 	skill_clear_unitgroup(&sd.bl);	// スキルユニットグル?プの削除
 	skill_cleartimerskill(&sd.bl);
 
-	pc_stop_walking(sd,0);
-	pc_stopattack(&sd);
-	pc_delinvincibletimer(&sd);
+			pc_stop_walking(sd,0);
+			pc_stopattack(sd);
+			pc_delinvincibletimer(sd);
 
-	pc_delspiritball(&sd,sd.spiritball,1);
+	pc_delspiritball(sd,sd.spiritball,1);
 	skill_gangsterparadise(&sd,0);
 	skill_unit_move(&sd.bl,gettick(),0);
 
 	if (sd.state.auth)
-		status_calc_pc(sd,4);
+			status_calc_pc(sd,4);
 
 	if (!(sd.status.option & OPTION_HIDE))
-		clif_clearchar_area(&sd.bl,2);
+		clif_clearchar_area(sd.bl,2);
 
 	if(sd.status.pet_id && sd.pd) {
 		pet_lootitem_drop(*(sd.pd),&sd);
-		pet_remove_map(sd);
+			pet_remove_map(sd);
 		if(sd.pet.intimate <= 0) {
 			intif_delete_petdata(sd.status.pet_id);
 			sd.status.pet_id = 0;
 			sd.pd = NULL;
 			sd.petDB = NULL;
-		}
-		else
+			}
+			else
 			intif_save_petdata(sd.status.account_id,sd.pet);
-	}
-	if(pc_isdead(sd))
-	pc_setrestartvalue(sd,2);
+		}
+		if(pc_isdead(sd))
+			pc_setrestartvalue(sd,2);
 
-	pc_clean_skilltree(sd);
-	pc_makesavestatus(sd);
-	chrif_save(sd);
-	storage_storage_dirty(sd);
-	storage_storage_save(sd);
+		pc_clean_skilltree(sd);
+		pc_makesavestatus(sd);
+		chrif_save(sd);
+		storage_storage_dirty(sd);
+		storage_storage_save(sd);
 	map_delblock(sd.bl);
 
 	if( sd.npc_stackbuf != NULL) {
@@ -1712,17 +1711,17 @@ int map_quit(struct map_session_data &sd)
 			aFree(p);
 		}
 	}
-
+	
 	strdb_erase(nick_db,sd.status.name);
 	numdb_erase(charid_db,sd.status.char_id);
 	numdb_erase(id_db,sd.bl.id);
-	
+		
 	if(sd.reg)
 	{
 		aFree(sd.reg);
 		sd.reg=NULL;
 	}
-		
+
 	if(sd.regstr)
 	{
 		aFree(sd.regstr);
@@ -1893,7 +1892,7 @@ void map_removenpc(void)
 	for(m=0;m<map_num;m++) {
 		for(i=0;i<map[m].npc_num && i<MAX_NPC_PER_MAP;i++) {
 			if(map[m].npc[i]!=NULL) {
-				clif_clearchar_area(&map[m].npc[i]->bl,2);
+				clif_clearchar_area(map[m].npc[i]->bl,2);
 				map_delblock(map[m].npc[i]->bl);
 				numdb_erase(id_db,map[m].npc[i]->bl.id);
 //				if(map[m].npc[i]->bl.subtype==SCRIPT) {
@@ -1911,6 +1910,66 @@ void map_removenpc(void)
 	ShowStatus("Successfully removed and freed from memory '"CL_WHITE"%d"CL_RESET"' NPCs.\n",n);
 }
 
+/*=========================================
+ * Dynamic Mobs [Wizputer]
+ *-----------------------------------------
+ */
+
+struct mob_list* map_addmobtolist(unsigned short m)
+{
+    size_t i;
+    for(i=0; i<MAX_MOB_LIST_PER_MAP; i++)
+	{
+		if(map[m].moblist[i]==NULL)
+		{
+			map[m].moblist[i] = (struct mob_list *) aMalloc (1 * sizeof(struct mob_list));
+			return map[m].moblist[i];
+		}
+	}
+	return NULL;
+}
+    
+void clear_moblist(unsigned short m)
+{
+	size_t i;
+	if(m<MAX_MAP_PER_SERVER)
+    for(i=0; i<MAX_MOB_LIST_PER_MAP; i++)
+		if(map[m].moblist[i]!=NULL)
+		{
+			aFree(map[m].moblist[i]);
+			map[m].moblist[i] = NULL;
+		}
+
+}
+
+    
+void map_spawnmobs(unsigned short m)
+{
+	size_t i;
+    for(i=0; i<MAX_MOB_LIST_PER_MAP; i++)
+		if(map[m].moblist[i]!=NULL)
+			npc_parse_mob2(*map[m].moblist[i]);
+}
+
+int mob_cleanup_sub (struct block_list &bl, va_list ap)
+{
+	struct mob_data &md= (struct mob_data &)bl;
+	switch(bl.type)
+	{
+	case BL_MOB:
+		// unload non-delay mobs only
+		if( !md.spawndelay1 || !md.spawndelay2 || ( (md.hp==md.max_hp) && battle_config.mob_remove_damaged ))
+			mob_unload(&md);
+		break;
+	}
+	return 0;
+}
+
+void map_removemobs(unsigned short m)
+{
+    map_foreachinarea(mob_cleanup_sub, m, 0, 0, map[m].xs, map[m].ys, 0);
+}
+    
 /*==========================================
  * map名からmap番?へ?換
  *------------------------------------------
@@ -2416,11 +2475,11 @@ bool map_cache_read(struct map_data &m)
 	{
 		if(map_cache.map[i].compressed == 0)
 		{
-			// 非圧縮ファイル
+				// 非圧縮ファイル
 			m.xs = map_cache.map[i].xs;
 			m.ys = map_cache.map[i].ys;
 			m.gat = (struct mapgat *)aMalloc( map_cache.map[i].datalen );
-			fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
+				fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
 			if( map_cache.map[i].datalen != fread(m.gat, 1, map_cache.map[i].datalen, map_cache.fp) )
 			{	// なぜかファイル後半が欠けてるので読み直し
 				aFree(m.gat);
@@ -2428,7 +2487,7 @@ bool map_cache_read(struct map_data &m)
 				m.xs = 0;
 				m.ys = 0;
 				return false;
-			}
+				}
 			else
 			{	// 成功
 				return true;
@@ -2436,35 +2495,35 @@ bool map_cache_read(struct map_data &m)
 		}
 		else if(map_cache.map[i].compressed == 1)
 		{	//zlib compressed
-			// 圧縮フラグ=1 : zlib
-			unsigned char *buf;
+				// 圧縮フラグ=1 : zlib
+				unsigned char *buf;
 			unsigned long size_compress = map_cache.map[i].datalen;
 			unsigned long dest_len = map_cache.map[i].xs * map_cache.map[i].ys * sizeof(struct mapgat);
 			m.xs = map_cache.map[i].xs;
 			m.ys = map_cache.map[i].ys;
-			buf = (unsigned char*)aMalloc(size_compress);
-			fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
+				buf = (unsigned char*)aMalloc(size_compress);
+				fseek(map_cache.fp,map_cache.map[i].pos,SEEK_SET);
 			if(fread(buf,1,size_compress,map_cache.fp) != size_compress)
 			{	// なぜかファイル後半が欠けてるので読み直し
-				aFree(buf);
+					aFree(buf);
 				buf = NULL;
 				m.gat = NULL;
 				m.xs = 0; 
 				m.ys = 0; 
 				return false;
-			}
+				}
 			m.gat = (struct mapgat *)aMalloc( dest_len );				
 			decode_zip((unsigned char*)m.gat, &dest_len, buf, size_compress);
 			if(dest_len != map_cache.map[i].xs * map_cache.map[i].ys * sizeof(struct mapgat))
 			{	// 正常に解凍が出来てない
-				aFree(buf);
+					aFree(buf);
 				buf=NULL;
 				aFree(m.gat);
 				m.gat = NULL;
 				m.xs = 0; 
 				m.ys = 0; 
 				return false;
-			}
+				}
 			if(buf)// might be ok without this check
 			{	aFree(buf);
 				buf=NULL;
@@ -2489,7 +2548,7 @@ bool map_cache_write(struct map_data &m)
 	{
 		if( (0==strcmp(m.mapname,map_cache.map[i].fn)) || (map_cache.map[i].fn[0] == 0) )
 			break;
-	}
+			}
 	if(i<map_cache.head.nmaps) 
 	{	// should always be valid but better check it
 		int compress = 0;
@@ -2501,12 +2560,12 @@ bool map_cache_write(struct map_data &m)
 		// prepare write_buf and len_new
 		if(compress == 1)
 		{	// zlib compress
-			// 圧縮保存
-			// さすがに２倍に膨れる事はないという事で
+				// 圧縮保存
+				// さすがに２倍に膨れる事はないという事で
 			len_new = 2 * m.xs * m.ys * sizeof(struct mapgat);
 			write_buf = (unsigned char *)aMalloc( len_new );
 			encode_zip(write_buf,&len_new,(unsigned char *)m.gat, m.xs*m.ys*sizeof(struct mapgat));
-		}
+			}
 		else
 		{	// no compress
 			len_new = m.xs * m.ys *sizeof(struct mapgat);
@@ -2517,17 +2576,17 @@ bool map_cache_write(struct map_data &m)
 		if( (map_cache.map[i].fn[0] == 0) )
 		{	// new map is inserted
 			// write at the end of the mapcache file
-			fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
-			fwrite(write_buf,1,len_new,map_cache.fp);
+				fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
+				fwrite(write_buf,1,len_new,map_cache.fp);
 
 			// prepare the data header
 			memcpy(map_cache.map[i].fn, m.mapname, sizeof(map_cache.map[i].fn));
 			map_cache.map[i].fn[sizeof(map_cache.map[i].fn)-1]=0;			
 
 			// update file header
-			map_cache.map[i].pos = map_cache.head.filesize;
-			map_cache.head.filesize += len_new;
-		}
+				map_cache.map[i].pos = map_cache.head.filesize;
+				map_cache.head.filesize += len_new;
+			}
 		else
 		{	// update an existing map
 			len_old = map_cache.map[i].datalen;
@@ -2540,13 +2599,13 @@ bool map_cache_write(struct map_data &m)
 			}
 			else 
 			{	// new len is larger then the old space -> write at file end
-				// 新しい場所に登録
-				fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
-				fwrite(write_buf,1,len_new,map_cache.fp);
+			// 新しい場所に登録
+			fseek(map_cache.fp,map_cache.head.filesize,SEEK_SET);
+			fwrite(write_buf,1,len_new,map_cache.fp);
 
 				// update file header
-				map_cache.map[i].pos = map_cache.head.filesize;
-				map_cache.head.filesize += len_new;			
+			map_cache.map[i].pos = map_cache.head.filesize;
+			map_cache.head.filesize += len_new;
 			}
 		}
 		// just make sure that everything gets updated
@@ -2555,15 +2614,15 @@ bool map_cache_write(struct map_data &m)
 		map_cache.map[i].water_height = map_waterheight(m.mapname);
 		map_cache.map[i].compressed   = compress;
 		map_cache.map[i].datalen      = len_new;
-		map_cache.dirty = 1;
+			map_cache.dirty = 1;
 
 		if(compress == 1)
 		{	// zlib compress has alloced an additional buffer
-			aFree(write_buf);
+				aFree(write_buf);
 			write_buf = NULL;
-		}
+			}
 		return true;
-	}
+		}
 	// 書き甲ﾟなかった
 	return false;
 }
@@ -2725,7 +2784,7 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 	if( map_cache_read(map[m]) )
 	{	// キャッシュから読み甲ﾟた
 		(*map_cache)++;
-	}
+			}
 	else
 	{	// read from grf
 		int wh;
@@ -2763,14 +2822,14 @@ static int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap) 
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*2);
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*3);
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*4);
-			}
+		}
 
 			if(wh!=NO_WATER && pp.type==0)
 			{	// ﾉ倏揮ｩﾆ
 				// no direct access
 				//map[m].gat[x+y*map[m].xs].type=(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0;
 				map_setcell(m,x,y,(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0);
-			}
+				}
 			else
 			{	// no direct access
 				//map[m].gat[x+y*map[m].xs].type=() & CELL_MASK;
@@ -3314,8 +3373,8 @@ void char_online_check(void)
 			sd->status.char_id)
 		{
 			chrif_char_online(*sd);
-		}
 	}
+}
 }
 
 int online_timer(int tid,unsigned long tick,int id,int data)
@@ -3367,27 +3426,27 @@ int charid_db_final(void *k,void *d,va_list ap)
 	if (p) aFree(p);
 	return 0;
 }
-int cleanup_sub(struct block_list *bl, va_list ap) 
+int cleanup_sub(struct block_list &bl, va_list ap) 
 {
-	nullpo_retr(0, bl);
-        switch(bl->type) {
+	switch(bl.type)
+	{
         case BL_PC:
-            map_quit(*((struct map_session_data *)bl) );
+        map_quit( (struct map_session_data &)bl );
             break;
         case BL_NPC:
-            npc_unload((struct npc_data *)bl);
+        npc_unload( (struct npc_data *)&bl );
             break;
         case BL_MOB:
-            mob_unload((struct mob_data *)bl);
+        mob_unload( (struct mob_data *)&bl);
             break;
         case BL_PET:
-            pet_remove_map(*((struct map_session_data *)bl));
+        pet_remove_map( (struct map_session_data &)bl );
             break;
         case BL_ITEM:
-            map_clearflooritem(bl->id);
+        map_clearflooritem(bl.id);
             break;
         case BL_SKILL:
-            skill_delunit((struct skill_unit *) bl);
+        skill_delunit( (struct skill_unit *)&bl);
             break;
         }
 	return 0;
@@ -3412,7 +3471,7 @@ void do_final(void)
     chrif_char_reset_offline();
     chrif_flush_fifo();
 
-    map_removenpc();
+		map_removenpc();
 	do_final_chrif(); // この内部でキャラを全て切断する
 	do_final_npc();
 	do_final_script();
@@ -3424,11 +3483,16 @@ void do_final(void)
 	do_final_pet();
 	do_final_msg();
 
-	for (i=0; i<map_num; i++) {
-		if(map[i].gat) {
+	for (i=0; i<map_num; i++)
+	{
+		if(map[i].gat)
+		{
 			aFree(map[i].gat);
 			map[i].gat=NULL;
-	}
+		}
+
+		clear_moblist(i);
+
 		if(map[i].block)			{ aFree(map[i].block); map[i].block=NULL; }
 		if(map[i].block_mob)		{ aFree(map[i].block_mob); map[i].block_mob=NULL; }
 		if(map[i].block_count)		{ aFree(map[i].block_count); map[i].block_count=NULL; }
@@ -3439,7 +3503,9 @@ void do_final(void)
     strdb_final(nick_db, nick_db_final);
     numdb_final(charid_db, charid_db_final);
 
-//#endif
+
+
+
 
 #ifndef TXT_ONLY
     map_sql_close();
@@ -3522,7 +3588,7 @@ int do_init(int argc, char *argv[]) {
 	for (i = 1; i < argc ; i++) {
 		if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "--h") == 0 || strcmp(argv[i], "--?") == 0 || strcmp(argv[i], "/?") == 0)
 			map_helpscreen(1);
-		if (strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "--v") == 0 || strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "/v") == 0)
+		else if (strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "--v") == 0 || strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "/v") == 0)
 			map_versionscreen(1);
 		else if (strcmp(argv[i], "--map_config") == 0 || strcmp(argv[i], "--map-config") == 0)
 			MAP_CONF_NAME=argv[i+1];
@@ -3540,10 +3606,10 @@ int do_init(int argc, char *argv[]) {
 			GRF_PATH_FILENAME = argv[i+1];
 #ifndef TXT_ONLY
 		else if (strcmp(argv[i],"--inter_config") == 0 || strcmp(argv[i],"--inter-config") == 0)
-		    INTER_CONF_NAME = argv[i+1];
-#endif /* not TXT_ONLY */
+			INTER_CONF_NAME = argv[i+1];
+#endif
 		else if (strcmp(argv[i],"--log_config") == 0 || strcmp(argv[i],"--log-config") == 0)
-		    LOG_CONF_NAME = argv[i+1];
+			LOG_CONF_NAME = argv[i+1];
 		else if (strcmp(argv[i],"--run_once") == 0)	// close the map-server as soon as its done.. for testing [Celest]
 			core_stoprunning();
 	}
@@ -3554,7 +3620,7 @@ int do_init(int argc, char *argv[]) {
 		ShowMessage("\nUnable to automatically determine the IP address.\n");
 		ShowMessage("please edit the map_athena.conf file and set it to correct values.\n");
 		ShowMessage("(127.0.0.1 is valid if you have no network interface)\n");
-        }
+	}
 	else if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK || chrif_getip() == INADDR_LOOPBACK) {
           // The map server should know what IP address it is running on
           //   - MouseJstr
@@ -3594,16 +3660,20 @@ int do_init(int argc, char *argv[]) {
 
 	map_readallmap();
 
-	add_timer_func_list(map_freeblock_timer,"map_freeblock_timer");
+	add_timer_func_list(map_freeblock_timer, "map_freeblock_timer");
 	add_timer_func_list(map_clearflooritem_timer, "map_clearflooritem_timer");
 	add_timer_interval(gettick()+1000,60*1000,map_freeblock_timer,0,0);
 
 	//Added by Mugendai for GUI support
-	if (flush_on)
+	if (flush_on) {
+		add_timer_func_list(flush_timer, "flush_timer");
 		add_timer_interval(gettick()+10,flush_time, flush_timer,0,0);
+	}
 	//Added for Mugendais I'm Alive mod
-	if (imalive_on)
+	if (imalive_on) {
+		add_timer_func_list(imalive_timer, "imalive_timer");
 		add_timer_interval(gettick()+10, imalive_time*1000, imalive_timer,0,0);
+	}
 
 	// online status timer, checks every hour [Valaris]
 	add_timer_func_list(online_timer, "online_timer");
@@ -3638,8 +3708,8 @@ int do_init(int argc, char *argv[]) {
 	npc_event_do_oninit();	// npcのOnInitイベント?行
 
 	if ( console ) {
-	    set_defaultconsoleparse(parse_console);
-	   	start_console();
+		set_defaultconsoleparse(parse_console);
+		start_console();
 	}
 
 	if (battle_config.pk_mode == 1)
@@ -3651,13 +3721,13 @@ int do_init(int argc, char *argv[]) {
 }
 
 int compare_item(struct item *a, struct item *b) {
-  return (
-          (a->nameid == b->nameid) &&
-          (a->identify == b->identify) &&
-          (a->refine == b->refine) &&
-          (a->attribute == b->attribute) &&
-          (a->card[0] == b->card[0]) &&
-          (a->card[1] == b->card[1]) &&
-          (a->card[2] == b->card[2]) &&
-          (a->card[3] == b->card[3]));
+	return (
+		(a->nameid == b->nameid) &&
+		(a->identify == b->identify) &&
+		(a->refine == b->refine) &&
+		(a->attribute == b->attribute) &&
+		(a->card[0] == b->card[0]) &&
+		(a->card[1] == b->card[1]) &&
+		(a->card[2] == b->card[2]) &&
+		(a->card[3] == b->card[3]));
 }

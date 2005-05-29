@@ -10,6 +10,8 @@
 
 #define DIFF_TICK(a,b) (((int)(a)-(int)(b)))
 
+extern time_t start_time;
+
 // Struct declaration
 
 struct TimerData {

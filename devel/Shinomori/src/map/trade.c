@@ -26,7 +26,7 @@ void trade_traderequest(struct map_session_data &sd, unsigned long target_id)
 	if ((target_sd = map_id2sd(target_id)) != NULL) {
 		if (!battle_config.invite_request_check) {
 			if (target_sd->guild_invite > 0 || target_sd->party_invite > 0) {
-				clif_tradestart(&sd, 2); // 相手はPT要請中かGuild要請中
+				clif_tradestart(sd, 2); // 相手はPT要請中かGuild要請中
 				return;
 			}
 		}
@@ -43,15 +43,15 @@ void trade_traderequest(struct map_session_data &sd, unsigned long target_id)
 			if (!level && (sd.bl.m != target_sd->bl.m ||
 			    (sd.bl.x+5 <= target_sd->bl.x || sd.bl.x >= target_sd->bl.x+5) ||
 			    (sd.bl.y+5 <= target_sd->bl.y || sd.bl.y  >= target_sd->bl.y+5))) {
-				clif_tradestart(&sd, 0); // too far
+				clif_tradestart(sd, 0); // too far
 			} else if (&sd != target_sd) {
 				target_sd->trade_partner = sd.status.account_id;
 				sd.trade_partner = target_sd->status.account_id;
-				clif_traderequest(target_sd, sd.status.name);
+				clif_traderequest(*target_sd, sd.status.name);
 			}
 		}
 	} else {
-		clif_tradestart(&sd, 1); // character does not exist
+		clif_tradestart(sd, 1); // character does not exist
 	}
 }
 
@@ -65,8 +65,8 @@ void trade_tradeack(struct map_session_data &sd, int type)
 	struct pc_storage *stor;
 
 	if ((target_sd = map_id2sd(sd.trade_partner)) != NULL) {
-		clif_tradestart(target_sd, type);
-		clif_tradestart(&sd, type);
+		clif_tradestart(*target_sd, type);
+		clif_tradestart(sd, type);
 		if (type == 4) { // Cancel
 			sd.deal_locked = 0;
 			sd.trade_partner = 0;
@@ -176,7 +176,7 @@ void trade_tradeadditem(struct map_session_data &sd, unsigned short index, unsig
 				if(amount > 0 && amount <= MAX_ZENY && amount <= (unsigned long)sd.status.zeny && // check amount
 				    (target_sd->status.zeny + amount) <= MAX_ZENY) { // fix positiv overflow
 					sd.deal_zeny = amount;
-					clif_tradeadditem(&sd, target_sd, 0, amount);
+					clif_tradeadditem(sd, *target_sd, 0, amount);
 				} else {
 					if (amount != 0) {
 						trade_tradecancel(sd);
@@ -196,7 +196,7 @@ void trade_tradeadditem(struct map_session_data &sd, unsigned short index, unsig
 					}
 					else if (target_sd->weight + trade_weight > target_sd->max_weight)
 					{
-						clif_tradeitemok(&sd, index, 1); // fail to add item -- the player was over weighted.
+						clif_tradeitemok(sd, index, 1); // fail to add item -- the player was over weighted.
 						amount = 0;
 					}
 					else 
@@ -213,8 +213,8 @@ void trade_tradeadditem(struct map_session_data &sd, unsigned short index, unsig
 							trade_tradecancel(sd);
 							return;
 						}
-						clif_tradeitemok(&sd, index, 0); // success to add item
-						clif_tradeadditem(&sd, target_sd, index, amount);
+						clif_tradeitemok(sd, index, 0); // success to add item
+						clif_tradeadditem(sd, *target_sd, index, amount);
 					}
 					break;
 				} else {
@@ -261,9 +261,9 @@ void trade_tradeok(struct map_session_data &sd)
 
 	if ((target_sd = map_id2sd(sd.trade_partner)) != NULL) {
 		sd.deal_locked = 1;
-		clif_tradeitemok(&sd, 0, 0);
-		clif_tradedeal_lock(&sd, 0);
-		clif_tradedeal_lock(target_sd, 1);
+		clif_tradeitemok(sd, 0, 0);
+		clif_tradedeal_lock(sd, 0);
+		clif_tradedeal_lock(*target_sd, 1);
 	}
 }
 
@@ -279,30 +279,30 @@ void trade_tradecancel(struct map_session_data &sd)
 	if ((target_sd = map_id2sd(sd.trade_partner)) != NULL) {
 		for(trade_i = 0; trade_i < 10; trade_i++) { // give items back (only virtual)
 			if (sd.deal_item_amount[trade_i] != 0) {
-				clif_additem(&sd, sd.deal_item_index[trade_i] - 2, sd.deal_item_amount[trade_i], 0);
+				clif_additem(sd, sd.deal_item_index[trade_i] - 2, sd.deal_item_amount[trade_i], 0);
 				sd.deal_item_index[trade_i] = 0;
 				sd.deal_item_amount[trade_i] = 0;
 			}
 			if (target_sd->deal_item_amount[trade_i] != 0) {
-				clif_additem(target_sd, target_sd->deal_item_index[trade_i] - 2, target_sd->deal_item_amount[trade_i], 0);
+				clif_additem(*target_sd, target_sd->deal_item_index[trade_i] - 2, target_sd->deal_item_amount[trade_i], 0);
 				target_sd->deal_item_index[trade_i] = 0;
 				target_sd->deal_item_amount[trade_i] = 0;
 			}
 		}
 		if (sd.deal_zeny) {
-			clif_updatestatus(&sd, SP_ZENY);
+			clif_updatestatus(sd, SP_ZENY);
 			sd.deal_zeny = 0;
 		}
 		if (target_sd->deal_zeny) {
-			clif_updatestatus(target_sd, SP_ZENY);
+			clif_updatestatus(*target_sd, SP_ZENY);
 			target_sd->deal_zeny = 0;
 		}
 		sd.deal_locked = 0;
 		sd.trade_partner = 0;
 		target_sd->deal_locked = 0;
 		target_sd->trade_partner = 0;
-		clif_tradecancelled(&sd);
-		clif_tradecancelled(target_sd);
+		clif_tradecancelled(sd);
+		clif_tradecancelled(*target_sd);
 	}
 }
 
@@ -351,7 +351,7 @@ void trade_tradecommit(struct map_session_data &sd)
 							if (flag == 0)
 								pc_delitem(sd, n, sd.deal_item_amount[trade_i], 1);
 							else
-								clif_additem(&sd, n, sd.deal_item_amount[trade_i], 0);
+								clif_additem(sd, n, sd.deal_item_amount[trade_i], 0);
 							sd.deal_item_index[trade_i] = 0;
 							sd.deal_item_amount[trade_i] = 0;
                                                         
@@ -366,7 +366,7 @@ void trade_tradecommit(struct map_session_data &sd)
 							if (flag == 0)
 								pc_delitem(*target_sd, n, target_sd->deal_item_amount[trade_i], 1);
 							else
-								clif_additem(target_sd, n, target_sd->deal_item_amount[trade_i], 0);
+								clif_additem(*target_sd, n, target_sd->deal_item_amount[trade_i], 0);
 							target_sd->deal_item_index[trade_i] = 0;
 							target_sd->deal_item_amount[trade_i] = 0;
 						}
@@ -380,17 +380,17 @@ void trade_tradecommit(struct map_session_data &sd)
 						sd.status.zeny += target_sd->deal_zeny;
 					}
 					if (sd.deal_zeny || target_sd->deal_zeny) {
-						clif_updatestatus(&sd, SP_ZENY);
+						clif_updatestatus(sd, SP_ZENY);
 						sd.deal_zeny = 0;
-						clif_updatestatus(target_sd, SP_ZENY);
+						clif_updatestatus(*target_sd, SP_ZENY);
 						target_sd->deal_zeny = 0;
 					}
 					sd.deal_locked = 0;
 					sd.trade_partner = 0;
 					target_sd->deal_locked = 0;
 					target_sd->trade_partner = 0;
-					clif_tradecompleted(&sd, 0);
-					clif_tradecompleted(target_sd, 0);
+					clif_tradecompleted(sd, 0);
+					clif_tradecompleted(*target_sd, 0);
 					// save both player to avoid crash: they always have no advantage/disadvantage between the 2 players
 					chrif_save(sd); // do pc_makesavestatus and save storage too
 					chrif_save(*target_sd); // do pc_makesavestatus and save storage too

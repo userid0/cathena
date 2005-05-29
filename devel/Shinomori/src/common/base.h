@@ -330,6 +330,11 @@ extern inline unsigned long GetTickCount() {
 	 return (unsigned long)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
 }
 
+extern inline unsigned long GetCurrentProcessId()
+{	
+	return getpid();
+}
+
 //////////////////////////////
 #endif////////////////////////
 //////////////////////////////

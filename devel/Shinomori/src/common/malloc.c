@@ -652,6 +652,7 @@ static void memmer_exit(void)
 		fclose(log_fp);
 	}
 #endif
+	return;
 }
 
 #endif//USE_MEMMGR

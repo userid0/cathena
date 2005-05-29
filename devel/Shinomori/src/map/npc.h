@@ -11,7 +11,7 @@
 
 void npc_chat_finalize(struct npc_data *nd);
 
-int npc_chat_sub(struct block_list *bl, va_list ap);
+int npc_chat_sub(struct block_list &bl, va_list ap);
 int npc_event_dequeue(struct map_session_data &sd);
 int npc_event_timer(int tid,unsigned long tick,int id,int data);
 int npc_event(struct map_session_data &sd,const char *npcname,int);
@@ -22,9 +22,10 @@ int npc_click(struct map_session_data &sd,unsigned long npcid);
 int npc_scriptcont(struct map_session_data &sd,unsigned long id);
 bool npc_icNear(struct map_session_data &sd,unsigned long id);
 int npc_buysellsel(struct map_session_data &sd,unsigned long id,int type);
-int npc_buylist(struct map_session_data &sd,int n,unsigned char *buffer);
-int npc_selllist(struct map_session_data &sd,int n,unsigned char *buffer);
+int npc_buylist(struct map_session_data &sd,unsigned short n,unsigned char *buffer);
+int npc_selllist(struct map_session_data &sd,unsigned short n,unsigned char *buffer);
 int npc_parse_mob(const char *w1,const char *w2,const char *w3,const char *w4);
+int npc_parse_mob2(struct mob_list &mob);
 bool npc_parse_warp(const char *w1,const char *w2,const char *w3,const char *w4);
 int npc_globalmessage(const char *name,const char *mes);
 

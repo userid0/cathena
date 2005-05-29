@@ -30,7 +30,6 @@ int chrif_char_offline(struct map_session_data &sd);
 int chrif_char_reset_offline(void);
 int chrif_char_online(struct map_session_data &sd);
 int chrif_changesex(unsigned long id, unsigned char sex);
-int chrif_chardisconnect(struct map_session_data &sd);
 int check_connect_char_server(int tid, unsigned long tick, int id, int data);
 
 int do_final_chrif(void);

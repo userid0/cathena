@@ -337,6 +337,7 @@ struct Battle_Config
 	ulong mail_system; // [Valaris]
 	ulong new_attack_function; //For testing purposes [Skotlex]
 	ulong ignore_items_gender; //[Lupus]
+	ulong mob_remove_damaged;
 };
 	
 extern struct Battle_Config battle_config;

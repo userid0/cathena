@@ -354,9 +354,9 @@ void npc_chat_finalize(struct npc_data *nd)
 /**
  * Handler called whenever a global message is spoken in a NPC's area
  */
-int npc_chat_sub(struct block_list *bl, va_list ap)
+int npc_chat_sub(struct block_list &bl, va_list ap)
 {
-    struct npc_data *nd = (struct npc_data *)bl;
+    struct npc_data &nd = (struct npc_data &)bl;
     struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
     unsigned char *msg;
     int len, pos, i;
@@ -435,8 +435,8 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
 				if( nd->u.scr.ref )
 				{
 					pos = -1;
-					lst=nd->u.scr.ref->label_list;           
-					for (i = 0; i < nd->u.scr.ref->label_list_num; i++) {
+					lst=nd.u.scr.ref->label_list;           
+					for (i = 0; i < nd.u.scr.ref->label_list_num; i++) {
 						if( strcmp(lst[i].labelname, e->label_ ) == 0) {
 							pos = lst[i].pos;
 							break;
@@ -449,7 +449,7 @@ int npc_chat_sub(struct block_list *bl, va_list ap)
 					}
 					else
 					{	// run the npc script
-						run_script(nd->u.scr.ref->script,pos,sd->bl.id,nd->bl.id);
+						run_script(nd.u.scr.ref->script,pos,sd->bl.id,nd.bl.id);
 					}
 				}
                 return 0;
@@ -503,7 +503,7 @@ int buildin_deletepset(struct script_state &st)
 #else
 
 void npc_chat_finalize(struct npc_data *nd)			{}
-int npc_chat_sub(struct block_list *bl, va_list ap)	{ return 0; }
+int npc_chat_sub(struct block_list &bl, va_list ap)	{ return 0; }
 int buildin_defpattern(struct script_state &st)		{ return 0; }
 int buildin_activatepset(struct script_state &st)	{ return 0; }
 int buildin_deactivatepset(struct script_state &st)	{ return 0; }

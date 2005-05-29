@@ -4,13 +4,6 @@
 #define LOG_UPTIME 0
 
 
-#ifdef DUMPSTACK
-#if !defined(CYGWIN) && !defined(WIN32) && !defined(__NETBSD__)	// HAVE_EXECINFO_H
-	#include <execinfo.h>
-#endif
-#endif
-
-
 
 #include "mmo.h"
 #include "malloc.h"
@@ -28,11 +21,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 // uptime class
 
-unsigned long uptime::starttick = gettick();
+time_t uptime::starttime = time(NULL);
 
 void uptime::getvalues(unsigned long& days,unsigned long& hours,unsigned long& minutes,unsigned long& seconds)
 {
-	seconds = (gettick()-starttick)/CLOCKS_PER_SEC;
+	seconds = (unsigned long)difftime( time(NULL), starttime );
 	days    = seconds/(24*60*60);
 	seconds-= days*(24*60*60);
 	hours   = seconds/(60*60);
@@ -85,12 +78,9 @@ void pid_create(const char* file)
 	}
 	strcat(pid_file,".pid");
 	fp = savefopen(pid_file,"w");
-	if(fp) {
-#ifdef WIN32
+	if(fp)
+	{
 		fprintf(fp,"%ld",GetCurrentProcessId());
-#else
-		fprintf(fp,"%ld",getpid());
-#endif
 		fclose(fp);
 	}
 }
@@ -111,10 +101,7 @@ void log_uptime(void)
 	{
 		time(&curtime);
 		strftime(curtime2, 24, "%m/%d/%Y %H:%M:%S", localtime(&curtime));
-
-
-		fprintf(fp, "%s: %s uptime - %s.\n",
-			curtime2, argv0, uptime.getstring());
+		fprintf(fp, "%s: %s uptime - %s.\n", curtime2, argv0, uptime.getstring());
 		fclose(fp);
 	}
 	return;
@@ -141,9 +128,9 @@ sigfunc *compat_signal(int signo, sigfunc *func)
 	sact.sa_handler = func;
 	sigemptyset(&sact.sa_mask);
 	sact.sa_flags = 0;
-#ifdef SA_INTERRUPT
-  sact.sa_flags |= SA_INTERRUPT;	// SunOS
-#endif
+ #ifdef SA_INTERRUPT
+	sact.sa_flags |= SA_INTERRUPT;	// SunOS
+ #endif
 
 	if (sigaction(signo, &sact, &oact) < 0)
 		return (SIG_ERR);
@@ -182,68 +169,8 @@ static void sig_proc(int sn)
 #endif
 	}
 }
-/*=========================================
- *	Dumps the stack using glibc's backtrace
- *-----------------------------------------
- */
-#ifdef DUMPSTACK
-void sig_dump(int sn)
-{	
-	FILE *fp;
-		void* array[20];
-		char **stack;
-		size_t size;
-	int no = 0;
-	char tmp[256];
-	
-	// search for a usable filename
-	do {
-		sprintf(tmp,"log/stackdump_%04d.txt", ++no);
-	} while((fp = savefopen(tmp,"r")) && (fclose(fp), no < 9999));
-
-	// dump the trace into the file
-	if ((fp = savefopen (tmp,"w")) != NULL)
-	{
-		fprintf(fp, "Exception: %s \n", strsignal(sn));
-		fprintf(fp, "Stack trace:\n");
-		size = backtrace (array, 20);
-		stack = backtrace_symbols (array, size);
-		for (no = 0; no < size; no++)
-		{
-			fprintf(fp, "%s\n", stack[no]);
-		}
-		fprintf(fp,"End of stack trace\n");
-		fclose(fp);
-		aFree(stack);
-	}
-	//cygwin_stackdump ();
-	// When pass the signal to the system's default handler
-	compat_signal(sn, SIG_DFL);
-	raise(sn);
-}
-#endif
-
 void init_signal()
 {
-	///////////////////////////////////////////////////////////////////////////
-#ifdef DUMPSTACK
-	///////////////////////////////////////////////////////////////////////////
-	// glibc dump
-	compat_signal(SIGTERM,sig_proc);
-	compat_signal(SIGINT,sig_proc);
-
-	// Signal to create coredumps by system when necessary (crash)
-	compat_signal(SIGSEGV, sig_dump);
-	compat_signal(SIGFPE, sig_dump);
-	compat_signal(SIGILL, sig_dump);
- #ifndef WIN32
-	compat_signal(SIGXFSZ, sig_proc);
-	compat_signal(SIGPIPE, sig_proc);
-	compat_signal(SIGBUS, sig_dump);
-	compat_signal(SIGTRAP, SIG_DFL);
- #endif
-	///////////////////////////////////////////////////////////////////////////
-#else
 	///////////////////////////////////////////////////////////////////////////
 	// normal dump
 	compat_signal(SIGTERM, sig_proc);
@@ -259,30 +186,37 @@ void init_signal()
 	compat_signal(SIGTRAP, SIG_DFL);
  #endif	
 	///////////////////////////////////////////////////////////////////////////
-#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // revision
-int get_svn_revision(char *svnentry)
-{	// Warning: minor syntax checking
-	char line[1024];
-	int rev = 0;
-	FILE *fp;
-	if( svnentry && ( NULL!=(fp = savefopen(svnentry, "r")) ) )
+// would make it extern inline but dll wants it on a fixed position
+// to get it's function pointer
+const char* get_svn_revision()	{ return "Shinomori's Modified Version"; }
+/*
+{
+	static char version[10]="";
+	if( !*version )
 	{
-		while (fgets(line,1023,fp))
+		FILE *fp;
+		if ((fp = fopen(".svn/entries", "r")) != NULL)
 		{
-			if (strstr(line,"revision="))
-				break;
+			char line[1024];
+			int rev;
+			while (fgets(line,1023,fp))
+				if (strstr(line,"revision=")) break;
+			fclose(fp);
+			if (sscanf(line," %*[^\"]\"%d%*[^\n]", &rev) == 1)
+			{
+				sprintf(version, "%d", rev);
+				return version;
+			}
 		}
-		fclose(fp);
-		if (sscanf(line," %*[^\"]\"%d%*[^\n]",&rev)==1)
-			return rev;
+		sprintf(version, "Unknown");
 	}
-	return 0;
+	return version;
 }
-
+*/
 ///////////////////////////////////////////////////////////////////////////////
 /*======================================
  *	CORE : Display title
@@ -290,7 +224,6 @@ int get_svn_revision(char *svnentry)
  */
 static void display_title(void)
 {
-	int revision;
 	ShowMessage(CL_CLS); // clear screen and go up/left (0, 0 position in text)
 	ShowMessage(CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=)"CL_CLL""CL_NORM"\n"); // white writing (37) on blue background (44), "CL_CLL" clean until end of file
 	ShowMessage(CL_XXBL"          ("CL_BT_YELLOW"        (c)2004 eAthena Development Team presents        "CL_XXBL")"CL_CLL""CL_NORM"\n"); // yellow writing (33)
@@ -308,11 +241,7 @@ static void display_title(void)
 	ShowMessage(CL_XXBL"          ("CL_BOLD"                                                         "CL_XXBL")"CL_CLL""CL_NORM"\n"); // yellow writing (33)
 	ShowMessage(CL_XXBL"          ("CL_BT_YELLOW"  Advanced Fusion Maps (c) 2003-2004 The Fusion Project  "CL_XXBL")"CL_CLL""CL_NORM"\n"); // yellow writing (33)
 	ShowMessage(CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=)"CL_CLL""CL_NORM"\n\n"); // reset color
-	
-	if ((revision = get_svn_revision(".svn\\entries"))>0)
-	{
-		ShowInfo("SVN Revision: '"CL_WHITE"%d"CL_RESET"'.\n",revision);
-	}
+	ShowInfo("SVN Revision: '"CL_WHITE"%s"CL_RESET"'.\n", get_svn_revision() );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -320,7 +249,7 @@ static void display_title(void)
  *	CORE : MAINROUTINE
  *--------------------------------------
  */
-int main(int argc,char **argv)
+int main (int argc, char **argv)
 {
 	int next;
 
@@ -329,14 +258,12 @@ int main(int argc,char **argv)
 	init_signal();
 	display_title();
 
-
 	argv0 = strrchr(argv[0],PATHSEP);
 	if(NULL==argv0)
 		argv0 = argv[0];
 
 	///////////////////////////////////////////////////////////////////////////
 	// stuff
-
 	pid_create(argv0);
 
 	///////////////////////////////////////////////////////////////////////////
@@ -384,5 +311,8 @@ int main(int argc,char **argv)
 	// stuff
 	log_uptime();
 	pid_delete();
+
+	///////////////////////////////////////////////////////////////////////////
+	// byebye
 	return 0;
 }

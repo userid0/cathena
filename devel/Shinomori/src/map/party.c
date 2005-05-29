@@ -71,7 +71,7 @@ int party_create(struct map_session_data &sd,const char *name,int item,int item2
 	if(sd.status.party_id==0)
 		intif_create_party(sd,name,item,item2);
 	else
-		clif_party_created(&sd,2);
+		clif_party_created(sd,2);
 	return 0;
 }
 
@@ -94,9 +94,9 @@ int party_created(unsigned long account_id,int fail,unsigned long party_id,const
 		p->party_id=party_id;
 		memcpy(p->name,name,24);
 		numdb_insert(party_db,party_id,p);
-		clif_party_created(sd,0);
+		clif_party_created(*sd,0);
 	}else{
-		clif_party_created(sd,1);
+		clif_party_created(*sd,1);
 	}
 	return 0;
 }
@@ -175,13 +175,13 @@ int party_recv_info(struct party &sp)
 		p->member[i].sd=(sd!=NULL && sd->status.party_id==p->party_id && !sd->state.waitingdisconnect)?sd:NULL;
 	}
 
-	clif_party_info(p,-1);
+	clif_party_info(*p,-1);
 
 	for(i=0;i<MAX_PARTY;i++){	// 設定情報の送信
 //		struct map_session_data *sd = map_id2sd(p->member[i].account_id);
 		struct map_session_data *sd = p->member[i].sd;
 		if(sd!=NULL && sd->party_sended==0){
-			clif_party_option(p,sd,0x100);
+			clif_party_option(*p,sd,0x100);
 			sd->party_sended=1;
 		}
 	}
@@ -200,17 +200,17 @@ int party_invite(struct map_session_data &sd,unsigned long account_id)
 		return 0;
 	if(!battle_config.invite_request_check) {
 		if (tsd->guild_invite>0 || tsd->trade_partner) {	// 相手が取引中かどうか
-			clif_party_inviteack(&sd,tsd->status.name,0);
+			clif_party_inviteack(sd,tsd->status.name,0);
 			return 0;
 		}
 	}
 	if( tsd->status.party_id>0 || tsd->party_invite>0 ){	// 相手の所属確認
-		clif_party_inviteack(&sd,tsd->status.name,0);
+		clif_party_inviteack(sd,tsd->status.name,0);
 		return 0;
 	}
 	for(i=0;i<MAX_PARTY;i++){	// 同アカウント確認
 		if(p->member[i].account_id==account_id){
-			clif_party_inviteack(&sd,tsd->status.name,0);
+			clif_party_inviteack(sd,tsd->status.name,0);
 			return 0;
 		}
 	}
@@ -218,7 +218,7 @@ int party_invite(struct map_session_data &sd,unsigned long account_id)
 	tsd->party_invite=sd.status.party_id;
 	tsd->party_invite_account=sd.status.account_id;
 
-	clif_party_invite(&sd,tsd);
+	clif_party_invite(sd,*tsd);
 	return 0;
 }
 // パーティ勧誘への返答
@@ -236,7 +236,7 @@ int party_reply_invite(struct map_session_data &sd,unsigned long account_id,int 
 		sd.party_invite_account=0;
 		if(tsd==NULL)
 			return 0;
-		clif_party_inviteack(tsd,sd.status.name,1);
+		clif_party_inviteack(*tsd,sd.status.name,1);
 	}
 	return 0;
 }
@@ -259,7 +259,7 @@ int party_member_added(unsigned long party_id,unsigned long account_id,int flag)
 	
 	if(flag==1){	// 失敗
 		if( sd2!=NULL )
-			clif_party_inviteack(sd2,sd->status.name,0);
+			clif_party_inviteack(*sd2,sd->status.name,0);
 		return 0;
 	}
 	
@@ -268,7 +268,7 @@ int party_member_added(unsigned long party_id,unsigned long account_id,int flag)
 	sd->status.party_id=party_id;
 	
 	if( sd2!=NULL)
-		clif_party_inviteack(sd2,sd->status.name,2);
+		clif_party_inviteack(*sd2,sd->status.name,2);
 
 	// いちおう競合確認
 	party_check_conflict(*sd);
@@ -325,7 +325,7 @@ int party_member_leaved(unsigned long party_id,unsigned long account_id,char *na
 		int i;
 		for(i=0;i<MAX_PARTY;i++)
 			if(p->member[i].account_id==account_id){
-				clif_party_leaved(p,sd,account_id,name,0x00);
+				clif_party_leaved(*p,sd,account_id,name,0x00);
 				p->member[i].account_id=0;
 				p->member[i].sd=NULL;
 			}
@@ -346,7 +346,7 @@ int party_broken(unsigned long party_id)
 	
 	for(i=0;i<MAX_PARTY;i++){
 		if(p->member[i].sd!=NULL){
-			clif_party_leaved(p,p->member[i].sd,
+			clif_party_leaved(*p,p->member[i].sd,
 				p->member[i].account_id,p->member[i].name,0x10);
 			p->member[i].sd->status.party_id=0;
 			p->member[i].sd->party_sended=0;
@@ -375,7 +375,7 @@ int party_optionchanged(unsigned long party_id,unsigned long account_id,int exp,
 
 	if(!(flag&0x01)) p->exp=exp;
 	if(!(flag&0x10)) p->item=item;
-	clif_party_option(p,sd,flag);
+	clif_party_option(*p,sd,flag);
 	return 0;
 }
 
@@ -412,7 +412,7 @@ int party_recv_movemap(unsigned long party_id,unsigned long account_id,char *map
 
 	party_send_xy_clear(*p);	// 座標再通知要請
 	
-	clif_party_info(p,-1);
+	clif_party_info(*p,-1);
 	return 0;
 }
 
@@ -435,8 +435,8 @@ int party_send_movemap(struct map_session_data &sd)
 	if( (p=party_search(sd.status.party_id))!=NULL ){
 		party_check_member(*p);	// 所属を確認する
 		if(sd.status.party_id==p->party_id){
-			clif_party_info(p,sd.fd);
-			clif_party_option(p,&sd,0x100);
+			clif_party_info(*p,sd.fd);
+			clif_party_option(*p,&sd,0x100);
 			sd.party_sended=1;
 		}
 	}
@@ -479,7 +479,7 @@ int party_recv_message(unsigned long party_id,unsigned long account_id,const cha
 	struct party *p;
 	if( (p=party_search(party_id))==NULL)
 		return 0;
-	clif_party_message(p,account_id,mes,len);
+	clif_party_message(*p,account_id,mes,len);
 	return 0;
 }
 // パーティ競合確認
@@ -503,13 +503,13 @@ int party_send_xyhp_timer_sub(void *key,void *data,va_list ap)
 		if(sd!=NULL){
 			// 座標通知
 			if(sd->party_x!=sd->bl.x || sd->party_y!=sd->bl.y){
-				clif_party_xy(p,sd);
+				clif_party_xy(*p,*sd);
 				sd->party_x=sd->bl.x;
 				sd->party_y=sd->bl.y;
 			}
 			// ＨＰ通知
 			if(sd->party_hp!=sd->status.hp){
-				clif_party_hp(p,sd);
+				clif_party_hp(*p,*sd);
 				sd->party_hp=sd->status.hp;
 			}
 		}
@@ -568,7 +568,7 @@ int party_exp_share(struct party &p,unsigned short map,int base_exp,int job_exp,
 	{	
 		if((sd=p.member[i].sd)!=NULL && p.member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
 		{
-			if( !sd->chatID && (sd->idletime+120 > tick_) )
+			if( !sd->chatID && (sd->idletime+120 > last_tick) )
 				c++;
 		}
 	}
@@ -580,9 +580,9 @@ int party_exp_share(struct party &p,unsigned short map,int base_exp,int job_exp,
 	{
 		if((sd=p.member[i].sd)!=NULL && p.member[i].online && sd->bl.m==map && session[sd->fd] != NULL) 
 		{
-			if( !sd->chatID && (sd->idletime+120 > tick_) )
+			if( !sd->chatID && (sd->idletime+120 > last_tick) )
 			{
-				pc_gainexp(sd, base_exp/c, job_exp/c);
+				pc_gainexp(*sd,(base_exp/c)+1,(job_exp/c)+1);
 
 				if(battle_config.zeny_from_mobs) // zeny from mobs [Valaris]
 					pc_getzeny(*sd,zeny/c);
@@ -598,7 +598,7 @@ int party_exp_share(struct party &p,unsigned short map,int base_exp,int job_exp,
 // the lvl 99 gets 99 and the lvl 1 get 1 point
 // this way it won't be necessary to block exp sharing of lvl differences
 ///////////////////////////////////////////////////////////////////////////////
-int party_exp_share2(struct party &p,unsigned short map,int base_exp,int job_exp,int zeny)
+int party_exp_share2(struct party &p, unsigned short map, unsigned long base_exp, unsigned long job_exp, unsigned long zeny)
 {
 	struct map_session_data *sd;
 	int i;
@@ -610,7 +610,7 @@ int party_exp_share2(struct party &p,unsigned short map,int base_exp,int job_exp
 	{
 		if((sd=p.member[i].sd)!=NULL && p.member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
 		{
-			if( !sd->chatID && (sd->idletime+120 > tick_) )
+			if( !sd->chatID && (sd->idletime+120 > last_tick) )
 				lvlsum += p.member[i].lv;
 		}
 	}
@@ -626,12 +626,12 @@ int party_exp_share2(struct party &p,unsigned short map,int base_exp,int job_exp
 	{
 		if((sd=p.member[i].sd)!=NULL && p.member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
 		{
-			if( !sd->chatID && (sd->idletime+120 > tick_) )
+			if( !sd->chatID && (sd->idletime+120 > last_tick) )
 			{
-				pc_gainexp(sd, (int)(base_exp_div * p.member[i].lv), (int)(job_exp_div * p.member[i].lv));
+				pc_gainexp(*sd, (unsigned long)(base_exp_div * p.member[i].lv), (unsigned long)(job_exp_div * p.member[i].lv));
 
 				if(battle_config.zeny_from_mobs) // zeny from mobs [Valaris]
-					pc_getzeny(*sd,(int)(zeny_div*p.member[i].lv));
+					pc_getzeny(*sd,(unsigned long)(zeny_div*p.member[i].lv));
 			}
 		}
 	}
@@ -641,7 +641,7 @@ int party_exp_share2(struct party &p,unsigned short map,int base_exp,int job_exp
 // 同じマップのパーティメンバー全体に処理をかける
 // type==0 同じマップ
 //     !=0 画面内
-void party_foreachsamemap(int (*func)(struct block_list*,va_list), struct map_session_data &sd, int type,...)
+void party_foreachsamemap(int (*func)(struct block_list&,va_list), struct map_session_data &sd, int type,...)
 {
 	struct party *p;
 	va_list ap;
@@ -678,7 +678,7 @@ void party_foreachsamemap(int (*func)(struct block_list*,va_list), struct map_se
 	
 	for(i=0;i<blockcount;i++)
 		if(list[i] && list[i]->prev)	// 有効かどうかチェック
-			func(list[i],ap);
+			func(*list[i],ap);
 
 	map_freeblock_unlock();	// 解放を許可する
 

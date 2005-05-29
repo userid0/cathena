@@ -219,6 +219,7 @@ extern int current_equip_item_index;
 // ƒpƒ‰ƒ[ƒ^Š“¾Œn battle.c ‚æ‚èˆÚ“®
 int status_get_class(struct block_list *bl);
 int status_get_dir(struct block_list *bl);
+int status_get_headdir(struct block_list *bl);
 int status_get_lv(struct block_list *bl);
 int status_get_range(struct block_list *bl);
 int status_get_hp(struct block_list *bl);
@@ -283,7 +284,7 @@ int status_get_sc_def(struct block_list *bl, int type);
 int status_change_start(struct block_list *bl,int type,int val1,int val2,int val3,int val4,int tick,int flag);
 int status_change_end( struct block_list* bl , int type,int tid );
 int status_change_timer(int tid,unsigned long tick,int id,int data);
-int status_change_timer_sub(struct block_list *bl, va_list ap );
+int status_change_timer_sub(struct block_list &bl, va_list ap );
 int status_change_clear(struct block_list *bl,int type);
 int status_change_clear_buffs(struct block_list *bl);
 int status_change_clear_debuffs(struct block_list *bl);

@@ -24,6 +24,7 @@
 #define MAX_SKILLTIMERSKILL 32
 #define MAX_MOBSKILLTIMERSKILL 10
 #define MAX_MOBSKILL 32
+#define MAX_MOB_LIST_PER_MAP 128
 #define MAX_EVENTQUEUE 2
 #define MAX_EVENTTIMER 32
 #define NATURAL_HEAL_INTERVAL 500
@@ -33,7 +34,7 @@
 #define MAX_DROP_PER_MAP 48
 #define MAX_IGNORE_LIST 80
 #define MAX_VENDING 12
-#define MAX_FAMELIST 10
+
 
 #define DEFAULT_AUTOSAVE_INTERVAL 60*1000
 
@@ -227,9 +228,6 @@ struct map_session_data
 	} state;
 
 	struct mmo_charstatus status;
-
-//	unsigned long char_id;
-//	unsigned char sex;
 
 	unsigned long login_id1;
 	unsigned long login_id2;
@@ -552,13 +550,14 @@ struct map_session_data
 	struct s_pet pet;
 	struct pet_db *petDB;
 	struct pet_data *pd;
-	long pet_hungry_timer;
+	int pet_hungry_timer;
 
-	long pvp_point;
-	long pvp_rank;
-	long pvp_timer;
+	unsigned long pvp_won;
+	unsigned long pvp_lost;
+	unsigned long pvp_point;
+	unsigned long pvp_rank;
 	unsigned long pvp_lastusers;
-	int pvp_won, pvp_lost;
+	int pvp_timer;
 
 	char eventqueue[MAX_EVENTQUEUE][50];
 	long eventtimer[MAX_EVENTTIMER];
@@ -662,8 +661,8 @@ struct mob_data {
 	int spawndelay1;
 	int spawndelay2;
 	struct {
-		unsigned state : 8;
-		unsigned skillstate : 8;
+		unsigned state : 8;						//b1
+		unsigned skillstate : 8;				//b2
 		unsigned targettype : 1;
 		unsigned steal_flag : 1;
 		unsigned steal_coin_flag : 1;
@@ -671,10 +670,9 @@ struct mob_data {
 		unsigned master_check : 1;
 		unsigned change_walk_target : 1;
 		unsigned walk_easy : 1;
-		unsigned soul_change_flag : 1; // Celest
+		unsigned soul_change_flag : 1; // Celest	//b3
 		unsigned special_mob_ai : 3;
-		unsigned idle_skill_flag : 1;	// signals if the pet can do a skill while in idle state [Skotlex]
-		unsigned _unused : 4;
+		unsigned _unused : 5;
 	} state;
 	
 	int timer;
@@ -842,12 +840,22 @@ enum {
 	EQP_HELM		= 8,		// ì™è„íi
 };
 
-
-
-
-
-
-
+// Mob List Held in memory for Dynamic Mobs [Wizputer]
+struct mob_list
+{
+    unsigned short m;
+	unsigned short x;
+	unsigned short y;
+	unsigned short xs;
+	unsigned short ys;
+	unsigned short class_;
+	unsigned short num;
+	unsigned short level;
+	int delay1;
+	int delay2;
+    char mobname[24];
+	char eventname[24];
+};
 
 
 
@@ -973,7 +981,9 @@ struct map_data {
 		int drop_type;
 		int drop_per;
 	} drop_list[MAX_DROP_PER_MAP];
+	struct mob_list *moblist[MAX_MOB_LIST_PER_MAP]; // [Wizputer]
 };
+
 struct map_data_other_server {
 	char name[24];
 	struct mapgat *gat;	// NULLå≈íËÇ…ÇµÇƒîªíf
@@ -984,8 +994,8 @@ struct map_data_other_server {
 
 struct flooritem_data {
 	struct block_list bl;
-	short subx;
-	short suby;
+	unsigned char subx;
+	unsigned char suby;
 	int cleartimer;
 	unsigned long first_get_id;
 	unsigned long second_get_id;
@@ -1107,11 +1117,11 @@ int map_freeblock_unlock(void);
 // blockä÷òA
 int map_addblock(struct block_list &bl);
 int map_delblock(struct block_list &bl);
-void map_foreachinarea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...);
+void map_foreachinarea(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...);
 // -- moonsoul (added map_foreachincell)
 void map_foreachincell(int (*func)(struct block_list*,va_list),unsigned short m,int x,int y,int type,...);
 void map_foreachinmovearea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...);
-void map_foreachinpath(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...); // Celest
+void map_foreachinpath(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...); // Celest
 int map_countnearpc(int,int,int);
 //blockä÷òAÇ…í«â¡
 int map_count_oncell(unsigned short m,int x,int y);
@@ -1164,10 +1174,15 @@ int path_blownpos(unsigned short m,int x0,int y0,int dx,int dy,int count);
 
 int map_who(int fd);
 
-int cleanup_sub(struct block_list *bl, va_list ap);
+int cleanup_sub(struct block_list &bl, va_list ap);
 
 void map_helpscreen(); // [Valaris]
 int map_delmap(const char *mapname);
+
+struct mob_list* map_addmobtolist(unsigned short m);// [Wizputer]
+void clear_moblist(unsigned short m);
+void map_spawnmobs(unsigned short m);		// [Wizputer]
+void map_removemobs(unsigned short m);		// [Wizputer]
 
 extern char *INTER_CONF_NAME;
 extern char *LOG_CONF_NAME;

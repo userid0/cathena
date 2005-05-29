@@ -82,7 +82,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-time_t tick_ 	   = time(0);
+time_t last_tick   = time(0);
 time_t stall_time_ = 60;
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -91,9 +91,9 @@ time_t stall_time_ = 60;
 
 // from freya, playing around with that a bit
 
-#define RFIFO_SIZE (2*1024) /* a player that send more than 2k is probably a hacker without be parsed */
-                            /* biggest known packet: S 0153 <len>.w <emblem data>.?B -> 24x24 256 color .bmp (0153 + len.w + 1618/1654/1756 bytes) */
-#define WFIFO_SIZE (4*1024)
+size_t RFIFO_SIZE = (2*1024);	// a player that send more than 2k is probably a hacker without be parsed
+								// biggest known packet: S 0153 <len>.w <emblem data>.?B -> 24x24 256 color .bmp (0153 + len.w + 1618/1654/1756 bytes)
+size_t WFIFO_SIZE = (4*1024);
 
 ///////////////////////////////////////////////////////////////////////////////
 #ifndef TCP_FRAME_LEN
@@ -409,6 +409,7 @@ public:
 				aFree(hist);
 				hist = hist2;
 			}
+			connect_history[i]=NULL;
 		}
 		if(access_allow)
 		{
@@ -829,9 +830,11 @@ void flush_fifos()
 					{	// everything is ok and on the run
 						session[fd]->wdata_size=0;
 					}
-				} else if (errno != EAGAIN) 
+				}
+				else if (errno != EAGAIN) 
 				{	// the socket is gone, just disconnect it, will be cleared later
-					session[fd]->flag.connected = false;	
+					session[fd]->flag.connected = false;
+					session[fd]->wdata_size=0;
 				}
 				else // EAGAIN
 				{	// try it again later; might lead to infinity loop when connections is generally blocked
@@ -854,7 +857,7 @@ int realloc_readfifo(int fd, size_t addition)
 	if( !session_isValid(fd) ) // might not happen
 		return 0;
 
-	if( session[fd]->rdata_size + addition  >= session[fd]->rdata_max )
+	if( session[fd]->rdata_size + addition  > session[fd]->rdata_max )
 	{	// grow rule
 		newsize = RFIFO_SIZE;
 		while( session[fd]->rdata_size + addition > newsize ) newsize += newsize;
@@ -879,7 +882,7 @@ int realloc_writefifo(int fd, size_t addition)
 	if( !session_isValid(fd) ) // might not happen
 		return 0;
 
-	if( session[fd]->wdata_size + addition  >= session[fd]->wdata_max )
+	if( session[fd]->wdata_size + addition  > session[fd]->wdata_max )
 	{	// grow rule
 		newsize = WFIFO_SIZE;
 		while( session[fd]->wdata_size + addition > newsize ) newsize += newsize;
@@ -891,6 +894,8 @@ int realloc_writefifo(int fd, size_t addition)
 	else // no change
 		return 0;
 
+	//printf("realloc %d->%d (+%d)\n", session[fd]->wdata_max, newsize,addition);fflush(stdout);
+
 	RECREATE(session[fd]->wdata, unsigned char, newsize);
 	session[fd]->wdata_max  = newsize;
 
@@ -899,13 +904,12 @@ int realloc_writefifo(int fd, size_t addition)
 
 int realloc_fifo(int fd, size_t rfifo_size, size_t wfifo_size)
 {
-	struct socket_data *s;
+	struct socket_data *s =session[fd];
 	
 	if( !session_isActive(fd) )
 		return 0;
-
-	s =session[fd];
-
+	
+	//printf("realloc all %d,%d\n", rfifo_size, wfifo_size);fflush(stdout);
 	if( s->rdata_max != rfifo_size && s->rdata_size < rfifo_size){
 		RECREATE(s->rdata, unsigned char, rfifo_size);
 		s->rdata_max  = rfifo_size;
@@ -919,14 +923,10 @@ int realloc_fifo(int fd, size_t rfifo_size, size_t wfifo_size)
 
 int WFIFOSET(int fd,size_t len)
 {
-	struct socket_data *s;
 	size_t newreserve;
-	
-	if( !session_isValid(fd) )
-		return 0;
+	struct socket_data *s = session[fd];
 
-	s =session[fd];
-	if( s == NULL  || s->wdata == NULL )
+	if( !session_isValid(fd) || s->wdata == NULL )
 		return 0;
 
 	// we have written len bytes to the buffer already
@@ -935,11 +935,12 @@ int WFIFOSET(int fd,size_t len)
 	if( s->wdata_size > s->wdata_max )
 	{	// we had a buffer overflow already
 		unsigned long ip = s->client_ip;
-		ShowError("socket: Buffer Overflow. Connection %d (%d.%d.%d.%d). has written %d bytes (%d allowed).\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, s->wdata_size, s->wdata_max);
+		ShowError("socket: Buffer Overflow. Connection %d (%d.%d.%d.%d). has written %d bytes (%d allowed).\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, s->wdata_size+len, s->wdata_max);
 		exit(1);
 	}
 
-	newreserve = s->wdata_size + WFIFO_SIZE; // always keep a WFIFO_SIZE reserve in the buffer
+	// always keep a WFIFO_SIZE reserve in the buffer
+	newreserve = s->wdata_size + WFIFO_SIZE; 
 
 	send_from_fifo(fd);
 
@@ -1001,9 +1002,10 @@ int recv_to_fifo(int fd)
 #endif
 		if(len>0){
 			session[fd]->rdata_size+=len;
-			session[fd]->rdata_tick = tick_;
+			session[fd]->rdata_tick = last_tick;
 		} else if(len<=0){
 			session[fd]->flag.connected = false;
+			session[fd]->wdata_size=0;
 		}
 	} else {	
 		// the socket has been terminated
@@ -1048,7 +1050,8 @@ int send_from_fifo(int fd)
 		}
 	} else if (errno != EAGAIN) {
 //		ShowMessage("set eof :%d\n",fd);
-		session[fd]->flag.connected = false;	
+		session[fd]->flag.connected = false;
+		session[fd]->wdata_size=0;
 	}
 	return 0;
 }
@@ -1122,7 +1125,7 @@ static int connect_client(int listen_fd)
 	session[fd]->func_send   = send_from_fifo;
 	session[fd]->func_parse  = default_func_parse;
 	session[fd]->client_ip	 = ntohl(client_address.sin_addr.s_addr);
-	session[fd]->rdata_tick  = tick_;
+	session[fd]->rdata_tick  = last_tick;
 
 	ShowStatus("Incoming connection from %d.%d.%d.%d:%i\n",
 		(session[fd]->client_ip>>24)&0xFF,(session[fd]->client_ip>>16)&0xFF,(session[fd]->client_ip>>8)&0xFF,(session[fd]->client_ip)&0xFF,
@@ -1254,7 +1257,7 @@ int make_connection(unsigned long ip, unsigned short port)
 	session[fd]->func_recv  = recv_to_fifo;
 	session[fd]->func_send  = send_from_fifo;
 	session[fd]->func_parse = default_func_parse;
-	session[fd]->rdata_tick = tick_;
+	session[fd]->rdata_tick = last_tick;
 
 	return fd;
 }
@@ -1495,12 +1498,12 @@ int do_sendrecv(int next)
 	size_t cnt=0;
 
 	// update global tick_timer
-	tick_ = time(0);
+	last_tick = time(0);
 
 	FD_ZERO(&wfd);
 	FD_ZERO(&rfd);
 #ifdef SOCKET_DEBUG_PRINT
-	printf("\r[%ld]",tick_);
+	printf("\r[%ld]",last_tick);
 #endif
 	for(fd=0; fd<fd_max; fd++)
 	{
@@ -1510,7 +1513,7 @@ int do_sendrecv(int next)
 			printf("(%i,%i%i%i)",fd,session[fd]->flag.connected,session[fd]->flag.marked,session[fd]->flag.remove);
 			fflush(stdout);
 #endif
-			if( (session[fd]->rdata_tick > 0) && (tick_ > session[fd]->rdata_tick + stall_time_) ) 
+			if( (session[fd]->rdata_tick > 0) && (last_tick > session[fd]->rdata_tick + stall_time_) ) 
 			{	// emulate a disconnection
 				session[fd]->flag.connected = false;
 				// and call the read function

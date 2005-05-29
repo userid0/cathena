@@ -13,14 +13,14 @@ extern unsigned char getServerType();
 
 void core_stoprunning();
 
-extern inline char* get_svn_revision()	{ return "Shinomori's Modified Version"; }
+const char* get_svn_revision();
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // uptime
 class uptime
 {
-	static unsigned long starttick;
+	static time_t starttime;
 
 	uptime(const uptime&);					// prevent copy
 	const uptime& operator=(const uptime&);	// prevent assign

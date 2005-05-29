@@ -15,9 +15,10 @@
 struct s_pet *pet_pt;
 static int pet_newid = 100;
 
+
 //---------------------------------------------------------
-int inter_pet_tosql(int pet_id, struct s_pet *p) {
-	//`pet` (`pet_id`, `class`,`name`,`account_id`,`char_id`,`level`,`egg_id`,`equip`,`intimate`,`hungry`,`rename_flag`,`incuvate`)
+int inter_pet_tosql(int pet_id, struct s_pet *p)
+{	//`pet` (`pet_id`, `class`,`name`,`account_id`,`char_id`,`level`,`egg_id`,`equip`,`intimate`,`hungry`,`rename_flag`,`incuvate`)
 	char t_name[100];
 
 	ShowMessage("request save pet: %d.......\n",pet_id);
@@ -179,13 +180,13 @@ int mapif_pet_info(int fd, unsigned long account_id, struct s_pet *p)
 
 	if(p)
 	{
-		WFIFOW(fd, 0) =0x3881;
-		WFIFOW(fd, 2) =sizeof(struct s_pet) + 9;
-		WFIFOL(fd, 4) =account_id;
-		WFIFOB(fd, 8)=0;
+	WFIFOW(fd, 0) =0x3881;
+	WFIFOW(fd, 2) =sizeof(struct s_pet) + 9;
+	WFIFOL(fd, 4) =account_id;
+	WFIFOB(fd, 8)=0;
 		//memcpy(WFIFOP(fd, 9), p, sizeof(struct s_pet));
 		s_pet_tobuffer(*p, WFIFOP(fd, 9));
-		WFIFOSET(fd, WFIFOW(fd, 2));
+	WFIFOSET(fd, WFIFOW(fd, 2));
 	}
 	return 0;
 }
@@ -325,7 +326,7 @@ int mapif_delete_pet(int fd, int pet_id){
 int mapif_parse_CreatePet(int fd)
 {
 	if( !session_isActive(fd) )
-		return 0;
+	return 0;
 
 	mapif_create_pet(fd, RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOW(fd, 10), RFIFOW(fd, 12), RFIFOW(fd, 14), 
 						RFIFOW(fd, 16), RFIFOW(fd, 18), RFIFOW(fd, 20), RFIFOB(fd, 22), RFIFOB(fd, 23), (char*)RFIFOP(fd, 24));
@@ -344,7 +345,7 @@ int mapif_parse_LoadPet(int fd)
 int mapif_parse_SavePet(int fd)
 {
 	if( !session_isActive(fd) )
-		return 0;
+	return 0;
 
 	mapif_save_pet(fd, RFIFOL(fd, 4), RFIFOP(fd, 8));
 	return 0;

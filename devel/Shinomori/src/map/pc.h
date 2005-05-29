@@ -25,7 +25,6 @@ extern inline bool pc_isinvisible(struct map_session_data &sd) { return 0 != (sd
 extern inline bool pc_is50overweight(struct map_session_data &sd) { return sd.weight*2 >= sd.max_weight; }
 extern inline bool pc_is90overweight(struct map_session_data &sd) { return sd.weight*10 >= sd.max_weight*9; }
 
-bool pc_istop10fame(unsigned long char_id,int type);
 unsigned char pc_isGM(struct map_session_data &sd);
 bool pc_iskiller(struct map_session_data &src, struct map_session_data &target); // [MouseJstr]
 int pc_getrefinebonus(int lv,int type);
@@ -67,10 +66,10 @@ int pc_memo(struct map_session_data &sd,int i);
 int pc_randomwalk(struct map_session_data &sd,unsigned long tick);
 
 int pc_checkadditem(struct map_session_data &sd,unsigned short nameid,unsigned short amount);
-int pc_inventoryblank(struct map_session_data &sd);
+size_t pc_inventoryblank(struct map_session_data &sd);
 int pc_search_inventory(struct map_session_data &sd,int item_id);
-int pc_payzeny(struct map_session_data &sd,int zeny);
-int pc_getzeny(struct map_session_data &sd,int zeny);
+bool pc_payzeny(struct map_session_data &sd,unsigned long zeny);
+bool pc_getzeny(struct map_session_data &sd,unsigned long zeny);
 int pc_additem(struct map_session_data &sd,struct item &item_data,size_t amount);
 int pc_delitem(struct map_session_data &sd, unsigned short inx, size_t amount, int type);
 int pc_checkitem(struct map_session_data &sd);
@@ -102,64 +101,65 @@ int pc_item_refine(struct map_session_data &sd, unsigned short idx); // [Celest]
 int pc_steal_item(struct map_session_data &sd,struct block_list *bl);
 int pc_steal_coin(struct map_session_data &sd,struct block_list *bl);
 
-int pc_modifybuyvalue(struct map_session_data*,int);
-int pc_modifysellvalue(struct map_session_data*,int);
+int pc_modifybuyvalue(struct map_session_data &sd,size_t orig_value);
+int pc_modifysellvalue(struct map_session_data &sd,size_t orig_value);
 
-int pc_attack(struct map_session_data *sd,unsigned long target_id,int type);
-int pc_stopattack(struct map_session_data*);
+int pc_attack(struct map_session_data &sd,unsigned long target_id,int type);
+int pc_stopattack(struct map_session_data &sd);
 
-int pc_follow(struct map_session_data*, int); // [MouseJstr]
+int pc_follow(struct map_session_data &sd, unsigned long target_id); // [MouseJstr]
 
-int pc_checkbaselevelup(struct map_session_data *sd);
-int pc_checkjoblevelup(struct map_session_data *sd);
-int pc_gainexp(struct map_session_data*,int,int);
-int pc_nextbaseexp(struct map_session_data *);
-int pc_nextbaseafter(struct map_session_data *); // [Valaris]
-int pc_nextjobexp(struct map_session_data *);
-int pc_nextjobafter(struct map_session_data *); // [Valaris]
-int pc_need_status_point(struct map_session_data *,int);
-int pc_statusup(struct map_session_data*,int);
-int pc_statusup2(struct map_session_data*,int,int);
-int pc_skillup(struct map_session_data *sd, unsigned short skillid);
-int pc_allskillup(struct map_session_data*);
-int pc_resetlvl(struct map_session_data*,int type);
-int pc_resetstate(struct map_session_data*);
-int pc_resetskill(struct map_session_data*);
-int pc_equipitem(struct map_session_data*,int,int);
-int pc_unequipitem(struct map_session_data*,int,int);
-int pc_useitem(struct map_session_data *sd,unsigned short n);
+int pc_checkbaselevelup(struct map_session_data &sd);
+int pc_checkjoblevelup(struct map_session_data &sd);
+int pc_gainexp(struct map_session_data &sd, unsigned long base_exp, unsigned long job_exp);
+unsigned long pc_nextbaseexp(struct map_session_data &sd);
+unsigned long pc_nextbaseafter(struct map_session_data &sd); // [Valaris]
+unsigned long pc_nextjobexp(struct map_session_data &sd);
+unsigned long pc_nextjobafter(struct map_session_data &sd); // [Valaris]
+unsigned char pc_need_status_point(struct map_session_data &sd,int type);
+int pc_statusup(struct map_session_data &sd,int type);
+int pc_statusup2(struct map_session_data &sd,int type,int val);
+int pc_skillup(struct map_session_data &sd, unsigned short skillid);
+int pc_allskillup(struct map_session_data &sd);
+int pc_resetlvl(struct map_session_data &sd,int type);
+int pc_resetstate(struct map_session_data &sd);
+int pc_resetskill(struct map_session_data &sd);
 
-int pc_damage(struct block_list *,struct map_session_data*,int);
-int pc_heal(struct map_session_data *,int,int);
-int pc_itemheal(struct map_session_data *sd,int hp,int sp);
-int pc_percentheal(struct map_session_data *sd,int,int);
-int pc_jobchange(struct map_session_data *,int, int);
-int pc_setoption(struct map_session_data *,int);
-int pc_setcart(struct map_session_data *sd,int type);
-int pc_setfalcon(struct map_session_data *sd);
-int pc_setriding(struct map_session_data *sd);
-int pc_changelook(struct map_session_data *sd,int type,unsigned short val);
-int pc_equiplookall(struct map_session_data *sd);
+int pc_equipitem(struct map_session_data &sd,unsigned short inx, unsigned short pos);
+int pc_unequipitem(struct map_session_data &sd,unsigned short inx, int flag);
+int pc_useitem(struct map_session_data &sd,unsigned short inx);
 
-int pc_readparam(struct map_session_data*,int);
-int pc_setparam(struct map_session_data*,int,int);
-int pc_readreg(struct map_session_data*,int);
-int pc_setreg(struct map_session_data*,int,int);
-char *pc_readregstr(struct map_session_data *sd,int reg);
-int pc_setregstr(struct map_session_data *sd,int reg,char *str);
-int pc_readglobalreg(struct map_session_data*,char*);
-int pc_setglobalreg(struct map_session_data *sd,const char *reg,int val);
-int pc_readaccountreg(struct map_session_data*,char*);
-int pc_setaccountreg(struct map_session_data *sd,const char *reg,int val);
-int pc_readaccountreg2(struct map_session_data*,char*);
-int pc_setaccountreg2(struct map_session_data *sd,const char *reg,int val);
+int pc_damage(struct map_session_data &sd, long damage, struct block_list *src);
+int pc_heal(struct map_session_data &sd,long hp,long sp);
+int pc_itemheal(struct map_session_data &sd,long hp,long sp);
+int pc_percentheal(struct map_session_data &sd,long hp,long sp);
+int pc_jobchange(struct map_session_data &sd,int job, int upper);
+int pc_setoption(struct map_session_data &sd,int type);
+int pc_setcart(struct map_session_data &sd,int type);
+int pc_setfalcon(struct map_session_data &sd);
+int pc_setriding(struct map_session_data &sd);
+int pc_changelook(struct map_session_data &sd,int type,unsigned short val);
+int pc_equiplookall(struct map_session_data &sd);
 
-int pc_addeventtimer(struct map_session_data *sd,unsigned long tick,const char *name);
-int pc_deleventtimer(struct map_session_data *sd,const char *name);
-int pc_cleareventtimer(struct map_session_data *sd);
-int pc_addeventtimercount(struct map_session_data *sd,const char *name,unsigned long tick);
+int pc_readparam(struct map_session_data &sd,int type);
+int pc_setparam(struct map_session_data &sd,int type,int val);
+int pc_readreg(struct map_session_data &sd,int reg);
+int pc_setreg(struct map_session_data &sd,int reg,int val);
+const char *pc_readregstr(struct map_session_data &sd,int reg);
+int pc_setregstr(struct map_session_data &sd,int reg,const char *str);
+int pc_readglobalreg(struct map_session_data &sd,const char *reg);
+int pc_setglobalreg(struct map_session_data &sd,const char *reg,int val);
+int pc_readaccountreg(struct map_session_data &sd,const char *reg);
+int pc_setaccountreg(struct map_session_data &sd,const char *reg,int val);
+int pc_readaccountreg2(struct map_session_data &sd,const char *reg);
+int pc_setaccountreg2(struct map_session_data &sd,const char *reg,int val);
 
-int pc_calc_pvprank(struct map_session_data *sd);
+int pc_addeventtimer(struct map_session_data &sd,unsigned long tick,const char *name);
+int pc_deleventtimer(struct map_session_data &sd,const char *name);
+int pc_cleareventtimer(struct map_session_data &sd);
+int pc_addeventtimercount(struct map_session_data &sd,const char *name,unsigned long tick);
+
+int pc_calc_pvprank(struct map_session_data &sd);
 int pc_calc_pvprank_timer(int tid,unsigned long tick,int id,int data);
 
 unsigned long pc_ismarried(struct map_session_data &sd);
@@ -199,19 +199,21 @@ struct skill_tree_entry {
 extern struct skill_tree_entry skill_tree[3][25][MAX_SKILL_TREE];
 
 int pc_read_gm_account(int fd);
-int pc_setinvincibletimer(struct map_session_data *sd,int);
-int pc_delinvincibletimer(struct map_session_data *sd);
-int pc_addspiritball(struct map_session_data *sd,int,int);
-int pc_delspiritball(struct map_session_data *sd,int,int);
+int pc_setinvincibletimer(struct map_session_data &sd,int);
+int pc_delinvincibletimer(struct map_session_data &sd);
+int pc_addspiritball(struct map_session_data &sd,int,int);
+int pc_delspiritball(struct map_session_data &sd,int,int);
 int pc_eventtimer(int tid,unsigned long tick,int id,int data);
 
-struct Fame_list {
+struct fame_list {
 	unsigned long id;
 	unsigned long fame;
 	char name[24];
 };
-extern struct Fame_list smith_fame_list[10];
-extern struct Fame_list chemist_fame_list[10];
+extern struct fame_list smith_fame_list[MAX_FAMELIST];
+extern struct fame_list chemist_fame_list[MAX_FAMELIST];
+int pc_addfame(struct map_session_data &sd, unsigned long count,int type);
+bool pc_istop10fame(unsigned long char_id,int type);
 
 int pc_readdb(void);
 int do_init_pc(void);

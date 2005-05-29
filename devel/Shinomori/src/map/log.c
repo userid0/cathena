@@ -531,7 +531,8 @@ int log_chat(const char *type, int type_id, int src_charid, int src_accid, const
 {
 
 	//Check ON/OFF
-	if(log_config.chat <= 0){
+	if(log_config.chat <= 0)
+	{
 		return 0; //Deactivated
 	}
 
@@ -771,7 +772,6 @@ int log_config_read(const char *cfgName)
 			}
 		}
 	}
-
 	fclose(fp);
 	return 0;
 }

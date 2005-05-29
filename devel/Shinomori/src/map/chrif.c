@@ -22,7 +22,7 @@ static const int packet_len_table[0x3d] = {
 	 6,-1,18, 7,-1,49,44, 0,	// 2b00-2b07: U->2b00, U->2b01, U->2b02, U->2b03, U->2b04, U->2b05, U->2b06, F->2b07
 	 6,30,-1,10,86, 7,44,34,	// 2b08-2b0f: U->2b08, U->2b09, U->2b0a, U->2b0b, U->2b0c, U->2b0d, U->2b0e, U->2b0f
 	-1,-1,10, 6,11,-1, 0, 0,	// 2b10-2b17: U->2b10, U->2b11, U->2b12, U->2b13, U->2b14, U->2b15, U->2b16, U->2b17
-	-1,-1,-1,-1,-1,-1,-1,-1,	// 2b18-2b1f: U->2b18, U->2b19, U->2b1a, U->2b1b, F->2b1c, F->2b1d, F->2b1e, U->2b1f
+	-1,-1,-1,-1,-1,-1,-1, 7,	// 2b18-2b1f: U->2b18, U->2b19, U->2b1a, U->2b1b, F->2b1c, F->2b1d, F->2b1e, U->2b1f
 	-1,-1,-1,-1,-1,-1,-1,-1,	// 2b20-2b27: U->2b20, F->2b21, F->2b22, F->2b23, F->2b24, F->2b25, F->2b26, F->2b27
 };
 
@@ -59,14 +59,14 @@ static const int packet_len_table[0x3d] = {
 //2b15: Incomming, chrif_recvgmaccounts -> 'recive gm accs from charserver (seems to be incomplete !)'
 //2b16: Outgoing, chrif_ragsrvinfo -> 'sends motd / rates ....'
 //2b17: Outgoing, chrif_char_offline -> 'tell the charserver that the char is now offline'
-//2b18: Outgoing, chrif_chardisconnect/chrif_char_reset_offline -> 'same as 2b17 LOL!/set all players OFF!'
+//2b18: Outgoing, chrif_char_reset_offline -> 'set all players OFF!'
 //2b19: Outgoing, chrif_char_online -> 'tell the charserver that the char .. is online'
 //2b1a: Outgoing, chrif_reqfamelist -> 'Request the fame list (top10)'
 //2b1b: Incomming, chrif_recvfamelist -> 'awnser of 2b1a ..... the famelist top10^^'
 //2b1c: FREE
 //2b1d: FREE
 //2b1e: FREE
-//2b1f: FREE
+//2b1f: Incomming, chrif_disconnectplayer -> 'disconnects a player (aid X) with the message XY ... 0x81 ..' [Sirius]
 //2b20: Incomming, chrif_removemap -> 'remove maps of a server (sample: its going offline)' [Sirius]
 //2b21-2b27: FREE
 
@@ -145,12 +145,12 @@ int chrif_save(struct map_session_data &sd)
 	pc_makesavestatus(sd);
 
 	WFIFOW(char_fd,0) = 0x2b01;
-	WFIFOW(char_fd,2) = sizeof(sd.status) + 12;
+	WFIFOW(char_fd,2) = 12+sizeof(sd.status);
 	WFIFOL(char_fd,4) = sd.bl.id;
 	WFIFOL(char_fd,8) = sd.status.char_id;
-	//memcpy(WFIFOP(char_fd,12), &sd->status, sizeof(sd->status));
+	//memcpy(WFIFOP(char_fd,12), &sd.status, sizeof(sd.status));
 	mmo_charstatus_tobuffer( sd.status, WFIFOP(char_fd,12) );
-	WFIFOSET(char_fd, sizeof(sd.status) + 12);
+	WFIFOSET(char_fd, 12+sizeof(sd.status));
 	storage_storage_dirty(sd);
 	storage_storage_save(sd);
 
@@ -311,7 +311,7 @@ int chrif_changemapserverack(int fd)
 		pc_authfail(sd->fd);
 		return 0;
 	}
-	clif_changemapserver(sd, (char*)RFIFOP(fd,18), RFIFOW(fd,34), RFIFOW(fd,36), RFIFOLIP(fd,38), RFIFOW(fd,42));
+	clif_changemapserver(*sd, (char*)RFIFOP(fd,18), RFIFOW(fd,34), RFIFOW(fd,36), RFIFOLIP(fd,38), RFIFOW(fd,42));
 
 	return 0;
 }
@@ -335,6 +335,7 @@ int chrif_connectack(int fd)
 	chrif_state = 1;
 
 	chrif_sendmap(fd);
+	chrif_reqfamelist();
 
 	ShowStatus("Event '"CL_WHITE"OnCharIfInit"CL_RESET"' executed with '"CL_WHITE"%d"CL_RESET"' NPCs.\n", npc_event_doall("OnCharIfInit"));
 	ShowStatus("Event '"CL_WHITE"OnInterIfInit"CL_RESET"' executed with '"CL_WHITE"%d"CL_RESET"' NPCs.\n", npc_event_doall("OnInterIfInit"));
@@ -721,7 +722,7 @@ int chrif_changedsex(int fd)
 			// to avoid any problem with equipment and invalid sex, equipment is unequiped.
 			for (i = 0; i < MAX_INVENTORY; i++) {
 				if (sd->status.inventory[i].nameid && sd->status.inventory[i].equip)
-					pc_unequipitem((struct map_session_data*)sd, i, 2);
+					pc_unequipitem(*((struct map_session_data*)sd), i, 2);
 			}
 			// reset skill of some job
 			if (s_class.job == 19 || s_class.job == 4020 || s_class.job == 4042 ||
@@ -742,7 +743,7 @@ int chrif_changedsex(int fd)
 						sd->status.skill[i].lv = 0;
 					}
 				}
-				clif_updatestatus(sd, SP_SKILLPOINT);
+				clif_updatestatus(*sd, SP_SKILLPOINT);
 				// change job if necessary
 				if (s_class.job == 20 || s_class.job == 4021 || s_class.job == 4043)
 					sd->status.class_ -= 1;
@@ -947,23 +948,48 @@ int chrif_accountban(int fd)
 	return 0;
 }
 
-/*==========================================
- * キャラクター切断通知
- *------------------------------------------
- */
-int chrif_chardisconnect(struct map_session_data &sd)
-{
-	if( !session_isActive(char_fd) || !chrif_isconnect() )
+//Disconnect the player out of the game, simple packet
+//packet.w AID.L WHY.B 2+4+1 = 7byte
+int chrif_disconnectplayer(int fd){
+	struct map_session_data *sd;
+	
+	sd = map_id2sd(RFIFOL(fd, 2));
+	
+	if(RFIFOL(fd, 2) <= 0 || sd == NULL){
 		return -1;
+	}
+	
+	//change sessid1 
+	sd->login_id1++;
 
-	WFIFOW(char_fd,0)=0x2b18;
-	WFIFOL(char_fd,2)=sd.status.account_id;
-	WFIFOL(char_fd,6)=sd.status.char_id;
-	WFIFOSET(char_fd,10);
-	//ShowMessage("chrif: char disconnect: %d %s\n",sd->bl.id,sd->status.name);
-	return 0;
-
+	switch(RFIFOB(fd, 6)){
+		//clif_authfail_fd
+		case 1: //server closed 
+			clif_authfail_fd(fd, 1);	
+		break;
+		
+		case 2: //someone else logged in
+			clif_authfail_fd(fd, 2);		
+		break;
+		
+		case 3: //server overpopulated
+			clif_authfail_fd(fd, 4);
+		
+		break;
+		
+		case 4: //out of time payd for .. (avail)
+			clif_authfail_fd(fd, 10);
+		break;
+		
+		case 5: //forced to dc by gm
+			clif_authfail_fd(fd, 15);
+		break;
+	}
+	
+return 0;
 }
+
+
 
 /*==========================================
  * Request to reload GM accounts and their levels: send to char-server by [Yor]
@@ -1033,7 +1059,7 @@ int chrif_recvfamelist(int fd)
 				memcpy(smith_fame_list[num].name, name, 24);
 			else
 			{
-				memcpy(smith_fame_list[num].name, "-", 24);
+				memcpy(smith_fame_list[num].name, "Unknown", 24);
 				chrif_searchcharid(id);
 			}
 			//ShowMessage("received : %s (id:%d) fame:%d\n", name, id, fame);
@@ -1266,7 +1292,7 @@ int chrif_parse(int fd)
 			// typecast is bad but only memcopied internally, so it might be ok
 			break;
 		}
-                case 0x2afe: pc_authfail(RFIFOL(fd,2)); break;
+        case 0x2afe: pc_authfail(RFIFOL(fd,2)); break;
 		case 0x2b00: map_setusers(fd); break;
 		case 0x2b03: clif_charselectok(RFIFOL(fd,2)); break;
 		case 0x2b04: chrif_recvmap(fd); break;
@@ -1281,6 +1307,7 @@ int chrif_parse(int fd)
 		case 0x2b14: chrif_accountban(fd); break;
 		case 0x2b15: chrif_recvgmaccounts(fd); break;
 		case 0x2b1b: chrif_recvfamelist(fd); break;
+		case 0x2b1f: chrif_disconnectplayer(fd); break;
 		case 0x2b20: chrif_removemap(fd); break; //Remove maps of a server [Sirius]
 
 		default:

@@ -586,17 +586,19 @@ int skill_tree_get_max(int id, int b_class){
 /* プロトタイプ */
 int skill_check_condition( struct map_session_data *sd,int type);
 int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag );
-int skill_frostjoke_scream(struct block_list *bl,va_list ap);
-int status_change_timer_sub(struct block_list *bl, va_list ap );
-int skill_attack_area(struct block_list *bl,va_list ap);
+
+int skill_frostjoke_scream(struct block_list &bl,va_list ap);
+int status_change_timer_sub(struct block_list &bl, va_list ap );
+int skill_attack_area(struct block_list &bl,va_list ap);
 int skill_clear_element_field(struct block_list *bl);
-int skill_landprotector(struct block_list *bl, va_list ap );
-int skill_ganbatein(struct block_list *bl, va_list ap );
-int skill_trap_splash(struct block_list *bl, va_list ap );
-int skill_count_target(struct block_list *bl, va_list ap );
+int skill_landprotector(struct block_list &bl, va_list ap );
+int skill_ganbatein(struct block_list &bl, va_list ap );
+int skill_trap_splash(struct block_list &bl, va_list ap );
+int skill_count_target(struct block_list &bl, va_list ap );
+
 struct skill_unit_group_tickset *skill_unitgrouptickset_search(struct block_list *bl,struct skill_unit_group *sg,unsigned long tick);
 int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned long tick);
-int skill_unit_effect(struct block_list *bl,va_list ap);
+int skill_unit_effect(struct block_list &bl,va_list ap);
 int skill_castend_delay (struct block_list* src, struct block_list *bl,int skillid,int skilllv,unsigned int tick,int flag);
 
 int enchant_eff[5] = { 10, 14, 17, 19, 20 };
@@ -769,12 +771,12 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 				skill_castend_damage_id(src,bl,HT_BLITZBEAT,(skill<lv)?skill:lv,tick,0xf00000);
 			}
 			// スナッチャ?
-			if(sd->status.weapon != 11 && (skill=pc_checkskill(*sd,RG_SNATCHER)) > 0 &&
+			if(dstmd && !dstmd->state.steal_flag && sd->status.weapon != 11 && (skill=pc_checkskill(*sd,RG_SNATCHER)) > 0 &&
 				(skill*15 + 55) + (skill2 = pc_checkskill(*sd,TF_STEAL))*10 > rand()%1000) {
 				if(pc_steal_item(*sd,bl))
 					clif_skill_nodamage(src,bl,TF_STEAL,skill2,1);
 				else if (battle_config.display_snatcher_skill_fail)
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 			}
 			// enchant poison has a chance of poisoning enemy
 			if (sd->sc_data[SC_ENCPOISON].timer != -1 && sc_data && sc_data[SC_POISON].timer == -1 &&
@@ -804,7 +806,7 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 			status_change_start(bl,SC_POISON,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		else{
 			if(sd && skillid==TF_POISON)
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 		}
 		break;
 
@@ -814,7 +816,7 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 		break;
 
 	case AS_GRIMTOOTH:
-		if (bl->type == BL_MOB) {
+		if (dstmd) {
 			struct status_change *sc_data = status_get_sc_data(bl);
 			if (sc_data && sc_data[SC_SLOWDOWN].timer == -1)
 				status_change_start(bl,SC_SLOWDOWN,0,0,0,0,1000,0);
@@ -822,11 +824,18 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 		break;
 
 	case HT_FREEZINGTRAP:	/* フリ?ジングトラップ */
-		if( bl->type == BL_MOB || (bl->type == BL_PC && (map[bl->m].flag.pvp || map[bl->m].flag.gvg)) ) {
-		rate=skilllv*3+35;
-		if(rand()%100 < rate*sc_def_mdef/100)
-			status_change_start(bl,SC_FREEZE,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+		if(dstmd || (dstsd && (map[bl->m].flag.pvp || map[bl->m].flag.gvg)) ) {
+			rate = skilllv*3 + 35;
+			if(rand()%100 < rate*sc_def_mdef/100)
+				status_change_start(bl,SC_FREEZE,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		}
+		break;
+
+	 case HT_FLASHER:  /* Flasher */
+		if (!(status_get_mode(bl) & 0x20) && !(status_get_mode(bl)&0x40) &&
+				((dstsd && md) || (dstmd && !md) || (dstsd && (map[bl->m].flag.pvp || map[bl->m].flag.gvg))) &&
+				rand()%100 < (10*skilllv+30)*sc_def_int/100)
+			status_change_start(bl,SC_BLIND,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		break;
 
 	case MG_FROSTDIVER:		/* フロストダイバ? */
@@ -854,8 +863,8 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 
 	case HT_LANDMINE:		/* ランドマイン */
 		if( bl->type == BL_MOB || (bl->type == BL_PC && (map[bl->m].flag.pvp || map[bl->m].flag.gvg)) )
-		if( rand()%100 < (5*skilllv+30)*sc_def_vit/100 )
-			status_change_start(bl,SC_STAN,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+			if( rand()%100 < (5*skilllv+30)*sc_def_vit/100 )
+				status_change_start(bl,SC_STAN,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		break;
 
 	case HT_SHOCKWAVE:				//it can't affect mobs, because they have no SP...
@@ -866,8 +875,8 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 		break;
 	case HT_SANDMAN:		/* サンドマン */
 		if( bl->type == BL_MOB || (bl->type == BL_PC && (map[bl->m].flag.pvp || map[bl->m].flag.gvg)) )
-		if( rand()%100 < (5*skilllv+30)*sc_def_int/100 )
-			status_change_start(bl,SC_SLEEP,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
+			if( rand()%100 < (5*skilllv+30)*sc_def_int/100 )
+				status_change_start(bl,SC_SLEEP,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 		break;
 	case TF_SPRINKLESAND:	/* 砂まき */
 		if( rand()%100 < 20*sc_def_int/100 )
@@ -969,7 +978,7 @@ int skill_additional_effect( struct block_list* src, struct block_list *bl,unsig
 		if(dstsd) {
 			int sp = dstsd->status.max_sp*(10+skilllv)/100;
 			if(sp < 1) sp = 1;
-			pc_heal(dstsd,0,-sp);
+			pc_heal(*dstsd,0,-sp);
 		}
 		break;
 
@@ -1232,22 +1241,22 @@ int skill_blown( struct block_list *src, struct block_list *target,int count)
 			sd->to_y=ny;
 // ? setting it to a valied timer?
 //			sd->walktimer = 1;
-			clif_walkok(sd);
-			clif_movechar(sd);
+			clif_walkok(*sd);
+			clif_movechar(*sd);
 		}
 		else if(md) {
 			md->to_x=nx;
 			md->to_y=ny;
 			prev_state = md->state.state;
 			md->state.state = MS_WALK;
-			clif_fixmobpos(md);
+			clif_fixmobpos(*md);
 		}
 		else if(pd) {
 			pd->to_x=nx;
 			pd->to_y=ny;
 			prev_state = pd->state.state;
 			pd->state.state = MS_WALK;
-			clif_fixpetpos(pd);
+			clif_fixpetpos(*pd);
 		}
 	}
 	else
@@ -1394,10 +1403,10 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 		struct pet_data *pd = (struct pet_data *)src;
 		if (pd->a_skill && pd->a_skill->div_ && pd->a_skill->id == skillid)
 		{
-		dmg.damage=battle_attr_fix(skilllv, skill_get_pl(skillid), status_get_element(bl) );
-		dmg.damage2=0;
+			dmg.damage=battle_attr_fix(skilllv, skill_get_pl(skillid), status_get_element(bl) );
+			dmg.damage2=0;
 			dmg.div_= pd->a_skill->div_;
-	}
+		}
 	}
 
 	damage = dmg.damage + dmg.damage2;
@@ -1430,7 +1439,7 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 					status_change_start(src,SC_COMBO,MO_CHAINCOMBO,skilllv,0,0,delay,0); //コンボ?態に
 			}
 			sd->attackabletime = sd->canmove_tick = tick + delay;
-			clif_combo_delay(src,delay); //コンボディレイパケットの送信
+			clif_combo_delay(*src,delay); //コンボディレイパケットの送信
 		}
 //連打掌(MO_CHAINCOMBO)ここまで
 //猛龍拳(MO_COMBOFINISH)ここから
@@ -1447,20 +1456,22 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 				status_change_start(src,SC_COMBO,MO_COMBOFINISH,skilllv,0,0,delay,0); //コンボ?態に
 			}
 			sd->attackabletime = sd->canmove_tick = tick + delay;
-			clif_combo_delay(src,delay); //コンボディレイパケットの送信
+			clif_combo_delay(*src,delay); //コンボディレイパケットの送信
 		}
 //猛龍拳(MO_COMBOFINISH)ここまで
 //伏虎拳(CH_TIGERFIST)ここから
 		else if(skillid == CH_TIGERFIST) {
 			int delay = 1000 - 4 * status_get_agi(src) - 2 *  status_get_dex(src);
 			if(damage < status_get_hp(bl)) {
-				if(pc_checkskill(*sd, CH_CHAINCRUSH) > 0) //連柱崩?(CH_CHAINCRUSH)取得時は+300ms
+				//阿修羅覇凰拳(MO_EXTREMITYFIST)取得＆?球4個保持＆爆裂波動(MO_EXPLOSIONSPIRITS)?態時は+300ms
+				if((pc_checkskill(*sd, MO_EXTREMITYFIST) > 0 && sd->spiritball >= 3 && sd->sc_data[SC_EXPLOSIONSPIRITS].timer != -1) ||
+					(pc_checkskill(*sd, CH_CHAINCRUSH) > 0)) //連柱崩?(CH_CHAINCRUSH)取得時は+300ms
 					delay += 300 * battle_config.combo_delay_rate /100; //追加ディレイをconfにより調整
 
 				status_change_start(src,SC_COMBO,CH_TIGERFIST,skilllv,0,0,delay,0); //コンボ?態に
 			}
 			sd->attackabletime = sd->canmove_tick = tick + delay;
-			clif_combo_delay(src,delay); //コンボディレイパケットの送信
+			clif_combo_delay(*src,delay); //コンボディレイパケットの送信
 		}
 //伏虎拳(CH_TIGERFIST)ここまで
 //連柱崩?(CH_CHAINCRUSH)ここから
@@ -1468,13 +1479,13 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 			int delay = 1000 - 4 * status_get_agi(src) - 2 *  status_get_dex(src);
 			if(damage < status_get_hp(bl)) {
 				//阿修羅覇凰拳(MO_EXTREMITYFIST)取得＆?球4個保持＆爆裂波動(MO_EXPLOSIONSPIRITS)?態時は+300ms
-				if(pc_checkskill(*sd, MO_EXTREMITYFIST) > 0 && sd->spiritball >= 4 && sd->sc_data[SC_EXPLOSIONSPIRITS].timer != -1)
+				if(pc_checkskill(*sd, MO_EXTREMITYFIST) > 0 && sd->spiritball >= 1 && sd->sc_data[SC_EXPLOSIONSPIRITS].timer != -1)
 					delay += 300 * battle_config.combo_delay_rate /100; //追加ディレイをconfにより調整
 
 				status_change_start(src,SC_COMBO,CH_CHAINCRUSH,skilllv,0,0,delay,0); //コンボ?態に
 			}
 			sd->attackabletime = sd->canmove_tick = tick + delay;
-			clif_combo_delay(src,delay); //コンボディレイパケットの送信
+			clif_combo_delay(*src,delay); //コンボディレイパケットの送信
 		}
 //連柱崩?(CH_CHAINCRUSH)ここまで
 	}
@@ -1549,11 +1560,11 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 	if (dmg.blewcount > 0 && bl->type!=BL_SKILL && !map[src->m].flag.gvg) {
 		skill_blown(dsrc,bl,dmg.blewcount);
 		if(bl->type == BL_MOB)
-			clif_fixmobpos((struct mob_data *)bl);
+			clif_fixmobpos(*((struct mob_data *)bl));
 		else if(bl->type == BL_PET)
-			clif_fixpetpos((struct pet_data *)bl);
+			clif_fixpetpos(*((struct pet_data *)bl));
 		else
-			clif_fixpos(bl);
+			clif_fixpos(*bl);
 	}
 
 	map_freeblock_lock();
@@ -1590,8 +1601,8 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 			if ((lv = pc_checkskill(*tsd,RG_PLAGIARISM)) < skilllv)
 				tsd->status.skill[skillid].lv = lv;
 			tsd->status.skill[skillid].flag = 13;//cloneskill flag
-			pc_setglobalreg(tsd, "CLONE_SKILL", tsd->cloneskill_id);
-			clif_skillinfoblock(tsd);
+			pc_setglobalreg(*tsd, "CLONE_SKILL", tsd->cloneskill_id);
+			clif_skillinfoblock(*tsd);
 		}
 	}
 	/* ダメ?ジがあるなら追加?果判定 */
@@ -1643,7 +1654,7 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 			else if(sd->left_weapon.sp_drain_rate < 0 && sp > -1) sp = -1;
 		}
 		if(hp || sp)
-			pc_heal(sd,hp,sp);
+			pc_heal(*sd,hp,sp);
 		if (sd->sp_drain_type && bl->type == BL_PC)
 			battle_heal(NULL,bl,0,-sp,0);
 	}
@@ -1690,7 +1701,7 @@ static unsigned long skill_area_temp[8];	/* 一時??。必要なら使う。 */
 
 typedef int (*SkillFunc)(struct block_list *,struct block_list *,unsigned short,unsigned short,unsigned long,int);
 
-int skill_area_sub( struct block_list *bl, va_list ap)
+int skill_area_sub( struct block_list &bl, va_list ap)
 {
 	struct block_list *src;
 	unsigned short skillid,skilllv;
@@ -1698,10 +1709,9 @@ int skill_area_sub( struct block_list *bl, va_list ap)
 	unsigned long tick;
 	SkillFunc func;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
-	if(bl->type!=BL_PC && bl->type!=BL_MOB && bl->type!=BL_SKILL)
+	if(bl.type!=BL_PC && bl.type!=BL_MOB && bl.type!=BL_SKILL)
 		return 0;
 
 	src=va_arg(ap,struct block_list *); //ここではsrcの値を?照していないのでNULLチェックはしない
@@ -1711,24 +1721,23 @@ int skill_area_sub( struct block_list *bl, va_list ap)
 	flag=va_arg(ap,int);
 	func=va_arg(ap,SkillFunc);
 
-	if(battle_check_target(src,bl,flag) > 0)
-		func(src,bl,skillid,skilllv,tick,flag);
+	if(battle_check_target(src,&bl,flag) > 0)
+		func(src,&bl,skillid,skilllv,tick,flag);
 	return 0;
 }
 
-static int skill_check_unit_range_sub( struct block_list *bl,va_list ap )
+static int skill_check_unit_range_sub( struct block_list &bl,va_list ap )
 {
 	struct skill_unit *unit;
 	int *c;
 	unsigned short skillid;
 	int unit_id;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
-	nullpo_retr(0, unit = (struct skill_unit *)bl);
+	nullpo_retr(0, unit = (struct skill_unit *)&bl);
 	nullpo_retr(0, c = va_arg(ap,int *));
 
-	if(bl->prev == NULL || bl->type != BL_SKILL)
+	if(bl.prev == NULL || bl.type != BL_SKILL)
 		return 0;
 
 	if(!unit->alive)
@@ -1782,25 +1791,24 @@ int skill_check_unit_range(int m,int x,int y,unsigned short skillid,unsigned sho
 	return c;
 }
 
-static int skill_check_unit_range2_sub( struct block_list *bl,va_list ap )
+static int skill_check_unit_range2_sub( struct block_list &bl,va_list ap )
 {
 	int *c;
 	unsigned short skillid;
 
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, c = va_arg(ap,int *));
 
-	if(bl->prev == NULL || (bl->type != BL_PC && bl->type != BL_MOB))
+	if(bl.prev == NULL || (bl.type != BL_PC && bl.type != BL_MOB))
 		return 0;
 
-	if(bl->type == BL_PC && pc_isdead(*((struct map_session_data *)bl)))
+	if(bl.type == BL_PC && pc_isdead(((struct map_session_data &)bl)))
 		return 0;
 
 	skillid = (unsigned short)va_arg(ap,int);
 
-	if (skillid==HP_BASILICA && bl->type==BL_PC)
+	if (skillid==HP_BASILICA && bl.type==BL_PC)
 		return 0;
 
 	(*c)++;
@@ -1843,33 +1851,31 @@ int skill_check_unit_range2(int m,int x,int y,unsigned short skillid, unsigned s
 	return c;
 }
 
-int skill_guildaura_sub (struct block_list *bl,va_list ap)
+int skill_guildaura_sub (struct block_list &bl,va_list ap)
 {
-	struct map_session_data *sd;
+	struct map_session_data &sd=(struct map_session_data &)bl;
 	unsigned long gid, id;
 	int* flag = NULL;
 	
-	nullpo_retr(0, sd=(struct map_session_data *)bl);
-
 	nullpo_retr(0, ap);
 	id = va_arg(ap,unsigned long);
 	gid = va_arg(ap,unsigned long);
-	if (sd->status.guild_id != gid)
+	if( bl.type!=BL_PC || sd.status.guild_id != gid)
 		return 0;
 	nullpo_retr(0, flag = va_arg(ap,int *));
 
 	if( flag && *flag > 0 )
 	{
-		if( sd->sc_data[SC_GUILDAURA].timer != -1)
+		if( sd.sc_data[SC_GUILDAURA].timer != -1)
 		{
-			if (sd->sc_data[SC_GUILDAURA].val4 != *flag)
+			if (sd.sc_data[SC_GUILDAURA].val4 != *flag)
 			{
-				sd->sc_data[SC_GUILDAURA].val4 = *flag;
-				status_calc_pc(*sd, 0);
+				sd.sc_data[SC_GUILDAURA].val4 = *flag;
+				status_calc_pc (sd, 0);
 			}
 			return 0;
 		}
-		status_change_start(&sd->bl, SC_GUILDAURA, 1, id, 0, *flag, 0, 0);
+		status_change_start(&sd.bl, SC_GUILDAURA, 1, id, 0, *flag, 0, 0);
 	}
 
 	return 0;
@@ -2323,7 +2329,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 	case WS_CARTTERMINATION:	// Cart Termination
 		if (sc_data && sc_data[SC_CARTBOOST].timer != -1)
 			skill_attack(BF_WEAPON,src,src,bl,skillid,skilllv,tick,flag);
-		else if (sd) clif_skill_fail(sd,skillid,0,0);
+		else if (sd) clif_skill_fail(*sd,skillid,0,0);
 		break;
 
 	case ASC_BREAKER:				/* ソウルブレ?カ? */	// [DracoRPG]
@@ -2356,13 +2362,13 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 				long sp = tsd->status.max_sp * (15 + 5 * skilllv) / 100;
 				if (sp > tsd->status.sp) sp = tsd->status.sp;
 				tsd->status.sp -= sp;
-				clif_updatestatus(tsd,SP_SP);
+				clif_updatestatus(*tsd,SP_SP);
 			}
 		}
 		break;
 
 	case NPC_DARKBREATH:
-		clif_emotion(src,7);
+		clif_emotion(*src,7);
 		skill_attack(BF_MISC,src,src,bl,skillid,skilllv,tick,flag);
 		break;
 
@@ -2391,10 +2397,10 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 					struct mob_data *tmd = (struct mob_data *)bl;
 					if (tmd) tmd->dir = dir;
 				}
-				clif_changed_dir(bl);
+				clif_changed_dir(*bl);
 			}
 			else if (sd)
-				clif_skill_fail(sd,sd->skillid,0,0);
+				clif_skill_fail(*sd,sd->skillid,0,0);
 		}
 		break;
 
@@ -2402,7 +2408,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 		skill_attack(BF_WEAPON, src, src, bl, skillid, skilllv, tick, flag);
 		if (tsd && battle_config.equipment_breaking && rand()%100 < skill_get_time(skillid,skilllv)) {
 			pc_breakarmor(*tsd);
-			clif_emotion(bl, 23);
+			clif_emotion(*bl, 23);
 		}
 		break;
 
@@ -2453,15 +2459,15 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 					dx = bl->x - sd->bl.x;
 					dy = bl->y - sd->bl.y;
 					if(path_search(wpd,src->m,sd->bl.x,sd->bl.y,sd->bl.x+dx,sd->bl.y+dy,1) == -1) {
-						clif_skill_fail(sd,sd->skillid,0,0);
+						clif_skill_fail(*sd,sd->skillid,0,0);
 						break;
 					}
 				}
 				sd->to_x = sd->bl.x + dx;
 				sd->to_y = sd->bl.y + dy;
 				skill_attack(BF_WEAPON,src,src,bl,skillid,skilllv,tick,flag);
-				clif_walkok(sd);
-				clif_movechar(sd);
+				clif_walkok(*sd);
+				clif_movechar(*sd);
 				if(dx < 0) dx = -dx;
 				if(dy < 0) dy = -dy;
 				sd->attackabletime = sd->canmove_tick = tick + 100 + sd->speed * ((dx > dy)? dx:dy);
@@ -2548,11 +2554,11 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 				for(i=0;i<c;i++){
 					skill_blown(src,bl,1);
 					if(bl->type == BL_MOB)
-						clif_fixmobpos((struct mob_data *)bl);
+						clif_fixmobpos(*((struct mob_data *)bl));
 					else if(bl->type == BL_PET)
-						clif_fixpetpos((struct pet_data *)bl);
+						clif_fixpetpos(*((struct pet_data *)bl));
 					else
-						clif_fixpos(bl);
+						clif_fixpos(*bl);
 					skill_area_temp[0]=0;
 					map_foreachinarea(skill_area_sub,
 						bl->m,bl->x-1,bl->y-1,bl->x+1,bl->y+1,0,
@@ -2767,7 +2773,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 				skill_attack(BF_MAGIC,src,src,bl,skillid,skilllv,tick,0 );
 			if (tsd && (map[src->m].flag.pvp || map[src->m].flag.gvg)) {
 				tsd->status.sp = 0;
-				clif_updatestatus(tsd,SP_SP);
+				clif_updatestatus(*tsd,SP_SP);
 			}
 		} else {
 			clif_skill_nodamage(src,src,skillid,skilllv,1);
@@ -2775,7 +2781,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 				skill_attack(BF_MAGIC,src,src,src,skillid,skilllv,tick,0 );
 			if (sd) {
 				sd->status.sp = 0;
-				clif_updatestatus(sd,SP_SP);
+				clif_updatestatus(*sd,SP_SP);
 			}
 		}		
 		if (sd) pc_blockskill_start(*sd, skillid, (skilllv < 5 ? 10000: 15000));
@@ -2926,7 +2932,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 				heal_get_jobexp = heal_get_jobexp * battle_config.heal_exp / 100;
 				if (heal_get_jobexp <= 0)
 					heal_get_jobexp = 1;
-				pc_gainexp (sd, 0, heal_get_jobexp);
+				pc_gainexp (*sd, 0, heal_get_jobexp);
 			}
 		}
 		break;
@@ -2953,9 +2959,9 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 				}
 				pc_setstand(*dstsd);
 				if(battle_config.pc_invincible_time > 0)
-					pc_setinvincibletimer(dstsd, battle_config.pc_invincible_time);
-				clif_updatestatus(dstsd, SP_HP);
-				clif_resurrection(bl, 1);
+					pc_setinvincibletimer(*dstsd, battle_config.pc_invincible_time);
+				clif_updatestatus(*dstsd, SP_HP);
+				clif_resurrection(*bl, 1);
 				if(sd && sd != dstsd && battle_config.resurrection_exp > 0) {
 					int exp = 0,jexp = 0;
 					int lv = dstsd->status.base_level - sd->status.base_level, jlv = dstsd->status.job_level - sd->status.job_level;
@@ -2968,7 +2974,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 						if (jexp < 1) jexp = 1;
 					}
 					if(exp > 0 || jexp > 0)
-						pc_gainexp (sd, exp, jexp);
+						pc_gainexp (*sd, exp, jexp);
 				}
 			}
 		}
@@ -3020,7 +3026,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			int abra_skillid = 0, abra_skilllv;
 			//require 1 yellow gemstone even with mistress card or Into the Abyss
 			if ((i = pc_search_inventory(*sd, 715)) < 0 ) { //bug fixed by Lupus (item pos can be 0, too!)
-				clif_skill_fail(sd,sd->skillid,0,0);
+				clif_skill_fail(*sd,sd->skillid,0,0);
 				break;
 			}
 			pc_delitem(*sd, i, 1, 0);
@@ -3036,7 +3042,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			clif_skill_nodamage (src, bl, skillid, skilllv, 1);
 			sd->skillitem = abra_skillid;
 			sd->skillitemlv = abra_skilllv;
-			clif_item_skill (sd, abra_skillid, abra_skilllv, "Abracadabra");
+			clif_item_skill (*sd, abra_skillid, abra_skilllv, "Abracadabra");
 		}
 		break;
 
@@ -3047,8 +3053,8 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		if (dstsd) {			
 			dstsd->status.hp = 1;
 			dstsd->status.sp = 1;
-			clif_updatestatus(dstsd, SP_HP);
-			clif_updatestatus(dstsd, SP_SP);
+			clif_updatestatus(*dstsd, SP_HP);
+			clif_updatestatus(*dstsd, SP_SP);
 		}
 		if(dstmd) dstmd->hp = 1;
 		break;
@@ -3056,7 +3062,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		if (status_isimmune(bl))
 			break;
-		if (dstsd) pc_heal (dstsd, dstsd->status.max_hp, dstsd->status.max_sp);
+		if (dstsd) pc_heal (*dstsd, dstsd->status.max_hp, dstsd->status.max_sp);
 		else if (dstmd) dstmd->hp = status_get_max_hp(bl);
 		break;
 	case SA_SUMMONMONSTER:
@@ -3065,11 +3071,11 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		break;
 	case SA_LEVELUP:
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
-		if (sd && pc_nextbaseexp(sd)) pc_gainexp(sd, pc_nextbaseexp(sd) * 10 / 100, 0);
+		if (sd && pc_nextbaseexp(*sd)) pc_gainexp(*sd, pc_nextbaseexp(*sd) * 10 / 100, 0);
 		break;
 	case SA_INSTANTDEATH:
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
-		if (sd) pc_damage(NULL,sd,sd->status.max_hp);
+		if (sd) pc_damage(*sd,sd->status.max_hp, NULL);
 		break;
 	case SA_QUESTION:
 	case SA_GRAVITY:
@@ -3093,12 +3099,12 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		break;
 	case SA_DEATH:
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
-		if (dstsd) pc_damage(NULL,dstsd,dstsd->status.max_hp);
-		if (dstmd) mob_damage(NULL,*dstmd,dstmd->hp,1);
+		if (dstsd) pc_damage(*dstsd,dstsd->status.max_hp,NULL);
+		if (dstmd) mob_damage(*dstmd,dstmd->hp,1,NULL);
 		break;
 	case SA_REVERSEORCISH:
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
-		if (dstsd) pc_setoption(dstsd,dstsd->status.option|0x0800);
+		if (dstsd) pc_setoption(*dstsd,dstsd->status.option|0x0800);
 		break;
 	case SA_FORTUNE:
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
@@ -3142,7 +3148,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			if ((sd == dstsd)
 			 || (!sd->status.party_id)
 			 || (sd->status.party_id != dstsd->status.party_id)) {
-			 	clif_skill_fail(sd,skillid,0,0);
+			 	clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 1;
 			}
@@ -3157,7 +3163,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					status_change_end(bl, sc2, -1);
 				}
 				else {
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 					map_freeblock_unlock();
 					return 1;
 				}
@@ -3182,7 +3188,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 				dstsd->sc_data[SC_LIGHTNINGLOADER].timer != -1 ||
 				dstsd->sc_data[SC_SEISMICWEAPON].timer != -1 ||
 				dstsd->sc_data[SC_ENCPOISON].timer != -1) {
-				if (sd) clif_skill_fail(sd,skillid,0,0);
+				if (sd) clif_skill_fail(*sd,skillid,0,0);
 				clif_skill_nodamage(src,bl,skillid,skilllv,0);
 				break;
 			}
@@ -3190,14 +3196,14 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		if (sd) {
 			int i = pc_search_inventory (*sd, skill_db[skillid].itemid[0]);
 			if(i < 0 || sd->status.inventory[i].amount < skill_db[skillid].amount[0]) {
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				break;
 			}
 			pc_delitem(*sd, i, skill_db[skillid].amount[0], 0);
 		}
 
 		if(skilllv < 5 && rand()%100 > (60+skilllv*10) ) { //fixed by Lupus (4 -> 5) or else it has 100% success even at lv4
-			if (sd) clif_skill_fail(sd,skillid,0,0);
+			if (sd) clif_skill_fail(*sd,skillid,0,0);
 			clif_skill_nodamage(src,bl,skillid,skilllv,0);
 			if(dstsd && battle_config.equipment_breaking) {
 				if(sd && sd != dstsd) clif_displaymessage(sd->fd,"You broke target's weapon");
@@ -3280,7 +3286,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 				dstsd->sc_data[SC_SEISMICWEAPON].timer != -1 ||
 				dstsd->sc_data[SC_ENCPOISON].timer != -1) {
 					clif_skill_nodamage(src,bl,skillid,skilllv,0);
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 					break;
 			}
 		}
@@ -3359,7 +3365,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			 || ((sd->status.party_id != dstsd->status.party_id)	// 同じパ?ティ?か、
 				&&(sd->status.guild_id != dstsd->status.guild_id))	// 同じギルドじゃないとだめ
 			 || (s_class == 14 || s_class == 21)) {	// クルセだめ
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 1;
 			}
@@ -3369,22 +3375,22 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					sd->dev.val2[i] = bl->id;
 					break;
 				} else if (i == skilllv - 1) {		// 空きがなかった
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 					map_freeblock_unlock();
 					return 1;
 				}
 			}
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
-			clif_devotion(sd,bl->id);
+			clif_devotion(*sd,bl->id);
 			status_change_start(bl,SkillStatusChangeTable[skillid],src->id,1,0,0,1000*(15+15*skilllv),0 );
 		}
-		else clif_skill_fail(sd,skillid,0,0);
+		else clif_skill_fail(*sd,skillid,0,0);
 		break;
 
 	case MO_CALLSPIRITS:	// ?功
 		if(sd) {
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
-			pc_addspiritball(sd,skill_get_time(skillid,skilllv),skilllv);
+			pc_addspiritball(*sd,skill_get_time(skillid,skilllv),skilllv);
 		}
 		break;
 
@@ -3392,7 +3398,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		if(sd) {
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 			for (i = 0; i < 5; i++)
-				pc_addspiritball(sd,skill_get_time(skillid,skilllv),5);
+				pc_addspiritball(*sd,skill_get_time(skillid,skilllv),5);
 		}
 		break;
 
@@ -3407,10 +3413,10 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			((sd && sd == dstsd) || map[src->m].flag.pvp || map[src->m].flag.gvg))
 		{
 			i = dstsd->spiritball * 7;
-			pc_delspiritball(dstsd,dstsd->spiritball,0);
+			pc_delspiritball(*dstsd,dstsd->spiritball,0);
 		} else if (dstmd && //?象がモンスタ?の場合
 			//20%の確率で?象のLv*2のSPを回復する。成功したときはタ?ゲット(σ?Д?)σ????!!
-			!(mob_db[dstmd->class_].mode & 20) && rand() % 100 < 20)
+			!(mob_db[dstmd->class_].mode & 0x20) && rand() % 100 < 20)
 		{
 			i = 2 * mob_db[dstmd->class_].lv;
 			mob_target(*dstmd,src,0);
@@ -3430,33 +3436,33 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 
 	case AC_MAKINGARROW:			/* 矢作成 */
 		if(sd) {
-			clif_arrow_create_list(sd);
+			clif_arrow_create_list(*sd);
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		}
 		break;
 
 	case AM_PHARMACY:			/* ポ?ション作成 */
 		if(sd) {
-			clif_skill_produce_mix_list(sd,32);
+			clif_skill_produce_mix_list(*sd,32);
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		}
 		break;
 	case WS_CREATECOIN:				/* クリエイトコイン */
 		if(sd) {
-			clif_skill_produce_mix_list(sd,64);
+			clif_skill_produce_mix_list(*sd,64);
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		}
 		break;
 	case WS_CREATENUGGET:			/* 塊製造 */
 		if(sd) {
-			clif_skill_produce_mix_list(sd,128);
+			clif_skill_produce_mix_list(*sd,128);
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		}
 		break;
 	case ASC_CDP: // [DracoRPG]
 		// notes: success rate (from emperium.org) = 20 + [(20*Dex)/50] + [(20*Luk)/100]
 		if(sd) {
-			clif_skill_produce_mix_list(sd,256);
+			clif_skill_produce_mix_list(*sd,256);
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		}
 		break;
@@ -3693,7 +3699,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			if(pc_steal_item(*sd,bl))
 				clif_skill_nodamage(src,bl,skillid,skilllv,1);
 			else
-				clif_skill_fail(sd,skillid,0x0a,0);
+				clif_skill_fail(*sd,skillid,0x0a,0);
 		}
 		break;
 
@@ -3707,7 +3713,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 				mob_target(*((struct mob_data *)bl),src,range);
 			}
 			else
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 		}
 		break;
 
@@ -3717,7 +3723,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			// Level 6-10 doesn't consume a red gem if it fails [celest]
 			int i, gem_flag = 1, fail_flag = 0;
 			if (dstmd && status_get_mode(bl)&0x20) {
-				clif_skill_fail(sd,sd->skillid,0,0);
+				clif_skill_fail(*sd,sd->skillid,0,0);
 				break;
 			}
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
@@ -3727,21 +3733,21 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 				status_change_end(bl,SC_STONE,-1);
 				if (sd) {
 					fail_flag = 1;
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 				}
 			}
 			else if( rand()%100 < skilllv*4+20 && !battle_check_undead(status_get_race(bl),status_get_elem_type(bl)))
 				status_change_start(bl,SC_STONE,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
 			else if(sd) {
 				if (skilllv > 5) gem_flag = 0;
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				fail_flag = 1;
 			}
 			if (dstmd)
 				mob_target(*dstmd,src,skill_get_range(skillid,skilllv));
 			if (sd && gem_flag) {
 				if ((i=pc_search_inventory(*sd, skill_db[skillid].itemid[0])) < 0 ) {
-					if (!fail_flag) clif_skill_fail(sd,sd->skillid,0,0);
+					if (!fail_flag) clif_skill_fail(*sd,sd->skillid,0,0);
 					break;
 				}
 				pc_delitem(*sd, i, skill_db[skillid].amount[0], 0);
@@ -3800,44 +3806,44 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case WZ_ESTIMATION:			/* モンスタ?情報 */
 		if(sd) {
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
-			clif_skill_estimation((struct map_session_data *)src,bl);
+			clif_skill_estimation(*((struct map_session_data *)src),bl);
 		}
 		break;
 
 	case MC_IDENTIFY:			/* アイテム鑑定 */
 		if(sd)
-			clif_item_identify_list(sd);
+			clif_item_identify_list(*sd);
 		break;
 
 	case BS_REPAIRWEAPON:			/* 武器修理 */
 		if(sd) {
 //動作しないのでとりあえずコメントアウト
-			clif_item_repair_list(sd);
+			clif_item_repair_list(*sd);
 		}
 		break;
 
 	// Weapon Refining [Celest]
 	case WS_WEAPONREFINE:
 		if(sd)
-			clif_item_refine_list(sd);
+			clif_item_refine_list(*sd);
 		break;
 
 	case MC_VENDING:			/* 露店開設 */
 		if(sd)
-			clif_openvendingreq(sd,2+sd->skilllv);
+			clif_openvendingreq(*sd,2+sd->skilllv);
 		break;
 
 	case AL_TELEPORT:			/* テレポ?ト */
 		if(sd) {
 			if (map[sd->bl.m].flag.noteleport) {	/* テレポ禁止 */
-				clif_skill_teleportmessage(sd,0);
+				clif_skill_teleportmessage(*sd,0);
 				break;
 			}
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 			if(sd->skilllv == 1)
-				clif_skill_warppoint(sd,sd->skillid,"Random","","","");
+				clif_skill_warppoint(*sd,sd->skillid,"Random","","","");
 			else {
-				clif_skill_warppoint(sd,sd->skillid,"Random",
+				clif_skill_warppoint(*sd,sd->skillid,"Random",
 					sd->status.save_point.map,"","");
 			}
 		} else if(dstmd)
@@ -3860,7 +3866,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			}
 			eflag = pc_additem(*sd,item_tmp,1);
 			if(eflag) {
-				clif_additem(sd,0,0,eflag);
+				clif_additem(*sd,0,0,eflag);
 				map_addflooritem(item_tmp,1,sd->bl.m,sd->bl.x,sd->bl.y,NULL,NULL,NULL,0);
 			}
 		}
@@ -3879,7 +3885,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			clif_takeitem(&sd->bl,&tbl);
 			eflag = pc_additem(*sd,item_tmp,1);
 			if(eflag) {
-				clif_additem(sd,0,0,eflag);
+				clif_additem(*sd,0,0,eflag);
 				map_addflooritem(item_tmp,1,sd->bl.m,sd->bl.x,sd->bl.y,NULL,NULL,NULL,0);
 			}
 		}
@@ -3890,7 +3896,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case RG_STRIPARMOR:			/* ストリップアーマー */
 	case RG_STRIPHELM:			/* ストリップヘルム */
 	case ST_FULLSTRIP:	
-	{
+		{
 		struct status_change *tsc_data;
 		int strip_fix, equip = 0;
 		int sclist[4] = {0,0,0,0};
@@ -3921,33 +3927,33 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					if( equip&EQP_WEAPON && (i == 8 || i == 9) && dstsd->inventory_data[dstsd->equip_index[i]]->type == 4 && !(dstsd->unstripable_equip&EQP_WEAPON) && !(tsc_data && tsc_data[SC_CP_WEAPON].timer != -1))
 					{
 				   		sclist[0] = SC_STRIPWEAPON; // Okay, we found a weapon to strip - It can be a right-hand, left-hand or two-handed weapon
-						pc_unequipitem(dstsd,dstsd->equip_index[i],3);
+						pc_unequipitem(*dstsd,dstsd->equip_index[i],3);
 					}
 					if (equip&EQP_SHIELD && i == 9 && dstsd->inventory_data[dstsd->equip_index[i]]->type == 5 && !(dstsd->unstripable_equip&EQP_SHIELD) && !(tsc_data && tsc_data[SC_CP_SHIELD].timer != -1))
 					{
 						sclist[1] = SC_STRIPSHIELD; // Okay, we found a shield to strip - It is really a shield, not a two-handed weapon or a left-hand weapon
-						pc_unequipitem(dstsd,dstsd->equip_index[i],3);
+						pc_unequipitem(*dstsd,dstsd->equip_index[i],3);
 					}
 					if (equip&EQP_ARMOR && i == 7 && !(dstsd->unstripable_equip&EQP_ARMOR) && !(tsc_data && tsc_data[SC_CP_ARMOR].timer != -1))
 					{
 						sclist[2] = SC_STRIPARMOR; // Okay, we found an armor to strip
-						pc_unequipitem(dstsd,dstsd->equip_index[i],3);
+						pc_unequipitem(*dstsd,dstsd->equip_index[i],3);
 					}
 					if (equip&EQP_HELM && i == 6 && !(dstsd->unstripable_equip&EQP_HELM) && !(tsc_data && tsc_data[SC_CP_HELM].timer != -1))
 					{
 						sclist[3] = SC_STRIPHELM; // Okay, we found a helm to strip
-						pc_unequipitem(dstsd,dstsd->equip_index[i],3);
+						pc_unequipitem(*dstsd,dstsd->equip_index[i],3);
 					}
 				}
 			}
 		} else if (dstmd) {
-			if(equip&EQP_WEAPON)
+			if (equip &EQP_WEAPON)
 				sclist[0] = SC_STRIPWEAPON;
-			if(equip&EQP_SHIELD)
+			if (equip &EQP_SHIELD)
 				sclist[1] = SC_STRIPSHIELD;
-			if(equip&EQP_ARMOR)
+			if (equip &EQP_ARMOR)
 				sclist[2] = SC_STRIPARMOR;
-			if(equip&EQP_HELM)
+			if (equip &EQP_HELM)
 				sclist[3] = SC_STRIPHELM;
 		}
 
@@ -3958,7 +3964,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		}
 
 		break;
-	}
+		}
 	/* PotionPitcher */
 	case AM_POTIONPITCHER:		/* ポ?ションピッチャ? */
 		{
@@ -3968,12 +3974,12 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 				x = skilllv%11 - 1;
 				i = pc_search_inventory(*sd,skill_db[skillid].itemid[x]);
 				if(i < 0 || skill_db[skillid].itemid[x] <= 0) {
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 					map_freeblock_unlock();
 					return 1;
 				}
 				if(sd->inventory_data[i] == NULL || sd->status.inventory[i].amount < skill_db[skillid].amount[x]) {
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 					map_freeblock_unlock();
 					return 1;
 				}
@@ -4064,11 +4070,11 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		battle_stopwalking(src,1);
 		skill_blown(src,bl,skill_get_blewcount(skillid,skilllv)|0x10000);
 		if (sd)
-			clif_fixpos(src);
+			clif_fixpos(*src);
 		else if (md)
-			clif_fixmobpos(md);
+			clif_fixmobpos(*md);
 		else if (src->type == BL_PET)
-			clif_fixpetpos((struct pet_data *)src);
+			clif_fixpetpos(*((struct pet_data *)src));
 		skill_addtimerskill(src,tick + 200,src->id,0,0,skillid,skilllv,0,flag);
 		break;
 
@@ -4079,7 +4085,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			int sp = skill_get_sp(sd->skillid_old,sd->skilllv_old);
 			sp = sp * (90 - (skilllv-1)*20) / 100;
 			if(sp < 0) sp = 0;
-			pc_heal(sd,0,-sp);
+			pc_heal(*sd,0,-sp);
 		}
 		break;
 	case SA_SPELLBREAKER:	// スペルブレイカ?
@@ -4104,7 +4110,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 				if(sd) {
 					sp = sd->status.max_sp/5;
 					if(sp < 1) sp = 1;
-					pc_heal(sd,0,-sp);
+					pc_heal(*sd,0,-sp);
 				}
 			}
 			else {
@@ -4126,7 +4132,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					skill_castcancel(bl,0);
 					sp = skill_get_sp(bl_skillid,bl_skilllv);
 					if(dstsd)
-						pc_heal(dstsd,0,-sp);
+						pc_heal(*dstsd,0,-sp);
 					if(sd) {
 						sp = sp*(25*(skilllv-1))/100;
 						if(skilllv > 1 && sp < 1) sp = 1;
@@ -4142,7 +4148,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					}
 				}
 				else if(sd)
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 			}
 		}
 		break;
@@ -4154,7 +4160,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case SA_AUTOSPELL:			/* オ?トスペル */
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		if(sd)
-			clif_autospell(sd,skilllv);
+			clif_autospell(*sd,skilllv);
 		else {
 			int maxlv=1,spellid=0;
 			static const int spellarray[3] = { MG_COLDBOLT,MG_FIREBOLT,MG_LIGHTNINGBOLT };
@@ -4209,7 +4215,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case NPC_PROVOCATION:
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 		if(md)
-			clif_pet_performance(src,mob_db[md->class_].skill[md->skillidx].val[0]);
+			clif_pet_performance(*src,mob_db[md->class_].skill[md->skillidx].val[0]);
 		break;
 
 	case NPC_HALLUCINATION:
@@ -4243,7 +4249,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			if(rand()%100 < sc_def*(50+skilllv*5)/100) {
 				if(dstsd) {
 					int hp = status_get_hp(bl)-1;
-					pc_heal(dstsd,-hp,0);
+					pc_heal(*dstsd,-hp,0);
 				}
 				else if(dstmd)
 					dstmd->hp = 1;
@@ -4261,7 +4267,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		if (dstsd) {
 			if(dstsd->state.no_weapon_damage )
 				break;
-			pc_heal(dstsd,0,-100);
+			pc_heal(*dstsd,0,-100);
 		}
 		if(rand()%100 < (skilllv*5)*sc_def_vit/100)
 			status_change_start(bl,SC_STAN,skilllv,0,0,0,skill_get_time2(skillid,skilllv),0);
@@ -4271,9 +4277,9 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		if(src && bl){
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 			if (md)
-				mob_damage(NULL,*md,md->hp,0);
+				mob_damage(*md,md->hp,0,NULL);
 			else if (sd)
-				pc_damage(NULL,sd,sd->status.hp);
+				pc_damage(*sd,sd->status.hp,NULL);
 		}
 		break;
 
@@ -4360,7 +4366,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 
 	case NPC_EMOTION:			/* エモ?ション */
 		if(md)
-			clif_emotion(&md->bl,mob_db[md->class_].skill[md->skillidx].val[0]);
+			clif_emotion(md->bl,mob_db[md->class_].skill[md->skillidx].val[0]);
 		break;
 
 	case NPC_EMOTION_ON:
@@ -4436,12 +4442,12 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		{
 			if((dstsd = pc_get_partner(*sd)) == NULL)
 			{
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
 			if(map[sd->bl.m].flag.nomemo || map[sd->bl.m].flag.nowarpto || map[dstsd->bl.m].flag.nowarp){
-				clif_skill_teleportmessage(sd,1);
+				clif_skill_teleportmessage(*sd,1);
 				map_freeblock_unlock();
 				return 0;
 			}
@@ -4456,7 +4462,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			struct map_session_data *m_sd = pc_get_mother(*sd);
 			// if neither was found
 			if(!f_sd && !m_sd){
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
@@ -4472,12 +4478,12 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			struct map_session_data *m_sd = pc_get_mother(*sd);
 			// if neither was found
 			if(!f_sd && !m_sd){
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
 			if(map[sd->bl.m].flag.nomemo || map[sd->bl.m].flag.nowarpto || map[dstsd->bl.m].flag.nowarp){
-				clif_skill_teleportmessage(sd,1);
+				clif_skill_teleportmessage(*sd,1);
 				map_freeblock_unlock();
 				return 0;
 			}
@@ -4489,12 +4495,12 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case WE_CALLBABY:
 		if(sd && dstsd){
 			if((dstsd = pc_get_child(*sd)) == NULL){
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
 			if(map[sd->bl.m].flag.nomemo || map[sd->bl.m].flag.nowarpto || map[dstsd->bl.m].flag.nowarp){
-				clif_skill_teleportmessage(sd,1);
+				clif_skill_teleportmessage(*sd,1);
 				map_freeblock_unlock();
 				return 0;
 			}
@@ -4513,9 +4519,9 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			// we need to check with the sp that was taken away when casting too
 			if (sd->status.sp + skill_get_sp(skillid, skilllv) >= sd->status.max_sp)
 				hp = sp = 0;
-			pc_heal(sd, -hp, sp);
+			pc_heal(*sd, -hp, sp);
 			clif_heal(sd->fd, SP_SP, sp);
-			clif_updatestatus(sd, SP_SP);
+			clif_updatestatus(*sd, SP_SP);
 		}
 		break;
 	case HT_REMOVETRAP:				/* リム?ブトラップ */
@@ -4537,7 +4543,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 								item_tmp.nameid = skill_db[su->group->skill_id].itemid[i];
 								item_tmp.identify = 1;
 								if(item_tmp.nameid && (flag=pc_additem(*sd,item_tmp,skill_db[su->group->skill_id].amount[i]))){
-									clif_additem(sd,0,0,flag);
+									clif_additem(*sd,0,0,flag);
 									map_addflooritem(item_tmp,skill_db[su->group->skill_id].amount[i],sd->bl.m,sd->bl.x,sd->bl.y,NULL,NULL,NULL,0);
 								}
 							}
@@ -4547,7 +4553,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 						item_tmp.nameid = 1065;
 						item_tmp.identify = 1;
 						if(item_tmp.nameid && (flag=pc_additem(*sd,item_tmp,1))){
-							clif_additem(sd,0,0,flag);
+							clif_additem(*sd,0,0,flag);
 							map_addflooritem(item_tmp,1,sd->bl.m,sd->bl.x,sd->bl.y,NULL,NULL,NULL,0);
 						}
 					}
@@ -4650,12 +4656,12 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					sd->status.sp = sp2;
 					dstsd->status.sp = sp1;
 					clif_heal(sd->fd,SP_SP,sp2);
-					clif_updatestatus(sd,SP_SP);
+					clif_updatestatus(*sd,SP_SP);
 					clif_heal(dstsd->fd,SP_SP,sp1);
-					clif_updatestatus(dstsd,SP_SP);
+					clif_updatestatus(*dstsd,SP_SP);
 				} else if (dstmd) {
 					if (dstmd->state.soul_change_flag) {
-						clif_skill_fail(sd,skillid,0,0);
+						clif_skill_fail(*sd,skillid,0,0);
 						map_freeblock_unlock();
 						return 0;
 					}
@@ -4664,7 +4670,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 						sp2 = sd->status.max_sp - sd->status.sp;
 					sd->status.sp += sp2;
 					clif_heal(sd->fd,SP_SP,sp2);
-					clif_updatestatus(sd,SP_SP);
+					clif_updatestatus(*sd,SP_SP);
 					dstmd->state.soul_change_flag = 1;
 				}
 			}
@@ -4736,8 +4742,8 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		break;
 
 	case PF_DOUBLECASTING:
-		if (rand() % 100 < 30 + skilllv * 10) {
-			clif_skill_fail(sd,skillid,0,0);
+		if (rand() % 100 > 30 + skilllv * 10) {
+			clif_skill_fail(*sd,skillid,0,0);
 			map_freeblock_unlock();
 			return 0;
 		}
@@ -4759,18 +4765,18 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case CG_TAROTCARD:
 		{
 			int eff, count = 1;
-			if (rand() % 100 < skilllv * 8) {
-				clif_skill_fail(sd,skillid,0,0);
+			if (rand() % 100 > skilllv * 8) {
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
 			do {
 				eff = rand() % 14;
-				clif_specialeffect(bl, 523 + eff, 0);
+				clif_specialeffect(*bl, 523 + eff, 0);
 				switch (eff)
 				{
 				case 0:	// heals SP to 0
-					if (dstsd) pc_heal(dstsd,0,-dstsd->status.sp);
+					if (dstsd) pc_heal(*dstsd,0,-dstsd->status.sp);
 					break;
 				case 1:	// matk halved
 					status_change_start(bl,SC_INCMATK2,-50,0,0,0,30000,0);
@@ -4790,7 +4796,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					status_change_start(bl,SC_INCATK2,-50,0,0,0,30000,0);
 					break;
 				case 5:	// 2000HP heal, random teleported
-					if (sd) pc_heal(sd,2000,0);
+					if (sd) pc_heal(*sd,2000,0);
 					if (bl->prev != NULL) {
 						if(sd && !map[src->m].flag.noteleport) pc_setpos(*sd,sd->mapname,0xFFFF,0xFFFF, 3);
 						else if(md && !map[src->m].flag.monster_noteleport) mob_warp(*md,-1,-1,-1,3);
@@ -4847,7 +4853,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			struct guild *g = NULL;
 			// Only usable during WoE
 			if (!agit_flag) {
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
@@ -4872,7 +4878,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			struct guild *g = NULL;
 			// Only usable during WoE
 			if (!agit_flag) {
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
@@ -4897,7 +4903,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			struct guild *g = NULL;
 			// Only usable during WoE
 			if (!agit_flag) {
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
@@ -4932,7 +4938,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			if (!agit_flag ||
 				(sd && map[sd->bl.m].flag.nowarpto &&	// if not allowed to warp to the map
 				guild_mapname2gc(sd->mapname) == NULL)) {	// and it's not a castle...
-				clif_skill_fail(sd,skillid,0,0);
+				clif_skill_fail(*sd,skillid,0,0);
 				map_freeblock_unlock();
 				return 0;
 			}
@@ -4987,7 +4993,7 @@ int skill_castend_id(int tid,unsigned long tick,int id,int data)
 		return 0;
 	if(sd->skillid != SA_CASTCANCEL && sd->skilltimer != -1 && pc_checkskill(*sd,SA_FREECAST) > 0) {
 		sd->speed = sd->prev_speed;
-		clif_updatestatus(sd,SP_SPEED);
+		clif_updatestatus(*sd,SP_SPEED);
 	}
 	if(sd->skillid != SA_CASTCANCEL)
 		sd->skilltimer=-1;
@@ -5008,7 +5014,7 @@ int skill_castend_id(int tid,unsigned long tick,int id,int data)
 	if(sd->skillid == PR_LEXAETERNA) {
 		struct status_change *sc_data = status_get_sc_data(bl);
 		if(sc_data && (sc_data[SC_FREEZE].timer != -1 || (sc_data[SC_STONE].timer != -1 && sc_data[SC_STONE].val2 == 0))) {
-			clif_skill_fail(sd,sd->skillid,0,0);
+			clif_skill_fail(*sd,sd->skillid,0,0);
 			sd->canact_tick = tick;
 			sd->canmove_tick = tick;
 			sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5019,7 +5025,7 @@ int skill_castend_id(int tid,unsigned long tick,int id,int data)
 		int dir = map_calc_dir(sd->bl,bl->x,bl->y),t_dir = status_get_dir(bl);
 		int dist = distance(sd->bl.x,sd->bl.y,bl->x,bl->y);
 		if(bl->type != BL_SKILL && (dist == 0 || map_check_dir(dir,t_dir))) {
-			clif_skill_fail(sd,sd->skillid,0,0);
+			clif_skill_fail(*sd,sd->skillid,0,0);
 			sd->canact_tick = tick;
 			sd->canmove_tick = tick;
 			sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5042,7 +5048,7 @@ int skill_castend_id(int tid,unsigned long tick,int id,int data)
 		if(inf2 & 0x800 && sd->status.guild_id > 0 && sd->status.guild_id == status_get_guild_id(bl))
 			fail_flag = 0;
 		if(fail_flag) {
-			clif_skill_fail(sd,sd->skillid,0,0);
+			clif_skill_fail(*sd,sd->skillid,0,0);
 			sd->canact_tick = tick;
 			sd->canmove_tick = tick;
 			sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5054,14 +5060,19 @@ int skill_castend_id(int tid,unsigned long tick,int id,int data)
 	if(range < 0)
 		range = status_get_range(&sd->bl) - (range + 1);
 	range += battle_config.pc_skill_add_range;
-	if((sd->skillid == MO_EXTREMITYFIST && sd->sc_data[SC_COMBO].timer != -1 && sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH) ||
-	   (sd->skillid == CH_TIGERFIST && sd->sc_data[SC_COMBO].timer != -1 && sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH) ||
-	   (sd->skillid == CH_CHAINCRUSH && sd->sc_data[SC_COMBO].timer != -1 && sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH) ||
-	   (sd->skillid == CH_CHAINCRUSH && sd->sc_data[SC_COMBO].timer != -1 && sd->sc_data[SC_COMBO].val1 == CH_TIGERFIST))
+
+	if (sd->sc_data[SC_COMBO].timer != -1 &&
+		((sd->skillid == MO_EXTREMITYFIST && sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH) ||
+		(sd->skillid == CH_TIGERFIST && sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH) ||
+		(sd->skillid == CH_CHAINCRUSH && sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH) ||
+		(sd->skillid == CH_CHAINCRUSH && sd->sc_data[SC_COMBO].val1 == CH_TIGERFIST) ||
+		(sd->skillid == MO_EXTREMITYFIST && sd->sc_data[SC_COMBO].val1 == CH_TIGERFIST) ||
+		(sd->skillid == MO_EXTREMITYFIST && sd->sc_data[SC_COMBO].val1 == CH_CHAINCRUSH)))
 		range += skill_get_blewcount(MO_COMBOFINISH,sd->sc_data[SC_COMBO].val2);
+
 	if(battle_config.skill_out_range_consume) { // changed to allow casting when target walks out of range [Valaris]
 		if(range < distance(sd->bl.x,sd->bl.y,bl->x,bl->y)) {
-			clif_skill_fail(sd,sd->skillid,0,0);
+			clif_skill_fail(*sd,sd->skillid,0,0);
 			sd->canact_tick = tick;
 			sd->canmove_tick = tick;
 			sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5077,7 +5088,7 @@ int skill_castend_id(int tid,unsigned long tick,int id,int data)
 //	sd->skillitem = sd->skillitemlv = -1; <- skill_check_condition(sd,1) does this
 	if(battle_config.skill_out_range_consume) {
 		if(range < distance(sd->bl.x,sd->bl.y,bl->x,bl->y)) {
-			clif_skill_fail(sd,sd->skillid,0,0);
+			clif_skill_fail(*sd,sd->skillid,0,0);
 			sd->canact_tick = tick;
 			sd->canmove_tick = tick;
 			return 0;
@@ -5129,7 +5140,7 @@ int skill_castend_pos( int tid, unsigned long tick, int id,int data )
 		return 0;
 	if(sd->skilltimer != -1 && pc_checkskill(*sd,SA_FREECAST) > 0) {
 		sd->speed = sd->prev_speed;
-		clif_updatestatus(sd,SP_SPEED);
+		clif_updatestatus(*sd,SP_SPEED);
 	}
 	sd->skilltimer=-1;
 	if(pc_isdead(*sd)) {
@@ -5142,7 +5153,7 @@ int skill_castend_pos( int tid, unsigned long tick, int id,int data )
 	if (!battle_config.pc_skill_reiteration &&
 			skill_get_unit_flag(sd->skillid)&UF_NOREITERATION &&
 			skill_check_unit_range(sd->bl.m,sd->skillx,sd->skilly,sd->skillid,sd->skilllv)) {
-		clif_skill_fail(sd,sd->skillid,0,0);
+		clif_skill_fail(*sd,sd->skillid,0,0);
 		sd->canact_tick = tick;
 		sd->canmove_tick = tick;
 		sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5153,7 +5164,7 @@ int skill_castend_pos( int tid, unsigned long tick, int id,int data )
 		(skill_get_unit_flag(sd->skillid) & UF_NOFOOTSET) &&
 		skill_check_unit_range2(sd->bl.m,sd->skillx,sd->skilly,sd->skillid,sd->skilllv,sd->bl.type) )
 	{
-		clif_skill_fail(sd,sd->skillid,0,0);
+		clif_skill_fail(*sd,sd->skillid,0,0);
 		sd->canact_tick = tick;
 		sd->canmove_tick = tick;
 		sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5168,7 +5179,7 @@ int skill_castend_pos( int tid, unsigned long tick, int id,int data )
 					c++;
 			}
 			if(c >= maxcount) {
-				clif_skill_fail(sd,sd->skillid,0,0);
+				clif_skill_fail(*sd,sd->skillid,0,0);
 				sd->canact_tick = tick;
 				sd->canmove_tick = tick;
 				sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5184,7 +5195,7 @@ int skill_castend_pos( int tid, unsigned long tick, int id,int data )
 	range += battle_config.pc_skill_add_range;
 	if(battle_config.skill_out_range_consume) {  // changed to allow casting when target walks out of range [Valaris]
 		if(range < distance(sd->bl.x,sd->bl.y,sd->skillx,sd->skilly)) {
-			clif_skill_fail(sd,sd->skillid,0,0);
+			clif_skill_fail(*sd,sd->skillid,0,0);
 			sd->canact_tick = tick;
 			sd->canmove_tick = tick;
 			sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5200,7 +5211,7 @@ int skill_castend_pos( int tid, unsigned long tick, int id,int data )
 //	sd->skillitem = sd->skillitemlv = -1; <- skill_check_condition(sd,1) does this
 	if(battle_config.skill_out_range_consume) {
 		if(range < distance(sd->bl.x,sd->bl.y,sd->skillx,sd->skilly)) {
-			clif_skill_fail(sd,sd->skillid,0,0);
+			clif_skill_fail(*sd,sd->skillid,0,0);
 			sd->canact_tick = tick;
 			sd->canmove_tick = tick;
 			return 0;
@@ -5369,7 +5380,7 @@ int skill_castend_pos2(struct block_list *src, int x,int y,unsigned short skilli
 		if(sd) {
 			if(map[sd->bl.m].flag.noteleport)	/* テレポ禁止 */
 				break;
-			clif_skill_warppoint(sd,sd->skillid,sd->status.save_point.map,
+			clif_skill_warppoint(*sd,sd->skillid,sd->status.save_point.map,
 				(sd->skilllv>1)?sd->status.memo_point[0].map:"",
 				(sd->skilllv>2)?sd->status.memo_point[1].map:"",
 				(sd->skilllv>3)?sd->status.memo_point[2].map:"");
@@ -5377,13 +5388,13 @@ int skill_castend_pos2(struct block_list *src, int x,int y,unsigned short skilli
 		break;
 
 	case MO_BODYRELOCATION:
-		if(sd){
+		if (sd) {
 			pc_movepos(*sd,x,y);
 			pc_blockskill_start(*sd, MO_EXTREMITYFIST, 2000);
 		} else if (src->type == BL_MOB) {
 			struct mob_data *md = (struct mob_data *)src;
 			mob_warp(*md, -1, x, y, 0);
-			clif_spawnmob(md);
+			clif_spawnmob(*md);
 		}
 		break;
 
@@ -5434,7 +5445,7 @@ int skill_castend_pos2(struct block_list *src, int x,int y,unsigned short skilli
 				int j = pc_search_inventory(*sd,skill_db[skillid].itemid[i]);
 				if(j < 0 || skill_db[skillid].itemid[i] <= 0 || sd->inventory_data[j] == NULL ||
 					sd->status.inventory[j].amount < skill_db[skillid].amount[i]) {
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 					return 1;
 				}
 				sd->state.potion_flag = 1;
@@ -5458,7 +5469,7 @@ int skill_castend_pos2(struct block_list *src, int x,int y,unsigned short skilli
 			clif_skill_poseffect(src,skillid,skilllv,x,y,tick);
 			map_foreachinarea (skill_ganbatein, src->m, x-1, y-1, x+1, y+1, BL_SKILL);
 		} else {
-			clif_skill_fail(sd,skillid,0,0);
+			clif_skill_fail(*sd,skillid,0,0);
 			return 1;
 		}
 		break;
@@ -5481,12 +5492,12 @@ int skill_castend_pos2(struct block_list *src, int x,int y,unsigned short skilli
 				int j = pc_search_inventory(*sd,skill_db[skillid].itemid[i]);
 				if(j < 0 || skill_db[skillid].itemid[i] <= 0 || sd->inventory_data[j] == NULL ||
 					sd->status.inventory[j].amount < skill_db[skillid].amount[i]) {
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 					return 1;
 				}
 				pc_delitem(*sd,j,skill_db[skillid].amount[i],0);
 				if (rand()%100 > 50) {
-					clif_skill_fail(sd,skillid,0,0);
+					clif_skill_fail(*sd,skillid,0,0);
 					return 1;
 				}
 				mob_once_spawn(sd, "this", x, y, "--ja--",
@@ -5532,7 +5543,7 @@ int skill_castend_map( struct map_session_data *sd,int skill_num, const char *ma
 	if( skill_num != sd->skillid)	/* 不正パケットらしい */
 		return 0;
 
-	pc_stopattack(sd);
+	pc_stopattack(*sd);
 
 	if(battle_config.pc_skill_log)
 		ShowMessage("PC %d skill castend skill =%d map=%s\n",sd->bl.id,skill_num,map);
@@ -5568,7 +5579,7 @@ int skill_castend_map( struct map_session_data *sd,int skill_num, const char *ma
 						c++;
 				}
 				if(c >= maxcount) {
-					clif_skill_fail(sd,sd->skillid,0,0);
+					clif_skill_fail(*sd,sd->skillid,0,0);
 					sd->canact_tick = gettick();
 					sd->canmove_tick = gettick();
 					sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -6143,12 +6154,12 @@ int skill_unit_onplace_timer(struct skill_unit *src,struct block_list *bl,unsign
 			if(moveblock) map_addblock(*bl);
 			skill_unit_move(bl,tick,1);
 			if(bl->type == BL_MOB)
-				clif_fixmobpos((struct mob_data *)bl);
+				clif_fixmobpos(*((struct mob_data *)bl));
 			else if(bl->type == BL_PET)
-				clif_fixpetpos((struct pet_data *)bl);
+				clif_fixpetpos(*((struct pet_data *)bl));
 			else
-				clif_fixpos(bl);
-			clif_01ac(&src->bl);
+				clif_fixpos(*bl);
+			clif_01ac(src->bl);
 			sg->limit=DIFF_TICK(tick,sg->tick) + sec;
 			sg->val2=bl->id;
 			sg->interval = -1;
@@ -6181,7 +6192,7 @@ int skill_unit_onplace_timer(struct skill_unit *src,struct block_list *bl,unsign
 		if (sg->src_id == bl->id) //自分が踏んでも発動しない
 			break;
 		if (sg->val2 == 0){
-			clif_talkiebox(&src->bl, sg->valstr);
+			clif_talkiebox(src->bl, sg->valstr);
 			sg->unit_id = 0x8c;
 			clif_changelook(&src->bl, LOOK_BASE, sg->unit_id);
 			sg->limit = DIFF_TICK(tick, sg->tick) + 5000;
@@ -6212,11 +6223,11 @@ int skill_unit_onplace_timer(struct skill_unit *src,struct block_list *bl,unsign
 			if(moveblock) map_addblock(*bl);
 			skill_unit_move(bl,tick,1);
  			if(bl->type == BL_MOB)
- 				clif_fixmobpos((struct mob_data *)bl);
+ 				clif_fixmobpos(*((struct mob_data *)bl));
  			else if(bl->type == BL_PET)
- 				clif_fixpetpos((struct pet_data *)bl);
+ 				clif_fixpetpos(*((struct pet_data *)bl));
  			else
- 				clif_fixpos(bl);
+ 				clif_fixpos(*bl);
 			sg->limit = DIFF_TICK(tick,sg->tick)+skill_get_time2(sg->skill_id,sg->skill_lv);
 			sg->val2=bl->id;
 			sg->interval = -1;
@@ -6366,7 +6377,7 @@ int skill_unit_onout(struct skill_unit *src,struct block_list *bl,unsigned long 
  *    bl: ユニット(BL_PC/BL_MOB)
  *------------------------------------------
  */
-int skill_unit_effect(struct block_list *bl,va_list ap)
+int skill_unit_effect(struct block_list &bl,va_list ap)
 {
 	struct skill_unit *unit;
 	struct skill_unit_group *group;
@@ -6374,28 +6385,27 @@ int skill_unit_effect(struct block_list *bl,va_list ap)
 	unsigned long tick;
 	static int called = 0;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, unit=va_arg(ap,struct skill_unit*));
 	tick = va_arg(ap,unsigned int);
 	flag = va_arg(ap,unsigned int);
 
-	if (bl->type!=BL_PC && bl->type!=BL_MOB)
+	if (bl.type!=BL_PC && bl.type!=BL_MOB)
 		return 0;
 
-	if (!unit->alive || bl->prev==NULL)
+	if (!unit->alive || bl.prev==NULL)
 		return 0;
 
 	nullpo_retr(0, group=unit->group);
 
 	if (flag)
-		skill_unit_onplace(unit,bl,tick);
+		skill_unit_onplace(unit,&bl,tick);
 	else {
-		skill_unit_onout(unit,bl,tick);
-		unit = map_find_skill_unit_oncell(bl,bl->x,bl->y,group->skill_id,unit);
+		skill_unit_onout(unit,&bl,tick);
+		unit = map_find_skill_unit_oncell(&bl,bl.x,bl.y,group->skill_id,unit);
 		if (unit && called == 0) {
 			called = 1;
-			skill_unit_onplace(unit,bl,tick);
+			skill_unit_onplace(unit,&bl,tick);
 			called = 0;
 		}
 	}
@@ -6479,15 +6489,15 @@ int skill_unit_ondamaged(struct skill_unit *src,struct block_list *bl,
  *------------------------------------------
  */
 
-static int skill_check_condition_char_sub (struct block_list *bl, va_list ap)
+static int skill_check_condition_char_sub (struct block_list &blx, va_list ap)
 {
+	struct block_list *bl = &blx;
 	int *c, skillid;
 	struct block_list *src;
 	struct map_session_data *sd;
 	struct map_session_data *tsd;
 	struct pc_base_job s_class;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, sd=(struct map_session_data*)bl);
 	nullpo_retr(0, src=va_arg(ap,struct block_list *));
@@ -6495,15 +6505,15 @@ static int skill_check_condition_char_sub (struct block_list *bl, va_list ap)
 	nullpo_retr(0, c=va_arg(ap,int *));
 	skillid = va_arg(ap,int);
 
-	if (bl == src)
-		return 0;
-
 	s_class = pc_calc_base_job(sd->status.class_);
 	//チェックしない設定ならcにありえない大きな?字を返して終了
 	if (!battle_config.player_skill_partner_check) {	//本?はforeachの前にやりたいけど設定適用箇所をまとめるためにここへ
 		(*c) = 99;
 		return 0;
 	}
+
+	if (bl == src)
+		return 0;
 
 	switch(skillid)
 	{
@@ -6544,7 +6554,7 @@ static int skill_check_condition_char_sub (struct block_list *bl, va_list ap)
  *------------------------------------------
  */
 
-static int skill_check_condition_use_sub(struct block_list *bl,va_list ap)
+static int skill_check_condition_use_sub(struct block_list &bl,va_list ap)
 {
 	int *c;
 	struct block_list *src;
@@ -6554,9 +6564,8 @@ static int skill_check_condition_use_sub(struct block_list *bl,va_list ap)
 	struct pc_base_job ss_class;
 	int skillid,skilllv;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
-	nullpo_retr(0, sd=(struct map_session_data*)bl);
+	nullpo_retr(0, sd=(struct map_session_data*)&bl);
 	nullpo_retr(0, src=va_arg(ap,struct block_list *));
 	nullpo_retr(0, c=va_arg(ap,int *));
 	nullpo_retr(0, ssd=(struct map_session_data*)src);
@@ -6579,7 +6588,7 @@ static int skill_check_condition_use_sub(struct block_list *bl,va_list ap)
 		if (sd != ssd && (s_class.job == 4 || s_class.job == 8 || s_class.job == 15) &&
 			(sd->bl.x == ssd->bl.x - 1 || sd->bl.x == ssd->bl.x + 1) && sd->status.sp >= 10){
 			sd->status.sp -= 10;
-			clif_updatestatus(sd,SP_SP);
+			clif_updatestatus(*sd,SP_SP);
 			(*c)++;
 		}
 		break;
@@ -6602,9 +6611,9 @@ static int skill_check_condition_use_sub(struct block_list *bl,va_list ap)
 		   !pc_issit(*sd) && //座ってない
 		   sd->sc_data[SC_DANCING].timer==-1 //ダンス中じゃない
 		  ){
-			ssd->sc_data[SC_DANCING].val4=bl->id;
-			clif_skill_nodamage(bl,src,skillid,skilllv,1);
-			status_change_start(bl,SC_DANCING,skillid,ssd->sc_data[SC_DANCING].val2,0,src->id,skill_get_time(skillid,skilllv)+1000,0);
+			ssd->sc_data[SC_DANCING].val4=bl.id;
+			clif_skill_nodamage(&bl,src,skillid,skilllv,1);
+			status_change_start(&bl,SC_DANCING,skillid,ssd->sc_data[SC_DANCING].val2,0,src->id,skill_get_time(skillid,skilllv)+1000,0);
 			sd->skillid_dance=sd->skillid=skillid;
 			sd->skilllv_dance=sd->skilllv=skilllv;
 			(*c)++;
@@ -6618,12 +6627,11 @@ static int skill_check_condition_use_sub(struct block_list *bl,va_list ap)
  *------------------------------------------
  */
 
-static int skill_check_condition_mob_master_sub(struct block_list *bl,va_list ap)
+static int skill_check_condition_mob_master_sub(struct block_list &bl,va_list ap)
 {
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
-	struct mob_data * md = (struct mob_data*)bl;
+	struct mob_data * md = (struct mob_data*)&bl;
 	unsigned long src_id = va_arg(ap,unsigned long);
 	int mob_class        = va_arg(ap,int);
 	int *c               = va_arg(ap,int *);
@@ -6637,14 +6645,13 @@ static int skill_check_condition_mob_master_sub(struct block_list *bl,va_list ap
 	return 0;
 }
 
-static int skill_check_condition_hermod_sub(struct block_list *bl,va_list ap)
+static int skill_check_condition_hermod_sub(struct block_list &bl,va_list ap)
 {
 	int *c;
 	struct npc_data *nd;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
-	nullpo_retr(0, nd=(struct npc_data*)bl);
+	nullpo_retr(0, nd=(struct npc_data*)&bl);
 	nullpo_retr(0, c=va_arg(ap,int *));
 
 	if (nd->bl.subtype == WARP)
@@ -6675,12 +6682,12 @@ int skill_check_condition(struct map_session_data *sd,int type)
 	}
 
 	if( sd->opt1>0) {
-		clif_skill_fail(sd,sd->skillid,0,0);
+		clif_skill_fail(*sd,sd->skillid,0,0);
 		sd->skillitem = sd->skillitemlv = 0xFFFF;
 		return 0;
 	}
 	if(pc_is90overweight(*sd)) {
-		clif_skill_fail(sd,sd->skillid,9,0);
+		clif_skill_fail(*sd,sd->skillid,9,0);
 		sd->skillitem = sd->skillitemlv = 0xFFFF;
 		return 0;
 	}
@@ -6696,7 +6703,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		if(!type) //When a target was selected
 		{	//Consume items that were skipped in pc_use_item [Skotlex]
 			int i;
-			if( (i = sd->itemindex) == -1 ||
+			 if((i = sd->itemindex) == -1 ||
 				sd->status.inventory[i].nameid != sd->itemid ||
 				!sd->inventory_data[i]->flag.delay_consume ||
 				sd->status.inventory[i].amount < 1
@@ -6714,7 +6721,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		return 1;
 	}
 	if( sd->opt1>0 ){
-		clif_skill_fail(sd,sd->skillid,0,0);
+		clif_skill_fail(*sd,sd->skillid,0,0);
 		return 0;
 	}
 
@@ -6725,7 +6732,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 			sd->sc_data[SC_STEELBODY].timer != -1 ||
 			sd->sc_data[SC_BERSERK].timer != -1 ||
 			(sd->sc_data[SC_MARIONETTE].timer != -1 && sd->skillid != CG_MARIONETTE)){
-			clif_skill_fail(sd,sd->skillid,0,0);
+			clif_skill_fail(*sd,sd->skillid,0,0);
 			return 0;	/* ?態異常や沈?など */
 		}
 	}
@@ -6766,7 +6773,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 	switch(skill) {
 	case SA_CASTCANCEL:
 		if(sd->skilltimer == -1) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
@@ -6783,19 +6790,19 @@ int skill_check_condition(struct map_session_data *sd,int type)
 	case AL_TELEPORT:
 	case AL_WARP:
 		if(map[sd->bl.m].flag.noteleport) {
-			clif_skill_teleportmessage(sd,0);
+			clif_skill_teleportmessage(*sd,0);
 			return 0;
 		}
 		break;
 	case MO_CALLSPIRITS:	/* ?功 */
 		if(sd->spiritball >= lv) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case CH_SOULCOLLECT:	/* 狂?功 */
 		if(sd->spiritball >= 5) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
@@ -6832,14 +6839,24 @@ int skill_check_condition(struct map_session_data *sd,int type)
 			return 0;
 		break;
 	case MO_EXTREMITYFIST:					// 阿修羅覇鳳拳
-		if((sd->sc_data[SC_COMBO].timer != -1 && (sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH || sd->sc_data[SC_COMBO].val1 == CH_CHAINCRUSH)) || sd->sc_data[SC_BLADESTOP].timer!=-1)
+		if(sd->sc_data[SC_BLADESTOP].timer!=-1)
 			spiritball--;
+		else if (sd->sc_data[SC_COMBO].timer != -1) {
+			if (sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH)
+				spiritball = 4;
+			else if (sd->sc_data[SC_COMBO].val1 == CH_TIGERFIST)
+				spiritball = 3;
+			else if (sd->sc_data[SC_COMBO].val1 == CH_CHAINCRUSH)
+				spiritball = 1;
+			// if chain crush came after tiger fist it should be 2...
+			// but i'm not sure how to check that yet ^^;
+		}
 		break;
 	case BD_ADAPTATION:				/* アドリブ */
 		{
 			struct skill_unit_group *group=NULL;
 			if(sd->sc_data[SC_DANCING].timer==-1 || ((group=(struct skill_unit_group*)sd->sc_data[SC_DANCING].val2) && (skill_get_time(sd->sc_data[SC_DANCING].val1,group->skill_lv) - sd->sc_data[SC_DANCING].val3*1000) <= skill_get_time2(skill,lv))){ //ダンス中で使用後5秒以上のみ？
-				clif_skill_fail(sd,skill,0,0);
+				clif_skill_fail(*sd,skill,0,0);
 				return 0;
 			}
 		}
@@ -6853,7 +6870,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 					sd->bl.x-range, sd->bl.y-range,
 					sd->bl.x+range, sd->bl.y+range, BL_PC, &sd->bl, &c, skill);
 				if (c < 2) {
-					clif_skill_fail(sd,skill,0,0);
+					clif_skill_fail(*sd,skill,0,0);
 					return 0;
 				}
 			} else {
@@ -6865,7 +6882,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		break;
 	case WE_CALLPARTNER:		/* あなたに逢いたい */
 		if(!sd->status.partner_id){
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
@@ -6879,7 +6896,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 			if(battle_config.pc_land_skill_limit && maxcount>0) {
 				map_foreachinarea(skill_check_condition_mob_master_sub ,sd->bl.m, 0, 0, map[sd->bl.m].xs, map[sd->bl.m].ys, BL_MOB, sd->bl.id, mob_class,&c );
 				if(c >= maxcount){
-					clif_skill_fail(sd,skill,0,0);
+					clif_skill_fail(*sd,skill,0,0);
 					return 0;
 				}
 			}
@@ -6898,7 +6915,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 						c++;
 				}
 				if(c >= maxcount) {
-					clif_skill_fail(sd,skill,0,0);
+					clif_skill_fail(*sd,skill,0,0);
 					return 0;
 				}
 			}
@@ -6916,7 +6933,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 						c++;
 				}
 				if(c >= maxcount) {
-					clif_skill_fail(sd,skill,0,0);
+					clif_skill_fail(*sd,skill,0,0);
 					return 0;
 				}
 			}
@@ -6931,7 +6948,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 	case SN_SHARPSHOOTING:
 	case CG_ARROWVULCAN:
 		if(sd->equip_index[10] < 0) {
-			clif_arrow_fail(sd,0);
+			clif_arrow_fail(*sd,0);
 			return 0;
 		}
 		arrow_flag = 1;
@@ -6939,7 +6956,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 	case RG_BACKSTAP:
 		if(sd->status.weapon == 11) {
 			if (sd->equip_index[10] < 0) {
-				clif_arrow_fail(sd,0);
+				clif_arrow_fail(*sd,0);
 				return 0;
 			}
 			arrow_flag = 1;
@@ -6964,7 +6981,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 			map_foreachinarea (skill_check_condition_hermod_sub, sd->bl.m,
 				sd->bl.x-3, sd->bl.y-3, sd->bl.x+3, sd->bl.y+3, BL_NPC, &c);
 			if (c < 1) {
-				clif_skill_fail(sd,skill,0,0);
+				clif_skill_fail(*sd,skill,0,0);
 				return 0;
 			}
 		}
@@ -6973,87 +6990,90 @@ int skill_check_condition(struct map_session_data *sd,int type)
 
 	if(!(type&2)){
 		if( hp>0 && sd->status.hp < hp) {				/* HPチェック */
-			clif_skill_fail(sd,skill,2,0);		/* HP不足：失敗通知 */
+			clif_skill_fail(*sd,skill,2,0);		/* HP不足：失敗通知 */
 			return 0;
 		}
 		if( sp>0 && sd->status.sp < sp) {				/* SPチェック */
-			clif_skill_fail(sd,skill,1,0);		/* SP不足：失敗通知 */
+			clif_skill_fail(*sd,skill,1,0);		/* SP不足：失敗通知 */
 			return 0;
 		}
-		if( zeny>0 && sd->status.zeny < zeny) {
-			clif_skill_fail(sd,skill,5,0);
+		if( zeny>0 && sd->status.zeny < (unsigned long)zeny) {
+			clif_skill_fail(*sd,skill,5,0);
 			return 0;
 		}
 		if(!(weapon & (1<<sd->status.weapon) ) ) {
-			clif_skill_fail(sd,skill,6,0);
+			clif_skill_fail(*sd,skill,6,0);
 			return 0;
 		}
 		if( spiritball > 0 && sd->spiritball < spiritball) {
-			clif_skill_fail(sd,skill,0,0);		// 氣球不足
+			clif_skill_fail(*sd,skill,0,0);		// 氣球不足
 			return 0;
 		}
 	}
 	switch(state) {
 	case ST_HIDING:
 		if(!(sd->status.option&2)) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_CLOAKING:
 		if(!(sd->status.option&4)) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_HIDDEN:
 		if(!pc_ishiding(*sd)) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_RIDING:
 		if(!pc_isriding(*sd)) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_FALCON:
 		if(!pc_isfalcon(*sd)) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_CART:
 		if(!pc_iscarton(*sd)) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_SHIELD:
 		if(sd->status.shield <= 0) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_SIGHT:
 		if(sd->sc_data[SC_SIGHT].timer == -1 && type&1) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_EXPLOSIONSPIRITS:
-		if (skill == MO_EXTREMITYFIST && ((sd->sc_data[SC_COMBO].timer != -1 && (sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH || sd->sc_data[SC_COMBO].val1 == CH_CHAINCRUSH)) || sd->sc_data[SC_BLADESTOP].timer!=-1)) {
+		if (skill == MO_EXTREMITYFIST && ((sd->sc_data[SC_COMBO].timer != -1 &&
+				(sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH ||
+				sd->sc_data[SC_COMBO].val1 == CH_TIGERFIST ||
+				sd->sc_data[SC_COMBO].val1 == CH_CHAINCRUSH)) ||
+				sd->sc_data[SC_BLADESTOP].timer!=-1))
 			break;
-		}
 		if(sd->sc_data[SC_EXPLOSIONSPIRITS].timer == -1) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
 	case ST_RECOV_WEIGHT_RATE:
 		if(battle_config.natural_heal_weight_rate <= 100 && sd->weight*100 >= sd->max_weight*(unsigned long)battle_config.natural_heal_weight_rate) {
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
@@ -7061,7 +7081,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		{
 			struct walkpath_data wpd;
 			if(path_search(wpd,sd->bl.m,sd->bl.x,sd->bl.y,sd->skillx,sd->skilly,1)==-1) {
-				clif_skill_fail(sd,skill,0,0);
+				clif_skill_fail(*sd,skill,0,0);
 				return 0;
 			}
 		}
@@ -7070,7 +7090,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		if( map[sd->bl.m].flag.rain==1 && battle_config.rainy_waterball==1)
 			break;
 		if((!map_getcell(sd->bl.m,sd->bl.x,sd->bl.y,CELL_CHKWATER))&& (sd->sc_data[SC_DELUGE].timer==-1)){	//水場判定
-			clif_skill_fail(sd,skill,0,0);
+			clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 		break;
@@ -7094,9 +7114,9 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		index[k] = pc_search_inventory(*sd,itemid[k]);
 		if(index[k] < 0 || sd->status.inventory[index[k]].amount < amount[k]) {
 			if(itemid[k] == 716 || itemid[k] == 717)
-				clif_skill_fail(sd,skill,(7+(itemid[k]-716)),0);
+				clif_skill_fail(*sd,skill,(7+(itemid[k]-716)),0);
 			else
-				clif_skill_fail(sd,skill,0,0);
+				clif_skill_fail(*sd,skill,0,0);
 			return 0;
 		}
 	}
@@ -7120,16 +7140,16 @@ int skill_check_condition(struct map_session_data *sd,int type)
 
 	if(sp > 0) {					// SP消費
 		sd->status.sp-=sp;
-		clif_updatestatus(sd,SP_SP);
+		clif_updatestatus(*sd,SP_SP);
 	}
 	if(hp > 0) {					// HP消費
 		sd->status.hp-=hp;
-		clif_updatestatus(sd,SP_HP);
+		clif_updatestatus(*sd,SP_HP);
 	}
 	if(zeny > 0)					// Zeny消費
 		pc_payzeny(*sd,zeny);
 	if(spiritball > 0)				// 氣球消費
-		pc_delspiritball(sd,spiritball,0);
+		pc_delspiritball(*sd,spiritball,0);
 
 
 	return 1;
@@ -7349,7 +7369,7 @@ int skill_use_id( struct map_session_data *sd, unsigned long target_id,unsigned 
 	case BD_ENCORE:					/* アンコ?ル */
 		if(!sd->skillid_dance)
 		{	//前回使用した踊りがないとだめ
-			clif_skill_fail(sd,skill_num,0,0);
+			clif_skill_fail(*sd,skill_num,0,0);
 			return 0;
 		}
 		else
@@ -7391,7 +7411,7 @@ int skill_use_id( struct map_session_data *sd, unsigned long target_id,unsigned 
 				sd->bl.x+range, sd->bl.y+range, BL_PC, &sd->bl, &c, skill_num);
 			if(c < 1)
 			{
-				clif_skill_fail(sd,skill_num,0,0);
+				clif_skill_fail(*sd,skill_num,0,0);
 				return 0;
 			}
 			else if(c == 99)
@@ -7441,7 +7461,7 @@ int skill_use_id( struct map_session_data *sd, unsigned long target_id,unsigned 
 		skill_num != CH_CHAINCRUSH) ||
 		(skill_num == CH_CHAINCRUSH && sd->state.skill_flag) ||
 		(skill_num == MO_EXTREMITYFIST && sd->state.skill_flag) )
-		pc_stopattack(sd);
+		pc_stopattack(*sd);
 
 	casttime = skill_castfix(&sd->bl, skill_get_cast(skill_num, skill_lv));
 	if (skill_num != SA_MAGICROD)
@@ -7471,6 +7491,7 @@ int skill_use_id( struct map_session_data *sd, unsigned long target_id,unsigned 
 			target_id = tbl->id;
 		}
 		break;
+
 	case MO_COMBOFINISH:	/*猛龍拳*/
 	case CH_CHAINCRUSH:		/* 連柱崩? */
 		target_id = sd->attacktarget;
@@ -7484,7 +7505,10 @@ int skill_use_id( struct map_session_data *sd, unsigned long target_id,unsigned 
 // -- moonsoul	(altered to allow proper usage of extremity from new champion combos)
 //
 	case MO_EXTREMITYFIST:	/*阿修羅覇鳳拳*/
-		if(sc_data && sc_data[SC_COMBO].timer != -1 && (sc_data[SC_COMBO].val1 == MO_COMBOFINISH || sc_data[SC_COMBO].val1 == CH_CHAINCRUSH))
+		if (sc_data && sc_data[SC_COMBO].timer != -1 &&
+			(sc_data[SC_COMBO].val1 == MO_COMBOFINISH ||
+			sc_data[SC_COMBO].val1 == CH_TIGERFIST ||
+			sc_data[SC_COMBO].val1 == CH_CHAINCRUSH))
 		{
 			casttime = 0;
 			target_id = sd->attacktarget;
@@ -7549,11 +7573,11 @@ int skill_use_id( struct map_session_data *sd, unsigned long target_id,unsigned 
 	case HP_BASILICA:		/* バジリカ */
 		{
 			if (skill_check_unit_range(sd->bl.m,sd->bl.x,sd->bl.y,sd->skillid,sd->skilllv)) {
-				clif_skill_fail(sd,sd->skillid,0,0);
+				clif_skill_fail(*sd,sd->skillid,0,0);
 				return 0;
 			}
 			if(skill_check_unit_range2(sd->bl.m,sd->bl.x,sd->bl.y,sd->skillid,sd->skilllv,0)) {
-				clif_skill_fail(sd,sd->skillid,0,0);
+				clif_skill_fail(*sd,sd->skillid,0,0);
 				return 0;
 			}
 			// cancel Basilica if already in effect
@@ -7643,7 +7667,7 @@ int skill_use_pos( struct map_session_data *sd, int skill_x, int skill_y, unsign
 	if (skillnotok(skill_num, *sd)) // [MoueJstr]
 		return 0;
 	if (skill_num == WZ_ICEWALL && map[sd->bl.m].flag.noicewall && !map[sd->bl.m].flag.pvp)  { // noicewall flag [Valaris]
-		clif_skill_fail(sd,sd->skillid,0,0);
+		clif_skill_fail(*sd,sd->skillid,0,0);
 		return 0;
 	}
 
@@ -7710,7 +7734,7 @@ int skill_use_pos( struct map_session_data *sd, int skill_x, int skill_y, unsign
 		}
 	}
 
-	pc_stopattack(sd);
+	pc_stopattack(*sd);
 
 	casttime = skill_castfix(&sd->bl, skill_get_cast( skill_num,skill_lv) );
 	delay = skill_delayfix(&sd->bl, skill_get_delay( skill_num,skill_lv) );
@@ -7775,7 +7799,7 @@ int skill_castcancel (struct block_list *bl, int type)
 		if (sd->skilltimer != -1) {
 			if (pc_checkskill(*sd,SA_FREECAST) > 0) {
 				sd->speed = sd->prev_speed;
-				clif_updatestatus(sd,SP_SPEED);
+				clif_updatestatus(*sd,SP_SPEED);
 			}
 			if (!type) {
 				if ((inf = skill_get_inf( sd->skillid )) == 2 || inf == 32)
@@ -8002,7 +8026,7 @@ int skill_devotion3(struct block_list *bl,unsigned long target)
 		for(n=0;n<5;n++)
 			if(md->dev.val1[n]==target)
 				md->dev.val2[n]=0;	// 離れた時は、?を切るだけ
-		clif_devotion(md,sd->bl.id);
+		clif_devotion(*md,sd->bl.id);
 		return 1;
 	}
 	return 0;
@@ -8019,8 +8043,8 @@ void skill_devotion_end(struct map_session_data *md,struct map_session_data *sd,
 	//	status_change_end(sd->bl,SC_DEVOTION,-1);
 		sd->sc_data[SC_DEVOTION].val1=0;
 		sd->sc_data[SC_DEVOTION].val2=0;
-		clif_status_change(&sd->bl,SC_DEVOTION,0);
-		clif_devotion(md,sd->bl.id);
+		clif_status_change(sd->bl,SC_DEVOTION,0);
+		clif_devotion(*md,sd->bl.id);
 	}
 }
 /*==========================================
@@ -8070,45 +8094,39 @@ int skill_autospell(struct map_session_data *sd,int skillid)
  *------------------------------------------
  */
 
-static int skill_gangster_count(struct block_list *bl,va_list ap)
+static int skill_gangster_count(struct block_list &bl,va_list ap)
 {
 	int *c;
-	struct map_session_data *sd;
+	struct map_session_data &sd = (struct map_session_data&)bl;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
-	sd=(struct map_session_data*)bl;
 	c=va_arg(ap,int *);
-
-	if(sd && c && pc_issit(*sd) && pc_checkskill(*sd,RG_GANGSTER) > 0)
+	if(c && pc_issit(sd) && pc_checkskill(sd,RG_GANGSTER) > 0)
 		(*c)++;
 	return 0;
 }
 
-static int skill_gangster_in(struct block_list *bl,va_list ap)
+static int skill_gangster_in(struct block_list &bl,va_list ap)
 {
 	struct map_session_data *sd;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
-	sd=(struct map_session_data*)bl;
+	sd=(struct map_session_data*)&bl;
 	if(sd && pc_issit(*sd) && pc_checkskill(*sd,RG_GANGSTER) > 0)
 		sd->state.gangsterparadise=1;
 	return 0;
 }
 
-static int skill_gangster_out(struct block_list *bl,va_list ap)
+static int skill_gangster_out(struct block_list &bl,va_list ap)
 {
-	struct map_session_data *sd;
+	struct map_session_data &sd=(struct map_session_data&)bl;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
-	sd=(struct map_session_data*)bl;
-	if(sd && sd->state.gangsterparadise)
-		sd->state.gangsterparadise=0;
+	if(sd.state.gangsterparadise)
+		sd.state.gangsterparadise=0;
 	return 0;
 }
 
@@ -8151,14 +8169,13 @@ int skill_gangsterparadise(struct map_session_data *sd ,int type)
  * 寒いジョ?ク?スクリ?ム判定?理(foreachinarea)
  *------------------------------------------
  */
-int skill_frostjoke_scream(struct block_list *bl,va_list ap)
+int skill_frostjoke_scream(struct block_list &bl,va_list ap)
 {
 	struct block_list *src;
 	unsigned short skillid;
 	unsigned short skilllv;
 	unsigned long tick;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, src=va_arg(ap,struct block_list*));
 
@@ -8167,23 +8184,23 @@ int skill_frostjoke_scream(struct block_list *bl,va_list ap)
 	if(skilllv <= 0) return 0;
 	tick=(unsigned long)va_arg(ap,int);
 
-	if (src == bl ||	//自分には?かない
-		bl->prev == NULL ||
-		status_isdead(bl))
+	if (src->id == bl.id ||	//自分には?かない
+		bl.prev == NULL ||
+		status_isdead(&bl))
 		return 0;
-	if (bl->type == BL_PC) {
-		struct map_session_data *sd = (struct map_session_data *)bl;
+	if (bl.type == BL_PC) {
+		struct map_session_data *sd = (struct map_session_data *)&bl;
 		if (sd && sd->status.option & OPTION_HIDE && pc_isGM(*sd) > 0)
 			return 0;
 	}
 	if (map[src->m].flag.gvg || map[src->m].flag.pvp)
-		skill_additional_effect(src,bl,skillid,skilllv,BF_MISC,tick);
+		skill_additional_effect(src,&bl,skillid,skilllv,BF_MISC,tick);
 	// we freeze everybody except of ourselfes on pvp/gvg [veider]
 	else {
-		if(battle_check_target(src,bl,BCT_ENEMY) > 0)
-		skill_additional_effect(src,bl,skillid,skilllv,BF_MISC,tick);
-		else if(battle_check_target(src,bl,BCT_PARTY) > 0 && rand()%100 < 10)
-			skill_additional_effect(src,bl,skillid,skilllv,BF_MISC,tick);
+		if(battle_check_target(src,&bl,BCT_ENEMY) > 0)
+		skill_additional_effect(src,&bl,skillid,skilllv,BF_MISC,tick);
+		else if(battle_check_target(src,&bl,BCT_PARTY) > 0 && rand()%100 < 10)
+			skill_additional_effect(src,&bl,skillid,skilllv,BF_MISC,tick);
 	}
 	// so on non-pvp/gvg we are just freezing as freezed before
 
@@ -8194,22 +8211,19 @@ int skill_frostjoke_scream(struct block_list *bl,va_list ap)
  * Moonlit creates a 'safe zone' [celest]
  *------------------------------------------
  */
-static int skill_moonlit_count(struct block_list *bl,va_list ap)
+static int skill_moonlit_count(struct block_list &bl,va_list ap)
 {
 	int *c;
 	unsigned long id;
-	struct map_session_data *sd;
+	struct map_session_data &sd=(struct map_session_data &)bl;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
-	nullpo_retr(0, (sd=(struct map_session_data *)bl));
 
 	id=va_arg(ap,unsigned long);
 	c=va_arg(ap,int *);
 
-	if(sd->bl.id != id && 
-		//!!sd->sc_count && 
-		sd->sc_data[SC_MOONLIT].timer != -1 && c)
+	if(sd.bl.id != id && 
+		sd.sc_data[SC_MOONLIT].timer != -1 && c)
 		(*c)++;
 	return 0;
 }
@@ -8243,7 +8257,7 @@ void skill_basilica_cell(struct skill_unit *unit,int flag)
  *
  *------------------------------------------
  */
-int skill_attack_area(struct block_list *bl,va_list ap)
+int skill_attack_area(struct block_list &bl,va_list ap)
 {
 	struct block_list *src,*dsrc;
 	int atk_type;
@@ -8251,7 +8265,6 @@ int skill_attack_area(struct block_list *bl,va_list ap)
 	int flag,type;
 	unsigned long tick;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
 	atk_type = va_arg(ap,int);
@@ -8268,8 +8281,8 @@ int skill_attack_area(struct block_list *bl,va_list ap)
 	flag=va_arg(ap,int);
 	type=va_arg(ap,int);
 
-	if(battle_check_target(dsrc,bl,type) > 0)
-		skill_attack(atk_type,src,dsrc,bl,skillid,skilllv,tick,flag);
+	if(battle_check_target(dsrc,&bl,type) > 0)
+		skill_attack(atk_type,src,dsrc,&bl,skillid,skilllv,tick,flag);
 
 	return 0;
 }
@@ -8311,18 +8324,17 @@ int skill_clear_element_field(struct block_list *bl)
  * ランドプロテクタ?チェック(foreachinarea)
  *------------------------------------------
  */
-int skill_landprotector(struct block_list *bl, va_list ap )
+int skill_landprotector(struct block_list &bl, va_list ap )
 {
 	unsigned short skillid;
 	int *alive;
 	struct skill_unit *unit;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
 	skillid=(unsigned short)va_arg(ap,int);
 	alive = va_arg(ap,int *);
-	if ((unit = (struct skill_unit *)bl) == NULL)
+	if ((unit = (struct skill_unit *)&bl) == NULL)
 		return 0;
 
 	if (skillid == SA_LANDPROTECTOR || 
@@ -8338,13 +8350,12 @@ int skill_landprotector(struct block_list *bl, va_list ap )
  * variation of skill_landprotector
  *------------------------------------------
  */
-int skill_ganbatein(struct block_list *bl, va_list ap )
+int skill_ganbatein(struct block_list &bl, va_list ap )
 {
 	struct skill_unit *unit;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
-	if ((unit = (struct skill_unit *)bl) == NULL || unit->group == NULL)
+	if ((unit = (struct skill_unit *)&bl) == NULL || unit->group == NULL)
 		return 0;
 
 	if (unit->group->skill_id == SA_LANDPROTECTOR)
@@ -8357,24 +8368,23 @@ int skill_ganbatein(struct block_list *bl, va_list ap )
  * イドゥンの林檎の回復?理(foreachinarea)
  *------------------------------------------
  */
-int skill_idun_heal (struct block_list *bl, va_list ap)
+int skill_idun_heal (struct block_list &bl, va_list ap)
 {
 	struct skill_unit *unit;
 	struct skill_unit_group *sg;
 	int heal;
 
-	nullpo_retr(0, bl);
-	if (bl->type != BL_PC && bl->type != BL_MOB)
+	if (bl.type != BL_PC && bl.type != BL_MOB)
 		return 0;
 
 	nullpo_retr(0, ap);
 	nullpo_retr(0, unit = va_arg(ap,struct skill_unit *));
 	nullpo_retr(0, sg = unit->group);
-	if (bl->id == sg->src_id)
+	if (bl.id == sg->src_id)
 		return 0;
 	heal = 30 + sg->skill_lv * 5 + ((sg->val1) >> 16) * 5 + ((sg->val2) & 0xfff) / 2;
-	clif_skill_nodamage(&unit->bl, bl, AL_HEAL, heal, 1);
-	battle_heal(NULL, bl, heal, 0, 0);
+	clif_skill_nodamage(&unit->bl, &bl, AL_HEAL, heal, 1);
+	battle_heal(NULL, &bl, heal, 0, 0);
 
 	return 0;
 }
@@ -8383,19 +8393,18 @@ int skill_idun_heal (struct block_list *bl, va_list ap)
  * 指定範??でsrcに?して有?なタ?ゲットのblの?を?える(foreachinarea)
  *------------------------------------------
  */
-int skill_count_target (struct block_list *bl, va_list ap)
+int skill_count_target (struct block_list &bl, va_list ap)
 {
 	struct block_list *src;
 	int *c;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 
 	if ((src = va_arg(ap,struct block_list *)) == NULL)
 		return 0;
 	if ((c = va_arg(ap,int *)) == NULL)
 		return 0;
-	if (battle_check_target(src,bl,BCT_ENEMY) > 0)
+	if (battle_check_target(src,&bl,BCT_ENEMY) > 0)
 		(*c)++;
 	return 0;
 }
@@ -8403,8 +8412,9 @@ int skill_count_target (struct block_list *bl, va_list ap)
  * トラップ範??理(foreachinarea)
  *------------------------------------------
  */
-int skill_trap_splash (struct block_list *bl, va_list ap)
+int skill_trap_splash (struct block_list &blx, va_list ap)
 {
+	struct block_list *bl = &blx;
 	struct block_list *src;
 	unsigned long tick;
 	int splash_count;
@@ -8413,7 +8423,6 @@ int skill_trap_splash (struct block_list *bl, va_list ap)
 	struct block_list *ss;
 	int i;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, src = va_arg(ap,struct block_list *));
 	nullpo_retr(0, unit = (struct skill_unit *)src);
@@ -8864,28 +8873,27 @@ struct skill_unit_group_tickset *skill_unitgrouptickset_search(struct block_list
  * スキルユニットタイマ??動?理用(foreachinarea)
  *------------------------------------------
  */
-int skill_unit_timer_sub_onplace( struct block_list *bl, va_list ap )
+int skill_unit_timer_sub_onplace( struct block_list &bl, va_list ap )
 {
 	struct skill_unit *unit;
 	struct skill_unit_group *group;
 	unsigned long tick;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	unit = va_arg(ap,struct skill_unit *);
 	tick = (unsigned long)va_arg(ap,int);
 
-	if (bl->type!=BL_PC && bl->type!=BL_MOB)
+	if (bl.type!=BL_PC && bl.type!=BL_MOB)
 		return 0;
-	if (!unit->alive || bl->prev==NULL)
+	if (!unit->alive || bl.prev==NULL)
 		return 0;
 
 	nullpo_retr(0, group=unit->group);
 
-	if (battle_check_target(&unit->bl,bl,group->target_flag)<=0)
+	if (battle_check_target(&unit->bl,&bl,group->target_flag)<=0)
 		return 0;
 
-	skill_unit_onplace_timer(unit,bl,tick);
+	skill_unit_onplace_timer(unit,&bl,tick);
 
 	return 0;
 }
@@ -9012,15 +9020,14 @@ int skill_unit_timer(int tid,unsigned long tick,int id,int data)
  * スキルユニット移動時?理用(foreachinarea)
  *------------------------------------------
  */
-int skill_unit_move_sub( struct block_list *bl, va_list ap )
+int skill_unit_move_sub( struct block_list &bl, va_list ap )
 {
-	struct skill_unit *unit = (struct skill_unit *)bl;
+	struct skill_unit *unit = (struct skill_unit *)&bl;
 	struct skill_unit_group *group;
 	struct block_list *target;
 	unsigned long tick;
 	int flag;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
 	nullpo_retr(0, target=va_arg(ap,struct block_list*));
 	tick = (unsigned long)va_arg(ap,int);
@@ -9170,11 +9177,9 @@ int skill_unit_move_unit_group( struct skill_unit_group *group, int m,int dx,int
  * アイテム合成可能判定
  *------------------------------------------
  */
-int skill_can_produce_mix( struct map_session_data *sd, unsigned short nameid, int trigger )
+int skill_can_produce_mix( struct map_session_data &sd, unsigned short nameid, int trigger )
 {
 	int i,j;
-
-	nullpo_retr(0, sd);
 
 	if(nameid<=0)
 		return 0;
@@ -9197,7 +9202,7 @@ int skill_can_produce_mix( struct map_session_data *sd, unsigned short nameid, i
 				return 0;
 		}
 	}
-	if( (j=skill_produce_db[i].req_skill)>0 && pc_checkskill(*sd,j)<=0 )
+	if( (j=skill_produce_db[i].req_skill)>0 && pc_checkskill(sd,j)<=0 )
 		return 0;		/* スキルが足りない */
 
 	for(j=0;j<MAX_PRODUCE_RESOURCE;j++){
@@ -9205,13 +9210,13 @@ int skill_can_produce_mix( struct map_session_data *sd, unsigned short nameid, i
 		if( (id=skill_produce_db[i].mat_id[j]) <= 0 )	/* これ以上は材料要らない */
 			continue;
 		if(skill_produce_db[i].mat_amount[j] <= 0) {
-			if(pc_search_inventory(*sd,id) < 0)
+			if(pc_search_inventory(sd,id) < 0)
 				return 0;
 		}
 		else {
 			for(y=0,x=0;y<MAX_INVENTORY;y++)
-				if( sd->status.inventory[y].nameid == id )
-					x+=sd->status.inventory[y].amount;
+				if( sd.status.inventory[y].nameid == id )
+					x+=sd.status.inventory[y].amount;
 			if(x<skill_produce_db[i].mat_amount[j]) /* アイテムが足りない */
 				return 0;
 		}
@@ -9223,7 +9228,7 @@ int skill_can_produce_mix( struct map_session_data *sd, unsigned short nameid, i
  * アイテム合成可能判定
  *------------------------------------------
  */
-int skill_produce_mix( struct map_session_data *sd,
+int skill_produce_mix( struct map_session_data &sd,
 	unsigned short nameid, int slot1, int slot2, int slot3 )
 {
 	int slot[3];
@@ -9231,10 +9236,8 @@ int skill_produce_mix( struct map_session_data *sd,
 	int wlv=0;
 	struct pc_base_job s_class;
 
-	nullpo_retr(0, sd);
-
 	//Calculate Common Class and Baby/High/Common flags
-	s_class = pc_calc_base_job(sd->status.class_);
+	s_class = pc_calc_base_job(sd.status.class_);
 
 	if( !(idx=skill_can_produce_mix(sd,nameid,-1)) )	/* ?件不足 */
 		return 0;
@@ -9248,16 +9251,16 @@ int skill_produce_mix( struct map_session_data *sd,
 		int j;
 		if( slot[i]<=0 )
 			continue;
-		j = pc_search_inventory(*sd,slot[i]);
+		j = pc_search_inventory(sd,slot[i]);
 		if(j < 0)	/* 不正パケット(アイテム存在)チェック */
 			continue;
 		if(slot[i]==1000){	/* Star Crumb */
-			pc_delitem(*sd,j,1,1);
+			pc_delitem(sd,j,1,1);
 			sc++;
 		}
 		if(slot[i]>=994 && slot[i]<=997 && ele==0){	/* Flame Heart . . . Great Nature */
 			static const int ele_table[4]={3,1,4,2};
-			pc_delitem(*sd,j,1,1);
+			pc_delitem(sd,j,1,1);
 			ele=ele_table[slot[i]-994];
 		}
 	}
@@ -9270,12 +9273,12 @@ int skill_produce_mix( struct map_session_data *sd,
 		x=skill_produce_db[idx].mat_amount[i];	/* 必要な個? */
 		do{	/* ２つ以上のインデックスにまたがっているかもしれない */
 			int y=0;
-			j = pc_search_inventory(*sd,id);
+			j = pc_search_inventory(sd,id);
 
 			if(j >= 0){
-				y = sd->status.inventory[j].amount;
+				y = sd.status.inventory[j].amount;
 				if(y>x)y=x;	/* 足りている */
-				pc_delitem(*sd,j,y,0);
+				pc_delitem(sd,j,y,0);
 			}else {
 				if(battle_config.error_log)
 					ShowMessage("skill_produce_mix: material item error\n");
@@ -9291,46 +9294,46 @@ int skill_produce_mix( struct map_session_data *sd,
 	if(!equip) {
 // Corrected rates [DracoRPG] --------------------------//
 		if(skill_produce_db[idx].req_skill==AM_PHARMACY) {
-			make_per = pc_checkskill(*sd,AM_LEARNINGPOTION)*100
-				+ pc_checkskill(*sd,AM_PHARMACY)*300 + sd->status.job_level*20
-				+ sd->paramc[3]*5 + sd->paramc[4]*10+sd->paramc[5]*10;
+			make_per = pc_checkskill(sd,AM_LEARNINGPOTION)*100
+				+ pc_checkskill(sd,AM_PHARMACY)*300 + sd.status.job_level*20
+				+ sd.paramc[3]*5 + sd.paramc[4]*10+sd.paramc[5]*10;
 
 			if(nameid >= 501 && nameid <= 505) // Normal potions
-				make_per += 2000 + pc_checkskill(*sd,AM_POTIONPITCHER)*100;
+				make_per += 2000 + pc_checkskill(sd,AM_POTIONPITCHER)*100;
 			else if(nameid >= 605 && nameid <= 606) // Anodyne & Aloevera (not sure of the formula, I put the same base value as normal pots but without the Aid Potion bonus since they are not throwable pots ^^)
 				make_per += 2000;
 //			else if(nameid >= 545 && nameid <= 547) // Concentrated potions
 			else if(nameid == 970) // Alcohol
 				make_per += 1000;
 			else if(nameid == 7135) // Bottle Grenade
-				make_per += 500 + pc_checkskill(*sd,AM_DEMONSTRATION)*100;
+				make_per += 500 + pc_checkskill(sd,AM_DEMONSTRATION)*100;
 			else if(nameid == 7136) // Acid Bottle
-				make_per += 500 + pc_checkskill(*sd,AM_ACIDTERROR)*100;
+				make_per += 500 + pc_checkskill(sd,AM_ACIDTERROR)*100;
 			else if(nameid == 7137) // Plant Bottle
-				make_per += 500 + pc_checkskill(*sd,AM_CANNIBALIZE)*100;
+				make_per += 500 + pc_checkskill(sd,AM_CANNIBALIZE)*100;
 			else if(nameid == 7138) // Marine Sphere Bottle
-				make_per += 500 + pc_checkskill(*sd,AM_SPHEREMINE)*100;
+				make_per += 500 + pc_checkskill(sd,AM_SPHEREMINE)*100;
 			else if(nameid == 7139) // Glistening Coat
-				make_per += 500 + pc_checkskill(*sd,AM_CP_WEAPON)*100 + pc_checkskill(*sd,AM_CP_SHIELD)*100 +
-					pc_checkskill(*sd,AM_CP_ARMOR)*100 + pc_checkskill(*sd,AM_CP_HELM)*100;
+				make_per += 500 + pc_checkskill(sd,AM_CP_WEAPON)*100 + pc_checkskill(sd,AM_CP_SHIELD)*100 +
+					pc_checkskill(sd,AM_CP_ARMOR)*100 + pc_checkskill(sd,AM_CP_HELM)*100;
 		} else if (skill_produce_db[idx].req_skill == ASC_CDP) {
-			make_per = 2000 + 40*sd->paramc[4] + 20*sd->paramc[5]; // Poison Bottle
+			make_per = 2000 + 40*sd.paramc[4] + 20*sd.paramc[5]; // Poison Bottle
 		} else {
 			if(nameid == 998) //Iron
-				make_per = 1500 + sd->status.job_level*35 + sd->paramc[4]*10 + sd->paramc[5]*10 + pc_checkskill(*sd,skill_produce_db[idx].req_skill)*600; // Iron
+				make_per = 1500 + sd.status.job_level*35 + sd.paramc[4]*10 + sd.paramc[5]*10 + pc_checkskill(sd,skill_produce_db[idx].req_skill)*600; // Iron
 			else
-				make_per = 1000 + sd->status.job_level*35 + sd->paramc[4]*10 + sd->paramc[5]*10 + pc_checkskill(*sd,skill_produce_db[idx].req_skill)*500; // Steel and Enchantedstones
+				make_per = 1000 + sd.status.job_level*35 + sd.paramc[4]*10 + sd.paramc[5]*10 + pc_checkskill(sd,skill_produce_db[idx].req_skill)*500; // Steel and Enchantedstones
 		}
 		if(battle_config.pp_rate != 100)
 			make_per = make_per * battle_config.pp_rate / 100;
 	} else { // Corrected rates [DracoRPG]
 		int add_per=0;
-		if(pc_search_inventory(*sd,989) > 0) add_per = 400;
-		else if(pc_search_inventory(*sd,988) > 0) add_per = 300;
-		else if(pc_search_inventory(*sd,987) > 0) add_per = 200;
-		else if(pc_search_inventory(*sd,986) > 0) add_per = 100;
-		make_per = 1500 + sd->status.job_level*35 + sd->paramc[4]*10 + sd->paramc[5]*10 + pc_checkskill(*sd,skill_produce_db[idx].req_skill)*1000 + pc_checkskill(*sd,BS_WEAPONRESEARCH)*100 +
-			((wlv >= 3)? pc_checkskill(*sd,BS_ORIDEOCON)*100 : 0) + add_per - (ele? 2500:0) - sc*((4-wlv)*500) - wlv*1000;
+		if(pc_search_inventory(sd,989) > 0) add_per = 400;
+		else if(pc_search_inventory(sd,988) > 0) add_per = 300;
+		else if(pc_search_inventory(sd,987) > 0) add_per = 200;
+		else if(pc_search_inventory(sd,986) > 0) add_per = 100;
+		make_per = 1500 + sd.status.job_level*35 + sd.paramc[4]*10 + sd.paramc[5]*10 + pc_checkskill(sd,skill_produce_db[idx].req_skill)*1000 + pc_checkskill(sd,BS_WEAPONRESEARCH)*100 +
+			((wlv >= 3)? pc_checkskill(sd,BS_ORIDEOCON)*100 : 0) + add_per - (ele? 2500:0) - sc*((4-wlv)*500) - wlv*1000;
 		if(battle_config.wp_rate != 100)	/* 確率補正 */
 			make_per = make_per * battle_config.wp_rate / 100;
 	}
@@ -9344,7 +9347,8 @@ int skill_produce_mix( struct map_session_data *sd,
 //	if(battle_config.etc_log)
 //		ShowMessage("make rate = %d\n",make_per);
 
-	if(rand()%10000 < make_per){
+	if(rand()%10000 < make_per)
+	{
 		/* 成功 */
 		struct item tmp_item;
 		memset(&tmp_item,0,sizeof(tmp_item));
@@ -9354,82 +9358,82 @@ int skill_produce_mix( struct map_session_data *sd,
 		if(equip){	/* 武器の場合 */
 			tmp_item.card[0]=0x00ff; /* 製造武器フラグ */
 			tmp_item.card[1]=((sc*5)<<8)+ele;	/* ?性とつよさ */
-			tmp_item.card[2]=GetWord(sd->status.char_id,0);	/* キャラID */
-			tmp_item.card[3]=GetWord(sd->status.char_id,1);
+			tmp_item.card[2]=GetWord(sd.status.char_id,0);	/* キャラID */
+			tmp_item.card[3]=GetWord(sd.status.char_id,1);
 		}
 		else if((battle_config.produce_item_name_input && skill_produce_db[idx].req_skill!=AM_PHARMACY) ||
 			(battle_config.produce_potion_name_input && skill_produce_db[idx].req_skill==AM_PHARMACY)) {
 			tmp_item.card[0]=0x00fe;
 			tmp_item.card[1]=0;
-			tmp_item.card[2]=GetWord(sd->status.char_id,0);	/* キャラID */
-			tmp_item.card[3]=GetWord(sd->status.char_id,1);
+			tmp_item.card[2]=GetWord(sd.status.char_id,0);	/* キャラID */
+			tmp_item.card[3]=GetWord(sd.status.char_id,1);
 		}
 
 		if(log_config.produce > 0)
-			log_produce(*sd,nameid,slot1,slot2,slot3,1);
+			log_produce(sd,nameid,slot1,slot2,slot3,1);
 
-		switch (skill_produce_db[idx].req_skill) {
-			case AM_PHARMACY:
-				clif_produceeffect(sd,2,nameid);/* 製?エフェクト */
-				clif_misceffect(&sd->bl,5); /* 他人にも成功を通知 */
-				if(nameid >= 545 && nameid <= 547) { // Fame point system [DracoRPG]
-		  			sd->potion_success_counter++;
-		  			if(sd->potion_success_counter == 3) {
-						sd->status.fame_points++; // Success to prepare 3 Concentrated Potions in a row = +1 fame point
-						clif_fame_alchemist(sd, 1);
-		  			}
-					if(sd->potion_success_counter == 5) {
-						sd->status.fame_points += 3; // Success to prepare 5 Concentrated Potions in a row = +3 fame point
-						clif_fame_alchemist(sd, 3);
-					}
-		  			if(sd->potion_success_counter == 7) {
-						sd->status.fame_points += 10; // Success to prepare 7 Concentrated Potions in a row = +10 fame point
-						clif_fame_alchemist(sd, 10);
-		  			}
-					if(sd->potion_success_counter == 10) {
-						sd->status.fame_points += 50;	// Success to prepare 10 Concentrated Potions in a row = +50 fame point
-						sd->potion_success_counter = 0;
-						clif_fame_alchemist(sd, 50);
-					}
-				} else sd->potion_success_counter = 0;
-				break;
-			case ASC_CDP:
-				clif_produceeffect(sd,2,nameid);/* 暫定で製?エフェクト */
-				clif_misceffect(&sd->bl,5);
-				break;
-			default:  /* 武器製造、コイン製造 */
-				clif_produceeffect(sd,0,nameid); /* 武器製造エフェクト */
-				clif_misceffect(&sd->bl,3);
-				if(equip && itemdb_wlv(nameid) >= 3 && ((ele? 1 : 0) + sc) >= 3)
-				{	// Fame point system [DracoRPG]
-					sd->status.fame_points += 10; // Success to forge a lv3 weapon with 3 additional ingredients = +10 fame point
-					clif_fame_blacksmith(sd, 10);
+		switch (skill_produce_db[idx].req_skill)
+		{
+		case AM_PHARMACY:
+			clif_produceeffect(sd,2,nameid);/* 製?エフェクト */
+			clif_misceffect(sd.bl,5); /* 他人にも成功を通知 */
+			if(nameid >= 545 && nameid <= 547)
+			{	// Fame point system [DracoRPG]
+		  		sd.potion_success_counter++;
+		  		if(sd.potion_success_counter == 3) {
+					pc_addfame(sd,1,1); // Success to prepare 3 Concentrated Potions in a row = +1 fame point
+		  		}
+				if(sd.potion_success_counter == 5) {
+					pc_addfame(sd,3,1); // Success to prepare 5 Concentrated Potions in a row = +3 fame point
 				}
-				break;
+		  		if(sd.potion_success_counter == 7) {
+					pc_addfame(sd,10,1); // Success to prepare 7 Concentrated Potions in a row = +10 fame point
+		  		}
+				if(sd.potion_success_counter == 10) {
+					pc_addfame(sd,50,1);	// Success to prepare 10 Concentrated Potions in a row = +50 fame point
+					sd.potion_success_counter = 0;
+				}
+			}
+			else 
+				sd.potion_success_counter = 0;
+			break;
+		case ASC_CDP:
+			clif_produceeffect(sd,2,nameid);/* 暫定で製?エフェクト */
+			clif_misceffect(sd.bl,5);
+			break;
+		default:  /* 武器製造、コイン製造 */
+			clif_produceeffect(sd,0,nameid); /* 武器製造エフェクト */
+			clif_misceffect(sd.bl,3);
+			if(equip && itemdb_wlv(nameid) >= 3 && ((ele? 1 : 0) + sc) >= 3)
+				pc_addfame(sd,10,0); // Success to forge a lv3 weapon with 3 additional ingredients = +10 fame point
+			break;
 		}
 
-		if((flag = pc_additem(*sd,tmp_item,1))) {
+		if((flag = pc_additem(sd,tmp_item,1)))
+		{
 			clif_additem(sd,0,0,flag);
-			map_addflooritem(tmp_item,1,sd->bl.m,sd->bl.x,sd->bl.y,NULL,NULL,NULL,0);
+			map_addflooritem(tmp_item,1,sd.bl.m,sd.bl.x,sd.bl.y,NULL,NULL,NULL,0);
 		}
-	} else {
+	}
+	else
+	{
 		if(log_config.produce > 0)
-			log_produce(*sd,nameid,slot1,slot2,slot3,0);
+			log_produce(sd,nameid,slot1,slot2,slot3,0);
 
 		switch (skill_produce_db[idx].req_skill) {
 			case AM_PHARMACY:
 				clif_produceeffect(sd,3,nameid);/* 製?失敗エフェクト */
-				clif_misceffect(&sd->bl,6); /* 他人にも失敗を通知 */
-				sd->potion_success_counter = 0; // Fame point system [DracoRPG]
+				clif_misceffect(sd.bl,6); /* 他人にも失敗を通知 */
+				sd.potion_success_counter = 0; // Fame point system [DracoRPG]
 				break;
 			case ASC_CDP:
 					clif_produceeffect(sd,3,nameid); /* 暫定で製?エフェクト */
-					clif_misceffect(&sd->bl,6); /* 他人にも失敗を通知 */
-					pc_heal(sd, -(sd->status.max_hp>>2), 0);
+					clif_misceffect(sd.bl,6); /* 他人にも失敗を通知 */
+					pc_heal(sd, -(sd.status.max_hp>>2), 0);
 				break;
 			default:
 				clif_produceeffect(sd,1,nameid);/* 武器製造失敗エフェクト */
-				clif_misceffect(&sd->bl,2); /* 他人にも失敗を通知 */
+				clif_misceffect(sd.bl,2); /* 他人にも失敗を通知 */
 				break;
 		}
 	}
@@ -9470,7 +9474,7 @@ int skill_arrow_create( struct map_session_data *sd,unsigned short nameid)
 		if(tmp_item.nameid <= 0 || tmp_item.amount <= 0)
 			continue;
 		if((flag = pc_additem(*sd,tmp_item,tmp_item.amount))) {
-			clif_additem(sd,0,0,flag);
+			clif_additem(*sd,0,0,flag);
 			map_addflooritem(tmp_item,tmp_item.amount,sd->bl.m,sd->bl.x,sd->bl.y,NULL,NULL,NULL,0);
 		}
 	}
@@ -10152,7 +10156,9 @@ int do_init_skill(void)
 	add_timer_func_list(skill_castend_id,"skill_castend_id");
 	add_timer_func_list(skill_castend_pos,"skill_castend_pos");
 	add_timer_func_list(skill_timerskill,"skill_timerskill");
-	add_timer_interval(gettick()+SKILLUNITTIMER_INVERVAL,SKILLUNITTIMER_INVERVAL,skill_unit_timer,0,0);
+	add_timer_func_list(skill_castend_delay_sub,"skill_castend_delay_sub");
+	
+	add_timer_interval(gettick()+SKILLUNITTIMER_INVERVAL, SKILLUNITTIMER_INVERVAL, skill_unit_timer,0,0);
 
 	return 0;
 }

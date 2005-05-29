@@ -177,7 +177,7 @@ struct skill_unit_group *skill_check_dancing( struct block_list *src );
 void skill_stop_dancing(struct block_list *src, int flag);
 
 // Guild skills [celest]
-int skill_guildaura_sub (struct block_list *bl,va_list ap);
+int skill_guildaura_sub (struct block_list &bl,va_list ap);
 
 // 詠唱キャンセル
 int skill_castcancel(struct block_list *bl,int type);
@@ -202,8 +202,8 @@ int skill_enchant_elemental_end(struct block_list *bl, int type);
 int skillnotok(int skillid, struct map_session_data &sd);
 
 // アイテム作成
-int skill_can_produce_mix( struct map_session_data *sd, unsigned short nameid, int trigger );
-int skill_produce_mix( struct map_session_data *sd, unsigned short nameid, int slot1, int slot2, int slot3 );
+int skill_can_produce_mix(struct map_session_data &sd, unsigned short nameid, int trigger );
+int skill_produce_mix( struct map_session_data &sd, unsigned short nameid, int slot1, int slot2, int slot3 );
 
 int skill_arrow_create( struct map_session_data *sd,unsigned short nameid);
 

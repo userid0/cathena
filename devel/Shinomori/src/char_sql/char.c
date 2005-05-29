@@ -81,6 +81,7 @@ unsigned long	subnet_mask	= INADDR_BROADCAST;	//255.255.255.255
 
 int char_maintenance;
 int char_new;
+int char_new_display;
 int name_ignoring_case = 0; // Allow or not identical name for characters but with a different case by [Yor]
 int char_name_option = 0; // Option to know which letters/symbols are authorised in the name of a character (0: all, 1: only those in char_name_letters, 2: all EXCEPT those in char_name_letters) by [Yor]
 char char_name_letters[1024] = ""; // list of letters/symbols used to authorise or not a name of a character. by [Yor]
@@ -1074,6 +1075,8 @@ int mmo_char_sql_init(void) {
           ShowMessage("Chars per Account: '%d'.......\n", char_per_account);
         }
 
+        /*
+
 	//sprintf(tmp_sql , "REPLACE INTO `%s` SET `online`=0", char_db);   //OLD QUERY ! BUGGED
 	sprintf(tmp_sql, "UPDATE `%s` SET `online` = '0'", char_db);//fixed the on start 0 entrys!
 	if (mysql_SendQuery(&mysql_handle, tmp_sql))
@@ -1088,6 +1091,11 @@ int mmo_char_sql_init(void) {
 	sprintf(tmp_sql, "UPDATE `%s` SET `connect_member` = '0'", guild_db);//fixed the 0 entrys in start.....
 	if (mysql_SendQuery(&mysql_handle, tmp_sql))
 		ShowMessage("DB server Error - %s\n", mysql_error(&mysql_handle));
+	*/
+	//the 'set offline' part is now in check_login_conn ... 
+	//if the server connects to loginserver
+	//it will dc all off players
+	//and send the loginserver the new state....
 
 	ShowMessage("init end.......\n");
 
@@ -2036,7 +2044,6 @@ int parse_frommap(int fd) {
 			mysql_free_result(sql_res);
 
 			if (i == 1 && char_dat) {
-				//memcpy(&char_dat[0], RFIFOP(fd,12), sizeof(struct mmo_charstatus));
 				mmo_charstatus_frombuffer(*char_dat,RFIFOP(fd,12));
 				mmo_char_tosql(RFIFOL(fd,8), char_dat);
 				//save to DB
@@ -2337,7 +2344,7 @@ int parse_frommap(int fd) {
 
 		// Recieve rates [Wizputer]
 		case 0x2b16:
-			if (RFIFOREST(fd) < 6 || RFIFOREST(fd) < RFIFOW(fd,8))
+			if (RFIFOREST(fd) < 10 || RFIFOREST(fd) < RFIFOW(fd,8))
 				return 0;
 			sprintf(tmp_sql, "INSERT INTO `ragsrvinfo` SET `index`='%d',`name`='%s',`exp`='%d',`jexp`='%d',`drop`='%d',`motd`='%s'",
 			        fd, server_name, (unsigned short)RFIFOW(fd,2), (unsigned short)RFIFOW(fd,4), (unsigned short)RFIFOW(fd,6), (char*)RFIFOP(fd,10));
@@ -2390,7 +2397,7 @@ int parse_frommap(int fd) {
 					WBUFL(buf, len) = atoi(sql_row[0]);
 					WBUFL(buf, len+4) = atoi(sql_row[1]);
 					len += 8;
-					if (++num == 10)
+					if (++num == MAX_FAMELIST)
 						break;
 				}
 			}
@@ -2734,7 +2741,7 @@ int parse_char(int fd)
 			if(char_new == 0) //turn character creation on/off [Kevin]
 				i = -2;
 			else
-			i = make_new_char_sql(fd, RFIFOP(fd, 2));
+				i = make_new_char_sql(fd, RFIFOP(fd, 2));
 
 			//if (i < 0) {
 			//	WFIFOW(fd, 0) = 0x6e;
@@ -3213,23 +3220,100 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		login_fd = make_connection(login_ip, login_port);
 		if ( session_isActive(login_fd) ) 
 		{
-		session[login_fd]->func_parse = parse_tologin;
-		realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-		WFIFOW(login_fd,0) = 0x2710;
-		memset(WFIFOP(login_fd,2), 0, 24);
-		memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
-		memset(WFIFOP(login_fd,26), 0, 24);
-		memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
-		WFIFOL(login_fd,50) = 0;
-		WFIFOL(login_fd,54) = char_ip;
-		WFIFOL(login_fd,58) = char_port;
-		memset(WFIFOP(login_fd,60), 0, 20);
-		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
-		WFIFOW(login_fd,80) = 0;
-		WFIFOW(login_fd,82) = char_maintenance;
-		WFIFOW(login_fd,84) = char_new;
-		WFIFOSET(login_fd,86);
-	}
+			session[login_fd]->func_parse = parse_tologin;
+			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+			WFIFOW(login_fd,0) = 0x2710;
+			memset(WFIFOP(login_fd,2), 0, 24);
+			memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
+			memset(WFIFOP(login_fd,26), 0, 24);
+			memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
+			WFIFOL(login_fd,50) = 0;
+			WFIFOL(login_fd,54) = char_ip;
+			WFIFOL(login_fd,58) = char_port;
+			memset(WFIFOP(login_fd,60), 0, 20);
+			memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
+			WFIFOW(login_fd,80) = 0;
+			WFIFOW(login_fd,82) = char_maintenance;
+			
+			WFIFOW(login_fd,84) = char_new_display; //only display (New) if they want to [Kevin]
+				
+			WFIFOSET(login_fd,86);
+		
+			//(re)connected to login-server,
+			//now wi'll look in sql which player's are ON and set them OFF
+			//AND send to all mapservers (if we have one / ..) to kick the players
+			//so the bug is fixed, if'ure using more than one charservers (worlds)
+			//that the player'S got reejected from server after a 'world' crash^^
+			//2b1f AID.L B1
+			struct char_session_data *sd;
+			int fd, cc;
+			unsigned char buf[16];
+			
+			sprintf(tmp_sql, "SELECT `account_id`, `online` FROM `%s` WHERE `online` = '1'", char_db);
+			if(mysql_SendQuery(&mysql_handle, tmp_sql))
+			{
+				printf("SQL Error: check_conn_loginserver '1', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
+				return -1;
+			}
+		
+			sql_res = mysql_store_result(&mysql_handle);
+			if(sql_res)
+			{
+				cc = mysql_num_rows(sql_res);
+				printf("Setting %d Players offline\n", cc);
+				while((sql_row = mysql_fetch_row(sql_res)))
+				{
+					//sql_row[0] == AID
+					//tell the loginserver
+					WFIFOW(login_fd, 0) = 0x272c; //set off
+					WFIFOL(login_fd, 2) = atoi(sql_row[0]); //AID
+					WFIFOSET(login_fd, 6);
+					
+					//tell map to 'kick' the player (incase of 'on' ..)
+					WBUFW(buf, 0) = 0x2b1f;
+					WBUFL(buf, 2) = atoi(sql_row[0]);
+					WBUFB(buf, 6) = 1;
+					mapif_sendall(buf, 7);
+					
+					//kick the player if he's on charselect
+					for(fd=0; (size_t)fd<fd_max; fd++)
+					{
+						if(session[fd] && (sd = (struct char_session_data*)session[fd]->session_data))
+						{
+							if(sd->account_id == (unsigned long)atoi(sql_row[0]))
+							{
+								session_Remove(fd);
+							}
+						}
+					}
+					
+				}
+				mysql_free_result(sql_res);			
+			}
+			else
+			{	//fail
+				printf("SQL ERROR: check_conn_loginserver '2', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
+				return -1;
+			}
+			
+			//Now Update all players to 'OFFLINE'
+			sprintf(tmp_sql, "UPDATE `%s` SET `online` = '0'", char_db);
+			if(mysql_SendQuery(&mysql_handle, tmp_sql))
+			{
+				ShowError("SQL ERROR: check_conn_loginserver '3', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
+			}
+			sprintf(tmp_sql, "UPDATE `%s` SET `online` = '0'", guild_member_db);
+			if(mysql_SendQuery(&mysql_handle, tmp_sql))
+			{
+				ShowError("SQL ERROR: check_conn_loginserver '4', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
+			}
+			sprintf(tmp_sql, "UPDATE `%s` SET `connect_member` = '0'", guild_db);
+			if(mysql_SendQuery(&mysql_handle, tmp_sql))
+			{
+				ShowError("SQL ERROR: check_conn_loginserver '5', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
+			}
+		
+		}
 	}
 	return 0;
 }
@@ -3483,6 +3567,8 @@ int char_config_read(const char *cfgName) {
 			char_maintenance = atoi(w2);
 		} else if (strcasecmp(w1, "char_new")==0){
 			char_new = atoi(w2);
+		} else if (strcasecmp(w1, "char_new_display")==0){
+			char_new_display = atoi(w2);
 		} else if (strcasecmp(w1, "max_connect_user") == 0) {
 			max_connect_user = atoi(w2);
 			if (max_connect_user < 0)
@@ -3631,23 +3717,29 @@ int do_init(int argc, char **argv){
 
 	// send ALIVE PING to login server.
 	ShowMessage("add interval tic (check_connect_login_server)....\n");
-	add_timer_interval(gettick() + 10, 10 * 1000, check_connect_login_server, 0, 0);
+	add_timer_func_list(check_connect_login_server, "check_connect_login_server");
+	i = add_timer_interval(gettick() + 10, 10*1000, check_connect_login_server, 0, 0);
 
 	// send USER COUNT PING to login server.
 	ShowMessage("add interval tic (send_users_tologin)....\n");
-	add_timer_interval(gettick() + 10,  5 * 1000, send_users_tologin, 0, 0);
+	add_timer_func_list(send_users_tologin, "send_users_tologin");
+	i = add_timer_interval(gettick() + 10, 5*1000, send_users_tologin, 0, 0);
 
 	//no need to set sync timer on SQL version.
 	//ShowMessage("add interval tic (mmo_char_sync_timer)....\n");
 	//add_timer_interval(gettick() + 10, mmo_char_sync_timer, 0, 0, autosave_interval);
 
 	//Added for Mugendais I'm Alive mod
-	if(imalive_on)
+	if(imalive_on) {
+		add_timer_func_list(imalive_timer, "imalive_timer");
 		add_timer_interval(gettick()+10, imalive_time*1000, imalive_timer,0,0);
+	}
 
 	//Added by Mugendai for GUI support
-	if(flush_on)
+	if(flush_on) {
+		add_timer_func_list(flush_timer, "flush_timer");
 		add_timer_interval(gettick()+10, flush_time, flush_timer,0,0);
+	}
 
 
 	read_gm_account();

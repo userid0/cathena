@@ -129,9 +129,9 @@ int storage_storageopen(struct map_session_data &sd)
 		{
 			stor->storage_status = 1;
 			sd.state.storage_flag = 0;
-			clif_storageitemlist(&sd,stor);
-			clif_storageequiplist(&sd,stor);
-			clif_updatestorageamount(&sd,stor);
+			clif_storageitemlist(sd,*stor);
+			clif_storageequiplist(sd,*stor);
+			clif_updatestorageamount(sd,*stor);
 			return 0;
 		}	
 	}
@@ -167,7 +167,7 @@ int storage_additem(struct map_session_data &sd, struct pc_storage &stor, struct
 				if(stor.storage[i].amount+amount > MAX_AMOUNT)
 					return 1;
 				stor.storage[i].amount+=amount;
-				clif_storageitemadded(&sd,&stor,i,amount);
+				clif_storageitemadded(sd,stor,i,amount);
 				break;
 			}
 		}
@@ -181,8 +181,8 @@ int storage_additem(struct map_session_data &sd, struct pc_storage &stor, struct
 				memcpy(&stor.storage[i],&item_data,sizeof(stor.storage[0]));
 				stor.storage[i].amount=amount;
 				stor.storage_amount++;
-				clif_storageitemadded(&sd,&stor,i,amount);
-				clif_updatestorageamount(&sd,&stor);
+				clif_storageitemadded(sd,stor,i,amount);
+				clif_updatestorageamount(sd,stor);
 				break;
 			}
 		}
@@ -207,9 +207,9 @@ int storage_delitem(struct map_session_data &sd,struct pc_storage &stor,size_t n
 	{
 		memset(&stor.storage[n],0,sizeof(struct item));
 		stor.storage_amount--;
-		clif_updatestorageamount(&sd,&stor);
+		clif_updatestorageamount(sd,stor);
 	}
-	clif_storageitemremoved(&sd,n,amount);
+	clif_storageitemremoved(sd,n,amount);
 	stor.dirty = 1;
 
 	return 0;
@@ -330,7 +330,7 @@ int storage_storageclose(struct map_session_data &sd)
 
 	stor->storage_status=0;
 	sd.state.storage_flag = 0;
-	clif_storageclose(&sd);
+	clif_storageclose(sd);
 
 	storage_storage_save(sd);
 
@@ -416,9 +416,9 @@ int storage_guild_storageopen(struct map_session_data &sd)
 			return 1;
 		gstor->storage_status = 1;
 		sd.state.storage_flag = 1;
-		clif_guildstorageitemlist(&sd,gstor);
-		clif_guildstorageequiplist(&sd,gstor);
-		clif_updateguildstorageamount(&sd,gstor);
+		clif_guildstorageitemlist(sd,*gstor);
+		clif_guildstorageequiplist(sd,*gstor);
+		clif_updateguildstorageamount(sd,*gstor);
 		return 0;
 	}
 	else
@@ -450,7 +450,7 @@ int guild_storage_additem(struct map_session_data &sd,struct guild_storage &stor
 				if(stor.storage[i].amount+amount > MAX_AMOUNT)
 					return 1;
 				stor.storage[i].amount+=amount;
-				clif_guildstorageitemadded(&sd,&stor,i,amount);
+				clif_guildstorageitemadded(sd,stor,i,amount);
 				break;
 			}
 		}
@@ -464,8 +464,8 @@ int guild_storage_additem(struct map_session_data &sd,struct guild_storage &stor
 				memcpy(&stor.storage[i],&item_data,sizeof(stor.storage[0]));
 				stor.storage[i].amount=amount;
 				stor.storage_amount++;
-				clif_guildstorageitemadded(&sd,&stor,i,amount);
-				clif_updateguildstorageamount(&sd,&stor);
+				clif_guildstorageitemadded(sd,stor,i,amount);
+				clif_updateguildstorageamount(sd,stor);
 				break;
 			}
 		}
@@ -485,9 +485,9 @@ int guild_storage_delitem(struct map_session_data &sd,struct guild_storage &stor
 	{
 		memset(&stor.storage[n],0,sizeof(stor.storage[0]));
 		stor.storage_amount--;
-		clif_updateguildstorageamount(&sd,&stor);
+		clif_updateguildstorageamount(sd,stor);
 	}
-	clif_storageitemremoved(&sd,n,amount);
+	clif_storageitemremoved(sd,n,amount);
 
 	return 0;
 }
@@ -531,7 +531,7 @@ int storage_guild_storageget(struct map_session_data &sd,size_t index, size_t am
 				if((flag = pc_additem(sd,stor->storage[index],amount)) == 0)
 					guild_storage_delitem(sd,*stor,index,amount);
 				else
-					clif_additem(&sd,0,0,flag);
+					clif_additem(sd,0,0,flag);
 				//log_fromstorage(sd, index, 1);
 			}
 		}
@@ -604,7 +604,7 @@ int storage_guild_storageclose(struct map_session_data &sd)
 		sd.state.storage_flag = 0;
 		sortage_gsortitem(*stor);
 	}
-	clif_storageclose(&sd);
+	clif_storageclose(sd);
 
 	return 0;
 }
