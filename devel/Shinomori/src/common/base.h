@@ -60,6 +60,7 @@
 #define WIN32_LEAN_AND_MEAN	// stuff
 #define _WINSOCKAPI_		// prevent inclusion of winsock.h
 #define _USE_32BIT_TIME_T	// use 32 bit time variables on 64bit windows
+//#define __USE_W32_SOCKETS
 //////////////////////////////
 #endif
 //////////////////////////////

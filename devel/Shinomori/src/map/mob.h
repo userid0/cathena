@@ -21,7 +21,8 @@ struct mob_skill {
 };
 
 struct mob_db {
-	char name[24],jname[24];
+	char name[24];
+	char jname[24];
 	short lv;
 	int max_hp,max_sp;
 	int base_exp,job_exp;
@@ -135,14 +136,14 @@ short mob_get_clothes_color(int);	//player mob dye [Valaris]
 int mob_get_equip(int); // mob equip [Valaris]
 int do_init_mob(void);
 
-void mob_unload(struct mob_data *md);
-int mob_remove_map(struct mob_data *md, int type);
-int mob_delete(struct mob_data *md);
+void mob_unload(struct mob_data &md);
+int mob_remove_map(struct mob_data &md, int type);
+int mob_delete(struct mob_data &md);
 int mob_timer_delete(int tid, unsigned long tick, int id, int data);
 
 int mob_deleteslave(struct mob_data &md);
 
-int mob_class_change(struct mob_data &md,int *value);
+int mob_class_change(struct mob_data &md,int value[], size_t count);
 int mob_warp(struct mob_data &md,int m,int x,int y,int type);
 
 int mobskill_use(struct mob_data &md,unsigned long tick,int event);

@@ -55,6 +55,12 @@ struct mmo_char_server server[MAX_SERVERS];
 
 int login_fd;
 
+//Account flood protection [Kevin]
+unsigned int new_reg_tick=0;
+int allowed_regs=1;
+int num_regs=0;
+int time_allowed=10000;
+
 //Added for Mugendai's I'm Alive mod
 int imalive_on=0;
 int imalive_time=60;
@@ -1119,7 +1125,7 @@ void mmo_auth_sync(void) {
 	int i, j, k, lock;
 	unsigned long account_id;
 	char line[65536];
-	CREATE_BUFFER(id,int,auth_num);
+	CREATE_BUFFER(id, int, auth_num);
 
 	// Sorting before save
 	for(i = 0; i < auth_num; i++) {
@@ -1332,7 +1338,8 @@ int mmo_auth_new(struct mmo_account* account, char sex, char* email) {
 //---------------------------------------
 // Check/authentification of a connection
 //---------------------------------------
-int mmo_auth(struct mmo_account* account, int fd) {
+int mmo_auth(struct mmo_account* account, int fd)
+{
 	int i;
 	struct timeval tv;
 	char tmpstr[256];
@@ -1358,14 +1365,20 @@ int mmo_auth(struct mmo_account* account, int fd) {
 
 	len = strlen(account->userid) - 2;
 	// Account creation with _M/_F
-	if( (new_account_flag == 1) &&
-		(account->passwdenc == 0) && 
-		(account->userid[len] == '_') &&
-	    ( (account->userid[len+1] == 'F') || (account->userid[len+1] == 'M')) &&
-	    (account_id_count <= END_ACCOUNT_NUM) && 
-		(len >= 4) && 
-		(strlen(account->passwd) >= 4) ) 
-	{
+	if (account->passwdenc == 0 && account->userid[len] == '_' &&
+	    (account->userid[len+1] == 'F' || account->userid[len+1] == 'M') && new_account_flag == 1 &&
+	    account_id_count <= END_ACCOUNT_NUM && len >= 4 && strlen(account->passwd) >= 4) {
+						
+		//only continue if amount in this time limit is allowed (account registration flood protection)[Kevin]
+		if(gettick() <= new_reg_tick && num_regs >= allowed_regs) {
+			ShowMessage("Notice: Account registration in disallowed time from: %s!", ip_str);
+			login_log("Notice: Account registration in disallowed time from: %s!", ip_str);
+			return 3;
+		} else {
+			num_regs=0;
+		}
+		
+		if (new_account_flag == 1)
 			newaccount = 1;
 		account->userid[len] = '\0';
 	}
@@ -1505,7 +1518,13 @@ int mmo_auth(struct mmo_account* account, int fd) {
 			login_log("Account creation and authentification accepted (account %s (id: %d), pass: %s, sex: %c, connection with _F/_M, ip: %s)" RETCODE,
 			          account->userid, new_id, account->passwd, account->userid[len+1], ip_str);
 			auth_before_save_file = 0; // Creation of an account -> save accounts file immediatly
+			
+			//restart ticker (account registration flood protection)[Kevin]
+			if(num_regs==0) {
+				new_reg_tick=gettick()+time_allowed*1000;
 		}
+			num_regs++;
+	}
 	}
 
 	gettimeofday(&tv, NULL);
@@ -1582,11 +1601,11 @@ int parse_fromchar(int fd) {
 			for(i = 0; i < AUTH_FIFO_SIZE; i++) 
 			{
 				if (auth_fifo[i].account_id == acc &&
-					auth_fifo[i].login_id1 == RFIFOL(fd,6) &&
+				    auth_fifo[i].login_id1 == RFIFOL(fd,6) &&
 #if CMP_AUTHFIFO_LOGIN2 != 0
-					auth_fifo[i].login_id2 == RFIFOL(fd,10) && // relate to the versions higher than 18
+				    auth_fifo[i].login_id2 == RFIFOL(fd,10) && // relate to the versions higher than 18
 #endif
-					auth_fifo[i].sex == RFIFOB(fd,14) &&
+				    auth_fifo[i].sex == RFIFOB(fd,14) &&
 				    (!check_ip_flag || auth_fifo[i].ip == RFIFOLIP(fd,15)) &&
 				    !auth_fifo[i].delflag) 
 				{
@@ -3510,9 +3529,9 @@ int parse_console(char *buf) {
 		ShowMessage("  'shutdown|exit|qui|end'\n");
 		ShowMessage("  To know if server is alive:\n");
 		ShowMessage("  'alive|status'\n");
-}
+	}
 
-		return 0;
+	return 0;
 }
 
 
@@ -3627,8 +3646,8 @@ int login_config_read(const char *cfgName) {
 					if (access_ladmin_allow)
 					{
 						aFree(access_ladmin_allow);
-						access_ladmin_allow = NULL;
-						access_ladmin_allownum = 0;
+					access_ladmin_allow = NULL;
+					access_ladmin_allownum = 0;
 					}
 				} else {
 					if (strcasecmp(w2, "all") == 0) {
@@ -3658,7 +3677,7 @@ int login_config_read(const char *cfgName) {
 				new_account_flag = config_switch(w2);
 			} else if (strcasecmp(w1, "login_ip") == 0) {
 				char login_ip_str[16];
-				h = gethostbyname(w2);
+				h = gethostbyname (w2);
 				if (h != NULL) {
 					ShowMessage("Login server binding IP address : %s -> %d.%d.%d.%d\n", w2, (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 					sprintf(login_ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
@@ -3758,8 +3777,8 @@ int login_config_read(const char *cfgName) {
 					if (access_deny)
 					{
 						aFree(access_deny);
-						access_deny = NULL;
-						access_denynum = 0;
+					access_deny = NULL;
+					access_denynum = 0;
 					}
 				} else {
 					if (strcasecmp(w2, "all") == 0) {
@@ -3804,6 +3823,14 @@ int login_config_read(const char *cfgName) {
 				client_version_to_connect = atoi(w2);			//Added by Sirius for client version check
 			} else if (strcasecmp(w1, "console") == 0) {
 		        console = config_switch(w2);
+            } else if (strcasecmp(w1, "allowed_regs") == 0) { //account flood protection system [Kevin]
+	            
+	            allowed_regs = atoi(w2);
+	            
+			} else if (strcasecmp(w1, "time_allowed") == 0) {
+	            
+	            time_allowed = atoi(w2);
+	            
             }
 		}
 	}

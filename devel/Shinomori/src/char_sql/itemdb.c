@@ -87,7 +87,7 @@ bool itemdb_isequip2(struct item_data &data)
  * アイテムデータベースの読み込み
  *------------------------------------------
  */
-static int itemdb_readdb(void)
+int itemdb_readdb(void)
 {
 	FILE *fp;
 	char line[1024];
@@ -131,7 +131,7 @@ static int itemdb_readdb(void)
 	return 0;
 }
 
-static int itemdb_read_sqldb(void) // sql item_db read, shortened version of map-server item_db read [Valaris]
+int itemdb_read_sqldb(void) // sql item_db read, shortened version of map-server item_db read [Valaris]
 {
 	unsigned short nameid; 	// Type should be "unsigned short int", but currently isn't for compatibility with numdb_insert()
 	struct item_data *id;
@@ -200,7 +200,7 @@ static int itemdb_read_sqldb(void) // sql item_db read, shortened version of map
 	return 0;
 }
 
-static int itemdb_final(void *key,void *data,va_list ap)
+int itemdb_final(void *key,void *data,va_list ap)
 {
 	struct item_data *id;
 

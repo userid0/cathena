@@ -1169,7 +1169,7 @@ int make_new_char_sql(int fd, unsigned char *dat)
 			//query
 			mysql_SendQuery(&mysql_handle, tmp_sql);		
 		}
-		printf("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
+		ShowError("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
 		return -2;
 	} // for now we have checked: stat points used <31, char slot is less then 9, hair style/color values are acceptable
 
@@ -1184,7 +1184,7 @@ int make_new_char_sql(int fd, unsigned char *dat)
 				//query
 				mysql_SendQuery(&mysql_handle, tmp_sql);
 			}
-			printf("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
+			ShowError("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
 				return -2;
 		}
 	} // now we know that every stat has proper value but we have to check if str/int agi/luk vit/dex pairs are correct
@@ -1198,7 +1198,7 @@ int make_new_char_sql(int fd, unsigned char *dat)
 			//query
 			mysql_SendQuery(&mysql_handle, tmp_sql);
 		}
-		printf("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
+		ShowError("fail (aid: %d), stats error(bot cheat?!)\n", sd->account_id);
 		return -2;
 	} // now when we have passed all stat checks
 		
@@ -2907,14 +2907,14 @@ int parse_char(int fd)
 					"WHERE `%s`.char_id='%d' AND `%s`.char_id=`%s`.char_id AND `%s`.card0=-256 AND `%s`.card1=`%s`.pet_id",
 					pet_db, pet_db, inventory_db,char_db,char_db,RFIFOL(fd, 2),char_db,inventory_db,inventory_db,inventory_db,pet_db);
 				if(mysql_SendQuery(&mysql_handle, tmp_sql)) {
-					printf("DB server Error - %s\n", mysql_error(&mysql_handle));
+					ShowError("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}
 
 				sprintf(tmp_sql,"DELETE FROM `%s` USING `%s`, `%s`, `%s` "
 					"WHERE `%s`.char_id='%d' AND `%s`.char_id=`%s`.char_id AND `%s`.card0=-256 AND `%s`.card1=`%s`.pet_id",
 					pet_db, pet_db, cart_db,char_db,char_db,RFIFOL(fd, 2),char_db,cart_db,cart_db,cart_db,pet_db);
 				if(mysql_SendQuery(&mysql_handle, tmp_sql)) {
-					printf("DB server Error - %s\n", mysql_error(&mysql_handle));
+					ShowError("DB server Error - %s\n", mysql_error(&mysql_handle));
 				}*/
 
 				sprintf(tmp_sql,"DELETE FROM `%s` WHERE `char_id`='%ld'",inventory_db, (unsigned long)RFIFOL(fd, 2));
@@ -3220,62 +3220,62 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 		login_fd = make_connection(login_ip, login_port);
 		if ( session_isActive(login_fd) ) 
 		{
-			session[login_fd]->func_parse = parse_tologin;
-			realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-			WFIFOW(login_fd,0) = 0x2710;
-			memset(WFIFOP(login_fd,2), 0, 24);
-			memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
-			memset(WFIFOP(login_fd,26), 0, 24);
-			memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
-			WFIFOL(login_fd,50) = 0;
-			WFIFOL(login_fd,54) = char_ip;
-			WFIFOL(login_fd,58) = char_port;
-			memset(WFIFOP(login_fd,60), 0, 20);
-			memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
-			WFIFOW(login_fd,80) = 0;
-			WFIFOW(login_fd,82) = char_maintenance;
-			
-			WFIFOW(login_fd,84) = char_new_display; //only display (New) if they want to [Kevin]
-				
-			WFIFOSET(login_fd,86);
+		session[login_fd]->func_parse = parse_tologin;
+		realloc_fifo(login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+		WFIFOW(login_fd,0) = 0x2710;
+		memset(WFIFOP(login_fd,2), 0, 24);
+		memcpy(WFIFOP(login_fd,2), userid, strlen(userid) < 24 ? strlen(userid) : 24);
+		memset(WFIFOP(login_fd,26), 0, 24);
+		memcpy(WFIFOP(login_fd,26), passwd, strlen(passwd) < 24 ? strlen(passwd) : 24);
+		WFIFOL(login_fd,50) = 0;
+		WFIFOL(login_fd,54) = char_ip;
+		WFIFOL(login_fd,58) = char_port;
+		memset(WFIFOP(login_fd,60), 0, 20);
+		memcpy(WFIFOP(login_fd,60), server_name, strlen(server_name) < 20 ? strlen(server_name) : 20);
+		WFIFOW(login_fd,80) = 0;
+		WFIFOW(login_fd,82) = char_maintenance;
 		
-			//(re)connected to login-server,
-			//now wi'll look in sql which player's are ON and set them OFF
-			//AND send to all mapservers (if we have one / ..) to kick the players
-			//so the bug is fixed, if'ure using more than one charservers (worlds)
-			//that the player'S got reejected from server after a 'world' crash^^
-			//2b1f AID.L B1
+		WFIFOW(login_fd,84) = char_new_display; //only display (New) if they want to [Kevin]
+			
+		WFIFOSET(login_fd,86);
+		
+		//(re)connected to login-server,
+		//now wi'll look in sql which player's are ON and set them OFF
+		//AND send to all mapservers (if we have one / ..) to kick the players
+		//so the bug is fixed, if'ure using more than one charservers (worlds)
+		//that the player'S got reejected from server after a 'world' crash^^
+		//2b1f AID.L B1
 			struct char_session_data *sd;
 			int fd, cc;
 			unsigned char buf[16];
-			
-			sprintf(tmp_sql, "SELECT `account_id`, `online` FROM `%s` WHERE `online` = '1'", char_db);
+		
+		sprintf(tmp_sql, "SELECT `account_id`, `online` FROM `%s` WHERE `online` = '1'", char_db);
 			if(mysql_SendQuery(&mysql_handle, tmp_sql))
 			{
-				printf("SQL Error: check_conn_loginserver '1', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
-				return -1;
-			}
+				ShowError("SQL Error: check_conn_loginserver '1', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
+			return -1;
+		}
 		
-			sql_res = mysql_store_result(&mysql_handle);
+		sql_res = mysql_store_result(&mysql_handle);
 			if(sql_res)
 			{
-				cc = mysql_num_rows(sql_res);
-				printf("Setting %d Players offline\n", cc);
+			cc = mysql_num_rows(sql_res);
+				ShowError("Setting %d Players offline\n", cc);
 				while((sql_row = mysql_fetch_row(sql_res)))
 				{
-					//sql_row[0] == AID
-					//tell the loginserver
-					WFIFOW(login_fd, 0) = 0x272c; //set off
-					WFIFOL(login_fd, 2) = atoi(sql_row[0]); //AID
-					WFIFOSET(login_fd, 6);
-					
-					//tell map to 'kick' the player (incase of 'on' ..)
-					WBUFW(buf, 0) = 0x2b1f;
-					WBUFL(buf, 2) = atoi(sql_row[0]);
-					WBUFB(buf, 6) = 1;
-					mapif_sendall(buf, 7);
-					
-					//kick the player if he's on charselect
+				//sql_row[0] == AID
+				//tell the loginserver
+				WFIFOW(login_fd, 0) = 0x272c; //set off
+				WFIFOL(login_fd, 2) = atoi(sql_row[0]); //AID
+				WFIFOSET(login_fd, 6);
+				
+				//tell map to 'kick' the player (incase of 'on' ..)
+				WBUFW(buf, 0) = 0x2b1f;
+				WBUFL(buf, 2) = atoi(sql_row[0]);
+				WBUFB(buf, 6) = 1;
+				mapif_sendall(buf, 7);
+				
+				//kick the player if he's on charselect
 					for(fd=0; (size_t)fd<fd_max; fd++)
 					{
 						if(session[fd] && (sd = (struct char_session_data*)session[fd]->session_data))
@@ -3283,37 +3283,37 @@ int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
 							if(sd->account_id == (unsigned long)atoi(sql_row[0]))
 							{
 								session_Remove(fd);
-							}
 						}
 					}
-					
 				}
-				mysql_free_result(sql_res);			
+				
+			}
+			mysql_free_result(sql_res);			
 			}
 			else
 			{	//fail
-				printf("SQL ERROR: check_conn_loginserver '2', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
-				return -1;
-			}
-			
-			//Now Update all players to 'OFFLINE'
-			sprintf(tmp_sql, "UPDATE `%s` SET `online` = '0'", char_db);
+				ShowError("SQL ERROR: check_conn_loginserver '2', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
+			return -1;
+		}
+		
+		//Now Update all players to 'OFFLINE'
+		sprintf(tmp_sql, "UPDATE `%s` SET `online` = '0'", char_db);
 			if(mysql_SendQuery(&mysql_handle, tmp_sql))
 			{
 				ShowError("SQL ERROR: check_conn_loginserver '3', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
-			}
-			sprintf(tmp_sql, "UPDATE `%s` SET `online` = '0'", guild_member_db);
+		}
+		sprintf(tmp_sql, "UPDATE `%s` SET `online` = '0'", guild_member_db);
 			if(mysql_SendQuery(&mysql_handle, tmp_sql))
 			{
 				ShowError("SQL ERROR: check_conn_loginserver '4', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
-			}
-			sprintf(tmp_sql, "UPDATE `%s` SET `connect_member` = '0'", guild_db);
+		}
+		sprintf(tmp_sql, "UPDATE `%s` SET `connect_member` = '0'", guild_db);
 			if(mysql_SendQuery(&mysql_handle, tmp_sql))
 			{
 				ShowError("SQL ERROR: check_conn_loginserver '5', delete all players where ONLINE: %s", mysql_error(&mysql_handle));
-			}
-		
 		}
+	
+	}
 	}
 	return 0;
 }
@@ -3363,7 +3363,7 @@ int char_lan_config_read(const char *lancfgName)
 	return 0;
 }
 
-static int char_db_final(void *key,void *data,va_list ap)
+int char_db_final(void *key,void *data,va_list ap)
 {
 	struct mmo_charstatus *p = (struct mmo_charstatus *) data;
 	if (p) aFree(p);

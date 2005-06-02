@@ -20,7 +20,7 @@ struct dbn *tail;
 static struct dbn *dbn_root[512], *dbn_free;
 static int dbn_root_rest = 0, dbn_root_num = 0;
 
-static struct dbn* malloc_dbn (void)
+struct dbn* malloc_dbn (void)
 {
 	struct dbn* ret;
 
@@ -38,7 +38,7 @@ static struct dbn* malloc_dbn (void)
 	return ret;
 }
 
-static void free_dbn (struct dbn *add_dbn)
+void free_dbn (struct dbn *add_dbn)
 {
 	add_dbn->parent = dbn_free;
 	dbn_free = add_dbn;
@@ -409,7 +409,7 @@ struct dbn* db_insert(struct dbt *table,void* key,void* data)
 
 //	if(NULL==key || NULL==data)
 //	{
-//		printf("db insert 0: key=%p, data=%p\n", key, data);
+//		ShowMessage("db insert 0: key=%p, data=%p\n", key, data);
 //	}
 
 	hash = table->hash(table,key) % HASH_SIZE;

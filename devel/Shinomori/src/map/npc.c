@@ -622,21 +622,21 @@ int npc_event(struct map_session_data &sd,const char *eventname,int mob_kill)
 	int xs,ys;
 	char mobevent[100];
 
-	if(ev==NULL && eventname && strcmp(((eventname)+strlen(eventname)-9),"::OnTouch") == 0)
-	return 1;
+	if (ev == NULL && eventname && strcmp(((eventname)+strlen(eventname)-9),"::OnTouch") == 0)
+		return 1;
 
-	if(ev==NULL || (nd=ev->nd)==NULL){
+	if (ev == NULL || (nd = ev->nd) == NULL) {
 		if (mob_kill) {
 			strcpy( mobevent, eventname);
 			strcat( mobevent, "::OnMyMobDead");
-			ev= (struct event_data *) strdb_search(ev_db,mobevent);
-	if (ev==NULL || (nd=ev->nd)==NULL) {
+			ev = (struct event_data *) strdb_search(ev_db, mobevent);
+			if (ev == NULL || (nd = ev->nd) == NULL) {
 				if (strncasecmp(eventname,"GM_MONSTER",10)!=0)
 					ShowError("npc_event: event not found [%s]\n", mobevent);
 				return 0;
 			}
 		} else {
-			if(battle_config.error_log)
+			if (battle_config.error_log)
 				ShowError("npc_event: event not found [%s]\n", eventname);
 			return 0;
 		}
@@ -1191,7 +1191,6 @@ static int npc_walk(struct npc_data &nd,unsigned long tick,int data)
 
 		if(nd.walkpath.path_pos>=nd.walkpath.path_len)
 			clif_fixnpcpos(nd);	// When npc stops, retransmission current of a position.
-
 	}
 	return 0;
 }
@@ -1284,11 +1283,10 @@ int npc_walktoxy(struct npc_data &nd,int x,int y,int easy)
 	nd.state.walk_easy = easy;
 	nd.to_x=x;
 	nd.to_y=y;
-	if(nd.state.state == MS_WALK) {
+	if(nd.state.state == MS_WALK)
 		nd.state.change_walk_target=1;
-	} else {
+	else
 		return npc_walktoxy_sub(nd);
-	}
 
 	return 0;
 }
@@ -1333,7 +1331,8 @@ int npc_stop_walking(struct npc_data &nd,int type)
 			nd.canmove_tick = tick + delay;
 }
 
-    return 0;
+
+	return 0;
 }
 
 
@@ -2000,14 +1999,15 @@ static int npc_parse_function(const char *w1,const char *w2,const char *w3,const
  * Parse Mob 1 - Parse mob list into each map
  * Parse Mob 2 - Actually Spawns Mob
  * [Wizputer]
+ * If cached =1, it is a dynamic cached mob
  *------------------------------------------
  */
 int npc_parse_mob2(struct mob_list &mob)
 {
-    int i;
 	struct mob_data *md;
+    register size_t i;
 
-	for (i = 0; i < mob.num; i++)
+	for(i = 0; i < mob.num; i++)
 	{
 		md = (struct mob_data *) aCalloc (1, sizeof(struct mob_data));
 
@@ -2016,7 +2016,7 @@ int npc_parse_mob2(struct mob_list &mob)
 			md->size = 2;
 			mob.class_ -= (MAX_MOB_DB + 2000);
 		}
-		else if (	mob.class_ > MAX_MOB_DB)
+		else if (mob.class_ > MAX_MOB_DB)
 		{
 			md->size = 1;
 			mob.class_ -= MAX_MOB_DB;
@@ -2024,21 +2024,25 @@ int npc_parse_mob2(struct mob_list &mob)
 
 		md->bl.prev = NULL;
 		md->bl.next = NULL;
+
+		md->bl.id = npc_get_new_npc_id();
+		md->bl.type = BL_MOB;
 		md->bl.m = mob.m;
-		md->bl.x = mob.x;
-		md->bl.y = mob.y;
+		md->bl.x = mob.x0;
+		md->bl.y = mob.y0;
+
 		md->level = mob.level;
 		memcpy(md->name, mob.mobname, 24);
-		md->n = i;
 		md->base_class = md->class_ = mob.class_;
-		md->bl.id = npc_get_new_npc_id();
-		md->m = mob.m;
-		md->x0 = mob.x;
-		md->y0 = mob.y;
-		md->xs = mob.xs;
-		md->ys = mob.ys;
-		md->spawndelay1 = mob.delay1;
-		md->spawndelay2 = mob.delay2;
+
+//		md->x0 = mob.x0;
+//		md->y0 = mob.y0;
+//		md->xs = mob.xs;
+//		md->ys = mob.ys;
+//		md->spawndelay1 = mob.delay1;
+//		md->spawndelay2 = mob.delay2;
+		md->cache = &mob;
+
 		md->speed=mob_db[mob.class_].speed;
 		md->timer = -1;
 
@@ -2052,81 +2056,81 @@ int npc_parse_mob2(struct mob_list &mob)
 		} else
 			memset(md->npc_event, 0, 24);
 
-		md->bl.type = BL_MOB;
 		map_addiddb(md->bl);
 		mob_spawn(md->bl.id);
 	}
+	// all mobs from cache are spawned now
+	mob.num = 0;
 
 	return 0;
 }
 
 int npc_parse_mob(const char *w1, const char *w2, const char *w3, const char *w4)
 {
-    int level;
+	int level;
 	char mapname[64];
 	char mobname[64];
-
+	char eventname[64];
 	int v1,v2,v3,v4,v5,v6,v7,v8;
-	struct mob_list mob;
-	memset(&mob, 0, sizeof(struct mob_list));
-	
+	unsigned short m;
 
+	
 	// 引数の個数チェック
 	if (sscanf(w1, "%[^,],%d,%d,%d,%d", mapname, &v1, &v2, &v3, &v4) < 3 ||
-		sscanf(w4, "%d,%d,%d,%d,%s", &v5, &v6, &v7, &v8, mob.eventname) < 2 ) {
+		sscanf(w4, "%d,%d,%d,%d,%s", &v5, &v6, &v7, &v8, eventname) < 2 ) {
 		ShowError("bad monster line : %s\n", w3);
 		return 1;
 	}
 
-	mob.m = map_mapname2mapid(mapname);
-	if(mob.m >= MAX_MAP_PER_SERVER)
+	m = map_mapname2mapid(mapname);
+	if(m >= MAX_MAP_PER_SERVER)
+		return 1;
+	if(v5 <= 1000 || v5 > MAX_MOB_DB) // class check
+		return 1;
+		
+	struct mob_list *dynmob = map_addmobtolist(m);
+	if( !dynmob )
 	{
+		ShowError("no place for mob cache on map: %s\n", map[m].mapname);
 		return 1;
 	}
-	mob.x		= v1;
-	mob.y		= v2;
-	mob.xs		= v3;
-	mob.ys		= v4;
-	mob.class_	= v5;
-	mob.num		= v6;
-	mob.delay1	= v7;
-	mob.delay2	= v8;
-		
-	if (mob.num > 1 && battle_config.mob_count_rate != 100) {
-		if ((mob.num = mob.num * battle_config.mob_count_rate / 100) < 1)
-			mob.num = 1;
+	
+	dynmob->m		= m;
+	dynmob->x0		= v1;
+	dynmob->y0		= v2;
+	dynmob->xs		= v3;
+	dynmob->ys		= v4;
+	dynmob->class_	= v5;
+	dynmob->num		= v6;
+	dynmob->delay1	= v7;
+	dynmob->delay2	= v8;
+
+	if( dynmob->num > 1 && battle_config.mob_count_rate != 100)
+	{
+		if((dynmob->num = dynmob->num * battle_config.mob_count_rate / 100) < 1)
+			dynmob->num = 1;
 	}
 	
 	if (sscanf(w3, "%[^,],%d", mobname, &level) > 1)
-			mob.level = level;
+		dynmob->level = level;
 	if (strcmp(mobname, "--en--") == 0)
-			memcpy(mob.mobname, mob_db[mob.class_].name, 24);
+		memcpy(dynmob->mobname, mob_db[dynmob->class_].name, 24);
 	else if (strcmp(mobname, "--ja--") == 0)
-			memcpy(mob.mobname, mob_db[mob.class_].jname, 24);
-	else memcpy(mob.mobname, mobname, 24);
+		memcpy(dynmob->mobname, mob_db[dynmob->class_].jname, 24);
+	else 
+		memcpy(dynmob->mobname, mobname, 24);
+	memcpy(dynmob->eventname, eventname, 24);
 
-	if( mob.delay1 || mob.delay2 )
-	{
-	    npc_parse_mob2(mob);
-	    npc_delay_mob += mob.num;
- 	}    
+	if( dynmob->delay1 || dynmob->delay2 || !battle_config.dynamic_mobs )
+	{	// delayed mobs are always created
+	    npc_parse_mob2(*dynmob);
+		npc_delay_mob += v6;
+		}
 	else
-	{
-		struct mob_list *dynmob = map_addmobtolist(mob.m);
-		if( dynmob )
-		{
-			memcpy(dynmob, &mob, sizeof(struct mob_list));
-			npc_cache_mob += mob.num;
-		}
-		else
-		{	// mobcache is full
-			// create them as delayed with one second
-			mob.delay1=1000;
-			npc_parse_mob2(mob);
-			npc_delay_mob += mob.num;
-		}
- 	}
-	npc_mob+=mob.num;
+	{	// others can be cached
+		npc_cache_mob += v6;
+	}
+	npc_mob+=v6;
 	return 0;
 }
 
@@ -2377,7 +2381,7 @@ void npc_parsesinglefile(const char *filename, struct npc_mark*& npcmarkerbase)
 					line[j++]='\t';
 				}
 				else
- 				line[j++]=line[i];
+				line[j++]=line[i];
 		}
 		// 最初はタブ区切りでチェックしてみて、ダメならスペース区切りで確認
 		if ((count = sscanf(line,"%[^\t]\t%[^\t]\t%[^\t\r\n]\t%n%[^\t\r\n]", w1, w2, w3, &w4pos, w4)) < 3 &&
@@ -2578,12 +2582,12 @@ int npc_cleanup_sub (struct block_list &bl, va_list ap)
 		npc_unload((struct npc_data *)&bl);
 		break;
 	case BL_MOB:
-		mob_unload((struct mob_data *)&bl);
+		mob_unload((struct mob_data &)bl);
 		break;
 	}
-
 	return 0;
 }
+
 int npc_reload (void)
 {
 	size_t m;
@@ -2695,7 +2699,7 @@ int do_final_npc(void)
 			else 
 				if(bl->type == BL_MOB && (md = (struct mob_data *)bl))
 			{
-				mob_unload(md);
+				mob_unload(*md);
 			}
 			else if(bl->type == BL_PET && (pd = (struct pet_data *)bl))
 			{	// hmm, should never happen
@@ -2709,7 +2713,7 @@ int do_final_npc(void)
 		strdb_final(ev_db, ev_db_final);
 		ev_db = NULL;
 	}
- 	if(npcname_db)
+	if(npcname_db)
 	{
 		strdb_final(npcname_db, npcname_db_final);
 		npcname_db = NULL;

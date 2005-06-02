@@ -41,6 +41,16 @@ char defaultlanguage = 'E';                  // Default language (F: Français/E:
                                              // (if it's not 'F', default is English)
 char ladmin_log_filename[1024] = "log/ladmin.log";
 char date_format[32] = "%Y-%m-%d %H:%M:%S";
+
+int login_fd;
+unsigned long login_ip;
+
+int bytes_to_read = 0; // flag to know if we waiting bytes from login-server
+char command[1024];
+char parameters[1024];
+int list_first, list_last, list_type, list_count; // parameter to display a list of accounts
+
+
 //-------------------------------------------------------------------------
 //  LIST of COMMANDs that you can type at the prompt:
 //    To use these commands you can only type only the first letters.
@@ -224,13 +234,8 @@ char date_format[32] = "%Y-%m-%d %H:%M:%S";
 //    Displays complete information of an account.
 //
 //-------------------------------------------------------------------------
-int login_fd;
-unsigned long login_ip;
 
-int bytes_to_read = 0; // flag to know if we waiting bytes from login-server
-char command[1024];
-char parameters[1024];
-int list_first, list_last, list_type, list_count; // parameter to display a list of accounts
+
 
 //------------------------------
 // Writing function of logs file
@@ -536,10 +541,9 @@ int check_command(char * command) {
 //-----------------------------------------
 // Sub-function: Display commands of ladmin
 //-----------------------------------------
-void display_help(char* param, int language) {
+void display_help(char* param, int language)
+{
 	char command[1023];
-	int i;
-
 	memset(command, '\0', sizeof(command));
 
 	if (sscanf(param, "%s ", command) < 1 || strlen(command) == 0)
@@ -553,8 +557,7 @@ void display_help(char* param, int language) {
 	}
 
 	// lowercase for command
-	for (i = 0; command[i]; i++)
-		command[i] = tolower(command[i]);
+	tolower(command);
 
 	// Analyse of the command
 	check_command(command); // give complete name to the command
@@ -1062,9 +1065,9 @@ void display_help(char* param, int language) {
 //-----------------------------
 // Sub-function: add an account
 //-----------------------------
-int addaccount(char* param, int emailflag) {
+int addaccount(char* param, int emailflag)
+{
 	char name[1023], sex[1023], email[1023], password[1023];
-//	int i;
 
 	memset(name, '\0', sizeof(name));
 	memset(sex, '\0', sizeof(sex));
@@ -1190,11 +1193,12 @@ int addaccount(char* param, int emailflag) {
 //---------------------------------------------------------------------------------
 // Sub-function: Add/substract time to the final date of a banishment of an account
 //---------------------------------------------------------------------------------
-int banaddaccount(char* param) {
+int banaddaccount(char* param)
+{
 	char name[1023], modif[1023];
 	int year, month, day, hour, minute, second;
 	char * p_modif;
-	int value, i;
+	int value;
 
 	memset(name, '\0', sizeof(name));
 	memset(modif, '\0', sizeof(modif));
@@ -1223,8 +1227,7 @@ int banaddaccount(char* param) {
 	}
 
 	// lowercase for modif
-	for (i = 0; modif[i]; i++)
-		modif[i] = tolower(modif[i]);
+	tolower(modif);
 	p_modif = modif;
 	while (strlen(p_modif) > 0) {
 		value = atoi(p_modif);
@@ -2053,10 +2056,8 @@ int changelanguage(char* language) {
 //--------------------------------------------------------
 // Sub-function: Asking to Displaying of the accounts list
 //--------------------------------------------------------
-int listaccount(char* param, int type) {
-//int list_first, list_last, list_type; // parameter to display a list of accounts
-	int i;
-
+int listaccount(char* param, int type)
+{
 	list_type = type;
 
 	// set default values
@@ -2066,8 +2067,7 @@ int listaccount(char* param, int type) {
 	if (list_type == 1) { // if listgm
 		// get all accounts = use default
 	} else if (list_type == 2) { // if search
-		for (i = 0; param[i]; i++)
-			param[i] = tolower(param[i]);
+		tolower(param);
 		// get all accounts = use default
 	} else if (list_type == 3) { // if listban
 		// get all accounts = use default
@@ -2518,11 +2518,12 @@ int blockaccount(char* param) {
 //---------------------------------------------------------------------
 // Sub-function: Add/substract time to the validity limit of an account
 //---------------------------------------------------------------------
-int timeaddaccount(char* param) {
+int timeaddaccount(char* param)
+{
 	char name[1023], modif[1023];
 	int year, month, day, hour, minute, second;
 	char * p_modif;
-	int value, i;
+	int value;
 
 	memset(name, '\0', sizeof(name));
 	memset(modif, '\0', sizeof(modif));
@@ -2551,8 +2552,7 @@ int timeaddaccount(char* param) {
 	}
 
 	// lowercase for modif
-	for (i = 0; modif[i]; i++)
-		modif[i] = tolower(modif[i]);
+	tolower(modif);
 	p_modif = modif;
 	while (strlen(p_modif) > 0) {
 		value = atoi(p_modif);
@@ -3146,7 +3146,8 @@ int prompt() {
 //-------------------------------------------------------------
 // Function: Parse receiving informations from the login-server
 //-------------------------------------------------------------
-int parse_fromlogin(int fd) {
+int parse_fromlogin(int fd)
+{
 	struct char_session_data *sd;
 
 	if( !session_isActive(fd) ) {
@@ -3296,21 +3297,19 @@ int parse_fromlogin(int fd) {
 				else
 					ladmin_log("  Receiving of a accounts list." RETCODE);
 				for(i = 4; i < RFIFOW(fd,2); i += 38) {
-					int j;
 					char userid[24];
 					char lower_userid[24];
 					memcpy(userid, RFIFOP(fd,i + 5), sizeof(userid));
 					userid[sizeof(userid)-1] = '\0';
-					memset(lower_userid, '\0', sizeof(lower_userid));
-					for (j = 0; userid[j]; j++)
-						lower_userid[j] = tolower(userid[j]);
+					strcpytolower(lower_userid, userid);
 					list_first = RFIFOL(fd,i) + 1;
 					// here are checks...
-					if (list_type == 0 ||
+					if( list_type == 0 ||
 					    (list_type == 1 && RFIFOB(fd,i+4) > 0) ||
 					    (list_type == 2 && strstr(lower_userid, parameters) != NULL) ||
 					    (list_type == 3 && RFIFOL(fd,i+34) != 0) ||
-					    (list_type == 4 && RFIFOL(fd,i+34) == 0)) {
+					    (list_type == 4 && RFIFOL(fd,i+34) == 0))
+					{
 						ShowMessage("%10ld ", (unsigned long)RFIFOL(fd,i));
 						if (RFIFOB(fd,i+4) == 0)
 							ShowMessage("   ");

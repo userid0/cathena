@@ -538,22 +538,19 @@ int party_send_xy_clear(struct party &p)
 	return 0;
 }
 // HP通知の必要性検査用（map_foreachinmoveareaから呼ばれる）
-int party_send_hp_check(struct block_list *bl,va_list ap)
+int party_send_hp_check(struct block_list &bl,va_list ap)
 {
 	unsigned long party_id;
 	int *flag;
-	struct map_session_data *sd;
+	struct map_session_data &sd = (struct map_session_data &)bl;
 
-	nullpo_retr(0, bl);
 	nullpo_retr(0, ap);
-	nullpo_retr(0, sd=(struct map_session_data *)bl);
-
 	party_id=va_arg(ap,unsigned long);
 	flag=va_arg(ap,int *);
 	
-	if(sd->status.party_id==party_id){
+	if(sd.status.party_id==party_id){
 		*flag=1;
-		sd->party_hp=-1;
+		sd.party_hp=-1;
 	}
 	return 0;
 }

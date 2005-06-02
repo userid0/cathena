@@ -245,7 +245,7 @@ int chrif_removemap(int fd)
 		map_eraseipport((char*)RFIFOP(fd, i), ip, port);
 	}
 	if(battle_config.etc_log){
-		printf("remove map of server %d.%d.%d.%d:%d (%d maps)\n", (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, port, j);
+		ShowMessage("remove map of server %d.%d.%d.%d:%d (%d maps)\n", (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, port, j);
 	}
 	
 	return 0;	
@@ -335,7 +335,6 @@ int chrif_connectack(int fd)
 	chrif_state = 1;
 
 	chrif_sendmap(fd);
-	chrif_reqfamelist();
 
 	ShowStatus("Event '"CL_WHITE"OnCharIfInit"CL_RESET"' executed with '"CL_WHITE"%d"CL_RESET"' NPCs.\n", npc_event_doall("OnCharIfInit"));
 	ShowStatus("Event '"CL_WHITE"OnInterIfInit"CL_RESET"' executed with '"CL_WHITE"%d"CL_RESET"' NPCs.\n", npc_event_doall("OnInterIfInit"));
@@ -1285,7 +1284,7 @@ int chrif_parse(int fd)
 
 		switch(cmd) {
 		case 0x2af9: chrif_connectack(fd); break;
-		case 0x2afb: chrif_sendmapack(fd); break;
+		case 0x2afb: chrif_sendmapack(fd); chrif_reqfamelist(); break;
 		case 0x2afd: 
 		{
 			pc_authok(RFIFOL(fd,4), RFIFOL(fd,8), (time_t)RFIFOL(fd,12), RFIFOP(fd,16)); 

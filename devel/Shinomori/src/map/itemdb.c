@@ -1,16 +1,18 @@
 // $Id: itemdb.c,v 1.3 2004/09/25 05:32:18 MouseJstr Exp $
 #include "base.h"
 #include "db.h"
-#include "grfio.h"
 #include "nullpo.h"
 #include "malloc.h"
+#include "showmsg.h"
+#include "utils.h"
+#include "grfio.h"
+
 #include "map.h"
 #include "battle.h"
 #include "itemdb.h"
 #include "script.h"
 #include "pc.h"
-#include "showmsg.h"
-#include "utils.h"
+
 
 #define MAX_RANDITEM	2000
 #define MAX_ITEMGROUP	20
@@ -223,7 +225,7 @@ bool itemdb_isequip2(struct item_data &data)
 {
 	int type=data.type;
 	return (type!=0 && type!=2 && type!=3 && type!=6 && type!=10);
-}
+	}
 /*==========================================
  *
  *------------------------------------------
@@ -235,26 +237,51 @@ bool itemdb_isequip3(unsigned short nameid)
 }
 
 /*==========================================
- * 捨てられるアイテムは1、そうでないアイテムは0
+ * Trade Restriction functions [Skotlex]
  *------------------------------------------
  */
-bool itemdb_isdropable(unsigned short nameid)
+bool itemdb_isdropable(unsigned short nameid, unsigned char gmlv)
 {
-	//結婚指輪は捨てられない
-	switch(nameid){
-	case 2634: //結婚指輪
-	case 2635: //結婚指輪
-		return false;
-	}
-
-	return true;
+	struct item_data* item = itemdb_exists(nameid);
+	return (item && (!(item->flag.trade_restriction&1) || gmlv >= item->gm_lv_trade_override));
 }
+
+bool itemdb_cantrade(unsigned short nameid, unsigned char gmlv)
+{
+	struct item_data* item = itemdb_exists(nameid);
+	return (item && (!(item->flag.trade_restriction&2) || gmlv >= item->gm_lv_trade_override));
+}
+
+bool itemdb_canpartnertrade(unsigned short nameid, unsigned char gmlv)
+{
+	struct item_data* item = itemdb_exists(nameid);
+	return (item && (!(item->flag.trade_restriction&(2|4)) || gmlv >= item->gm_lv_trade_override));
+}
+
+bool itemdb_cansell(unsigned short nameid, unsigned char gmlv)
+{
+	struct item_data* item = itemdb_exists(nameid);
+	return (item && (!(item->flag.trade_restriction&8) || gmlv >= item->gm_lv_trade_override));
+}
+
+bool itemdb_cancartstore(unsigned short nameid, unsigned char gmlv)
+{	
+	struct item_data* item = itemdb_exists(nameid);
+	return (item && (!(item->flag.trade_restriction&16) || gmlv >= item->gm_lv_trade_override));
+}
+
+bool itemdb_canstore(unsigned short nameid, unsigned char gmlv, int guild_flag)
+{	
+	struct item_data* item = itemdb_exists(nameid);
+	return (item && (!(item->flag.trade_restriction&(guild_flag?64:32)) || gmlv >= item->gm_lv_trade_override));
+}
+
 
 /*==========================================
  * ランダムアイテム出現データの読み込み
  *------------------------------------------
  */
-static int itemdb_read_randomitem()
+int itemdb_read_randomitem()
 {
 	FILE *fp;
 	char line[1024];
@@ -266,7 +293,8 @@ static int itemdb_read_randomitem()
 	const struct {
 		char filename[64];
 		struct random_item_data *pdata;
-		int *pcount,*pdefault;
+		int *pcount;
+		int *pdefault;
 	} data[] = {
 		{"db/item_bluebox.txt",		blue_box,	&blue_box_count, &blue_box_default		},
 		{"db/item_violetbox.txt",	violet_box,	&violet_box_count, &violet_box_default	},
@@ -340,14 +368,14 @@ static int itemdb_read_itemavail(void)
 	unsigned short nameid;
 	size_t j,k;
 	char *str[10],*p;
+	struct item_data *id;
 
 	if( (fp=savefopen("db/item_avail.txt","r"))==NULL ){
 		ShowMessage("can't read %s\n","db/item_avail.txt");
 		return -1;
 	}
 
-	while(fgets(line,1020,fp)){
-		struct item_data *id;
+	while (fgets(line, sizeof(line) - 1, fp)) {
 		if(line[0]=='/' && line[1]=='/')
 			continue;
 		memset(str,0,sizeof(str));
@@ -357,18 +385,15 @@ static int itemdb_read_itemavail(void)
 			if(p) *p++=0;
 		}
 
-		if(str[0]==NULL)
+		if (j < 2 || str[0] == NULL ||
+			(nameid = atoi(str[0])) >= 20000 || !(id = itemdb_exists(nameid)))
 			continue;
 
-		nameid=atoi(str[0]);
-		if(nameid>=MAX_ITEMS || !(id=itemdb_exists(nameid)) )
-			continue;
 		k=atoi(str[1]);
 		if(k > 0) {
 			id->flag.available = 1;
 			id->view_id = k;
-		}
-		else
+		} else
 			id->flag.available = 0;
 		ln++;
 	}
@@ -609,41 +634,51 @@ static int itemdb_read_noequip(void)
 	return 0;
 }
 
-/*================================================
- * Whether the item can be refined or not [Celest]
- *------------------------------------------------
+/*==========================================
+ * Reads item trade restrictions [Skotlex]
+ *------------------------------------------
  */
-/* Function no longer needed [Skotlex]
-static int itemdb_read_norefine(void)
+static int itemdb_read_itemtrade(void)
 {
-	int i, nameid;
+	FILE *fp;
+	int nameid, j, flag, gmlv, ln = 0;
+	char line[1024], *str[10], *p;
 	struct item_data *id;
-	// To-do: let it read from a text file later
-	int cant_refine[] = {
-		1243, 1530, 2110, 2112, 2201, 2202, 2203, 2204, 2205, 2210,
-		2212, 2218, 2219, 2237, 2238, 2239, 2240, 2241, 2242, 2243,
-		2250, 2253, 2260, 2262, 2263, 2264, 2265, 2266, 2267, 2268,
-		2269, 2270, 2271, 2276, 2278, 2279, 2281, 2282, 2286, 2288,
-		2289, 2290, 2291, 2292, 2293, 2295, 2296, 2297, 2298, 2352,
-		2410, 2413, 2414, 2509, 2510, 2601, 2602, 2603, 2604, 2605,
-		2607, 2608, 2609, 2610, 2611, 2612, 2613, 2614, 2615, 2616,
-		2617, 2618, 2619, 2620, 2621, 2622, 2623, 2624, 2625, 2626,
-		2627, 2628, 2629, 2630, 2631, 2634, 2635, 2636, 2637, 2638,
-		2639, 2640, 5004, 5005, 5006, 5008, 5014, 5015, 5037, 5039,
-		5040, 5043, 5046, 5049, 5050, 5051, 5053, 5054, 5055, 5058,
-		5068, 5074, 5085, 5086, 5087, 5088, 5089, 5090, 5096, 5098, 0
-	};
 
-	for (i=0; i < (int)(sizeof(cant_refine) / sizeof(cant_refine[0])); i++) {
-		nameid = cant_refine[i];
-		if(nameid>=MAX_ITEMS || !(id=itemdb_exists(nameid)))
-			continue;
-		id->flag.no_refine = 1;
+	if ((fp = fopen("db/item_trade.txt","r")) == NULL) {
+		ShowError("can't read db/item_trade.txt\n");
+		return -1;
 	}
 
-	return 1;
+	while (fgets(line, sizeof(line) - 1, fp)) {
+		if (line[0] == '/' && line[1] == '/')
+			continue;
+		memset(str, 0, sizeof(str));
+		for (j = 0, p = line; j < 3 && p; j++) {
+			str[j] = p;
+			p = strchr(p, ',');
+			if(p) *p++ = 0;
+	}
+
+		if (j < 3 || str[0] == NULL ||
+			(nameid = atoi(str[0])) < 0 || nameid >= 20000 || !(id = itemdb_exists(nameid)))
+			continue;
+
+		flag = atoi(str[1]);
+		gmlv = atoi(str[2]);
+		
+		if (flag > 0 && flag < 128 && gmlv > 0) { //Check range
+			id->flag.trade_restriction = flag;
+			id->gm_lv_trade_override = gmlv;
+			ln++;
 }
-*/
+	}
+	fclose(fp);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", ln, "db/item_trade.txt");
+
+	return 0;
+}
+
 #ifndef TXT_ONLY
 
 /*======================================
@@ -901,10 +936,10 @@ static int itemdb_readdb(void)
 			if((p=strchr(np,'{'))!=NULL)
 				id->use_script = parse_script((unsigned char *) p,lines);
 			else
-				id->use_script=NULL;
+			id->use_script=NULL;
 
 			if((p=strchr(p+1,'{'))!=NULL)
-				id->equip_script = parse_script((unsigned char *) p,lines);
+			id->equip_script = parse_script((unsigned char *) p,lines);
 			else
 				id->equip_script=NULL;
 		}
@@ -940,7 +975,7 @@ static void itemdb_read(void)
 	itemdb_read_randomitem();
 	itemdb_read_itemavail();
 	itemdb_read_noequip();
-//	itemdb_read_norefine();
+	itemdb_read_itemtrade();
 	if (battle_config.cardillust_read_grffile)
 		itemdb_read_cardillustnametable();
 	if (battle_config.item_equip_override_grffile)
@@ -955,38 +990,45 @@ static void itemdb_read(void)
  * Initialize / Finalize
  *------------------------------------------
  */
-static int itemdb_final(void *key,void *data,va_list ap)
+static int itemdb_final_sub (void *key,void *data,va_list ap)
 {
 	struct item_data *id = (struct item_data *)data;
 
-	if (id == NULL)
-		return 0;
-	if (id->use_script)
-		aFree(id->use_script);
-	if (id->equip_script)
-		aFree(id->equip_script);
-	aFree(id);
-
+	if( id )
+	{
+		int flag = va_arg(ap, int);
+		if (id->use_script)
+			aFree(id->use_script);
+		if (id->equip_script)
+			aFree(id->equip_script);
+		// Whether to clear the item data
+		if (flag)
+			aFree(id);
+	}
 	return 0;
 }
 
 void itemdb_reload(void)
 {
-	numdb_final(item_db,itemdb_final);
-	do_init_itemdb();
+	// free up all item scripts first
+	numdb_foreach(item_db, itemdb_final_sub, 0);
+	itemdb_read();
 }
 
 void do_final_itemdb(void)
 {
 	if (item_db)
-		numdb_final(item_db, itemdb_final);
+	{
+		numdb_final(item_db, itemdb_final_sub, 1);
+		item_db = NULL;
+	}
 }
 
 int do_init_itemdb(void)
 {
 	if(item_db)
 	{
-		numdb_final(item_db,itemdb_final);
+		numdb_final(item_db, itemdb_final_sub, 1);
 	}
 	item_db = numdb_init();
 	itemdb_read();

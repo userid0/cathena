@@ -144,7 +144,7 @@ sigfunc *compat_signal(int signo, sigfunc *func)
  *--------------------------------------
  */
 
-static void sig_proc(int sn)
+void sig_proc(int sn)
 {
 	//////////////////////////////////
 	// force shut down
@@ -222,7 +222,7 @@ const char* get_svn_revision()	{ return "Shinomori's Modified Version"; }
  *	CORE : Display title
  *--------------------------------------
  */
-static void display_title(void)
+void display_title(void)
 {
 	ShowMessage(CL_CLS); // clear screen and go up/left (0, 0 position in text)
 	ShowMessage(CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=)"CL_CLL""CL_NORM"\n"); // white writing (37) on blue background (44), "CL_CLL" clean until end of file

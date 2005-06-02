@@ -28,7 +28,7 @@
 
 
 
-	#define exists(filename) (!access(filename, F_OK))
+#define exists(filename) (!access(filename, F_OK))
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -45,7 +45,7 @@ const char* strerror(int err, char* buf, size_t size)
 			if( strlen(p)+1 < size ) size = strlen(p)+1;
 			memcpy(buf,p,size);
 			buf[size-1]=0; //force EOS
-}
+		}
 		else
 			*buf=0;
 	}

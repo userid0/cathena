@@ -5,9 +5,8 @@
 
 #include "base.h"
 
+
 #define BASE_TICK 5
-
-
 #define DIFF_TICK(a,b) (((int)(a)-(int)(b)))
 
 extern time_t start_time;

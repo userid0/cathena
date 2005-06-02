@@ -2871,7 +2871,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 				1390,1391,1392,1400,1401,1402,1403,1404,1405,1406,1408,1409,1410,1412,1413,1415,1416,
 				1417,1493,1494,1495,1497,1498,1499,1500,1502,1503,1504,1505,1506,1507,1508,1509,1510,
 				1511,1512,1513,1514,1515,1516,1517,1519,1520,1582,1584,1585,1586,1587 };
-				mob_class_change( *((struct mob_data *)target),changeclass);
+				mob_class_change( *((struct mob_data *)target),changeclass, sizeof(changeclass)/sizeof(changeclass[0]));
 			}
 		}
 
@@ -3223,9 +3223,8 @@ static struct Damage battle_calc_weapon_attack_sub(
 
 	if (!flag.hit)
 	{	//Hit/Flee calculation
-		short
-			flee = status_get_flee(target),
-			hitrate=80; //Default hitrate
+		unsigned short flee = status_get_flee(target);
+		unsigned short hitrate=80; //Default hitrate
 		if(battle_config.agi_penalty_type)
 		{	
 			unsigned char target_count; //256 max targets should be a sane max
@@ -3270,7 +3269,10 @@ static struct Damage battle_calc_weapon_attack_sub(
 				break;
 		}
 
-		hitrate = ((hitrate>95)?95: ((hitrate<5)?5:hitrate));
+		if (hitrate > battle_config.max_hitrate)
+			hitrate = battle_config.max_hitrate;
+		else if (hitrate < battle_config.min_hitrate)
+			hitrate = battle_config.min_hitrate;
 
 		if(rand()%100 >= hitrate)
 			wd.dmg_lv = ATK_FLEE;
@@ -3780,8 +3782,7 @@ static struct Damage battle_calc_weapon_attack_sub(
 		if (!flag.infdef && (!flag.idef || !flag.idef2))
 		{	//Defense reduction
 			int t_vit = status_get_vit(target);
-			int t_def, vitbonusmax;
-			int defense;
+			int vit_def;
 
 			if(battle_config.vit_penalty_type)
 			{
@@ -3802,22 +3803,27 @@ static struct Damage battle_calc_weapon_attack_sub(
 				if(def2 < 1) def2 = 1;
 				if(t_vit < 1) t_vit = 1;
 			}
-			t_def = def2*8/10;
-			if(tsd &&
-				(battle_check_undead(s_race,status_get_elem_type(src)) || s_race==6) &&
+			//Vitality reduction from rodatazone: http://rodatazone.simgaming.net/mechanics/substats.php#def	
+			if (tsd)	//Sd vit-eq
+			{	//[VIT*0.5] + rnd([VIT*0.3], max([VIT*0.3],[VIT^2/150]-1))
+				vit_def = t_vit*(t_vit-15)/150;
+				vit_def = t_vit/2 + (vit_def>0?rand()%vit_def:0);
+				
+				if((battle_check_undead(s_race,status_get_elem_type(src)) || s_race==6) &&
 				(skill=pc_checkskill(*tsd,AL_DP)) >0)
-				t_def += skill*(int)(3 +(tsd->status.base_level+1)*0.04);   // submitted by orn
-			vitbonusmax = (t_vit/20)*(t_vit/20)-1;
-
-			if(battle_config.player_defense_type) {
-					defense = -(def1*(int)battle_config.player_defense_type) -t_def -(vitbonusmax<1)?0:rand()%(vitbonusmax+1);
-			} else {
-				defense = -t_def -(vitbonusmax<1)?0:rand()%(vitbonusmax+1);
-				ATK_RATE2(flag.idef?100:100-def1, flag.idef2?100:100-def1);
+					vit_def += skill*(3 +(tsd->status.base_level+1)/25);   // submitted by orn
+			} else { //Mob-Pet vit-eq
+				//VIT + rnd(0,[VIT/20]^2-1)
+				vit_def = (t_vit/20)*(t_vit/20);
+				vit_def = t_vit + (vit_def>0?rand()%vit_def:0);
 			}
-			ATK_ADD2(flag.idef?0:defense, flag.idef2?0:defense);
+			
+			if(battle_config.player_defense_type)
+				vit_def += def1*battle_config.player_defense_type;
+			else
+				ATK_RATE2(flag.idef?100:100-def1, flag.idef2?100:100-def1);
+			ATK_ADD2(flag.idef?0:-vit_def, flag.idef2?0:-vit_def);
 		}
-
 		//Post skill/vit reduction damage increases
 		if (sc_data)
 		{	//SC skill damages
@@ -4077,7 +4083,7 @@ static struct Damage battle_calc_weapon_attack_sub(
 			1390,1391,1392,1400,1401,1402,1403,1404,1405,1406,1408,1409,1410,1412,1413,1415,1416,
 			1417,1493,1494,1495,1497,1498,1499,1500,1502,1503,1504,1505,1506,1507,1508,1509,1510,
 			1511,1512,1513,1514,1515,1516,1517,1519,1520,1582,1584,1585,1586,1587 };
-		mob_class_change(*tmd, changeclass);
+		mob_class_change(*tmd, changeclass, sizeof(changeclass)/sizeof(changeclass[0]));
 	}
 	return wd;
 }
@@ -4103,15 +4109,15 @@ struct Damage battle_calc_weapon_attack(
 	else
 	{
 		if(target->type == BL_PET)
-		memset(&wd,0,sizeof(wd));
-	else if(src->type == BL_PC)
-		wd = battle_calc_pc_weapon_attack(src,target,skill_num,skill_lv,wflag);
-	else if(src->type == BL_MOB)
-		wd = battle_calc_mob_weapon_attack(src,target,skill_num,skill_lv,wflag);
-	else if(src->type == BL_PET)
-		wd = battle_calc_pet_weapon_attack(src,target,skill_num,skill_lv,wflag);
-	else
-		memset(&wd,0,sizeof(wd));
+			memset(&wd,0,sizeof(wd));
+		else if(src->type == BL_PC)
+			wd = battle_calc_pc_weapon_attack(src,target,skill_num,skill_lv,wflag);
+		else if(src->type == BL_MOB)
+			wd = battle_calc_mob_weapon_attack(src,target,skill_num,skill_lv,wflag);
+		else if(src->type == BL_PET)
+			wd = battle_calc_pet_weapon_attack(src,target,skill_num,skill_lv,wflag);
+		else
+			memset(&wd,0,sizeof(wd));
 	}
 	if(battle_config.equipment_breaking && src->type==BL_PC && (wd.damage > 0 || wd.damage2 > 0)) {
 		struct map_session_data *sd = (struct map_session_data *)src;
@@ -4667,7 +4673,7 @@ struct Damage battle_calc_attack(int attack_type, struct block_list *bl,struct b
 	case BF_MISC:
 		return battle_calc_misc_attack(bl,target,skill_num,skill_lv,flag);
 	default:
-		if(battle_config.error_log)
+		if (battle_config.error_log)
 			ShowError("battle_calc_attack: unknown attack type! %d\n",attack_type);
 		memset(&d,0,sizeof(d));
 		break;
@@ -4693,6 +4699,7 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target, unsi
 
 	if (src->prev == NULL || target->prev == NULL)
 		return 0;
+
 	if(src->type == BL_PC)
 	{
 		sd = (struct map_session_data *)src;
@@ -4934,7 +4941,18 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target, unsi
 					sp += battle_calc_drain(wd.damage, sp_drain_rate, sp_drain_per, sp_drain_value);
 				}
 
-				if (hp || sp) pc_heal(*sd, hp, sp);
+				if (battle_config.show_hp_sp_drain)
+				{	//Display gained values [Skotlex]
+					if (hp > 0 && pc_heal(*sd, hp, 0) > 0)
+						clif_heal(sd->fd, SP_HP, hp);
+					if (sp > 0 && pc_heal(*sd, 0, sp) > 0)
+						clif_heal(sd->fd, SP_SP, sp);
+				}
+				else	if (hp || sp)
+				{
+					pc_heal(*sd, hp, sp);
+				}
+
 				if (tsd && sd->sp_drain_type)
 					pc_heal(*tsd, 0, -sp);
 			}
@@ -5161,7 +5179,7 @@ int battle_check_target( struct block_list *src, struct block_list *target,int f
 				return 1;
 		}
 		// Mob‚Åmaster_id‚ª‚ ‚Á‚Äspecial_mob_ai‚È‚çA¢Š«Žå‚ð‹‚ß‚é
-		if (md->master_id > 0) {
+		if(md->master_id > 0) {
 			if (md->master_id == target->id)	// Žå‚È‚çm’è
 				return 1;
 			if (md->state.special_mob_ai){
@@ -5417,6 +5435,8 @@ static struct {
 	{ "undead_detect_type",                &battle_config.undead_detect_type		},
 	{ "player_auto_counter_type",          &battle_config.pc_auto_counter_type		},
 	{ "monster_auto_counter_type",         &battle_config.monster_auto_counter_type},
+	{ "min_hitrate",                       &battle_config.min_hitrate	},
+	{ "max_hitrate",                       &battle_config.max_hitrate	},
 	{ "agi_penalty_type",                  &battle_config.agi_penalty_type			},
 	{ "agi_penalty_count",                 &battle_config.agi_penalty_count			},
 	{ "agi_penalty_num",                   &battle_config.agi_penalty_num			},
@@ -5546,10 +5566,15 @@ static struct {
 	{ "who_display_aid",	                  &battle_config.who_display_aid}, // [Ancyker], for a feature by...?
 	{ "display_hallucination",             &battle_config.display_hallucination}, // [Skotlex]
 	{ "use_statpoint_table",               &battle_config.use_statpoint_table}, // [Skotlex]
-	{ "mob_remove_damaged",					&battle_config.mob_remove_damaged	}, // added by [Valaris]
+	{ "dynamic_mobs",						&battle_config.dynamic_mobs},
+	{ "dynamic_mobs",                      &battle_config.dynamic_mobs},
+	{ "mob_remove_damaged",                &battle_config.mob_remove_damaged},
+	{ "show_hp_sp_drain",                  &battle_config.show_hp_sp_drain}, // [Skotlex]
+	{ "show_hp_sp_gain",                   &battle_config.show_hp_sp_gain}, // [Skotlex]
 
 	{ "mail_system",                       &battle_config.mail_system	}, // added by [Valaris]
 
+	{ "mob_remove_delay",                  &battle_config.mob_remove_delay	},
 };
 
 int battle_set_value(const char *w1, const char *w2)
@@ -5686,6 +5711,8 @@ void battle_set_defaults() {
 	battle_config.undead_detect_type = 0;
 	battle_config.pc_auto_counter_type = 1;
 	battle_config.monster_auto_counter_type = 1;
+	battle_config.min_hitrate = 5;
+	battle_config.max_hitrate = 95;
 	battle_config.agi_penalty_type = 1;
 	battle_config.agi_penalty_count = 3;
 	battle_config.agi_penalty_num = 10;
@@ -5746,7 +5773,8 @@ void battle_set_defaults() {
 	battle_config.hp_rate = 100;
 	battle_config.sp_rate = 100;
 	battle_config.gm_can_drop_lv = 0;
-	battle_config.disp_hpmeter = 0;
+	battle_config.disp_hpmeter = 60;
+
 	battle_config.bone_drop = 0;
 	battle_config.monster_damage_delay = 1;
 
@@ -5815,20 +5843,22 @@ void battle_set_defaults() {
 
 	battle_config.use_statpoint_table = 1;
 	battle_config.new_attack_function = 1; //This is for test/debug purposes [Skotlex]
+	battle_config.dynamic_mobs = 1;
 	battle_config.mob_remove_damaged = 0;
+	battle_config.mob_remove_delay = 60000;
+
+	battle_config.show_hp_sp_drain = 0; //Display drained hp/sp from attacks
+	battle_config.show_hp_sp_gain = 1;	//Display gained hp/sp from mob-kills
 	battle_config.mail_system = 0;
+	
 }
 
 void battle_validate_conf() {
 	if(battle_config.flooritem_lifetime < 1000)
 		battle_config.flooritem_lifetime = LIFETIME_FLOORITEM*1000;
-/*	if(battle_config.restart_hp_rate < 0)
-		battle_config.restart_hp_rate = 0;
-	else*/ if(battle_config.restart_hp_rate > 100)
+	if(battle_config.restart_hp_rate > 100)
 		battle_config.restart_hp_rate = 100;
-/*	if(battle_config.restart_sp_rate < 0)
-		battle_config.restart_sp_rate = 0;
-	else*/ if(battle_config.restart_sp_rate > 100)
+	if(battle_config.restart_sp_rate > 100)
 		battle_config.restart_sp_rate = 100;
 	if(battle_config.natural_healhp_interval < NATURAL_HEAL_INTERVAL)
 		battle_config.natural_healhp_interval=NATURAL_HEAL_INTERVAL;
@@ -5872,6 +5902,9 @@ void battle_validate_conf() {
 		battle_config.max_cart_weight = 100;
 	battle_config.max_cart_weight *= 10;
 
+	if(battle_config.min_hitrate > battle_config.max_hitrate)
+		battle_config.min_hitrate = battle_config.max_hitrate;
+		
 	if(battle_config.agi_penalty_count < 2)
 		battle_config.agi_penalty_count = 2;
 	if(battle_config.vit_penalty_count < 2)
@@ -5959,6 +5992,10 @@ void battle_validate_conf() {
 	if (battle_config.plant_spawn_delay < 0)
 		battle_config.plant_spawn_delay = 0;
 */	
+	if (battle_config.mob_remove_delay < 15000)	//Min 15 sec
+		battle_config.mob_remove_delay = 15000;
+	if (battle_config.dynamic_mobs > 1)
+		battle_config.dynamic_mobs = 1;	//The flag will be used in assignations
 }
 
 /*==========================================

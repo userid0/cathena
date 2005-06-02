@@ -40,7 +40,7 @@ int mapif_guild_info(int fd,struct guild *g);
 int guild_break_sub(void *key,void *data,va_list ap);
 
 
-static int _erase_guild(void *key, void *data, va_list ap) {
+int _erase_guild(void *key, void *data, va_list ap) {
     unsigned long guild = va_arg(ap, unsigned long);
     struct guild_castle * castle = (struct guild_castle *) data;
     if (castle->guild_id == guild) {
@@ -511,7 +511,7 @@ struct guild * inter_guild_fromsql(int guild_id)
 }
 
 #if 1
-static int _set_guild_castle(void *key, void *data, va_list ap) {
+int _set_guild_castle(void *key, void *data, va_list ap) {
     unsigned short castle_id = (unsigned short)va_arg(ap, int);
     unsigned long guild_id   = va_arg(ap, unsigned long);
     struct guild * g = (struct guild *) data;

@@ -170,7 +170,7 @@ int skill_check_unit_range2(int m,int x,int y,unsigned short skillid, unsigned s
 // -- moonsoul	(added skill_check_unit_cell)
 //int skill_check_unit_cell(int skillid,int m,int x,int y,int unit_id);
 //int skill_unit_out_all( struct block_list *bl,unsigned long tick,int range);
-int skill_unit_move(struct block_list *bl,unsigned long tick,int flag);
+int skill_unit_move(struct block_list &bl,unsigned long tick,int flag);
 int skill_unit_move_unit_group( struct skill_unit_group *group, int m,int dx,int dy);
 
 struct skill_unit_group *skill_check_dancing( struct block_list *src );

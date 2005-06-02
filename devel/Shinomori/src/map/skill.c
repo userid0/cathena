@@ -1276,12 +1276,12 @@ int skill_blown( struct block_list *src, struct block_list *target,int count)
 		skill_unit_move_unit_group(su->group,target->m,dx,dy);
 	}else{
 		unsigned long tick = gettick();
-		skill_unit_move(target,tick,0);
+		skill_unit_move(*target,tick,0);
 		if(moveblock) map_delblock(*target);
 		target->x=nx;
 		target->y=ny;
 		if(moveblock) map_addblock(*target);
-		skill_unit_move(target,tick,1);
+		skill_unit_move(*target,tick,1);
 	}
 
 	if(sd) {	/* ?面?に入ってきたので表示 */
@@ -3084,17 +3084,16 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case SA_CLASSCHANGE:
 		{
 			//クラスチェンジ用ボスモンスタ?ID
-			int changeclass[]={1038,1039,1046,1059,1086,1087,1112,1115
-				,1157,1159,1190,1272,1312,1373,1492};
+			int changeclass[]={1038,1039,1046,1059,1086,1087,1112,1115,1157,1159,1190,1272,1312,1373,1492};
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
-			if(dstmd) mob_class_change(*dstmd,changeclass);
+			if(dstmd) mob_class_change(*dstmd,changeclass, sizeof(changeclass)/sizeof(changeclass[0]));
 		}
 		break;
 	case SA_MONOCELL:
 		{
 			int poringclass[]={1002};
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
-			if(dstmd) mob_class_change(*dstmd,poringclass);
+			if(dstmd) mob_class_change(*dstmd,poringclass,1);
 		}
 		break;
 	case SA_DEATH:
@@ -4361,7 +4360,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case NPC_TRANSFORMATION:
 	case NPC_METAMORPHOSIS:
 		if(md)
-			mob_class_change(*md,mob_db[md->class_].skill[md->skillidx].val);
+			mob_class_change(*md, mob_db[md->class_].skill[md->skillidx].val,0); // count=0 to have the array size checked internally
 		break;
 
 	case NPC_EMOTION:			/* エモ?ション */
@@ -6147,12 +6146,12 @@ int skill_unit_onplace_timer(struct skill_unit *src,struct block_list *bl,unsign
 			battle_stopwalking(bl,1);
 			status_change_start(bl,SC_ANKLE,sg->skill_lv,0,0,0,sec,0);
 
-			skill_unit_move(bl,tick,0);
+			skill_unit_move(*bl,tick,0);
 			if(moveblock) map_delblock(*bl);
 				bl->x = src->bl.x;
 				bl->y = src->bl.y;
 			if(moveblock) map_addblock(*bl);
-			skill_unit_move(bl,tick,1);
+			skill_unit_move(*bl,tick,1);
 			if(bl->type == BL_MOB)
 				clif_fixmobpos(*((struct mob_data *)bl));
 			else if(bl->type == BL_PET)
@@ -6216,12 +6215,12 @@ int skill_unit_onplace_timer(struct skill_unit *src,struct block_list *bl,unsign
 		if(sg->val2==0){
 			int moveblock = ( bl->x/BLOCK_SIZE != src->bl.x/BLOCK_SIZE || bl->y/BLOCK_SIZE != src->bl.y/BLOCK_SIZE);
 			skill_additional_effect(ss,bl,sg->skill_id,sg->skill_lv,BF_MISC,tick);
-			skill_unit_move(bl,tick,0);
+			skill_unit_move(*bl,tick,0);
 			if(moveblock) map_delblock(*bl);
 				bl->x = src->bl.x;
 				bl->y = src->bl.y;
 			if(moveblock) map_addblock(*bl);
-			skill_unit_move(bl,tick,1);
+			skill_unit_move(*bl,tick,1);
  			if(bl->type == BL_MOB)
  				clif_fixmobpos(*((struct mob_data *)bl));
  			else if(bl->type == BL_PET)
@@ -9022,7 +9021,7 @@ int skill_unit_timer(int tid,unsigned long tick,int id,int data)
  */
 int skill_unit_move_sub( struct block_list &bl, va_list ap )
 {
-	struct skill_unit *unit = (struct skill_unit *)&bl;
+	struct skill_unit &unit = (struct skill_unit &)bl;
 	struct skill_unit_group *group;
 	struct block_list *target;
 	unsigned long tick;
@@ -9033,20 +9032,20 @@ int skill_unit_move_sub( struct block_list &bl, va_list ap )
 	tick = (unsigned long)va_arg(ap,int);
 	flag = va_arg(ap,int);
 
-	if (target->type!=BL_PC && target->type!=BL_MOB)
+	if(target->type!=BL_PC && target->type!=BL_MOB)
 		return 0;
 
-	nullpo_retr(0, group=unit->group);
+	nullpo_retr(0, group=unit.group);
 	if (group->interval!=-1)
 		return 0;
 
-	if (!unit->alive || target->prev==NULL)
+	if (!unit.alive || target->prev==NULL)
 		return 0;
 
 	if (flag)
-		skill_unit_onplace(unit,target,tick);
+		skill_unit_onplace(&unit,target,tick);
 	else
-		skill_unit_onout(unit,target,tick);
+		skill_unit_onout(&unit,target,tick);
 
 	return 0;
 }
@@ -9055,15 +9054,13 @@ int skill_unit_move_sub( struct block_list &bl, va_list ap )
  * スキルユニット移動時?理
  *------------------------------------------
  */
-int skill_unit_move(struct block_list *bl,unsigned long tick,int flag)
+int skill_unit_move(struct block_list &bl,unsigned long tick,int flag)
 {
-	nullpo_retr(0, bl);
-
-	if(bl->prev==NULL )
-		return 0;
+	if(bl.prev==NULL )
+		return 1;
 
 	map_foreachinarea(skill_unit_move_sub,
-			bl->m,bl->x,bl->y,bl->x,bl->y,BL_SKILL,bl,tick,flag);
+			bl.m,bl.x,bl.y,bl.x,bl.y,BL_SKILL,&bl,tick,flag);
 
 	return 0;
 }
@@ -9073,7 +9070,7 @@ int skill_unit_move(struct block_list *bl,unsigned long tick,int flag)
  * 引?はグル?プと移動量
  *------------------------------------------
  */
-int skill_unit_move_unit_group( struct skill_unit_group *group, int m,int dx,int dy)
+int skill_unit_move_unit_group(struct skill_unit_group *group, int m,int dx,int dy)
 {
 	int i,j;
 	int tick = gettick();

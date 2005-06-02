@@ -272,14 +272,14 @@ Addon *dll_open (const char *filename, bool force=false)
 	void **procs;
 	int init_flag = 1;
 
-	//printf ("loading %s\n", filename);
+	//ShowMessage ("loading %s\n", filename);
 	
 	// Check if the plugin has been loaded before
 	addon = addon_head;
 	while (addon) {
 		// returns handle to the already loaded plugin
 		if (addon->state && strcasecmp(addon->filename, filename) == 0) {
-			//printf ("not loaded (duplicate) : %s\n", filename);
+			//ShowMessage ("not loaded (duplicate) : %s\n", filename);
 			return addon;
 		}
 		addon = addon->next;
@@ -290,7 +290,7 @@ Addon *dll_open (const char *filename, bool force=false)
 
 	addon->dll = LoadLibrary(filename);
 	if (!addon->dll) {
-		//printf ("not loaded (invalid file) : %s\n", filename);
+		//ShowMessage ("not loaded (invalid file) : %s\n", filename);
 		dll_close(addon);
 		return NULL;
 	}
@@ -306,7 +306,7 @@ Addon *dll_open (const char *filename, bool force=false)
 		// plugin is not for this server 
 		!(getServerType() & info->type))) )
 	{
-		//printf ("not loaded (incompatible) : %s\n", filename);
+		//ShowMessage ("not loaded (incompatible) : %s\n", filename);
 		dll_close(addon);
 		return NULL;
 	}
@@ -329,7 +329,7 @@ Addon *dll_open (const char *filename, bool force=false)
 				test_func = (int (*)(void))GetProcAddress(addon->dll, events[i].func_name);
 				if (test_func && test_func() == 0) {
 					// plugin has failed test, disabling
-					//printf ("disabled (failed test) : %s\n", filename);
+					//ShowMessage ("disabled (failed test) : %s\n", filename);
 					init_flag = 0;
 				}
 			} else {

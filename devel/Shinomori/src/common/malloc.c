@@ -554,6 +554,7 @@ static void block_free(struct block* p)
 	else if(block_unused->block_no > p->block_no)
 		block_unused = p;
 }
+
 #ifdef LOG_MEMMGR
 static void memmgr_log (char *buf)
 {
@@ -594,7 +595,7 @@ static void memmer_exit(void)
 					sprintf (buf,
 						"%04d : %s line %d size %d\n", ++count,
 						head->file, head->line, head->size);
-					memmgr_log (buf);
+					memmgr_log(buf);
 #endif
 					// get block pointer and free it
 					ptr = (char *)head + sizeof(struct unit_head);
@@ -612,11 +613,8 @@ static void memmer_exit(void)
 			FREE(bltmp);
 			bltmp=block;
 		}
-		
 	}
 	block_first = NULL;
-
-
 
 	large = unit_head_large_first;
 	while(large)

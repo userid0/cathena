@@ -16,6 +16,24 @@ keep on updating with branch but do not copy any enhancement
 
 
 ///////////////////////////////////////////////////////////
+changed dynamic mobs to a different dataset
+now _all_ script mobs are created with a cache and each mob
+gets an additional pointer to their corrosponding cache slot
+on creation, allowing to share a common data set among multiple
+mobs created from a common cache slot. this data is not necessary 
+at the mob itself anymore
+
+the cache is build with counter, so when a mob is spawned on
+the map, the cache counter is decremented, if the mob
+is unloaded, the corrosponding cache counter is incremented
+thus preventing mob duplication
+
+only non-delayed mobs with a cache are actually unloaded,
+ensuring that guardians, quest mobs and spawned mobs
+are not touched as they do not have a cache
+if a cached master is unloaded, it's slaves are destroyed as well
+
+///////////////////////////////////////////////////////////
 now referencing builds to gcc 3.3.2
 slight changes to makefile; 
 nsl now needs be linked explicitely in my environment
@@ -31,6 +49,7 @@ still much way to go
 somebody should outlaw the usage of int's and
 the type changes via pointer casting
 *keep on changing types
+*almost finished
 ///////////////////////////////////////////////////////////
 integrated the anti freeze system into the user count update messages
 (which are already send between chat,login and map)

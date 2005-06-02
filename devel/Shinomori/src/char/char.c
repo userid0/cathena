@@ -1656,7 +1656,7 @@ int disconnect_player(unsigned long accound_id) {
 }
 
 // キャラ削除に伴うデータ削除
-static int char_delete(struct mmo_charstatus *cs) {
+int char_delete(struct mmo_charstatus *cs) {
 	int j;
 
 	// ペット削除
@@ -2782,7 +2782,7 @@ int search_mapserver(const char *map) {
 }
 
 // char_mapifの初期化処理（現在はinter_mapif初期化のみ）
-static int char_mapif_init(int fd) {
+int char_mapif_init(int fd) {
 	return inter_mapif_init(fd);
 }
 

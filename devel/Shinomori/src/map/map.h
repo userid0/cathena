@@ -34,6 +34,7 @@
 #define MAX_DROP_PER_MAP 48
 #define MAX_IGNORE_LIST 80
 #define MAX_VENDING 12
+#define MAX_TRADING 10
 
 
 #define DEFAULT_AUTOSAVE_INTERVAL 60*1000
@@ -520,8 +521,8 @@ struct map_session_data
 	struct square dev;
 
 	unsigned long trade_partner;
-	unsigned long deal_item_index[10];
-	unsigned short deal_item_amount[10];
+	unsigned short deal_item_index[MAX_TRADING];
+	unsigned short deal_item_amount[MAX_TRADING];
 	unsigned long deal_zeny;
 	unsigned short deal_locked;
 
@@ -644,22 +645,49 @@ struct npc_data {
 	npc_data() : chatdb(NULL)	{} 
 };
 
+
+
+
+
+
+
+
+// Mob List Held in memory for Dynamic Mobs [Wizputer]
+struct mob_list
+{
+    unsigned short m;
+
+	unsigned short x0;			/////////
+	unsigned short y0;			// will replace the data in the mobs
+	unsigned short xs;
+	unsigned short ys;
+	unsigned long delay1;
+	unsigned long delay2;		////////
+
+	unsigned short class_;
+	unsigned short level;
+
+    char mobname[24];
+	char eventname[24];
+
+	unsigned short num;
+};
+
+
+
 struct mob_data {
 	struct block_list bl;
-	short n;
 	short base_class;
 	short class_;
 	short dir;
 	short mode;
 	short level;
-	short m;
-	short x0;
-	short y0;
-	short xs;
-	short ys;
 	char name[24];
-	int spawndelay1;
-	int spawndelay2;
+
+
+	// mobs are divided into cached and noncached (script/spawned)
+	mob_list* cache;
+
 	struct {
 		unsigned state : 8;						//b1
 		unsigned skillstate : 8;				//b2
@@ -670,11 +698,12 @@ struct mob_data {
 		unsigned master_check : 1;
 		unsigned change_walk_target : 1;
 		unsigned walk_easy : 1;
-		unsigned soul_change_flag : 1; // Celest	//b3
-		unsigned special_mob_ai : 3;
+		unsigned soul_change_flag : 1;			//b3
+		unsigned special_mob_ai : 2;			//	takes values 0,1,2,3
+		unsigned is_master : 1;					//	set if mob is a master with spawns
 		unsigned _unused : 5;
 	} state;
-	
+
 	int timer;
 	short to_x;
 	short to_y;
@@ -819,7 +848,7 @@ struct pet_data {
 		unsigned short max;
 		unsigned long loottick;
 	} *loot; //[Valaris] / Rewritten by [Skotlex]
-
+	
 	struct skill_timerskill skilltimerskill[MAX_MOBSKILLTIMERSKILL]; // [Valaris]
 	struct skill_unit_group skillunit[MAX_MOBSKILLUNITGROUP]; // [Valaris]
 	struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET]; // [Valaris]
@@ -839,29 +868,6 @@ enum {
 	EQP_SHIELD		= 4,		// 左手
 	EQP_HELM		= 8,		// 頭上段
 };
-
-// Mob List Held in memory for Dynamic Mobs [Wizputer]
-struct mob_list
-{
-    unsigned short m;
-	unsigned short x;
-	unsigned short y;
-	unsigned short xs;
-	unsigned short ys;
-	unsigned short class_;
-	unsigned short num;
-	unsigned short level;
-	int delay1;
-	int delay2;
-    char mobname[24];
-	char eventname[24];
-};
-
-
-
-
-
-
 
 
 
@@ -982,6 +988,7 @@ struct map_data {
 		int drop_per;
 	} drop_list[MAX_DROP_PER_MAP];
 	struct mob_list *moblist[MAX_MOB_LIST_PER_MAP]; // [Wizputer]
+	int mob_delete_timer;	// [Skotlex]
 };
 
 struct map_data_other_server {
@@ -1117,11 +1124,11 @@ int map_freeblock_unlock(void);
 // block関連
 int map_addblock(struct block_list &bl);
 int map_delblock(struct block_list &bl);
-void map_foreachinarea(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...);
+int map_foreachinarea(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...);
 // -- moonsoul (added map_foreachincell)
-void map_foreachincell(int (*func)(struct block_list*,va_list),unsigned short m,int x,int y,int type,...);
-void map_foreachinmovearea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...);
-void map_foreachinpath(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...); // Celest
+int map_foreachincell(int (*func)(struct block_list&,va_list),unsigned short m,int x,int y,int type,...);
+int map_foreachinmovearea(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...);
+int map_foreachinpath(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...); // Celest
 int map_countnearpc(int,int,int);
 //block関連に追加
 int map_count_oncell(unsigned short m,int x,int y);
@@ -1138,6 +1145,7 @@ int map_addnpc(unsigned short m, struct npc_data *nd);
 
 // 床アイテム関連
 int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data);
+int map_removemobs_timer(int tid,unsigned long tick,int id,int data);
 #define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
 int map_addflooritem(struct item &item_data,unsigned short amount,unsigned short m,unsigned short x,unsigned short y,struct map_session_data *first_sd,struct map_session_data *second_sd,struct map_session_data *third_sd,int type);
 int map_searchrandfreecell(int,int,int,int);
@@ -1179,7 +1187,7 @@ int cleanup_sub(struct block_list &bl, va_list ap);
 void map_helpscreen(); // [Valaris]
 int map_delmap(const char *mapname);
 
-struct mob_list* map_addmobtolist(unsigned short m);// [Wizputer]
+struct mob_list* map_addmobtolist(unsigned short m);	// [Wizputer]
 void clear_moblist(unsigned short m);
 void map_spawnmobs(unsigned short m);		// [Wizputer]
 void map_removemobs(unsigned short m);		// [Wizputer]
@@ -1228,6 +1236,10 @@ extern MYSQL lmysql_handle;
 extern char tmp_lsql[65535];
 extern MYSQL_RES* lsql_res ;
 extern MYSQL_ROW	lsql_row ;
+
+extern MYSQL logmysql_handle;
+extern MYSQL_RES* logsql_res ;
+extern MYSQL_ROW logsql_row ;
 
 extern MYSQL mail_handle;
 extern MYSQL_RES* 	mail_res ;

@@ -15,6 +15,8 @@ struct item_data
 	long value_buy;
 	long value_sell;
 	unsigned char type;
+	unsigned char gm_lv_trade_override;
+
 	unsigned short class_;
 	unsigned short equip;
 
@@ -32,18 +34,20 @@ struct item_data
 		unsigned available : 1;			// 0
 		unsigned value_notdc : 1;		// 1
 		unsigned value_notoc : 1;		// 2
-		unsigned no_equip : 3;			// 3,4,5
-		unsigned no_use : 1;			// 6
-		unsigned no_refine : 1;			// 7 [celest]
-		unsigned sex : 2;				// 8,9 // male=0, female=1, all=2
-		unsigned slot : 2;				// 10,11
+		unsigned no_use : 1;			// 3
+		unsigned sex : 2;				// 4,5 // male=0, female=1, all=2
+		unsigned slot : 2;				// 6,7
+		unsigned no_refine : 1;			// 8 [celest]
+		unsigned no_equip : 3;			// 9,10,11
 		unsigned delay_consume : 1;		// 12 Signifies items that are not consumed inmediately upon double-click [Skotlex]
-		unsigned _unused : 3;
+		unsigned trade_restriction : 7;	// 13-19 Item restrictions mask [Skotlex]
+		unsigned _unused : 4;			// 20-23
 	} flag;
 
 	char *use_script;	// 回復とかも全部この中でやろうかなと
 	char *equip_script;	// 攻撃,防御の属性設定もこの中で可能かな?
 };
+
 
 struct random_item_data {
 	unsigned short nameid;
@@ -80,11 +84,17 @@ int itemdb_searchrandomgroup(unsigned short groupid);
 #define itemdb_value_notdc(n) itemdb_search(n)->flag.value_notdc
 #define itemdb_value_notoc(n) itemdb_search(n)->flag.value_notoc
 #define itemdb_canrefine(n) itemdb_search(n)->flag.no_refine
+//Item trade restrictions [Skotlex]
+bool itemdb_isdropable(unsigned short nameid, unsigned char gmlv);
+bool itemdb_cantrade(unsigned short nameid, unsigned char gmlv);
+bool itemdb_cansell(unsigned short nameid, unsigned char gmlv);
+bool itemdb_canstore(unsigned short nameid, unsigned char gmlv, int guild_flag);
+bool itemdb_cancartstore(unsigned short nameid, unsigned char gmlv);
+bool itemdb_canpartnertrade(unsigned short nameid, unsigned char gmlv);
 
 bool itemdb_isequip(unsigned short nameid);
 bool itemdb_isequip2(struct item_data &data);
 bool itemdb_isequip3(unsigned short nameid);
-bool itemdb_isdropable(unsigned short nameid);
 
 // itemdb_equipマクロとitemdb_equippointとの違いは
 // 前者が鯖側dbで定義された値そのものを返すのに対し

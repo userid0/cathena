@@ -233,7 +233,6 @@ ACMD_FUNC(skilltree); // by MouseJstr
 
 ACMD_FUNC(marry); // by MouseJstr
 ACMD_FUNC(divorce); // by MouseJstr
-ACMD_FUNC(rings); // by MouseJstr
 
 ACMD_FUNC(grind); // by MouseJstr
 ACMD_FUNC(grind2); // by MouseJstr
@@ -272,6 +271,7 @@ ACMD_FUNC(battleoption);
 
 ACMD_FUNC(iteminfo); // Lupus
 ACMD_FUNC(mapflag); // Lupus
+ACMD_FUNC(me); //added by massdriller, code by lordalfa
 
 /*==========================================
  *AtCommandInfo atcommand_info[]\‘¢‘Ì‚Ì’è‹`
@@ -524,7 +524,6 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_SkillTree,			"@skilltree",		40, atcommand_skilltree }, // [MouseJstr]
 	{ AtCommand_Marry,				"@marry",			40, atcommand_marry }, // [MouseJstr]
 	{ AtCommand_Divorce,			"@divorce",			40, atcommand_divorce }, // [MouseJstr]
-	{ AtCommand_Rings,				"@rings",			40, atcommand_rings }, // [MouseJstr]
 	{ AtCommand_Grind,				"@grind",			99, atcommand_grind }, // [MouseJstr]
 	{ AtCommand_Grind2,				"@grind2",			99, atcommand_grind2 }, // [MouseJstr]
 
@@ -568,6 +567,9 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_ItemInfo,			"@iteminfo",		1, atcommand_iteminfo }, // [Lupus]
 	{ AtCommand_ItemInfo,			"@ii",		1, atcommand_iteminfo }, // [Lupus]
 	{ AtCommand_MapFlag,			"@mapflag",		99, atcommand_mapflag }, // [Lupus]
+
+	{ AtCommand_Me,				"@me",			20, atcommand_me }, //added by massdriller, code by lordalfa
+
 
 // add new commands before this line
 	{ AtCommand_Unknown,			NULL,				1,	NULL }
@@ -702,7 +704,7 @@ bool msg_config_read(const char *cfgName)
 	{
 		memset(&msg_table[0], 0, sizeof(msg_table[0]) * MAX_MSG);
 		initialized=true;
-	}
+		}
 	while(fgets(line, sizeof(line)-1, fp))
 	{
 		if (line[0] == '/' && line[1] == '/')
@@ -710,7 +712,7 @@ bool msg_config_read(const char *cfgName)
 		if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) == 2) {
 			if(strcasecmp(w1, "import") == 0) {
 				msg_config_read(w2);
-			}
+	}
 			else
 			{
 				msg_number = atoi(w1);
@@ -742,7 +744,7 @@ void do_final_msg ()
 		{
 			aFree(msg_table[i]);
 			msg_table[i] = NULL;
-		}
+}
 	}
 	return;
 }
@@ -771,7 +773,7 @@ AtCommandInfo* get_atcommandinfo_byname(const char* name)
 		if( strcasecmp(atcommand_info[i].command+1, name) == 0 )
 			return &atcommand_info[i];
 	return NULL;
-}
+	}
 
 /*==========================================
  *
@@ -786,7 +788,7 @@ bool atcommand_config_read(const char *cfgName)
 	if((fp = savefopen(cfgName, "r")) == NULL) {
 		ShowError("At commands configuration file not found: %s\n", cfgName);
 		return false;
-		}
+	}
 
 	while (fgets(line, sizeof(line)-1, fp)) {
 		if (line[0] == '/' && line[1] == '/')
@@ -810,7 +812,7 @@ bool atcommand_config_read(const char *cfgName)
 				p->level = atoi(w2);
 				if (p->level > 100)
 					p->level = 100;
-}
+			}
 		}
 	}
 	fclose(fp);
@@ -825,7 +827,7 @@ bool atcommand_config_read(const char *cfgName)
 
 AtCommandType atcommand(AtCommandInfo& info, const char* message, struct map_session_data &sd, unsigned char level)
 {
-	if( battle_config.atc_gmonly != 0 && !level ) // level = pc_isGM(sd)
+	if (battle_config.atc_gmonly != 0 && !level) // level = pc_isGM(sd)
 		return AtCommand_None;
 	if (!message || !*message)
 	{
@@ -853,7 +855,7 @@ AtCommandType atcommand(AtCommandInfo& info, const char* message, struct map_ses
 				return AtCommand_None;
 			else
 				return AtCommand_Unknown;
-}
+		}
 		else if( log_config.gm && (atcommand_info[i].level >= log_config.gm))
 		{
 			log_atcommand(sd, message);
@@ -893,7 +895,7 @@ AtCommandType is_atcommand(const int fd, struct map_session_data &sd, const char
 		if (*str == ':')
 			s_flag = 1;
 		str++;
-	}
+				}
 	if (!*str)
 		return AtCommand_None;
 
@@ -925,9 +927,9 @@ AtCommandType is_atcommand(const int fd, struct map_session_data &sd, const char
 				sprintf(output, msg_table[154], command); // %s failed.
 				clif_displaymessage(fd, output);
 		}
-		}
-		return info.type;
 	}
+		return info.type;
+}
 	return AtCommand_None;
 }
 
@@ -940,16 +942,16 @@ static int atkillmonster_sub(struct block_list &bl, va_list ap)
 {
 	struct mob_data &md = (struct mob_data &)bl;
 	int flag;
-	
+
 	nullpo_retr(0, ap);
 	flag = va_arg(ap, int);
 
 	if(flag)
 		mob_damage(md, md.hp, 2, NULL);
 	else
-		mob_delete(&md);
-	
-	return true;
+		mob_delete(md);
+
+	return 0;
 }
 
 
@@ -1177,7 +1179,7 @@ bool atcommand_jump(int fd, struct map_session_data &sd, const char* command, co
 bool atcommand_who(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
 	struct map_session_data *pl_sd;
-	size_t i, j, count;
+	size_t i, count;
 	int pl_GM_level, GM_level;
 	char output[128]="";
 	char match_text[104]="";
@@ -1187,8 +1189,7 @@ bool atcommand_who(int fd, struct map_session_data &sd, const char* command, con
 
 	if (sscanf(message, "%99[^\n]", match_text) < 1)
 		*match_text = 0;
-	for (j = 0; match_text[j]; j++)
-		match_text[j] = tolower(match_text[j]);
+	tolower(match_text);
 
 	count = 0;
 	GM_level = pc_isGM(sd);
@@ -1197,8 +1198,7 @@ bool atcommand_who(int fd, struct map_session_data &sd, const char* command, con
 			pl_GM_level = pc_isGM(*pl_sd);
 			if (!((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE)) && (pl_GM_level > GM_level))) { // you can look only lower or same level
 				memcpy(player_name, pl_sd->status.name, 24);
-				for (j = 0; player_name[j]; j++)
-					player_name[j] = tolower(player_name[j]);
+				tolower(player_name);
 				if(strstr(player_name, match_text) != NULL)
 				{	// search with no case sensitive
 					if (battle_config.who_display_aid > 0 && pc_isGM(sd) >= battle_config.who_display_aid) {
@@ -1239,7 +1239,7 @@ bool atcommand_who(int fd, struct map_session_data &sd, const char* command, con
 bool atcommand_who2(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
 	struct map_session_data *pl_sd;
-	size_t i, j, count;
+	size_t i, count;
 	int pl_GM_level, GM_level;
 	char match_text[128]="";
 	char output[128];
@@ -1249,8 +1249,7 @@ bool atcommand_who2(int fd, struct map_session_data &sd, const char* command, co
 
 	if (sscanf(message, "%99[^\n]", match_text) < 1)
 		*match_text = 0;
-	for (j = 0; match_text[j]; j++)
-		match_text[j] = tolower(match_text[j]);
+	tolower(match_text);
 
 	count = 0;
 	GM_level = pc_isGM(sd);
@@ -1259,8 +1258,7 @@ bool atcommand_who2(int fd, struct map_session_data &sd, const char* command, co
 			pl_GM_level = pc_isGM(*pl_sd);
 			if (!((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE)) && (pl_GM_level > GM_level))) { // you can look only lower or same level
 				memcpy(player_name, pl_sd->status.name, 24);
-				for (j = 0; player_name[j]; j++)
-					player_name[j] = tolower(player_name[j]);
+				tolower(player_name);
 				if (strstr(player_name, match_text) != NULL) { // search with no case sensitive
 					if (pl_GM_level > 0)
 						sprintf(output, "Name: %s (GM:%d) | BLvl: %d | Job: %s (Lvl: %d)", pl_sd->status.name, pl_GM_level, pl_sd->status.base_level, job_name(pl_sd->status.class_), pl_sd->status.job_level);
@@ -1306,8 +1304,7 @@ bool atcommand_who3(int fd, struct map_session_data &sd, const char* command, co
 
 	if (sscanf(message, "%99[^\n]", match_text) < 1)
 		*match_text = 0;
-	for (j = 0; match_text[j]; j++)
-		match_text[j] = tolower(match_text[j]);
+	tolower(match_text);
 
 	count = 0;
 	GM_level = pc_isGM(sd);
@@ -1539,7 +1536,7 @@ bool atcommand_whogm(int fd, struct map_session_data &sd, const char* command, c
 	char temp0[128];
 	char temp1[128];
 	struct map_session_data *pl_sd;
-	size_t i, j, count;
+	size_t i, count;
 	int pl_GM_level, GM_level;
 	char match_text[128]="";
 	char output[128];
@@ -1552,8 +1549,7 @@ bool atcommand_whogm(int fd, struct map_session_data &sd, const char* command, c
 
 	if (sscanf(message, "%99[^\n]", match_text) < 1)
 		*match_text = 0;
-	for (j = 0; match_text[j]; j++)
-		match_text[j] = tolower(match_text[j]);
+	tolower(match_text);
 
 	count = 0;
 	GM_level = pc_isGM(sd);
@@ -1563,8 +1559,7 @@ bool atcommand_whogm(int fd, struct map_session_data &sd, const char* command, c
 			if (pl_GM_level > 0) {
 				if (!((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE)) && (pl_GM_level > GM_level))) { // you can look only lower or same level
 					memcpy(player_name, pl_sd->status.name, 24);
-					for (j = 0; player_name[j]; j++)
-						player_name[j] = tolower(player_name[j]);
+					tolower(player_name);
 					if (strstr(player_name, match_text) != NULL) { // search with no case sensitive
 						sprintf(output, "Name: %s (GM:%d) | Location: %s %d %d", pl_sd->status.name, pl_GM_level, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
 						clif_displaymessage(fd, output);
@@ -1615,7 +1610,6 @@ bool atcommand_whozeny(int fd, struct map_session_data &sd, const char* command,
 		*match_text = 0;
 	tolower(match_text);
 
-	
 	for(count=0, i=0; i<fd_max; i++)
 	{
 		if (session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth)
@@ -2093,18 +2087,19 @@ bool atcommand_kill(int fd, struct map_session_data &sd, const char* command, co
 bool atcommand_alive(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
 	
-	if (pc_isdead(sd)) {
-	sd.status.hp = sd.status.max_hp;
-	sd.status.sp = sd.status.max_sp;
-	clif_skill_nodamage(&sd.bl,&sd.bl,ALL_RESURRECTION,4,1);
+	if( pc_isdead(sd) )
+	{
+		sd.status.hp = sd.status.max_hp;
+		sd.status.sp = sd.status.max_sp;
+		clif_skill_nodamage(&sd.bl,&sd.bl,ALL_RESURRECTION,4,1);
 	pc_setstand(sd);
 	if (battle_config.pc_invincible_time > 0)
 		pc_setinvincibletimer(sd, battle_config.pc_invincible_time);
 	clif_updatestatus(sd, SP_HP);
 	clif_updatestatus(sd, SP_SP);
-	clif_resurrection(sd.bl, 1);
+		clif_resurrection(sd.bl, 1);
 	clif_displaymessage(fd, msg_table[16]); // You've been revived! It's a miracle!
-	return true;
+		return true;
 	}
 	return false;
 }
@@ -2116,7 +2111,6 @@ bool atcommand_alive(int fd, struct map_session_data &sd, const char* command, c
 bool atcommand_kami(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
 	char output[128]="";
-
 
 	if (!message || !*message) {
 		clif_displaymessage(fd, "Please, enter a message (usage: @kami <message>).");
@@ -2138,10 +2132,13 @@ bool atcommand_heal(int fd, struct map_session_data &sd, const char* command, co
 
 	sscanf(message, "%ld %ld", &hp, &sp);
 
-	if (hp == 0 && sp == 0) {
+	if (hp == 0 && sp == 0)
+	{
 		hp = sd.status.max_hp - sd.status.hp;
 		sp = sd.status.max_sp - sd.status.sp;
-	} else {
+	}
+	else
+	{
 		if(hp > 0 && (hp > (long)sd.status.max_hp || hp > (long)(sd.status.max_hp - sd.status.hp))) // fix positiv overflow
 			hp = sd.status.max_hp - sd.status.hp;
 		else if(hp < 0 && (hp < -(long)sd.status.max_hp || hp < (1 - (long)sd.status.hp))) // fix negativ overflow
@@ -2159,13 +2156,16 @@ bool atcommand_heal(int fd, struct map_session_data &sd, const char* command, co
 	if (sp > 0) // no display when we lost SP
 		clif_heal(fd, SP_SP, sp);
 
-	if (hp != 0 || sp != 0) {
+	if (hp != 0 || sp != 0)
+	{
 		pc_heal(sd, hp, sp);
 		if (hp >= 0 && sp >= 0)
 			clif_displaymessage(fd, msg_table[17]); // HP, SP recovered.
 		else
 			clif_displaymessage(fd, msg_table[156]); // HP or/and SP modified.
-	} else {
+	}
+	else
+	{
 		clif_displaymessage(fd, msg_table[157]); // HP and SP are already with the good value.
 		return false;
 	}
@@ -2786,7 +2786,6 @@ bool atcommand_hair_color(int fd, struct map_session_data &sd, const char* comma
  */
 bool atcommand_go(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
-	int i;
 	int town;
 	char map_name[128]="";
 	char output[128];
@@ -2840,8 +2839,7 @@ bool atcommand_go(int fd, struct map_session_data &sd, const char* command, cons
 	} else {
 		// get possible name of the city and add .gat if not in the name
 		map_name[sizeof(map_name)-1] = '\0';
-		for (i = 0; map_name[i]; i++)
-			map_name[i] = tolower(map_name[i]);
+		tolower(map_name);
 		if (strstr(map_name, ".gat") == NULL && strstr(map_name, ".afm") == NULL && strlen(map_name) < 13) // 16 - 4 (.gat)
 			strcat(map_name, ".gat");
 		// try to see if it's a name, and not a number (try a lot of possibilities, write errors and abbreviations too)
@@ -3469,7 +3467,10 @@ bool atcommand_memo(int fd, struct map_session_data &sd, const char* command, co
 		atcommand_memo_sub(sd);
 	else {
 		if (position >= MIN_PORTAL_MEMO && position <= MAX_PORTAL_MEMO) {
-			if (sd.bl.m < map_num && map[sd.bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd)) {
+			if( sd.bl.m < map_num && 
+				(map[sd.bl.m].flag.nowarpto || map[sd.bl.m].flag.nomemo) && 
+				battle_config.any_warp_GM_min_level > pc_isGM(sd) )
+			{
 				clif_displaymessage(fd, msg_table[253]);
 				return false;
 			}
@@ -4040,8 +4041,6 @@ bool atcommand_revive(int fd, struct map_session_data &sd, const char* command, 
 {
 	char player_name[128];
 	struct map_session_data *pl_sd;
-
-
 
 
 	if(!message || !*message || sscanf(message, "%99[^\n]", player_name) < 1) {
@@ -7162,6 +7161,29 @@ bool atcommand_skilltree(int fd, struct map_session_data &sd, const char* comman
 	return true;
 }
 
+// Hand a ring with partners name on it to this char
+void getring(struct map_session_data &sd)
+{
+	int flag;
+        struct item item_tmp;
+	unsigned short item_id = (sd.status.sex==0) ? 2635 : 2634;
+
+        memset(&item_tmp,0,sizeof(item_tmp));
+        item_tmp.nameid=item_id;
+        item_tmp.identify=1;
+	item_tmp.card[0] = 0x00FF;
+	item_tmp.card[2] = GetWord(sd.status.partner_id, 0);
+	item_tmp.card[3] = GetWord(sd.status.partner_id, 1);
+
+	flag = pc_additem(sd, item_tmp, 1);
+	if( flag>0 )
+	{
+                clif_additem(sd,0,0,flag);
+		map_addflooritem(item_tmp,1,sd.bl.m,sd.bl.x,sd.bl.y,NULL,NULL,NULL,0);
+        }
+}
+
+
 /*==========================================
  * @marry by [MouseJstr], fixed by Lupus
  *
@@ -7195,7 +7217,10 @@ bool atcommand_marry(int fd, struct map_session_data &sd, const char* command, c
 	{
 	clif_displaymessage(fd, "They are married.. wish them well");
 		clif_wedding_effect(sd.bl);	//wedding effect and music [Lupus]
-		return true;
+	// Auto-give named rings (Aru)
+	getring(*pl_sd1);
+	getring(*pl_sd2);
+	return 0;
   }
 	return false;
 }
@@ -7235,31 +7260,6 @@ bool atcommand_divorce(int fd, struct map_session_data &sd, const char* command,
 	sprintf(output, "Cannot find player '%s' online", player_name);
 	clif_displaymessage(fd, output);
 	return false;
-}
-
-/*==========================================
- * @rings by [MouseJstr]
- *
- * Give two players rings
- *------------------------------------------
- */
-bool atcommand_rings(int fd, struct map_session_data &sd, const char* command, const char* message)
-{
-  struct item item_tmp;
-  int flag;
-  memset(&item_tmp, 0, sizeof(item_tmp));
-
-  item_tmp.nameid = 2634;
-  item_tmp.identify = 1;
-	if ((flag = pc_additem(sd, item_tmp, 1)))
-		clif_additem(sd, 0, 0, flag);
-
-  item_tmp.nameid = 2635;
-  item_tmp.identify = 1;
-	if ((flag = pc_additem(sd, item_tmp, 1)))
-		clif_additem(sd, 0, 0, flag);
-  clif_displaymessage(fd, "You have rings!  Give them to the lovers.");
-	return true;
 }
 
 #ifdef DMALLOC
@@ -9060,6 +9060,27 @@ bool atcommand_battleoption(int fd, struct map_session_data &sd, const char* com
 		return false;
 	}
 	battle_set_value(w1,w2);
+	return true;
+}
+
+/*==========================================
+ * @me by lordalfa
+ * => Displays the OUTPUT string on top of 
+ *    the Visible players Heads.
+ *------------------------------------------
+ */
+bool atcommand_me(int fd, struct map_session_data &sd, const char* command, const char* message)
+{
+	char tempmes[256];
+	char output[256];
+	if (!message || !*message)
+	{
+		clif_displaymessage(fd, "Please, enter a message (usage: @me <message>).");
+		return false;
+	}
+	sscanf(message, "%199[^\n]", tempmes);
+	sprintf(output, "** %s %s **", sd.status.name, tempmes);
+    clif_disp_overhead(sd, output);
 	return true;
 }
 

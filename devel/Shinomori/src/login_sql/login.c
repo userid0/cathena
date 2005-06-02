@@ -56,6 +56,11 @@ struct mmo_char_server server[MAX_SERVERS];
 
 int login_fd=-1;
 
+//Account flood protection [Kevin]
+unsigned int new_reg_tick=0;
+int allowed_regs=1;
+int num_regs=0;
+int time_allowed=10000;
 
 //Added for Mugendai's I'm Alive mod
 int imalive_on=0;
@@ -135,7 +140,7 @@ struct dbt *online_db = NULL;
 
 void add_online_user(unsigned long account_id) {
 	int *p;
-	if(register_users_online <= 0)
+	if (register_users_online <= 0)
 		return;
 	p = (int*)numdb_search(online_db, account_id);
 	if (p == NULL)
@@ -324,29 +329,52 @@ int mmo_auth( struct mmo_account* account , int fd)
 	//accountreg with _M/_F .. [Sirius]
 	len = strlen(account->userid) -2;
 	if( (account->passwdenc == 0 && account->userid[len] == '_') &&
-                 (account->userid[len+1] == 'F' || account->userid[len+1] == 'M') && new_account_flag == 1 &&
-		(account_id_count <= END_ACCOUNT_NUM) && (len >= 4) && (strlen(account->passwd) >= 4) ) {
-                          if (new_account_flag == 1) 
-                                        account->userid[len] = '\0';                       	                                        
-                                      	sprintf(tmp_sql, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", login_db_userid, login_db, account->userid);
-					if(mysql_SendQuery(&mysql_handle, tmp_sql)){
+		(account->userid[len+1] == 'F' || account->userid[len+1] == 'M') && new_account_flag == 1 &&
+		(account_id_count <= END_ACCOUNT_NUM) && (len >= 4) && (strlen(account->passwd) >= 4) )
+	{
+		if (new_account_flag == 1)
+			account->userid[len] = '\0';
+		sprintf(tmp_sql, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", login_db_userid, login_db, account->userid);
+		if(mysql_SendQuery(&mysql_handle, tmp_sql))
+		{
 			ShowMessage("SQL error (_M/_F reg): %s", mysql_error(&mysql_handle));
-					}else{
-					sql_res = mysql_store_result(&mysql_handle);
-						if(mysql_num_rows(sql_res) == 0){
-						//ok no existing acc,
+		}
+		else
+		{
+			sql_res = mysql_store_result(&mysql_handle);
+			//only continue if amount in this time limit is allowed (account registration flood protection)[Kevin]
+			if(gettick() <= new_reg_tick && num_regs >= allowed_regs)
+			{
+				ShowMessage("Notice: Account registration in disallowed time from: %s!", ip_str);
+				return 3;
+			}
+			else
+			{
+				num_regs=0;
+			}
+			if(mysql_num_rows(sql_res) == 0)
+			{	//ok no existing acc,
 				ShowMessage("Adding a new account user: %s with passwd: %s sex: %c (ip: %s)\n", account->userid, account->passwd, account->userid[len+1], ip_str);
-							sprintf(tmp_sql, "INSERT INTO `%s` (`%s`, `%s`, `sex`, `email`) VALUES ('%s', '%s', '%c', '%s')", login_db, login_db_userid, login_db_user_pass, account->userid, account->passwd, account->userid[len+1], "a@a.com");
-							if(mysql_SendQuery(&mysql_handle, tmp_sql)){
-								//Failed to insert new acc :/
+				sprintf(tmp_sql, "INSERT INTO `%s` (`%s`, `%s`, `sex`, `email`) VALUES ('%s', '%s', '%c', '%s')", login_db, login_db_userid, login_db_user_pass, account->userid, account->passwd, account->userid[len+1], "a@a.com");
+				if(mysql_SendQuery(&mysql_handle, tmp_sql))
+				{	//Failed to insert new acc :/
 					ShowMessage("SQL Error (_M/_F reg) .. insert ..: %s", mysql_error(&mysql_handle));
-							}//sql query check to insert
-						}//rownum check (0!)
-					mysql_free_result(sql_res);
-					}//sqlquery                              
-	     }//all values for NEWaccount ok ?
-                                                                                                               
- 	// auth start : time seed
+				}
+				else
+				{	//sql query check to insert
+					//restart ticker (account registration flood protection)[Kevin]
+					if(num_regs==0)
+					{
+						new_reg_tick=gettick()+time_allowed*1000;
+					}
+					num_regs++;
+				}
+			}//rownum check (0!)
+			mysql_free_result(sql_res);
+		}//sqlquery
+	}//all values for NEWaccount ok ?
+	
+	// auth start : time seed
 	gettimeofday(&tv, NULL);
 	strftime(tmpstr, 24, "%Y-%m-%d %H:%M:%S",localtime((const time_t*)&(tv.tv_sec)));
 	sprintf(tmpstr+19, ".%03d", (int)tv.tv_usec/1000);
@@ -638,7 +666,7 @@ int parse_fromchar(int fd){
 
 			account_id = RFIFOL(fd,2);
 			for(i=0;i<AUTH_FIFO_SIZE;i++){
-				if( auth_fifo[i].account_id == account_id &&
+				if (auth_fifo[i].account_id == account_id &&
 				    auth_fifo[i].login_id1 == RFIFOL(fd,6) &&
 #if CMP_AUTHFIFO_LOGIN2 != 0
 				    auth_fifo[i].login_id2 == RFIFOL(fd,10) && // relate to the versions higher than 18
@@ -1561,7 +1589,7 @@ int login_config_read(const char *cfgName){
 			continue;
 
 		else if (strcasecmp(w1, "bind_ip") == 0) {
-			h = gethostbyname(w2);
+			h = gethostbyname (w2);
 			if (h != NULL) {
 				sprintf(ip_str, "%d.%d.%d.%d", (unsigned char)h->h_addr[0], (unsigned char)h->h_addr[1], (unsigned char)h->h_addr[2], (unsigned char)h->h_addr[3]);
 			} else
@@ -1621,28 +1649,28 @@ int login_config_read(const char *cfgName){
 		} else if(strcasecmp(w1,"use_MD5_passwords")==0){
 			use_md5_passwds=config_switch(w2);
 			ShowMessage ("Using MD5 Passwords: %s \n",w2);
-		}
-        else if (strcasecmp(w1, "date_format") == 0) { // note: never have more than 19 char for the date!
-			switch (atoi(w2)) {
-			case 0:
-				strcpy(date_format, "%d-%m-%Y %H:%M:%S"); // 31-12-2004 23:59:59
-				break;
-			case 1:
-				strcpy(date_format, "%m-%d-%Y %H:%M:%S"); // 12-31-2004 23:59:59
-				break;
-			case 2:
-				strcpy(date_format, "%Y-%d-%m %H:%M:%S"); // 2004-31-12 23:59:59
-				break;
-			case 3:
-				strcpy(date_format, "%Y-%m-%d %H:%M:%S"); // 2004-12-31 23:59:59
-				break;
 			}
+        else if (strcasecmp(w1, "date_format") == 0) { // note: never have more than 19 char for the date!
+				switch (atoi(w2)) {
+				case 0:
+					strcpy(date_format, "%d-%m-%Y %H:%M:%S"); // 31-12-2004 23:59:59
+					break;
+				case 1:
+					strcpy(date_format, "%m-%d-%Y %H:%M:%S"); // 12-31-2004 23:59:59
+					break;
+				case 2:
+					strcpy(date_format, "%Y-%d-%m %H:%M:%S"); // 2004-31-12 23:59:59
+					break;
+				case 3:
+					strcpy(date_format, "%Y-%m-%d %H:%M:%S"); // 2004-12-31 23:59:59
+					break;
+				}
 		}
         else if (strcasecmp(w1, "min_level_to_connect") == 0) {
-			min_level_to_connect = atoi(w2);
+				min_level_to_connect = atoi(w2);
 		}
         else if (strcasecmp(w1, "check_ip_flag") == 0) {
-			check_ip_flag = config_switch(w2);
+                check_ip_flag = config_switch(w2);
     	}
     	else if (strcasecmp(w1, "console") == 0) {
 			console = config_switch(w2);
@@ -1652,6 +1680,14 @@ int login_config_read(const char *cfgName){
         }
 		else if(strcasecmp(w1, "register_users_online") == 0) {
 			register_users_online = config_switch(w2);
+		} else if (strcasecmp(w1, "allowed_regs") == 0) { //account flood protection system [Kevin]
+	            
+			allowed_regs = atoi(w2);
+	            
+		} else if (strcasecmp(w1, "time_allowed") == 0) {
+	            
+			time_allowed = atoi(w2);
+	            
 		}
  	}
 	fclose(fp);

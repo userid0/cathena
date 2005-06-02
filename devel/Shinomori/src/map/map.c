@@ -49,6 +49,10 @@ MYSQL_RES* lsql_res ;
 MYSQL_ROW  lsql_row ;
 char tmp_lsql[65535]="";
 
+MYSQL logmysql_handle; //For the log database - fix by [Maeki]
+MYSQL_RES* logsql_res ;
+MYSQL_ROW  logsql_row ;
+
 MYSQL mail_handle; // mail system [Valaris]
 MYSQL_RES* 	mail_res ;
 MYSQL_ROW	mail_row ;
@@ -193,19 +197,18 @@ int map_getusers(void) {
  * ロックされているときはバッファにためる
  *------------------------------------------
  */
-int map_freeblock( void *bl )
+int map_freeblock (void *bl)
 {
 	if(bl)
-	if(block_free_lock==0){
+	if (block_free_lock == 0) {
 		aFree(bl);
 	} else{
-		if( block_free_count>=block_free_max ) {
-			if(battle_config.error_log)
+		if (block_free_count >= block_free_max) {
+			if (battle_config.error_log)
 				ShowWarning("map_freeblock: too many free block! %d %d\n",
-			block_free_count,block_free_lock);
+					block_free_count, block_free_lock);
 		} else block_free[block_free_count++] = bl;
-		}
-
+	}
 	return block_free_lock;
 }
 /*==========================================
@@ -227,13 +230,13 @@ int map_freeblock_unlock (void)
 {
 	if ((--block_free_lock) == 0) {
 		int i;
-		for(i=0;i<block_free_count;i++){
+		for (i = 0; i < block_free_count; i++) {
 			aFree(block_free[i]);
 			block_free[i] = NULL;
 		}
-		block_free_count=0;
-	}else if(block_free_lock<0){
-		if(battle_config.error_log)
+		block_free_count = 0;
+	} else if (block_free_lock < 0) {
+		if (battle_config.error_log)
 			ShowError("map_freeblock_unlock: lock count < 0 !\n");
 		block_free_lock = 0; // 次回以降のロックに支障が出てくるのでリセット
 	}
@@ -248,7 +251,7 @@ int map_freeblock_unlock (void)
 
 int map_freeblock_timer (int tid, unsigned long tick, int id, int data)
 {
-	if(block_free_lock > 0) {
+	if (block_free_lock > 0) {
 		ShowError("map_freeblock_timer: block_free_lock(%d) is invalid.\n", block_free_lock);
 		block_free_lock = 1;
 		map_freeblock_unlock();
@@ -279,8 +282,8 @@ int map_addblock(struct block_list &bl)
 	size_t m,x,y,pos;
 
 	if(bl.prev != NULL){
-			if(battle_config.error_log)
-				ShowMessage("map_addblock error : bl->prev!=NULL\n");
+		if(battle_config.error_log)
+			ShowMessage("map_addblock error : bl->prev!=NULL\n");
 		return 0;
 	}
 
@@ -304,7 +307,8 @@ int map_addblock(struct block_list &bl)
 		map[m].block[pos] = &bl;
 		map[m].block_count[pos]++;
 		if(bl.type==BL_PC)
-			map[m].users++;
+			if (map[m].users++ == 0 && battle_config.dynamic_mobs)	//Skotlex
+				map_spawnmobs(m);			
 	}
 
 	return 0;
@@ -330,11 +334,13 @@ int map_delblock(struct block_list &bl)
 
 	b = bl.x/BLOCK_SIZE+(bl.y/BLOCK_SIZE)*map[bl.m].bxs;
 
-	if(bl.type==BL_PC)
-		map[bl.m].users--;
-	if(bl.next)
+	if (bl.type == BL_PC)
+		if (--map[bl.m].users == 0 && battle_config.dynamic_mobs)	//[Skotlex]
+			map_removemobs(bl.m);
+
+	if (bl.next)
 		bl.next->prev = bl.prev;
-	if(bl.prev==&bl_head){
+	if (bl.prev == &bl_head) {
 		// リストの頭なので、map[]のblock_listを更新する
 		if(bl.type==BL_MOB){
 			map[bl.m].block_mob[b] = bl.next;
@@ -368,18 +374,18 @@ int map_countnearpc (unsigned short m, size_t x, size_t y)
 
 	for(by=y/BLOCK_SIZE-AREA_SIZE/BLOCK_SIZE-1;by<=y/BLOCK_SIZE+AREA_SIZE/BLOCK_SIZE+1;by++)
 	{
-		if(by<0 || by>=map[m].bys)
+		if (by < 0 || by >= map[m].bys)
 			continue;
 		for(bx=x/BLOCK_SIZE-AREA_SIZE/BLOCK_SIZE-1;bx<=x/BLOCK_SIZE+AREA_SIZE/BLOCK_SIZE+1;bx++)
 		{
-			if(bx<0 || bx>=map[m].bxs)
+			if (bx < 0 || bx >= map[m].bxs)
 				continue;
 			bl = map[m].block[bx+by*map[m].bxs];
 			while(bl)
 			{
-				if(bl->type==BL_PC)
+				if (bl->type == BL_PC)
 					c++;
-				bl=bl->next;
+				bl = bl->next;
 			}
 		}
 	}
@@ -452,14 +458,15 @@ struct skill_unit *map_find_skill_unit_oncell(struct block_list *target,int x,in
  * type!=0 ならその種類のみ
  *------------------------------------------
  */
-void map_foreachinarea(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...) {
+int map_foreachinarea(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int type,...) {
 	va_list ap;
 	int bx,by;
+	int returnCount =0;	//total sum of returned values of func() [Skotlex]
 	struct block_list *bl=NULL;
 	int blockcount=bl_list_count,i,c;
 
 	if(m >= MAX_MAP_PER_SERVER)
-		return;
+		return 0;
 	
 	if(x0>x1) swap(x0,x1);
 	if(y0>y1) swap(y0,y1);
@@ -503,13 +510,14 @@ void map_foreachinarea(int (*func)(struct block_list&,va_list),unsigned short m,
 	map_freeblock_lock();	// メモリからの解放を禁止する
 
 	for(i=blockcount;i<bl_list_count;i++)
-		if(bl_list[i]->prev)	// 有?かどうかチェック
-			func(*bl_list[i],ap);
+		if(bl_list[i] && bl_list[i]->prev)	// 有?かどうかチェック
+			returnCount += func(*bl_list[i],ap);
 
 	map_freeblock_unlock();	// 解放を許可する
 	va_end(ap);
 
 	bl_list_count = blockcount;
+	return returnCount;	//[Skotlex]
 }
 
 /*==========================================
@@ -520,8 +528,10 @@ void map_foreachinarea(int (*func)(struct block_list&,va_list),unsigned short m,
  * dx,dyは-1,0,1のみとする（どんな値でもいいっぽい？）
  *------------------------------------------
  */
-void map_foreachinmovearea(int (*func)(struct block_list*,va_list),unsigned short m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...) {
+int map_foreachinmovearea(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int dx,int dy,int type,...)
+{
 	int bx,by;
+	int returnCount =0;  //total sum of returned values of func() [Skotlex]
 	struct block_list *bl=NULL;
 	va_list ap;
 	int blockcount=bl_list_count,i,c;
@@ -612,25 +622,28 @@ void map_foreachinmovearea(int (*func)(struct block_list*,va_list),unsigned shor
 	map_freeblock_lock();	// メモリからの解放を禁止する
 
 	for(i=blockcount;i<bl_list_count;i++)
-		if(bl_list[i]->prev) {	// 有?かどうかチェック
+		if(bl_list[i] && bl_list[i]->prev) {	// 有?かどうかチェック
 			if (bl_list[i]->type == BL_PC
 			  && session[((struct map_session_data *) bl_list[i])->fd] == NULL)
 				continue;
-			func(bl_list[i],ap);
+			returnCount += func(*bl_list[i],ap);
 		}
 
 	map_freeblock_unlock();	// 解放を許可する
 
 	va_end(ap);
 	bl_list_count = blockcount;
+	return returnCount;
 }
 
 // -- moonsoul	(added map_foreachincell which is a rework of map_foreachinarea but
 //			 which only checks the exact single x/y passed to it rather than an
 //			 area radius - may be more useful in some instances)
 //
-void map_foreachincell(int (*func)(struct block_list*,va_list),unsigned short m,int x,int y,int type,...) {
+int map_foreachincell(int (*func)(struct block_list&,va_list),unsigned short m,int x,int y,int type,...)
+{
 	int bx,by;
+	int returnCount =0;  //total sum of returned values of func() [Skotlex]
 	struct block_list *bl=NULL;
 	va_list ap;
 	int blockcount=bl_list_count,i,c;
@@ -672,21 +685,23 @@ void map_foreachincell(int (*func)(struct block_list*,va_list),unsigned short m,
 	map_freeblock_lock();	// メモリからの解放を禁止する
 
 	for(i=blockcount;i<bl_list_count;i++)
-		if(bl_list[i]->prev)	// 有?かどうかチェック
-			func(bl_list[i],ap);
+		if(bl_list[i] && bl_list[i]->prev)	// 有?かどうかチェック
+			returnCount += func(*bl_list[i],ap);
 
 	map_freeblock_unlock();	// 解放を許可する
 
 	va_end(ap);
 	bl_list_count = blockcount;
+	return returnCount;
 }
 
 /*============================================================
 * For checking a path between two points (x0, y0) and (x1, y1)
 *------------------------------------------------------------
  */
-void map_foreachinpath(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...)
+int map_foreachinpath(int (*func)(struct block_list&,va_list),unsigned short m,int x0,int y0,int x1,int y1,int range,int type,...)
 {
+	int returnCount =0;  //total sum of returned values of func() [Skotlex]
 /*	va_list ap;
 	double deltax = 0.0;
 	double deltay = 0.0;
@@ -869,7 +884,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 //ShowMessage("(%i,%i)(%i,%i) range: %i\n",x0,y0,x1,y1,range);
 
-	if(kfact==0) return; // shooting at the standing position should not happen
+	if(kfact==0) return 0; // shooting at the standing position should not happen
 	kfact = 1/kfact; // divide here and multiply in the loop
 
 	range *= range; // compare with range^2 so we can skip a sqrt and signs
@@ -986,7 +1001,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 	for(i=blockcount;i<bl_list_count;i++)
 		if(bl_list[i]->prev)	// 有?かどうかチェック
-			func(bl_list[i],ap);
+			returnCount += func(bl_list[i],ap);
 
 	map_freeblock_unlock();	// 解放を許可する
 	va_end(ap);
@@ -1110,7 +1125,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 
 	for(i=blockcount;i<bl_list_count;i++)
 		if(bl_list[i]->prev)	// 有?かどうかチェック
-			func(bl_list[i],ap);
+			returnCount += func(bl_list[i],ap);
 
 	map_freeblock_unlock();	// 解放を許可する
 	va_end(ap);
@@ -1154,7 +1169,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	int save_x[BLOCK_SIZE],save_y[BLOCK_SIZE],save_cnt=0;
 
 	// no map
-	if(m >= MAX_MAP_PER_SERVER) return;
+	if(m >= MAX_MAP_PER_SERVER) return 0;
 
 	// xy out of range
 	if (x0 < 0) x0 = 0;
@@ -1174,7 +1189,7 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	{
 		dx = ((double)(x1-x0)) / ((double)tmax);
 		dy = ((double)(y1-y0)) / ((double)tmax);
-}
+	}
 	// go along the index t from 0 to tmax
 	t=0;
 	do {	
@@ -1251,13 +1266,15 @@ if you want to keep this that way then check and swap x0,y0 with x1,y1
 	map_freeblock_lock();	// メモリからの解放を禁止する
 
 	for(i=blockcount;i<bl_list_count;i++)
-		if(bl_list[i]->prev)	// 有?かどうかチェック
-			func(*bl_list[i],ap);
+		if(bl_list[i] && bl_list[i]->prev)	// 有?かどうかチェック
+			returnCount += func(*bl_list[i],ap);
 
 	map_freeblock_unlock();	// 解放を許可する
 	va_end(ap);
 	
 	bl_list_count = blockcount;
+
+	return returnCount;
 
 }
 
@@ -1667,7 +1684,7 @@ int map_quit(struct map_session_data &sd)
 
 	pc_delspiritball(sd,sd.spiritball,1);
 	skill_gangsterparadise(&sd,0);
-	skill_unit_move(&sd.bl,gettick(),0);
+	skill_unit_move(sd.bl,gettick(),0);
 
 	if (sd.state.auth)
 			status_calc_pc(sd,4);
@@ -1917,7 +1934,7 @@ void map_removenpc(void)
 
 struct mob_list* map_addmobtolist(unsigned short m)
 {
-    size_t i;
+	size_t i;
     for(i=0; i<MAX_MOB_LIST_PER_MAP; i++)
 	{
 		if(map[m].moblist[i]==NULL)
@@ -1928,53 +1945,116 @@ struct mob_list* map_addmobtolist(unsigned short m)
 	}
 	return NULL;
 }
-    
+
 void clear_moblist(unsigned short m)
 {
 	size_t i;
 	if(m<MAX_MAP_PER_SERVER)
-    for(i=0; i<MAX_MOB_LIST_PER_MAP; i++)
+	for (i = 0; i < MAX_MOB_LIST_PER_MAP; i++)
+	{
 		if(map[m].moblist[i]!=NULL)
 		{
 			aFree(map[m].moblist[i]);
 			map[m].moblist[i] = NULL;
-		}
-
+	}
+	}
 }
 
-    
 void map_spawnmobs(unsigned short m)
 {
-	size_t i;
-    for(i=0; i<MAX_MOB_LIST_PER_MAP; i++)
+	size_t i, k=0;
+
+	if(m>=map_num)
+		return;
+
+	if (map[m].mob_delete_timer != -1)
+	{	//Mobs have not been removed yet [Skotlex]
+		delete_timer(map[m].mob_delete_timer, map_removemobs_timer);
+		map[m].mob_delete_timer = -1;
+		return;
+	}
+	for(i=0; i<MAX_MOB_LIST_PER_MAP; i++)	
+	{
 		if(map[m].moblist[i]!=NULL)
+		{
+			k+=map[m].moblist[i]->num;
 			npc_parse_mob2(*map[m].moblist[i]);
+		}
+	}
+	if (k > 0)
+		ShowStatus("Map %s: Spawned '"CL_WHITE"%d"CL_RESET"' mobs.\n",map[m].mapname, k);
+	}
+
+int mob_cache_cleanup_sub(struct block_list &bl, va_list ap)
+{
+	struct mob_data &md = (struct mob_data &)bl;
+	
+	if( bl.type!= BL_MOB )
+		return 0;
+
+	//When not to remove:
+	//1: Mob is not from a cache
+	//2: Mob is damaged 
+
+	// not cached, delayed or already on delete schedule
+	if( !md.cache || md.cache->delay1 || md.cache->delay2 || md.deletetimer != -1)
+		return 0;
+	
+	// hurt enemies	
+	if ( (md.hp != md.max_hp) && !battle_config.mob_remove_damaged )
+		return 0;
+
+	// cleaning a master will also clean its slaves
+	if( md.state.is_master )
+		mob_deleteslave(md);
+
+	// check the mob into the cache
+	md.cache->num++;
+	// and unload it
+	mob_unload(md);	
+	return 1;
 }
 
-int mob_cleanup_sub (struct block_list &bl, va_list ap)
+int map_removemobs_timer(int tid,unsigned long tick,int id,int data)
 {
-	struct mob_data &md= (struct mob_data &)bl;
-	switch(bl.type)
-	{
-	case BL_MOB:
-		// unload non-delay mobs only
-		if( !md.spawndelay1 || !md.spawndelay2 || ( (md.hp==md.max_hp) && battle_config.mob_remove_damaged ))
-			mob_unload(&md);
-		break;
+	int k;
+	
+	if (id < 0 || id >= MAX_MAP_PER_SERVER)
+	{	//Incorrect map id!
+		if (battle_config.error_log)
+			ShowError("map_removemobs_timer error: timer %d points to invalid map %d\n",tid, id);
+		return 0;
 	}
-	return 0;
+	if (map[id].mob_delete_timer != tid)
+	{	//Incorrect timer call!
+		if (battle_config.error_log)
+			ShowError("map_removemobs_timer mismatch: %d != %d (map %s)\n",map[id].mob_delete_timer, tid, map[id].mapname);
+		return 0;
+	}
+	map[id].mob_delete_timer = -1;
+	if (map[id].users > 0) //Map not empty!
+		return 1;
+	
+	k = map_foreachinarea(mob_cache_cleanup_sub, id, 0, 0, map[id].xs, map[id].ys, BL_MOB);
+	if (k > 0)
+		ShowStatus("Map %s: Removed '"CL_WHITE"%d"CL_RESET"' mobs.\n",map[id].mapname, k);
+	return 1;
 }
 
 void map_removemobs(unsigned short m)
 {
-    map_foreachinarea(mob_cleanup_sub, m, 0, 0, map[m].xs, map[m].ys, 0);
+	if (map[m].mob_delete_timer != -1)
+		return; //Mobs are already scheduled for removal
+
+	map[m].mob_delete_timer = add_timer(gettick()+battle_config.mob_remove_delay, map_removemobs_timer, m, 0);
 }
-    
+
 /*==========================================
  * map名からmap番?へ?換
  *------------------------------------------
  */
-int map_mapname2mapid(const char *name) {
+int map_mapname2mapid(const char *name)
+{
 	struct map_data *md=NULL;
 
 	md = (struct map_data*)strdb_search(map_db,name);
@@ -2381,13 +2461,13 @@ struct map_cache_info {
 struct map_cache_head {
 	size_t sizeof_header;
 	size_t sizeof_map;
-    // 上の２つ改変不可
+	// 上の２つ改変不可
 	size_t nmaps;			// マップの個数
 	long filesize;
 };
 
 struct map_cache {
-        struct map_cache_head head;
+	struct map_cache_head head;
 	struct map_cache_info *map;
 	FILE *fp;
 	int dirty;
@@ -2890,9 +2970,6 @@ int map_readallmap(void)
 #ifdef USE_AFM
 		FILE *afm_file;
 		char afm_name[256] = "";
-
-		map[i].alias = NULL;
-
 		if(!strstr(map[i].mapname,".afm")) {
 		// check if it's necessary to replace the extension - speeds up loading abit
 			memcpy(afm_name, map[i].mapname, strlen(map[i].mapname) - 3);
@@ -2937,6 +3014,7 @@ int map_readallmap(void)
 		else
 				map[i].alias = NULL;
 
+		// have windows backslash as path seperator here
 		sprintf(fn,"data\\%s",map[i].mapname);
 		if(map_readmap(i,fn, p, &map_cache, map_num) == -1)
 		{
@@ -2944,7 +3022,8 @@ int map_readallmap(void)
 				maps_removed++;
 				i--;
 			}
-		}
+		map[i].mob_delete_timer = -1;	//Initialize timer [Skotlex]
+	}
 
 	aFree(waterlist);
 	ShowMessage("\r");
@@ -3333,23 +3412,31 @@ int map_sql_close(void)
 
 	mysql_close(&lmysql_handle);
 	ShowMessage("Close Login DB Connection....\n");
+
+	if (log_config.sql_logs && (log_config.branch || log_config.drop || log_config.mvpdrop ||
+		log_config.present || log_config.produce || log_config.refine || log_config.trade))
+	{
+		mysql_close(&logmysql_handle);
+		ShowMessage("Close Log DB Connection....\n");
+	}
+
 	return 0;
 }
 
 int log_sql_init(void)
 {
 
-    mysql_init(&mmysql_handle);
+    mysql_init(&logmysql_handle);
 
 	//DB connection start
 	ShowMessage(""CL_WHITE"[SQL]"CL_RESET": Connecting to Log Database "CL_WHITE"%s"CL_RESET" At "CL_WHITE"%s"CL_RESET"...\n",log_db,log_db_ip);
-	if(!mysql_real_connect(&mmysql_handle, log_db_ip, log_db_id, log_db_pw,
+	if(!mysql_real_connect(&logmysql_handle, log_db_ip, log_db_id, log_db_pw,
 		log_db ,log_db_port, (char *)NULL, 0)) {
 			//pointer check
-			ShowMessage(""CL_WHITE"[SQL Error]"CL_RESET": %s\n",mysql_error(&mmysql_handle));
+			ShowError(""CL_WHITE"[SQL Error]"CL_RESET": %s\n",mysql_error(&logmysql_handle));
 			exit(1);
 	} else {
-		ShowMessage(""CL_WHITE"[SQL]"CL_RESET": Successfully '"CL_GREEN"connected"CL_RESET"' to Database '"CL_WHITE"%s"CL_RESET"'.\n", log_db);
+		ShowStatus(""CL_WHITE"[SQL]"CL_RESET": Successfully '"CL_GREEN"connected"CL_RESET"' to Database '"CL_WHITE"%s"CL_RESET"'.\n", log_db);
 	}
 
 	return 0;
@@ -3430,25 +3517,25 @@ int cleanup_sub(struct block_list &bl, va_list ap)
 {
 	switch(bl.type)
 	{
-        case BL_PC:
+		case BL_PC:
         map_quit( (struct map_session_data &)bl );
-            break;
-        case BL_NPC:
+			break;
+		case BL_NPC:
         npc_unload( (struct npc_data *)&bl );
-            break;
-        case BL_MOB:
-        mob_unload( (struct mob_data *)&bl);
-            break;
-        case BL_PET:
+			break;
+		case BL_MOB:
+        mob_unload( (struct mob_data &)bl);
+			break;
+		case BL_PET:
         pet_remove_map( (struct map_session_data &)bl );
-            break;
-        case BL_ITEM:
+			break;
+		case BL_ITEM:
         map_clearflooritem(bl.id);
-            break;
-        case BL_SKILL:
+			break;
+		case BL_SKILL:
         skill_delunit( (struct skill_unit *)&bl);
-            break;
-        }
+			break;
+	}
 	return 0;
 }
 
@@ -3459,17 +3546,17 @@ int cleanup_sub(struct block_list &bl, va_list ap)
 void do_final(void)
 {
     size_t i;
-    ShowStatus("Terminating...\n");
+	ShowStatus("Terminating...\n");
 	///////////////////////////////////////////////////////////////////////////
 
-    grfio_final();
+	grfio_final();
 	map_eraseallipport();
-    for (i = 0; i < map_num; i++)
+	for (i = 0; i < map_num; i++)
 		if (map[i].m >= 0)
 			map_foreachinarea(cleanup_sub, i, 0, 0, map[i].xs, map[i].ys, 0);
 
-    chrif_char_reset_offline();
-    chrif_flush_fifo();
+	chrif_char_reset_offline();
+	chrif_flush_fifo();
 
 		map_removenpc();
 	do_final_chrif(); // この内部でキャラを全て切断する
@@ -3490,7 +3577,6 @@ void do_final(void)
 			aFree(map[i].gat);
 			map[i].gat=NULL;
 		}
-
 		clear_moblist(i);
 
 		if(map[i].block)			{ aFree(map[i].block); map[i].block=NULL; }
@@ -3498,13 +3584,10 @@ void do_final(void)
 		if(map[i].block_count)		{ aFree(map[i].block_count); map[i].block_count=NULL; }
 		if(map[i].block_mob_count)	{ aFree(map[i].block_mob_count); map[i].block_mob_count=NULL; }
 	}
-    numdb_final(id_db, id_db_final);
+	numdb_final(id_db, id_db_final);
 	strdb_final(map_db, map_db_final);
-    strdb_final(nick_db, nick_db_final);
-    numdb_final(charid_db, charid_db_final);
-
-
-
+	strdb_final(nick_db, nick_db_final);
+	numdb_final(charid_db, charid_db_final);
 
 
 #ifndef TXT_ONLY
@@ -3622,13 +3705,13 @@ int do_init(int argc, char *argv[]) {
 		ShowMessage("(127.0.0.1 is valid if you have no network interface)\n");
 	}
 	else if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK || chrif_getip() == INADDR_LOOPBACK) {
-          // The map server should know what IP address it is running on
-          //   - MouseJstr
+		// The map server should know what IP address it is running on
+		//   - MouseJstr
 		unsigned long localaddr = addr_[0]; // host order network address
-          if (naddr_ != 1)
+		if (naddr_ != 1)
 			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n",
 							(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
-          else
+		else
 			ShowMessage("Defaulting to %d.%d.%d.%d as our IP address\n",
 							(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
 
@@ -3638,7 +3721,7 @@ int do_init(int argc, char *argv[]) {
 			chrif_setip(localaddr);
 		if ((localaddr&0xFFFF0000) == 0xC0A80000)//192.168.x.x
 			ShowMessage("\nPrivate Network detected.. \nedit lan_support.conf and map_athena.conf\n\n");
-        }
+	}
 	if (SHOW_DEBUG_MSG) ShowNotice("Server running in '"CL_WHITE"Debug Mode"CL_RESET"'.\n");
 	battle_config_read(BATTLE_CONF_FILENAME);
 	msg_config_read(MSG_CONF_NAME);
@@ -3662,7 +3745,8 @@ int do_init(int argc, char *argv[]) {
 
 	add_timer_func_list(map_freeblock_timer, "map_freeblock_timer");
 	add_timer_func_list(map_clearflooritem_timer, "map_clearflooritem_timer");
-	add_timer_interval(gettick()+1000,60*1000,map_freeblock_timer,0,0);
+	add_timer_func_list(map_removemobs_timer, "map_removemobs_timer");
+	add_timer_interval(gettick()+1000, 60*1000, map_freeblock_timer, 0, 0);
 
 	//Added by Mugendai for GUI support
 	if (flush_on) {

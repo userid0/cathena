@@ -337,9 +337,17 @@ struct Battle_Config
 	ulong mail_system; // [Valaris]
 	ulong new_attack_function; //For testing purposes [Skotlex]
 	ulong ignore_items_gender; //[Lupus]
+	ulong dynamic_mobs;
 	ulong mob_remove_damaged;
-};
+	ulong mob_remove_delay;
 	
+	ulong max_hitrate;
+	ulong min_hitrate;
+
+	ulong show_hp_sp_drain;
+	ulong show_hp_sp_gain;
+};
+
 extern struct Battle_Config battle_config;
 
 int battle_config_read(const char *cfgName);

@@ -694,7 +694,7 @@ int guild_explusion(struct map_session_data &sd,unsigned long guild_id,unsigned 
 // ƒMƒ‹ƒhƒƒ“ƒo‚ª’E‘Ş‚µ‚½
 int guild_member_leaved(unsigned long guild_id,unsigned long account_id,unsigned long char_id,int flag,const char *name,const char *mes)
 {
-	struct map_session_data *sd=map_id2sd(account_id);
+	struct map_session_data *sd=map_charid2sd(char_id);
 	struct guild *g=guild_search(guild_id);
 
 	if(g!=NULL){

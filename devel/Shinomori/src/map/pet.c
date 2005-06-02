@@ -223,7 +223,7 @@ static int pet_attackskill(struct pet_data &pd, unsigned int tick, int data)
 {
 	//short mode,race;
 	struct mob_data *md;
-
+	
 //	pd.state.state=MS_IDLE;
 
 	md=(struct mob_data *)map_id2bl(pd.target_id);
@@ -307,7 +307,7 @@ static int petskill_castend(struct pet_data &pd,unsigned long tick,int data)
 		pd.state.casting_flag = 0;
 		if (target && &pd == dat->src && target->prev != NULL)
 			petskill_castend2(pd, *target, dat->skill_id, dat->skill_lv, dat->x, dat->y, tick);
-		aFree(dat);
+	aFree(dat);
 	}
 	return 0;
 }
@@ -319,7 +319,7 @@ static int petskill_castend(struct pet_data &pd,unsigned long tick,int data)
 static int petskill_castend2(struct pet_data &pd, struct block_list &target, short skill_id, short skill_lv, short skill_x, short skill_y, unsigned int tick)
 {	//Invoked after the casting time has passed.
 	short delaytime =0, range;
-	
+
 	pd.state.state=MS_IDLE;
 	
 	if (skill_get_inf(skill_id) & 2)
@@ -517,7 +517,7 @@ int pet_changestate(struct pet_data &pd,int state,int type)
 	}
 	pd.state.state=state;
 	if( pd.state.casting_flag )
-	{	//Skotlex: Cancel casting
+	{//Skotlex: Cancel casting
 		pd.state.casting_flag = 0;
 		clif_skillcastcancel(&pd.bl);
 	}
@@ -767,7 +767,12 @@ int pet_remove_map(struct map_session_data &sd)
 		if (pd->s_skill)
 		{
 			if (pd->s_skill->timer != -1)
-				delete_timer(pd->s_skill->timer, pet_skill_support_timer);
+			{
+				if (pd->s_skill->id == 0)
+					delete_timer(pd->s_skill->timer, pet_heal_timer);
+				else
+					delete_timer(pd->s_skill->timer, pet_skill_support_timer);
+			}
 			aFree(pd->s_skill);
 			pd->s_skill = NULL;
 		}
@@ -1064,8 +1069,9 @@ int pet_catch_process2(struct map_session_data &sd,int target_id)
 	if(battle_config.pet_catch_rate != 100)
 		pet_catch_rate = (pet_catch_rate*battle_config.pet_catch_rate)/100;
 
-	if(rand()%10000 < pet_catch_rate) {
-		mob_remove_map(md,0);
+	if(rand()%10000 < pet_catch_rate)
+	{
+		mob_remove_map(*md,0);
 		mob_setdelayspawn(md->bl.id);
 		clif_pet_rulet(sd,1);
 //		if(battle_config.etc_log)
@@ -1117,7 +1123,10 @@ int pet_get_egg(unsigned long account_id,unsigned long pet_id,int flag)
 
 int pet_menu(struct map_session_data &sd,int menunum)
 {
-	switch(menunum) {
+	if (sd.pd == NULL)
+		return 1;
+	switch(menunum)
+	{
 		case 0:
 			clif_send_petstatus(sd);
 			break;
@@ -1401,10 +1410,10 @@ static int pet_ai_sub_hard(struct pet_data &pd,unsigned long tick)
 						{	// 最初はAEGISと同じ方法で検索
 							dx=md->bl.x - pd.bl.x;
 							dy=md->bl.y - pd.bl.y;
-							if(dx<0)		dx++;
-							else if(dx>0)	dx--;
-							if(dy<0)		dy++;
-							else if(dy>0)	dy--;
+							if(dx<0) dx++;
+							else if(dx>0) dx--;
+							if(dy<0) dy++;
+							else if(dy>0) dy--;
 						}
 						else
 						{	// だめならAthena式(ランダム)
@@ -1417,10 +1426,10 @@ static int pet_ai_sub_hard(struct pet_data &pd,unsigned long tick)
 
 					if(ret)
 					{	// 移動不可能な所からの攻撃なら2歩下る
-						if(dx<0)		dx=2;
-						else if(dx>0)	dx=-2;
-						if(dy<0)		dy=2;
-						else if(dy>0)	dy=-2;
+						if(dx<0) dx=2;
+						else if(dx>0) dx=-2;
+						if(dy<0) dy=2;
+						else if(dy>0) dy=-2;
 						pet_walktoxy(pd,pd.bl.x+dx,pd.bl.y+dy);
 					}
 				}
@@ -1471,9 +1480,9 @@ static int pet_ai_sub_hard(struct pet_data &pd,unsigned long tick)
 					pd.loot->weight += itemdb_search(fitem->item_data.nameid)->weight*fitem->item_data.amount;
 					map_clearflooritem(bl_item->id);
 				}
-				pet_unlocktarget(pd);
+					pet_unlocktarget(pd);
+				}
 			}
-		}
 		else
 		{
 			if(dist <= 3 || (pd.timer != -1 && pd.state.state == MS_WALK && distance(pd.to_x,pd.to_y,sd->bl.x,sd->bl.y) < 3) )
@@ -1548,33 +1557,33 @@ int pet_lootitem_drop(struct pet_data &pd,struct map_session_data *sd)
 	{
 		for(i=0;i<pd.loot->count;i++)
 		{
-			struct delay_item_drop2 *ditem;
+				struct delay_item_drop2 *ditem;
 
-			ditem=(struct delay_item_drop2 *)aCalloc(1,sizeof(struct delay_item_drop2));
+				ditem=(struct delay_item_drop2 *)aCalloc(1,sizeof(struct delay_item_drop2));
 			memcpy(&ditem->item_data,&pd.loot->item[i],sizeof(struct item));
 			ditem->m = pd.bl.m;
 			ditem->x = pd.bl.x;
 			ditem->y = pd.bl.y;
-			ditem->first_sd = 0;
-			ditem->second_sd = 0;
-			ditem->third_sd = 0;
-			// 落とさないで直接PCのItem欄へ
-			if(sd){
+				ditem->first_sd = 0;
+				ditem->second_sd = 0;
+				ditem->third_sd = 0;
+				// 落とさないで直接PCのItem欄へ
+				if(sd){
 				if((flag = pc_additem(*sd,ditem->item_data,ditem->item_data.amount))){
 					clif_additem(*sd,0,0,flag);
 					map_addflooritem(ditem->item_data,ditem->item_data.amount,ditem->m,ditem->x,ditem->y,ditem->first_sd,ditem->second_sd,ditem->third_sd,0);
+					}
+					aFree(ditem);
 				}
-				aFree(ditem);
+				else
+					add_timer(gettick()+540+i,pet_delay_item_drop2,(int)ditem,0);
 			}
-			else
-				add_timer(gettick()+540+i,pet_delay_item_drop2,(int)ditem,0);
-		}
-		//The smart thing to do is use pd->loot->max (thanks for pointing it out, Shinomori)
+			//The smart thing to do is use pd->loot->max (thanks for pointing it out, Shinomori)
 		memset(pd.loot->item,0,pd.loot->max * sizeof(struct item));
 		pd.loot->count = 0;
 		pd.loot->weight = 0;
 		pd.loot->loottick = gettick()+10000;	//	10*1000msの間拾わない
-	}
+		}
 	return 1;
 }
 
@@ -1609,9 +1618,9 @@ int pet_skill_bonus_timer(int tid,unsigned long tick,int id,int data)
 		if(battle_config.error_log)
 		{
 			if (pd->bonus)
-				printf("pet_skill_bonus_timer %d != %d\n",pd->bonus->timer,tid);
+				ShowMessage("pet_skill_bonus_timer %d != %d\n",pd->bonus->timer,tid);
 			else
-				printf("pet_skill_bonus_timer called with no bonus defined (tid=%d)\n",tid);
+				ShowMessage("pet_skill_bonus_timer called with no bonus defined (tid=%d)\n",tid);
 		}
 		return 0;
 	}
@@ -1652,9 +1661,9 @@ int pet_recovery_timer(int tid,unsigned long tick,int id,int data)
 		if(battle_config.error_log)
 		{
 			if (pd->recovery)
-				printf("pet_recovery_timer %d != %d\n",pd->recovery->timer,tid);
+				ShowMessage("pet_recovery_timer %d != %d\n",pd->recovery->timer,tid);
 			else
-				printf("pet_recovery_timer called with no recovery skill defined (tid=%d)\n",tid);
+				ShowMessage("pet_recovery_timer called with no recovery skill defined (tid=%d)\n",tid);
 		}
 		return 0;
 	}
@@ -1684,9 +1693,9 @@ int pet_heal_timer(int tid,unsigned long tick,int id,int data)
 		if(battle_config.error_log)
 		{
 			if (pd->s_skill)
-				printf("pet_heal_timer %d != %d\n",pd->s_skill->timer,tid);
+				ShowMessage("pet_heal_timer %d != %d\n",pd->s_skill->timer,tid);
 			else
-				printf("pet_heal_timer called with no support skill defined (tid=%d)\n",tid);
+				ShowMessage("pet_heal_timer called with no support skill defined (tid=%d)\n",tid);
 		}
 		return 0;
 	}
@@ -1729,9 +1738,9 @@ int pet_skill_support_timer(int tid,unsigned long tick,int id,int data)
 		if(battle_config.error_log)
 		{
 			if (pd->s_skill)
-				printf("pet_skill_support_timer %d != %d\n",pd->s_skill->timer,tid);
+				ShowMessage("pet_skill_support_timer %d != %d\n",pd->s_skill->timer,tid);
 			else
-				printf("pet_skill_support_timer called with no support skill defined (tid=%d)\n",tid);
+				ShowMessage("pet_skill_support_timer called with no support skill defined (tid=%d)\n",tid);
 		}
 		return 0;
 	}
@@ -1745,7 +1754,7 @@ int pet_skill_support_timer(int tid,unsigned long tick,int id,int data)
 		pd->s_skill->timer=add_timer(gettick()+(rate>10?rate:10)*100,pet_skill_support_timer,sd->bl.id,0);
 		return 0;
 	}
-
+	
 	if (pd->state.state == MS_ATTACK)
 		pet_stopattack(*pd);
 	petskill_use(*pd, sd->bl, pd->s_skill->id, pd->s_skill->lv, tick);

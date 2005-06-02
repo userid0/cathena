@@ -103,7 +103,7 @@ int inter_party_tosql(unsigned long party_id,struct party *p)
 							p->member[i].account_id, jstrescapecpy(t_member, p->member[i].name));
 				}
 			}
-			//printf("%s",tmp_sql);
+			//ShowError("%s",tmp_sql);
 			if (tmp_sql[0] != '\0' && mysql_SendQuery(&mysql_handle, tmp_sql)) {
 						ShowMessage("DB server Error (update `char`)- %s\n", mysql_error(&mysql_handle) );
 			}
@@ -782,7 +782,7 @@ int mapif_parse_PartyLeave(int fd,unsigned long party_id,unsigned long account_i
 					// -- if anything goes wrong just uncomment the section above ^^;
 					sprintf (tmp_sql, "UPDATE `%s` SET `party_id`='0' WHERE `party_id`='%d'", char_db, party_id);
 					if (/*tmp_sql != '\0' &&*/ mysql_SendQuery(&mysql_handle, tmp_sql)) {
-						printf("DB server Error (update `char`)- %s\n", mysql_error(&mysql_handle) );
+						ShowError("DB server Error (update `char`)- %s\n", mysql_error(&mysql_handle) );
 					}
 					// Delete the party, if has no member.
 					sprintf(tmp_sql, "DELETE FROM `%s` WHERE `party_id`='%d'", party_db, party_id);

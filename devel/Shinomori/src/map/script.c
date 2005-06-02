@@ -323,6 +323,7 @@ int buildin_deletepset(struct script_state &st); // MouseJstr
 int buildin_unequip(struct script_state &st); // unequip [Spectre]
 
 int buildin_pcstrcharinfo(struct script_state &st);
+int buildin_getnameditem(struct script_state &st);
 
 void push_val(struct script_stack &stack,int type,int val);
 int run_func(struct script_state &st);
@@ -361,6 +362,7 @@ struct {
 	{buildin_if,"if","i*"},
 	{buildin_getitem,"getitem","ii**"},
 	{buildin_getitem2,"getitem2","iiiiiiiii*"},
+	{buildin_getnameditem,"getnameditem","is"},
 	{buildin_makeitem,"makeitem","iisii"},
 	{buildin_delitem,"delitem","ii"},
 	{buildin_cutin,"cutin","si"},
@@ -636,12 +638,11 @@ static int add_str(const char *p)
 	if(NULL==p) return -1; // should not happen
 
 	lowcase=(char *)aMalloc((strlen(p)+1)*sizeof(char));
-	for(i=0; p[i]; i++)
-		lowcase[i]=tolower(p[i]);
-	lowcase[i] = 0;//EOS
+	strcpytolower(lowcase, p);
 	i=search_str(lowcase);
 		aFree(lowcase);
-	if(i >= 0) return i;
+	if(i >= 0)
+		return i;
 
 	i=calc_hash(p);
 	if(str_hash[i]==0){
@@ -1187,7 +1188,7 @@ static void read_constdb(void)
 	FILE *fp;
 	char line[1024];
 	char name[1024];
-	int val,n,i,type;
+	int val,n,type;
 
 	fp=savefopen("db/const.txt","r");
 	if(fp==NULL){
@@ -1200,8 +1201,7 @@ static void read_constdb(void)
 		type=0;
 		if(sscanf(line,"%[A-Za-z0-9_],%d,%d",name,&val,&type)>=2 ||
 		   sscanf(line,"%[A-Za-z0-9_] %d %d",name,&val,&type)>=2){
-			for(i=0;name[i];i++)
-				name[i]=tolower(name[i]);
+			tolower(name);
 			n=add_str(name);
 			if(type==0)
 				str_data[n].type=C_INT;
@@ -1450,37 +1450,51 @@ static int set_reg(struct map_session_data &sd,int num,const char *name, void *v
 	if(name)
 	{
 		char prefix =name[0];
-	char postfix=name[strlen(name)-1];
-
+		char postfix=name[strlen(name)-1];
+		
 		if( postfix=='$' )
 		{	// string variable
-		char *str=(char*)v;
-		if( prefix=='@' || prefix=='l'){
-			pc_setregstr(sd,num,str);
-		}else if(prefix=='$') {
-			mapreg_setregstr(num,str);
-		}else{
+			char *str=(char*)v;
+			if( prefix=='@' || prefix=='l')
+			{
+				pc_setregstr(sd,num,str);
+			}
+			else if(prefix=='$')
+			{
+				mapreg_setregstr(num,str);
+			}
+			else
+			{
 				ShowError("script: set_reg: illegal scope string variable !");
-		}
+			}
 		}
 		else
 		{	// ”’l
-		int val = (int)v;
-		if(str_data[num&0x00ffffff].type==C_PARAM){
-			pc_setparam(sd,str_data[num&0x00ffffff].val,val);
-		}else if(prefix=='@' || prefix=='l') {
-			pc_setreg(sd,num,val);
-		}else if(prefix=='$') {
-			mapreg_setreg(num,val);
-		}else if(prefix=='#') {
-			if( name[1]=='#' )
-				pc_setaccountreg2(sd,name,val);
+			int val = (int)v;
+			if(str_data[num&0x00ffffff].type==C_PARAM)
+			{
+				pc_setparam(sd,str_data[num&0x00ffffff].val,val);
+			}
+			else if(prefix=='@' || prefix=='l')
+			{
+				pc_setreg(sd,num,val);
+			}
+			else if(prefix=='$')
+			{
+				mapreg_setreg(num,val);
+			}
+			else if(prefix=='#')
+			{
+				if( name[1]=='#' )
+					pc_setaccountreg2(sd,name,val);
+				else
+					pc_setaccountreg(sd,name,val);
+			}
 			else
-				pc_setaccountreg(sd,name,val);
-		}else{
-			pc_setglobalreg(sd,name,val);
+			{
+				pc_setglobalreg(sd,name,val);
+			}
 		}
-	}
 	}
 	return 0;
 }
@@ -2545,6 +2559,77 @@ int buildin_getitem2(struct script_state &st)
 
 	return 0;
 }
+
+/*==========================================
+ * gets an item with someone's name inscribed [Skotlex]
+ * getinscribeditem item_num, character_name
+ * Returned Qty is always 1, only works on equip-able
+ * equipment
+ *------------------------------------------
+ */
+int buildin_getnameditem(struct script_state &st)
+{
+	int nameid;
+	struct item item_tmp;
+	struct map_session_data *sd, *tsd;
+	struct script_data &data = st.stack.stack_data[st.start+2];
+
+	sd = script_rid2sd(st);
+	if (sd == NULL)
+	{	//Player not attached!
+		push_val(st.stack,C_INT,0);
+		return 0; 
+	}
+	
+	get_val(st,data);
+	if( data.type==C_STR || data.type==C_CONSTSTR ){
+		const char *name=conv_str(st,data);
+		struct item_data *item_data = itemdb_searchname(name);
+		if( item_data == NULL)
+		{	//Failed
+			push_val(st.stack,C_INT,0);
+			return 0;
+		}
+		nameid = item_data->nameid;
+	}else
+		nameid = conv_num(st,data);
+
+	if(!itemdb_exists(nameid) || !itemdb_isequip3(nameid))
+	{	//We don't allow non-equipable/stackable items to be named
+		//to avoid any qty exploits that could happen because of it.
+		push_val(st.stack,C_INT,0);
+		return 0;
+	}
+
+	data = st.stack.stack_data[st.start+3];
+	get_val(st,data);
+	if( data.type==C_STR || data.type==C_CONSTSTR )	//Char Name
+		tsd=map_nick2sd(conv_str(st,data));
+	else	//Char Id was given
+		tsd=map_charid2sd(conv_num(st,data));
+	
+	if( tsd == NULL )
+	{	//Failed
+		push_val(st.stack,C_INT,0);
+		return 0;
+	}
+
+	memset(&item_tmp,0,sizeof(item_tmp));
+	item_tmp.nameid=nameid;
+	item_tmp.amount=1;
+	item_tmp.identify=1;
+	item_tmp.card[0]=255;
+	item_tmp.card[2]=tsd->status.char_id;
+	item_tmp.card[3]=tsd->status.char_id >> 16;
+	if(pc_additem(*sd,item_tmp,1)) {
+		push_val(st.stack,C_INT,0);
+		return 0;	//Failed to add item, we will not drop if they don't fit
+	}
+
+	push_val(st.stack,C_INT,1);
+	return 0;
+}
+
 /*==========================================
  *
  *------------------------------------------
@@ -3930,18 +4015,23 @@ int buildin_areamonster(struct script_state &st)
  */
 int buildin_killmonster_sub(struct block_list &bl,va_list ap)
 {
+	struct mob_data &md =(struct mob_data&)bl;
 	char *event=va_arg(ap,char *);
 	int allflag=va_arg(ap,int);
 
-	if(!allflag){
-		if(strcmp(event,((struct mob_data *)&bl)->npc_event)==0)
-			mob_delete((struct mob_data *)&bl);
-	}else if(allflag){
-		if(((struct mob_data *)&bl)->spawndelay1==-1 && ((struct mob_data *)&bl)->spawndelay2==-1)
-			mob_delete((struct mob_data *)&bl);
+	if(allflag)
+	{	// delete all script-summoned mobs
+		if( !md.cache  )
+			mob_delete(md);
+	}
+	else
+	{	// delete only mobs with same event name
+		if(strcmp(event, md.npc_event)==0)
+			mob_delete(md);
 	}
 	return 0;
 }
+
 int buildin_killmonster(struct script_state &st)
 {
 	const char *mapname,*event;
@@ -3961,7 +4051,7 @@ int buildin_killmonster(struct script_state &st)
 
 int buildin_killmonsterall_sub(struct block_list &bl,va_list ap)
 {
-	mob_delete((struct mob_data *)&bl);
+	mob_delete((struct mob_data &)bl);
 	return 0;
 }
 int buildin_killmonsterall(struct script_state &st)
@@ -5284,7 +5374,7 @@ int buildin_maprespawnguildid_sub(struct block_list &bl,va_list ap)
 	}
 	else if(md && flag&4){
 		if(md->class_ < 1285 || md->class_ > 1288)
-			mob_delete(md);
+			mob_delete(*md);
 	}
 	return 0;
 }
@@ -6735,9 +6825,8 @@ int buildin_npcwalkto(struct script_state &st)
 	x=conv_num(st, (st.stack.stack_data[st.start+2]));
 	y=conv_num(st, (st.stack.stack_data[st.start+3]));
 
-	if(nd) {
+	if(nd)
 		npc_walktoxy(*nd,x,y,0);
-	}
 
 	return 0;
 }
@@ -6746,9 +6835,8 @@ int buildin_npcstop(struct script_state &st)
 {
 	struct npc_data *nd=(struct npc_data *)map_id2bl(st.oid);
 
-	if( (nd) && (nd->state.state==MS_WALK) ){
-			npc_stop_walking(*nd,1);
-	}
+	if( (nd) && (nd->state.state==MS_WALK) )
+		npc_stop_walking(*nd,1);
 	return 0;
 }
 
@@ -6852,133 +6940,121 @@ int buildin_getsavepoint(struct script_state &st)
 int buildin_getmapxy(struct script_state &st)
 {
 	struct map_session_data *sd=NULL;
-        struct npc_data *nd;
-        struct pet_data *pd;
+	struct npc_data *nd;
+	struct pet_data *pd;
 	int num;
 	char *name;
-	char prefix;
 	int x,y,type;
 	char *mapname=NULL;
-
+	
 	if( st.stack.stack_data[st.start+2].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapname variable\n");
-                push_val(st.stack,C_INT,-1);
-                return 0;
-        }
+		push_val(st.stack,C_INT,-1);
+		return 0;
+	}
 	if( st.stack.stack_data[st.start+3].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapx variable\n");
-                push_val(st.stack,C_INT,-1);
-                return 0;
-        }
+		push_val(st.stack,C_INT,-1);
+		return 0;
+	}
 	if( st.stack.stack_data[st.start+4].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapy variable\n");
-                push_val(st.stack,C_INT,-1);
-                return 0;
-        }
-//??????????? >>>  Possible needly check function parameters on C_STR,C_INT,C_INT <<< ???????????//
-	type=conv_num(st, (st.stack.stack_data[st.start+5]));
+		push_val(st.stack,C_INT,-1);
+		return 0;
+	}
 
+
+	//??????????? >>>  Possible needly check function parameters on C_STR,C_INT,C_INT <<< ???????????//
+	type=conv_num(st, (st.stack.stack_data[st.start+5]));
+	
 	switch(type)
 	{
-            case 0:                                             //Get Character Position
-                    if( st.end>st.start+6 )
-                        sd=map_nick2sd(conv_str(st, (st.stack.stack_data[st.start+6])));
-                    else
-                        sd=script_rid2sd(st);
+	case 0:	//Get Character Position
+		if( st.end>st.start+6 )
+			sd=map_nick2sd(conv_str(st, (st.stack.stack_data[st.start+6])));
+		else
+			sd=script_rid2sd(st);
 		if( sd==NULL )
 		{	//wrong char name or char offline
-                        push_val(st.stack,C_INT,-1);
-                        return 0;
-                    }
-                    x=sd->bl.x;
-                    y=sd->bl.y;
-		memcpy(mapname,sd->mapname,24);//EOS included
+			push_val(st.stack,C_INT,-1);
+			return 0;
+		}
+		x=sd->bl.x;
+		y=sd->bl.y;
+		mapname = sd->mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-                    break;
-            case 1:                                             //Get NPC Position
-                    if( st.end > st.start+6 )
-                        nd=npc_name2id(conv_str(st, (st.stack.stack_data[st.start+6])));
-                    else
-                        nd=(struct npc_data *)map_id2bl(st.oid);
+		break;
+	case 1:	//Get NPC Position
+		if( st.end > st.start+6 )
+			nd=npc_name2id(conv_str(st, (st.stack.stack_data[st.start+6])));
+		else
+			nd=(struct npc_data *)map_id2bl(st.oid);
 		if( nd==NULL )
 		{	//wrong npc name or char offline
-                        push_val(st.stack,C_INT,-1);
-                        return 0;
-                    }
-                    x=nd->bl.x;
-                    y=nd->bl.y;
+			push_val(st.stack,C_INT,-1);
+			return 0;
+		}
+		x=nd->bl.x;
+		y=nd->bl.y;
 		mapname=map[nd->bl.m].mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-                    break;
-            case 2:                                             //Get Pet Position
-                    if( st.end>st.start+6 )
-                        sd=map_nick2sd(conv_str(st, (st.stack.stack_data[st.start+6])));
-                    else
-                        sd=script_rid2sd(st);
+		break;
+	case 2:	//Get Pet Position
+		if( st.end>st.start+6 )
+			sd=map_nick2sd(conv_str(st, (st.stack.stack_data[st.start+6])));
+		else
+			sd=script_rid2sd(st);
 		if( sd==NULL )
 		{	//wrong char name or char offline
-                        push_val(st.stack,C_INT,-1);
-                        return 0;
-                    }
-                    pd=sd->pd;
+			push_val(st.stack,C_INT,-1);
+			return 0;
+		}
+		pd=sd->pd;
 		if(pd==NULL)
 		{	//ped data not found
-                        push_val(st.stack,C_INT,-1);
-                        return 0;
-                    }
-                    x=pd->bl.x;
-                    y=pd->bl.y;
+			push_val(st.stack,C_INT,-1);
+			return 0;
+		}
+		x=pd->bl.x;
+		y=pd->bl.y;
 		mapname=map[pd->bl.m].mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-                    break;
-            case 3:                                             //Get Mob Position
-                        push_val(st.stack,C_INT,-1);
-                        return 0;
-            default:                                            //Wrong type parameter
-                        push_val(st.stack,C_INT,-1);
-                        return 0;
+		break;
+	case 3:	//Get Mob Position
+		push_val(st.stack,C_INT,-1);
+		return 0;
+	default:	//Wrong type parameter
+		push_val(st.stack,C_INT,-1);
+		return 0;
 	}//end switch
 
-     //Set MapName$
-        num=st.stack.stack_data[st.start+2].u.num;
-        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-        prefix=*name;
+	sd=script_rid2sd(st);
+	if(sd)
+	{
+		//Set MapName$
+		num=st.stack.stack_data[st.start+2].u.num;
+		name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+		set_reg(*sd,num,name,mapname);
 
-        if( prefix!='$' )
-            sd=script_rid2sd(st);
-        else
-            sd=NULL;
-	set_reg(*sd,num,name,mapname);
-
-
-     //Set MapX
-        num=st.stack.stack_data[st.start+3].u.num;
-        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-        prefix=*name;
-
-        if( prefix!='$' )
-            sd=script_rid2sd(st);
-        else
-            sd=NULL;
-        set_reg(*sd,num,name,(void*)x);
-
-     //Set MapY
-        num=st.stack.stack_data[st.start+4].u.num;
-        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
-        prefix=*name;
-
-        if( prefix!='$' )
-            sd=script_rid2sd(st);
-        else
-            sd=NULL;
-        set_reg(*sd,num,name,(void*)y);
-
-     //Return Success value
-        push_val(st.stack,C_INT,0);
-        return 0;
+		//Set MapX
+		num=st.stack.stack_data[st.start+3].u.num;
+		name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+		set_reg(*sd,num,name,(void*)x);
+		
+		//Set MapY
+		num=st.stack.stack_data[st.start+4].u.num;
+		name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+		set_reg(*sd,num,name,(void*)y);
+		
+		//Return Success value
+		push_val(st.stack,C_INT,0);
+		return 0;
+	}
+	push_val(st.stack,C_INT,-1);
+	return 0;
 }
 
 /*=====================================================
@@ -6992,7 +7068,7 @@ int buildin_skilluseid (struct script_state &st)
    skid=conv_num(st, (st.stack.stack_data[st.start+2]));
    sklv=conv_num(st, (st.stack.stack_data[st.start+3]));
    sd=script_rid2sd(st);
-   skill_use_id(sd,sd->status.account_id,skid,sklv);
+   if(sd) skill_use_id(sd,sd->status.account_id,skid,sklv);
    return 0;
 }
 
@@ -7009,7 +7085,7 @@ int buildin_skillusepos(struct script_state &st)
    x=conv_num(st, (st.stack.stack_data[st.start+4]));
    y=conv_num(st, (st.stack.stack_data[st.start+5]));
    sd=script_rid2sd(st);
-   skill_use_pos(sd,x,y,skid,sklv);
+   if(sd) skill_use_pos(sd,x,y,skid,sklv);
    return 0;
 }
 
@@ -7085,52 +7161,53 @@ int buildin_isequipped(struct script_state &st)
 	int ret = -1;
 
 	sd = script_rid2sd(st);
-	
-	for (i=0; id!=0; i++) {
-		int flag = 0;
-	
-		if(st.end > st.start+i+2)
-			id = conv_num(st,(st.stack.stack_data[st.start+i+2]));
-		else 
-			id = 0;
+	if(sd)
+	{
+		for (i=0; id!=0; i++) {
+			int flag = 0;
 
-		if (id <= 0)
-			continue;
-		
-		for (j=0; j<10; j++) {
-			int index, type;
-			index = sd->equip_index[j];
-			if(index < 0) continue;
-			if(j == 9 && sd->equip_index[8] == index) continue;
-			if(j == 5 && sd->equip_index[4] == index) continue;
-			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
-			type = itemdb_type(id);
+			if(st.end > st.start+i+2)
+				id = conv_num(st,(st.stack.stack_data[st.start+i+2]));
+			else 
+				id = 0;
+
+			if (id <= 0)
+				continue;
 			
-			if(sd->inventory_data[index]) {
-				if (type == 4 || type == 5) {
-					if (sd->inventory_data[index]->nameid == id)
-						flag = 1;
-				} else if (type == 6) {
-					for(k=0; k<sd->inventory_data[index]->slot; k++) {
-						if (sd->status.inventory[index].card[0]!=0x00ff &&
-							sd->status.inventory[index].card[0]!=0x00fe &&
-							sd->status.inventory[index].card[0]!=0xff00 &&
-							sd->status.inventory[index].card[k] == id) {
+			for (j=0; j<10; j++) {
+				int index, type;
+				index = sd->equip_index[j];
+				if(index < 0) continue;
+				if(j == 9 && sd->equip_index[8] == index) continue;
+				if(j == 5 && sd->equip_index[4] == index) continue;
+				if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+				type = itemdb_type(id);
+				
+				if(sd->inventory_data[index]) {
+					if (type == 4 || type == 5) {
+						if (sd->inventory_data[index]->nameid == id)
 							flag = 1;
-							break;
+					} else if (type == 6) {
+						for(k=0; k<sd->inventory_data[index]->slot; k++) {
+							if (sd->status.inventory[index].card[0]!=0x00ff &&
+								sd->status.inventory[index].card[0]!=0x00fe &&
+								sd->status.inventory[index].card[0]!=0xff00 &&
+								sd->status.inventory[index].card[k] == id) {
+								flag = 1;
+								break;
+							}
 						}
 					}
+					if (flag) break;
 				}
-				if (flag) break;
 			}
+			if (ret == -1)
+				ret = flag;
+			else
+				ret &= flag;
+			if (!ret) break;
 		}
-		if (ret == -1)
-			ret = flag;
-		else
-			ret &= flag;
-		if (!ret) break;
 	}
-	
 	push_val(st.stack,C_INT,ret);
 	return 0;
 }
@@ -7150,39 +7227,42 @@ int buildin_isequippedcnt(struct script_state &st)
 	int index, type;
 
 	sd = script_rid2sd(st);
-	
-	for (i=0; id!=0; i++) {
 
-		if(st.end > st.start+i+2)
-			id = conv_num(st,(st.stack.stack_data[st.start+i+2]));
-		else 
-			id = 0;
+	if(sd)
+	{
+		for (i=0; id!=0; i++) {
 
-		if (id <= 0)
-			continue;
-		
-		for (j=0; j<10; j++) {
-			index = sd->equip_index[j];
-			if(index < 0) continue;
-			if(j == 9 && sd->equip_index[8] == index) continue;
-			if(j == 5 && sd->equip_index[4] == index) continue;
-			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
-			type = itemdb_type(id);
+			if(st.end > st.start+i+2)
+				id = conv_num(st,(st.stack.stack_data[st.start+i+2]));
+			else 
+				id = 0;
+
+			if (id <= 0)
+				continue;
 			
-			if(sd->inventory_data[index]) {
-				if (type == 4 || type == 5) {
-					if (sd->inventory_data[index]->nameid == id)
-						ret++; //[Lupus]
-				} else if (type == 6) {
-					for(k=0; k<sd->inventory_data[index]->flag.slot; k++) {
-						if (sd->status.inventory[index].card[0]!=0x00ff &&
-							sd->status.inventory[index].card[0]!=0x00fe &&
-							sd->status.inventory[index].card[0]!=0xff00 &&
-							sd->status.inventory[index].card[k] == id) {
+			for (j=0; j<10; j++) {
+				index = sd->equip_index[j];
+				if(index < 0) continue;
+				if(j == 9 && sd->equip_index[8] == index) continue;
+				if(j == 5 && sd->equip_index[4] == index) continue;
+				if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+				type = itemdb_type(id);
+				
+				if(sd->inventory_data[index]) {
+					if (type == 4 || type == 5) {
+						if (sd->inventory_data[index]->nameid == id)
 							ret++; //[Lupus]
+					} else if (type == 6) {
+						for(k=0; k<sd->inventory_data[index]->flag.slot; k++) {
+							if (sd->status.inventory[index].card[0]!=0x00ff &&
+								sd->status.inventory[index].card[0]!=0x00fe &&
+								sd->status.inventory[index].card[0]!=0xff00 &&
+								sd->status.inventory[index].card[k] == id) {
+								ret++; //[Lupus]
+							}
 						}
-					}
-				}				
+					}				
+				}
 			}
 		}
 	}
@@ -7205,82 +7285,91 @@ int buildin_isequipped(struct script_state &st)
 	int ret = -1;
 
 	sd = script_rid2sd(st);
-	
-	for (i=0; id!=0; i++)
+
+	if(sd)
 	{
-		int flag = 0;
-	
-		if(st.end>st.start+(i+2)) \
-			id=conv_num(st,(st.stack.stack_data[st.start+(i+2)]));
-		else
-			id = 0;
-
-		if (id <= 0)
-			continue;
-		
-		for (j=0; j<10; j++) {
-			int index, type;
-			index = sd->equip_index[j];
-			if(index < 0) continue;
-			if(j == 9 && sd->equip_index[8] == index) continue;
-			if(j == 5 && sd->equip_index[4] == index) continue;
-			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
-			type = itemdb_type(id);
+		for (i=0; id!=0; i++)
+		{
+			int flag = 0;
 			
-			if(sd->inventory_data[index]) {
-				if (type == 4 || type == 5) {					
-					if (sd->inventory_data[index]->nameid == id)
-						flag = 1;
-				} else if (type == 6) {
-					// Item Hash format:
-					// 1111 1111 1111 1111 1111 1111 1111 1111
-					// [ left  ] [ right ] [ NA ] [  armor  ]
-					for (k = 0; k < sd->inventory_data[index]->flag.slot; k++) {
-						// --- Calculate hash for current card ---
-						// Defense equipment
-						// They *usually* have only 1 slot, so we just assign 1 bit
-						int hash = 0;
-						if (sd->inventory_data[index]->type == 5) {
-							hash = sd->inventory_data[index]->equip;
-						}
-						// Weapons
-						// right hand: slot 1 - 0x10000 ... slot 4 - 0x80000
-						// left hand: slot 1 - 0x1000000 ... slot 4 - 0x8000000
-						// We can support up to 8 slots each, just in case
-						else if (sd->inventory_data[index]->type == 4) {
-							if (sd->inventory_data[index]->equip & 2)	// right hand
-								hash = 0x10000 * (int)pow(2,k);	// x slot number
-							else if (sd->inventory_data[index]->equip & 32)	// left hand
-								hash = 0x1000000 * (int)pow(2,k);	// x slot number
-						} else
-							continue;	// slotted item not armour nor weapon? we're not going to support it
-
-						if (sd->setitem_hash & hash)	// check if card is already used by another set
-							continue;	// this item is used, move on to next card
-
-						if (sd->status.inventory[index].card[0] != 0x00ff &&
-							sd->status.inventory[index].card[0] != 0x00fe &&
-							sd->status.inventory[index].card[0] != 0xff00 &&
-							sd->status.inventory[index].card[k] == id)
-						{
-							// We have found a match
+			if(st.end>st.start+(i+2))
+				id=conv_num(st,(st.stack.stack_data[st.start+(i+2)]));
+			else
+				id = 0;
+			
+			if (id <= 0)
+				continue;
+			
+			for (j=0; j<10; j++)
+			{
+				int index, type;
+				index = sd->equip_index[j];
+				if(index < 0) continue;
+				if(j == 9 && sd->equip_index[8] == index) continue;
+				if(j == 5 && sd->equip_index[4] == index) continue;
+				if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+				type = itemdb_type(id);
+				
+				if(sd->inventory_data[index])
+				{
+					if (type == 4 || type == 5)
+					{
+						if (sd->inventory_data[index]->nameid == id)
 							flag = 1;
-							// Set hash so this card cannot be used by another
-							sd->setitem_hash |= hash;
-							break;
+					}
+					else if (type == 6)
+					{	// Item Hash format:
+						// 1111 1111 1111 1111 1111 1111 1111 1111
+						// [ left  ] [ right ] [ NA ] [  armor  ]
+						for (k = 0; k < sd->inventory_data[index]->flag.slot; k++)
+						{	// --- Calculate hash for current card ---
+							// Defense equipment
+							// They *usually* have only 1 slot, so we just assign 1 bit
+							int hash = 0;
+							if (sd->inventory_data[index]->type == 5)
+							{
+								hash = sd->inventory_data[index]->equip;
+							}
+							// Weapons
+							// right hand: slot 1 - 0x0010000 ... slot 4 - 0x0080000
+							// left hand: slot 1 -  0x1000000 ... slot 4 - 0x8000000
+							// We can support up to 8 slots each, just in case
+							else if (sd->inventory_data[index]->type == 4)
+							{
+								if (sd->inventory_data[index]->equip & 2)	// right hand
+									hash = 0x10000 * (int)pow(2,k);	// x slot number
+								else if (sd->inventory_data[index]->equip & 32)	// left hand
+									hash = 0x1000000 * (int)pow(2,k);	// x slot number
+							}
+							else
+								continue;	// slotted item not armour nor weapon? we're not going to support it
+							
+							if (sd->setitem_hash & hash)	// check if card is already used by another set
+								continue;	// this item is used, move on to next card
+							
+							if( sd->status.inventory[index].card[0] != 0x00ff &&
+								sd->status.inventory[index].card[0] != 0x00fe &&
+								sd->status.inventory[index].card[0] != 0xff00 &&
+								sd->status.inventory[index].card[k] == id )
+							{
+								// We have found a match
+								flag = 1;
+								// Set hash so this card cannot be used by another
+								sd->setitem_hash |= hash;
+								break;
+							}
 						}
 					}
+					if (flag) break;
 				}
-				if (flag) break;
 			}
+			if (ret == -1)
+				ret = flag;
+			else
+				ret &= flag;
+			if (!ret) break;
 		}
-		if (ret == -1)
-			ret = flag;
-		else
-			ret &= flag;
-		if (!ret) break;
 	}
-	
 	push_val(st.stack,C_INT,ret);
 	return 0;
 }
@@ -7299,34 +7388,45 @@ int buildin_cardscnt(struct script_state &st)
 	int index, type;
 
 	sd = script_rid2sd(st);
-	
-	for (i=0; id!=0; i++) {
-		if(st.end>st.start+(i+2))
-			id=conv_num(st,(st.stack.stack_data[st.start+(i+2)]));
-		else id = 0;
 
-		if (id <= 0)
-			continue;
-		
-		index = current_equip_item_index; //we get CURRENT WEAPON inventory index from status.c [Lupus]
-		if(index < 0) continue;
-
-		type = itemdb_type(id);
+	if(sd)
+	{
+		for (i=0; id!=0; i++)
+		{
+			if(st.end>st.start+(i+2))
+				id=conv_num(st,(st.stack.stack_data[st.start+(i+2)]));
+			else 
+				id = 0;
 			
-		if(sd->inventory_data[index]) {
-			if (type == 4 || type == 5) {
-				if (sd->inventory_data[index]->nameid == id)
-					ret++;
-			} else if (type == 6) {
-				for(k=0; k<sd->inventory_data[index]->flag.slot; k++) {
-					if (sd->status.inventory[index].card[0]!=0x00ff &&
-						sd->status.inventory[index].card[0]!=0x00fe &&
-						sd->status.inventory[index].card[0]!=0xff00 &&
-						sd->status.inventory[index].card[k] == id) {
+			if (id <= 0)
+				continue;
+			
+			index = current_equip_item_index; //we get CURRENT WEAPON inventory index from status.c [Lupus]
+			if(index < 0) continue;
+			
+			type = itemdb_type(id);
+			
+			if(sd->inventory_data[index])
+			{
+				if (type == 4 || type == 5)
+				{
+					if (sd->inventory_data[index]->nameid == id)
 						ret++;
-					}
 				}
-			}				
+				else if (type == 6)
+				{
+					for(k=0; k<sd->inventory_data[index]->flag.slot; k++)
+					{
+						if( sd->status.inventory[index].card[0]!=0x00ff &&
+							sd->status.inventory[index].card[0]!=0x00fe &&
+							sd->status.inventory[index].card[0]!=0xff00 &&
+							sd->status.inventory[index].card[k] == id )
+						{
+							ret++;
+						}
+					}
+				}				
+			}
 		}
 	}
 	push_val(st.stack,C_INT,ret);
