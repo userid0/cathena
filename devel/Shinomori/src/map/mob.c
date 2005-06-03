@@ -3672,28 +3672,34 @@ int mobskill_use(struct mob_data &md,unsigned long tick,int event)
 					flag = (mob_countslave(md) < (unsigned int)c2 );
 					break;
 				case MSC_ATTACKPCGT:	// attack pc > num
-					flag = (battle_counttargeted(&md.bl, NULL, 0) > (unsigned int)c2); break;
+					flag = (battle_counttargeted(md.bl, NULL, 0) > (unsigned int)c2); break;
 				case MSC_SLAVELE:		// slave <= num
 					flag = (mob_countslave(md) <= (unsigned int)c2 ); break;
 				case MSC_ATTACKPCGE:	// attack pc >= num
-					flag = (battle_counttargeted(&md.bl, NULL, 0) >= (unsigned int)c2); break;
+					flag = (battle_counttargeted(md.bl, NULL, 0) >= (unsigned int)c2); break;
 				case MSC_SKILLUSED:		// specificated skill used
 					flag = ((event & 0xffff) == MSC_SKILLUSED && ((event >> 16) == c2 || c2 == 0)); break;
 				case MSC_RUDEATTACKED:
 					flag = (!md.attacked_id && md.attacked_count > 0); break;
 				case MSC_MASTERHPLTMAXRATE:
-					{
-						struct block_list *bl = mob_getmasterhpltmaxrate(md, ms[i].cond2);
-						if (bl) {
-							if (bl->type == BL_MOB)
-								fmd=(struct mob_data *)bl;
-							else if (bl->type == BL_PC)
-								fsd=(struct map_session_data *)bl;
-						}
-						flag = (fmd || fsd); break;
+				{
+					struct block_list *bl = mob_getmasterhpltmaxrate(md, ms[i].cond2);
+					if (bl) {
+						if (bl->type == BL_MOB)
+							fmd=(struct mob_data *)bl;
+						else if (bl->type == BL_PC)
+							fsd=(struct map_session_data *)bl;
 					}
+					flag = (fmd || fsd);
+					break;
+				}
 				case MSC_MASTERATTACKED:
-					flag = (md.master_id > 0 && battle_counttargeted(map_id2bl(md.master_id), NULL, 0) > 0); break;
+				{
+					block_list * bl = map_id2bl(md.master_id);
+
+					flag = (md.master_id>0 && bl && battle_counttargeted(*bl, NULL, 0) > 0);
+					break;
+				}
 			}
 		}
 

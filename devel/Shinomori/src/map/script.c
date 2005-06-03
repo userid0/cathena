@@ -7342,13 +7342,13 @@ int buildin_isequipped(struct script_state &st)
 						// We can support up to 8 slots each, just in case
 							else if (sd->inventory_data[index]->type == 4)
 							{
-							if (sd->inventory_data[index]->equip & 2)	// right hand
-								hash = 0x10000 * (int)pow(2,k);	// x slot number
-							else if (sd->inventory_data[index]->equip & 32)	// left hand
-								hash = 0x1000000 * (int)pow(2,k);	// x slot number
+								if (sd->inventory_data[index]->equip & 2)	// right hand
+									hash = 0x00010000 * (1<<k);	// pow(2,k) x slot number
+								else if (sd->inventory_data[index]->equip & 32)	// left hand
+									hash = 0x01000000 * (1<<k);	// pow(2,k) x slot number
 							}
 							else
-							continue;	// slotted item not armour nor weapon? we're not going to support it
+								continue;	// slotted item not armour nor weapon? we're not going to support it
 
 						if (sd->setitem_hash & hash)	// check if card is already used by another set
 							continue;	// this item is used, move on to next card
@@ -7557,8 +7557,7 @@ int buildin_pcstrcharinfo(struct script_state &st)
 int buildin_getstrlen(struct script_state &st)
 {
 	const char *str=conv_str(st, (st.stack.stack_data[st.start+2]));
-
-	int len=strlen(str);
+	int len = (str) ? strlen(str) : 0;
 	push_val(st.stack,C_INT,len);
 	return 0;
 }
@@ -7569,9 +7568,10 @@ int buildin_getstrlen(struct script_state &st)
 int buildin_charisalpha(struct script_state &st)
 {
 	const char *str=conv_str(st, (st.stack.stack_data[st.start+2]));
-	int pos =conv_num(st, (st.stack.stack_data[st.start+3]));
+	size_t pos =conv_num(st, (st.stack.stack_data[st.start+3]));
 
-	push_val(st.stack,C_INT, isalpha(str[pos]) );
+	int val = (str && pos>0 && pos<strlen(str)) ? isalpha(str[pos]) : 0;
+	push_val(st.stack,C_INT, val);
 	return 0;
 }
 //

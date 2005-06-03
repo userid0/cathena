@@ -565,8 +565,6 @@ int log_chat(const char *type, int type_id, int src_charid, int src_accid, const
 			timestring, type, type_id, src_charid, src_accid, map, x, y, dst_charname, message, RETCODE);
 		fclose(logfp);
 		return 0;
-	}else{
-		return -1;
 	}
 #endif
 return -1;

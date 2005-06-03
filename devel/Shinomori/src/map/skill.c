@@ -2796,7 +2796,7 @@ int skill_castend_damage_id( struct block_list* src, struct block_list *bl,unsig
 			} else {
 				skill_area_temp[1] = bl->id;
 				skill_area_temp[2] = status_get_hp(src);
-				clif_skill_nodamage(src, src, NPC_SELFDESTRUCTION, ~0, 1);
+				clif_skill_nodamage(src, src, NPC_SELFDESTRUCTION, 0xFFFF, 1);
 				map_foreachinarea(skill_area_sub, bl->m,
 						bl->x-5, bl->y-5, bl->x+5, bl->y+5, 0,
 						src, skillid, skilllv, tick, flag|BCT_ENEMY|1,
@@ -3598,7 +3598,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		{
 			struct status_change *tsc_data = status_get_sc_data(bl);
 			int sc = SkillStatusChangeTable[skillid];
-			clif_skill_nodamage(src,bl,skillid,~0,1);
+			clif_skill_nodamage(src,bl,skillid,0xFFFF,1);
 			if (tsc_data && tsc_data[sc].timer != -1)
 				status_change_end(bl, sc, -1);
 			else
@@ -3610,7 +3610,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		{
 			struct status_change *tsc_data = status_get_sc_data(bl);
 			int sc=SkillStatusChangeTable[skillid];
-			clif_skill_nodamage(src,bl,skillid,~0,1);
+			clif_skill_nodamage(src,bl,skillid,0xFFFF,1);
 			if(tsc_data && tsc_data[sc].timer!=-1 )
 				/* 解除する */
 				status_change_end(bl, sc, -1);
@@ -3625,7 +3625,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		{
 			struct status_change *tsc_data = status_get_sc_data(bl);
 			int sc=SkillStatusChangeTable[skillid];
-			clif_skill_nodamage(src,bl,skillid,~0,1);
+			clif_skill_nodamage(src,bl,skillid,0xFFFF,1);
 			if(tsc_data && tsc_data[sc].timer!=-1 )
 				/* 解除する */
 				status_change_end(bl, sc, -1);
@@ -7154,7 +7154,7 @@ int skill_check_condition(struct map_session_data *sd,int type)
  * 詠唱時間計算
  *------------------------------------------
  */
-int skill_castfix(struct block_list *bl, unsigned long time)
+int skill_castfix(struct block_list *bl, long time)
 {
 	struct status_change *sc_data;
 	
@@ -7213,7 +7213,7 @@ int skill_castfix(struct block_list *bl, unsigned long time)
  * ディレイ計算
  *------------------------------------------
  */
-int skill_delayfix(struct block_list *bl, unsigned long time)
+int skill_delayfix(struct block_list *bl, long time)
 {
 	struct status_change *sc_data;	
 
@@ -7230,7 +7230,7 @@ int skill_delayfix(struct block_list *bl, unsigned long time)
 			else
 				time = 300;	// default delay, according to official servers
 		} else if (time < 0)
-			time = abs(time) + status_get_adelay (bl)/2;	// if set to <0, the aspd delay will be added
+			time = status_get_adelay (bl)/2 - time;	// if set to <0, the aspd delay will be added
 
 		if (battle_config.delay_dependon_dex &&	/* dexの影響を計算する */
 			!skill_get_delaynodex(sd->skillid, sd->skilllv))	// if skill casttime is allowed to be reduced by dex
@@ -7247,7 +7247,7 @@ int skill_delayfix(struct block_list *bl, unsigned long time)
 		if (sd->delayrate != 100)
 			time = time * sd->delayrate / 100;
 
-		if (time < battle_config.min_skill_delay_limit)	// check minimum skill delay
+		if (time < (long)battle_config.min_skill_delay_limit)	// check minimum skill delay
 			time = battle_config.min_skill_delay_limit;
 	}
 
@@ -7264,7 +7264,7 @@ int skill_delayfix(struct block_list *bl, unsigned long time)
  * スキル使用（ID指定）
  *------------------------------------------
  */
-int skill_use_id( struct map_session_data *sd, unsigned long target_id,unsigned short skill_num, unsigned short skill_lv)
+int skill_use_id(struct map_session_data *sd, unsigned long target_id,unsigned short skill_num, unsigned short skill_lv)
 {
 	int casttime = 0, delay = 0, skill, range;
 	struct map_session_data* target_sd=NULL;

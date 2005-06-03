@@ -1835,7 +1835,6 @@ int status_get_max_hp(struct block_list *bl)
 		if(max_hp < 1) max_hp = 1;
 		return max_hp;
 	}
-	return 1;
 }
 /*==========================================
  * 対象のStrを返す(汎用)
@@ -2396,7 +2395,6 @@ int status_get_atk2(struct block_list *bl)
 		if(atk2 < 0) atk2 = 0;
 		return atk2;
 	}
-	return 0;
 }
 /*==========================================
  * 対象の左手Atk2を返す(汎用)
@@ -2731,9 +2729,9 @@ int status_get_speed(struct block_list *bl)
 		if(speed < 1) speed = 1;
 		return speed;
 	}
-
-	return 1000;
 }
+
+
 /*==========================================
  * 対象のaDelay(攻撃時ディレイ)を返す(汎用)
  * aDelayは小さいほうが攻撃速度が速い
@@ -2806,8 +2804,8 @@ int status_get_adelay(struct block_list *bl)
 		if(adelay < 2*(int)battle_config.monster_max_aspd) adelay = battle_config.monster_max_aspd<<1;
 		return adelay;
 	}
-	return 4000;
 }
+
 int status_get_amotion(struct block_list *bl)
 {
 	nullpo_retr(2000, bl);
@@ -2855,8 +2853,9 @@ int status_get_amotion(struct block_list *bl)
 		if(amotion < (int)battle_config.monster_max_aspd) amotion = battle_config.monster_max_aspd;
 		return amotion;
 	}
-	return 2000;
 }
+
+
 int status_get_dmotion(struct block_list *bl)
 {
 	int ret;
@@ -2885,6 +2884,7 @@ int status_get_dmotion(struct block_list *bl)
 
 	return ret;
 }
+
 int status_get_element(struct block_list *bl)
 {
 	int ret = 20;
@@ -3859,8 +3859,10 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 
 		case SC_ASSUMPTIO:		/* アスムプティオ */
 			if(sc_data[SC_KYRIE].timer!=-1 )
+			{
 				status_change_end(bl,SC_KYRIE,-1);
 				break;
+			}
 			*opt3 |= 2048;
 			break;
 

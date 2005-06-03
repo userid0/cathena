@@ -25,7 +25,7 @@ struct Battle_Config battle_config;
  * 戻りは整数で0以上
  *------------------------------------------
  */
-static unsigned int distance(unsigned int x0,unsigned int y0,unsigned int x1,unsigned int y1)
+static int distance(int x0, int y0, int x1, int y1)
 {
 	unsigned int dx,dy;
 
@@ -49,7 +49,7 @@ static int battle_counttargeted_sub(struct block_list &bl, va_list ap)
 	id = va_arg(ap,int);
 	nullpo_retr(0, c = va_arg(ap, int *));
 	src = va_arg(ap,struct block_list *);
-	target_lv = va_arg(ap,int);
+	target_lv = (unsigned short)va_arg(ap,int);
 
 	if (id == bl.id || (src && id == src->id))
 		return 0;
@@ -80,15 +80,14 @@ static int battle_counttargeted_sub(struct block_list &bl, va_list ap)
  * 戻りは整数で0以上
  *------------------------------------------
  */
-unsigned int battle_counttargeted(struct block_list *bl,struct block_list *src,int target_lv)
+unsigned int battle_counttargeted(struct block_list &bl,struct block_list *src,  unsigned short target_lv)
 {
 	unsigned int c = 0;
-	nullpo_retr(0, bl);
 
-	map_foreachinarea(battle_counttargeted_sub, bl->m,
-		bl->x-AREA_SIZE, bl->y-AREA_SIZE,
-		bl->x+AREA_SIZE, bl->y+AREA_SIZE, 0,
-		bl->id, &c, src, target_lv);
+	map_foreachinarea(battle_counttargeted_sub, bl.m,
+		bl.x-AREA_SIZE, bl.y-AREA_SIZE,
+		bl.x+AREA_SIZE, bl.y+AREA_SIZE, 0,
+		bl.id, &c, src, target_lv);
 
 	return c;
 }
@@ -340,6 +339,8 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 	int class_;
 
 	nullpo_retr(0, bl);
+	if(src->m != bl->m) // [ShAPoNe] Src and target same map check.
+		return 0;
 
 	class_ = status_get_class(bl);
 	if(bl->type==BL_MOB) md=(struct mob_data *)bl;
@@ -770,7 +771,7 @@ static struct Damage battle_calc_pet_weapon_attack(
 	// 回避率計算、回避判定は後で
 	flee = status_get_flee(target);
 	if(battle_config.agi_penalty_type > 0 || battle_config.vit_penalty_type > 0)
-		target_count += battle_counttargeted(target,src,battle_config.agi_penalty_count_lv);
+		target_count += battle_counttargeted(*target,src,battle_config.agi_penalty_count_lv);
 	if(battle_config.agi_penalty_type > 0) {
 		if(target_count >= battle_config.agi_penalty_count) {
 			if(battle_config.agi_penalty_type == 1)
@@ -1080,7 +1081,7 @@ static struct Damage battle_calc_pet_weapon_attack(
 		// ディバインプロテクション（ここでいいのかな？）
 		if (!ignore_def_flag && def1 < 1000000) {	//DEF, VIT無視
 			int t_def;
-			target_count = 1 + battle_counttargeted(target,src,battle_config.vit_penalty_count_lv);
+			target_count = 1 + battle_counttargeted(*target,src,battle_config.vit_penalty_count_lv);
 			if(battle_config.vit_penalty_type > 0) {
 				if(target_count >= battle_config.vit_penalty_count) {
 					if(battle_config.vit_penalty_type == 1) {
@@ -1269,7 +1270,7 @@ static struct Damage battle_calc_mob_weapon_attack(
 	// 回避率計算、回避判定は後で
 	flee = status_get_flee(target);
 	if(battle_config.agi_penalty_type > 0 || battle_config.vit_penalty_type > 0)
-		target_count += battle_counttargeted(target,src,battle_config.agi_penalty_count_lv);
+		target_count += battle_counttargeted(*target,src,battle_config.agi_penalty_count_lv);
 	if(battle_config.agi_penalty_type > 0) {
 		if(target_count >= battle_config.agi_penalty_count) {
 			if(battle_config.agi_penalty_type == 1)
@@ -1612,7 +1613,7 @@ static struct Damage battle_calc_mob_weapon_attack(
 		// ディバインプロテクション（ここでいいのかな？）
 		if (!ignore_def_flag && def1 < 1000000) {	//DEF, VIT無視
 			int t_def;
-			target_count = 1 + battle_counttargeted(target,src,battle_config.vit_penalty_count_lv);
+			target_count = 1 + battle_counttargeted(*target,src,battle_config.vit_penalty_count_lv);
 			if(battle_config.vit_penalty_type > 0) {
 				if(target_count >= battle_config.vit_penalty_count) {
 					if(battle_config.vit_penalty_type == 1) {
@@ -1872,7 +1873,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 	// 回避率計算、回避判定は後で
 	flee = status_get_flee(target);
 	if(battle_config.agi_penalty_type > 0 || battle_config.vit_penalty_type > 0) //AGI、VITペナルティ設定が有効
-		target_count += battle_counttargeted(target,src,battle_config.agi_penalty_count_lv);	//対象の数を算出
+		target_count += battle_counttargeted(*target,src,battle_config.agi_penalty_count_lv);	//対象の数を算出
 	if(battle_config.agi_penalty_type > 0) {
 		if(target_count >= battle_config.agi_penalty_count) { //ペナルティ設定より対象が多い
 			if(battle_config.agi_penalty_type == 1) //回避率がagi_penalty_num%ずつ減少
@@ -2421,7 +2422,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 		// ディバインプロテクション（ここでいいのかな？）
 		if (!ignore_def_flag && def1 < 1000000) {	//DEF, VIT無視
 			int t_def;
-			target_count = 1 + battle_counttargeted(target,src,battle_config.vit_penalty_count_lv);
+			target_count = 1 + battle_counttargeted(*target,src,battle_config.vit_penalty_count_lv);
 			if(battle_config.vit_penalty_type > 0) {
 				if(target_count >= battle_config.vit_penalty_count) {
 					if(battle_config.vit_penalty_type == 1) {
@@ -3228,7 +3229,7 @@ static struct Damage battle_calc_weapon_attack_sub(
 		if(battle_config.agi_penalty_type)
 		{	
 			unsigned char target_count; //256 max targets should be a sane max
-			target_count = 1+battle_counttargeted(target,src,battle_config.agi_penalty_count_lv);
+			target_count = 1+battle_counttargeted(*target,src,battle_config.agi_penalty_count_lv);
 			if(target_count >= battle_config.agi_penalty_count)
 			{
 				if (battle_config.agi_penalty_type == 1)
@@ -3787,7 +3788,7 @@ static struct Damage battle_calc_weapon_attack_sub(
 			if(battle_config.vit_penalty_type)
 			{
 				unsigned char target_count; //256 max targets should be a sane max
-				target_count = 1 + battle_counttargeted(target,src,battle_config.vit_penalty_count_lv);
+				target_count = 1 + battle_counttargeted(*target,src,battle_config.vit_penalty_count_lv);
 				if(target_count >= battle_config.vit_penalty_count) {
 					if(battle_config.vit_penalty_type == 1) {
 						def1 = (def1 * (100 - (target_count - (battle_config.vit_penalty_count - 1))*battle_config.vit_penalty_num))/100;
@@ -4097,7 +4098,8 @@ struct Damage battle_calc_weapon_attack(
 	struct Damage wd;
 
 	//return前の処理があるので情報出力部のみ変更
-	if (src == NULL || target == NULL) {
+	if (src == NULL || target == NULL  || (src->m != target->m) )
+	{
 		nullpo_info(NLP_MARK);
 		memset(&wd,0,sizeof(wd));
 		return wd;

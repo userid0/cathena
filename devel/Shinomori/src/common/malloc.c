@@ -323,7 +323,7 @@ void* _mmalloc(size_t size, const char *file, int line, const char *func )
 	ShowFatalError("MEMMGR::memmgr_malloc() serious error.\n");
 	memmgr_info();
 	exit(1);
-	return NULL;
+//	return NULL;
 };
 
 void* _mcalloc(size_t num, size_t size, const char *file, int line, const char *func )

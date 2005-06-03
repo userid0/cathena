@@ -4052,8 +4052,10 @@ bool atcommand_revive(int fd, struct map_session_data &sd, const char* command, 
 		return false;
 	}
 
-	if((pl_sd = map_nick2sd(player_name)) != NULL) {
-		if (pc_isdead(*pl_sd)) {
+	if((pl_sd = map_nick2sd(player_name)) != NULL)
+	{
+		if (pc_isdead(*pl_sd))
+		{
 			pl_sd->status.hp = pl_sd->status.max_hp;
 			clif_skill_nodamage(&sd.bl,&sd.bl,ALL_RESURRECTION,4,1);
 			pc_setstand(*pl_sd);
@@ -4065,13 +4067,11 @@ bool atcommand_revive(int fd, struct map_session_data &sd, const char* command, 
 			clif_displaymessage(fd, msg_table[51]); // Character revived.
 			return true;
 		}
-		return false;
-	} else {
-		clif_displaymessage(fd, msg_table[3]); // Character not found.
-		return false;
 	}
+	else
+		clif_displaymessage(fd, msg_table[3]); // Character not found.
 
-	return true;
+	return false;
 }
 
 /*==========================================
@@ -8958,7 +8958,6 @@ bool atcommand_version(int fd, struct map_session_data &sd, const char* command,
           clif_displaymessage(fd,"Cannot determine SVN revision");
 	return true;
 }
-
 
 static int atcommand_mutearea_sub(struct block_list &bl,va_list ap)
 {

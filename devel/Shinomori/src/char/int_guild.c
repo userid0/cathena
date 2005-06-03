@@ -1394,8 +1394,6 @@ int mapif_parse_GuildCastleDataLoad(int fd, int castle_id, int index)
 		ShowMessage("mapif_parse_GuildCastleDataLoad ERROR!! (Not found index=%d)\n", index);
 		return 0;
 	}
-
-	return 0;
 }
 
 int mapif_parse_GuildCastleDataSave(int fd, int castle_id, int index, int value)

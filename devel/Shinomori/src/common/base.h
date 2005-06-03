@@ -515,7 +515,12 @@ extern inline unsigned long log2(unsigned long v)
 	return c;
 }
 
-
+extern inline unsigned long pow2(unsigned long v)
+{
+	if(v<32)
+		return 1<<v;
+	return 0;
+}
 
 
 

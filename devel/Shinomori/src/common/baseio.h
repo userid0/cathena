@@ -360,7 +360,7 @@ public:
 // basic interface to a sql database
 //////////////////////////////////////////////////////////////////////////
 
-class Database
+class Database : public global, public noncopyable
 {
 protected:
 	DBDefaults& def;

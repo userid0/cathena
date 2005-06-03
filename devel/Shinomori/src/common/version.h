@@ -20,9 +20,7 @@
 // C言語の仕様上、最初に0を付けると8進数になるので間違えないで下さい。
 #define ATHENA_MOD_VERSION	1052	// mod version (patch No.)
 
-
-
-
+#define ATHENA_SVN_VERSION	2001	// svn version
 
 
 typedef enum 

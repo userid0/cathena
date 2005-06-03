@@ -64,7 +64,7 @@ int battle_stopwalking(struct block_list *bl,int type);
 int battle_weapon_attack( struct block_list *bl,struct block_list *target,unsigned long tick,int flag);
 
 // 各種パラメータを得る
-unsigned int battle_counttargeted(struct block_list *bl,struct block_list *src,int target_lv);
+unsigned int battle_counttargeted(struct block_list &bl,struct block_list *src, unsigned short target_lv);
 struct block_list* battle_gettargeted(struct block_list &target);
 
 enum {

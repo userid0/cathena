@@ -162,8 +162,8 @@ int skill_clear_unitgroup(struct block_list *src);
 
 int skill_unit_ondamaged(struct skill_unit *src,struct block_list *bl,int damage,unsigned long tick);
 
-int skill_castfix(struct block_list *bl, unsigned long time);
-int skill_delayfix(struct block_list *bl, unsigned long time);
+int skill_castfix(struct block_list *bl, long time);
+int skill_delayfix(struct block_list *bl, long time);
 int skill_check_unit_range(int m,int x,int y,unsigned short skillid, unsigned short skilllv);
 int skill_check_unit_range2(int m,int x,int y,unsigned short skillid, unsigned short skilllv, int type);
 
