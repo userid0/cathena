@@ -6,11 +6,12 @@
 #include "malloc.h"
 #include "db.h"
 
+#include "storage.h"
+#include "chrif.h"
 #include "itemdb.h"
 #include "clif.h"
 #include "intif.h"
 #include "pc.h"
-#include "storage.h"
 #include "guild.h"
 #include "battle.h"
 #include "atcommand.h"
@@ -319,7 +320,7 @@ int storage_storagegettocart(struct map_session_data &sd,size_t index,size_t amo
 
 
 /*==========================================
- * ƒJƒvƒ‰‘qŒÉ‚ð•Â‚¶‚é
+ * Modified By Valaris to save upon closing [massdriller]
  *------------------------------------------
  */
 int storage_storageclose(struct map_session_data &sd)
@@ -331,8 +332,9 @@ int storage_storageclose(struct map_session_data &sd)
 	stor->storage_status=0;
 	sd.state.storage_flag = 0;
 	clif_storageclose(sd);
-
-	storage_storage_save(sd);
+	chrif_save(sd);
+	chrif_save(sd);
+	storage_storage_save(sd);	//items lost on crash/shutdown, by valaris
 
 	sortage_sortitem(*stor);
 	return 0;

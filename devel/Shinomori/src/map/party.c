@@ -1,10 +1,7 @@
 // $Id: party.c,v 1.2 2004/09/22 02:59:47 Akitasha Exp $
 #include "base.h"
 #include "db.h"
-#include "timer.h"
-#include "socket.h"
 #include "nullpo.h"
-#include "malloc.h"
 #include "showmsg.h"
 #include "utils.h"
 
@@ -46,7 +43,7 @@ void do_init_party(void)
 // 検索
 struct party *party_search(unsigned long party_id)
 {
-	return (struct party *)numdb_search(party_db,party_id);
+	return (struct party *) numdb_search(party_db,party_id);
 }
 int party_searchname_sub(void *key,void *data,va_list ap)
 {
@@ -86,7 +83,7 @@ int party_created(unsigned long account_id,int fail,unsigned long party_id,const
 	if(fail==0){
 		struct party *p;
 		sd->status.party_id=party_id;
-		if((p=(struct party *)numdb_search(party_db,party_id))!=NULL){
+		if((p=(struct party *) numdb_search(party_db,party_id))!=NULL){
 			ShowMessage("party: id already exists!\n");
 			exit(1);
 		}
@@ -148,7 +145,7 @@ int party_recv_noinfo(unsigned long party_id)
 	size_t i;
 	struct map_session_data *sd;
 	for(i=0;i<fd_max;i++){
-		if(session[i] && (sd=(struct map_session_data *)session[i]->session_data) && sd->state.auth){
+		if(session[i] && (sd=(struct map_session_data *) session[i]->session_data) && sd->state.auth){
 			if(sd->status.party_id==party_id)
 				sd->status.party_id=0;
 		}
@@ -185,7 +182,7 @@ int party_recv_info(struct party &sp)
 			sd->party_sended=1;
 		}
 	}
-
+	
 	return 0;
 }
 
@@ -243,8 +240,8 @@ int party_reply_invite(struct map_session_data &sd,unsigned long account_id,int 
 // パーティが追加された
 int party_member_added(unsigned long party_id,unsigned long account_id,int flag)
 {
-	struct map_session_data *sd= map_id2sd(account_id),*sd2;
-	if( sd==NULL ){
+	struct map_session_data *sd = map_id2sd(account_id),*sd2;
+	if(sd == NULL){
 		if(flag==0)
 		{
 			if(battle_config.error_log)
@@ -276,7 +273,7 @@ int party_member_added(unsigned long party_id,unsigned long account_id,int flag)
 	return 0;
 }
 // パーティ除名要求
-int party_removemember(struct map_session_data &sd,unsigned long account_id,char *name)
+int party_removemember(struct map_session_data &sd,unsigned long account_id,const char *name)
 {
 	struct party *p;
 	int i;
@@ -317,7 +314,7 @@ int party_leave(struct map_session_data &sd)
 	return 0;
 }
 // パーティメンバが脱退した
-int party_member_leaved(unsigned long party_id,unsigned long account_id,char *name)
+int party_member_leaved(unsigned long party_id,unsigned long account_id,const char *name)
 {
 	struct map_session_data *sd=map_id2sd(account_id);
 	struct party *p=party_search(party_id);
@@ -380,7 +377,7 @@ int party_optionchanged(unsigned long party_id,unsigned long account_id,int exp,
 }
 
 // パーティメンバの移動通知
-int party_recv_movemap(unsigned long party_id,unsigned long account_id,char *map,int online,unsigned short lv)
+int party_recv_movemap(unsigned long party_id,unsigned long account_id,const char *map,int online,unsigned short lv)
 {
 	struct party *p;
 	int i;
@@ -449,7 +446,7 @@ int party_send_logout(struct map_session_data &sd)
 
 	if( sd.status.party_id>0 )
 		intif_party_changemap(&sd,0);
-	
+
 	// sdが無効になるのでパーティ情報から削除
 	if( (p=party_search(sd.status.party_id))!=NULL ){
 		int i;
@@ -469,7 +466,7 @@ int party_send_message(struct map_session_data &sd,const char *mes,size_t len)
 	party_recv_message (sd.status.party_id,sd.status.account_id,mes,len);
 	//Chat Logging support Type 'P'
 	log_chat("P", sd.status.party_id, sd.status.char_id, sd.status.account_id, sd.mapname, sd.bl.x, sd.bl.y, "", mes);
-
+	
 	return 0;
 }
 
@@ -530,9 +527,9 @@ int party_send_xy_clear(struct party &p)
 	for(i=0;i<MAX_PARTY;i++){
 		struct map_session_data *sd=p.member[i].sd;
 		if(sd!=NULL){
-			sd->party_x = -1;
-			sd->party_y = -1;
-			sd->party_hp= -1;
+			sd->party_x=-1;
+			sd->party_y=-1;
+			sd->party_hp=-1;
 		}
 	}
 	return 0;
@@ -556,34 +553,49 @@ int party_send_hp_check(struct block_list &bl,va_list ap)
 }
 
 // exp share and added zeny share [Valaris]
-int party_exp_share(struct party &p,unsigned short map,int base_exp,int job_exp,int zeny)
+int party_exp_share(struct party &p,unsigned short map, unsigned long base_exp,unsigned long job_exp,unsigned long zeny)
 {
 	struct map_session_data *sd;
-	int i,c;
+	int i;
+	short c;
 
-	for(i=c=0;i<MAX_PARTY;i++)
+	for (i=c=0; i < MAX_PARTY; i++)
 	{	
 		if((sd=p.member[i].sd)!=NULL && p.member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
 		{
 			if( !sd->chatID && (sd->idletime+120 > last_tick) )
-				c++;
+			c++;
 		}
 	}
 
 	if(c==0)
 		return 0;
+	
+	if( battle_config.party_bonus )
+	{	// bonus formula, originally [Valaris]
+		// 1    2    3    4    5    6    7    8    9    10   11   12
+		// 1.00 1.05 1.15 1.30 1.50 1.75 2.05 2.40 2.80 3.25 3.75 4.30
+		//
+		// will be calculated as E*( 1+0.05*(c-1)*c/2 )
+		base_exp += base_exp * (c-1)*c /40;
+		job_exp  += job_exp  * (c-1)*c /40;
+		zeny     += zeny     * (c-1)*c /40;
+	}
+	base_exp = base_exp/c+1;
+	job_exp  = job_exp /c+1;
+	zeny     = zeny    /c;
 
-	for(i=0;i<MAX_PARTY;i++)
+	for (i = 0; i < MAX_PARTY; i++)
 	{
 		if((sd=p.member[i].sd)!=NULL && p.member[i].online && sd->bl.m==map && session[sd->fd] != NULL) 
 		{
 			if( !sd->chatID && (sd->idletime+120 > last_tick) )
 			{
-				pc_gainexp(*sd,(base_exp/c)+1,(job_exp/c)+1);
+				pc_gainexp(*sd,base_exp,job_exp);
 
-				if(battle_config.zeny_from_mobs) // zeny from mobs [Valaris]
-					pc_getzeny(*sd,zeny/c);
-			}
+			if (battle_config.zeny_from_mobs) // zeny from mobs [Valaris]
+					pc_getzeny(*sd,zeny);
+		}
 		}
 	}
 	return 0;
@@ -599,7 +611,7 @@ int party_exp_share2(struct party &p, unsigned short map, unsigned long base_exp
 {
 	struct map_session_data *sd;
 	int i;
-	size_t lvlsum = 0;
+	size_t lvlsum = 0, c=0;
 	double base_exp_div,job_exp_div,zeny_div;
 
 
@@ -608,7 +620,10 @@ int party_exp_share2(struct party &p, unsigned short map, unsigned long base_exp
 		if((sd=p.member[i].sd)!=NULL && p.member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)
 		{
 			if( !sd->chatID && (sd->idletime+120 > last_tick) )
+			{
 				lvlsum += p.member[i].lv;
+				c++;
+			}
 		}
 	}
 
@@ -618,7 +633,19 @@ int party_exp_share2(struct party &p, unsigned short map, unsigned long base_exp
 	base_exp_div = (double)base_exp /(double)lvlsum;
 	job_exp_div  = (double)job_exp  /(double)lvlsum;
 	zeny_div     = (double)zeny     /(double)lvlsum;
-	
+
+	if( battle_config.party_bonus )
+	{	// bonus formula
+		// 1    2    3    4    5    6    7    8    9    10   11   12
+		// 1.00 1.05 1.15 1.30 1.50 1.75 2.05 2.40 2.80 3.25 3.75 4.30
+		//
+		// will be calculated as E*( 1+0.05*(c-1)*c/2 )
+		base_exp_div += base_exp_div * (c-1)*c /40.;
+		job_exp_div  += job_exp_div  * (c-1)*c /40.;
+		zeny_div     += zeny_div     * (c-1)*c /40.;
+	}
+
+
 	for(i=0;i<MAX_PARTY;i++)
 	{
 		if((sd=p.member[i].sd)!=NULL && p.member[i].online && sd->bl.m==map  && session[sd->fd] != NULL)

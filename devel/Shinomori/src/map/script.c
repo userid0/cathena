@@ -314,6 +314,8 @@ int buildin_globalmes(struct script_state &st);
 int buildin_jump_zero(struct script_state &st);
 int buildin_select(struct script_state &st);
 int buildin_getmapmobs(struct script_state &st); //jA addition end
+int buildin_getstrlen(struct script_state &st); //strlen [valaris]
+int buildin_charisalpha(struct script_state &st);//isalpha [valaris]
 
 int buildin_defpattern(struct script_state &st); // MouseJstr
 int buildin_activatepset(struct script_state &st); // MouseJstr
@@ -562,10 +564,10 @@ struct {
 	{buildin_adopt,"adopt","sss"}, // allows 2 parents to adopt a child
 	{buildin_night,"night",""}, // sets the server to night time
 	{buildin_day,"day",""}, // sets the server to day time
-        {buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
-        {buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
-        {buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
-        {buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
+	{buildin_defpattern, "defpattern", "iss"}, // Define pattern to listen for [MouseJstr]
+	{buildin_activatepset, "activatepset", "i"}, // Activate a pattern set [MouseJstr]
+	{buildin_deactivatepset, "deactivatepset", "i"}, // Deactive a pattern set [MouseJstr]
+	{buildin_deletepset, "deletepset", "i"}, // Delete a pattern set [MouseJstr]
 	{buildin_dispbottom,"dispbottom","s"}, //added from jA [Lupus]
 	{buildin_getusersname,"getusersname","*"},
 	{buildin_recovery,"recovery",""},
@@ -577,6 +579,9 @@ struct {
 	{buildin_getmapmobs,"getmapmobs","s"}, //end jA addition
 	{buildin_unequip,"unequip","i"}, // unequip command [Spectre]
 	{buildin_pcstrcharinfo,"pcstrcharinfo","ii"},
+	{buildin_getstrlen,"getstrlen","s"}, //strlen [Valaris]
+	{buildin_charisalpha,"charisalpha","si"}, //isalpha [Valaris]
+
 	{NULL,NULL,NULL},
 };
 
@@ -592,18 +597,19 @@ enum {
  * 文字列のハッシュを計算
  *------------------------------------------
  */
-static int calc_hash(const char *str)
-{	// we need it unsigned here
-	int h=0;
-	if(str)
+unsigned char calc_hash(const char *str)
 {
+	size_t h=0;
+	if(str)
+	{	// we need it unsigned here
 		const unsigned char *p = (const unsigned char *)str;
-	while(*p){
+		while(*p)
+		{
 		h=(h<<1)+(h>>3)+(h>>5)+(h>>8);
 		h+=*p++;
 	}
-	}
-	return h&15;
+}
+	return h&0xF;
 }
 
 /*==========================================
@@ -615,10 +621,10 @@ static int search_str(const char *p)
 {
 	int i;
 	i=str_hash[calc_hash(p)];
-	while(i){
-		if(strcasecmp(str_buf+str_data[i].str,p)==0){
+	while(i)
+	{
+		if(strcasecmp(str_buf+str_data[i].str,p)==0)
 			return i;
-		}
 		i=str_data[i].next;
 	}
 	return -1;
@@ -1450,19 +1456,19 @@ static int set_reg(struct map_session_data &sd,int num,const char *name, void *v
 	if(name)
 	{
 		char prefix =name[0];
-		char postfix=name[strlen(name)-1];
-		
+	char postfix=name[strlen(name)-1];
+
 		if( postfix=='$' )
 		{	// string variable
-			char *str=(char*)v;
+		char *str=(char*)v;
 			if( prefix=='@' || prefix=='l')
 			{
-				pc_setregstr(sd,num,str);
+			pc_setregstr(sd,num,str);
 			}
 			else if(prefix=='$')
 			{
-				mapreg_setregstr(num,str);
-			}
+			mapreg_setregstr(num,str);
+		}
 			else
 			{
 				ShowError("script: set_reg: illegal scope string variable !");
@@ -1470,31 +1476,31 @@ static int set_reg(struct map_session_data &sd,int num,const char *name, void *v
 		}
 		else
 		{	// 数値
-			int val = (int)v;
+		int val = (int)v;
 			if(str_data[num&0x00ffffff].type==C_PARAM)
 			{
-				pc_setparam(sd,str_data[num&0x00ffffff].val,val);
+			pc_setparam(sd,str_data[num&0x00ffffff].val,val);
 			}
 			else if(prefix=='@' || prefix=='l')
 			{
-				pc_setreg(sd,num,val);
+			pc_setreg(sd,num,val);
 			}
 			else if(prefix=='$')
 			{
-				mapreg_setreg(num,val);
+			mapreg_setreg(num,val);
 			}
 			else if(prefix=='#')
 			{
-				if( name[1]=='#' )
-					pc_setaccountreg2(sd,name,val);
-				else
-					pc_setaccountreg(sd,name,val);
+			if( name[1]=='#' )
+				pc_setaccountreg2(sd,name,val);
+			else
+				pc_setaccountreg(sd,name,val);
 			}
 			else
 			{
-				pc_setglobalreg(sd,name,val);
-			}
+			pc_setglobalreg(sd,name,val);
 		}
+	}
 	}
 	return 0;
 }
@@ -6466,7 +6472,7 @@ int buildin_nude(struct script_state &st)
 	if(sd==NULL)
 		return 0;
 
-	for(i=0;i<11;i++)
+	for(i=0;i<MAX_EQUIP;i++)
 		if(sd->equip_index[i] >= 0)
 			pc_unequipitem(*sd,sd->equip_index[i],2);
 
@@ -6940,119 +6946,119 @@ int buildin_getsavepoint(struct script_state &st)
 int buildin_getmapxy(struct script_state &st)
 {
 	struct map_session_data *sd=NULL;
-	struct npc_data *nd;
-	struct pet_data *pd;
+        struct npc_data *nd;
+        struct pet_data *pd;
 	int num;
 	char *name;
 	int x,y,type;
 	char *mapname=NULL;
-	
+
 	if( st.stack.stack_data[st.start+2].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapname variable\n");
 		push_val(st.stack,C_INT,-1);
-		return 0;
-	}
+                return 0;
+        }
 	if( st.stack.stack_data[st.start+3].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapx variable\n");
 		push_val(st.stack,C_INT,-1);
-		return 0;
-	}
+                return 0;
+        }
 	if( st.stack.stack_data[st.start+4].type!=C_NAME )
 	{
 		ShowMessage("script: buildin_getmapxy: not mapy variable\n");
 		push_val(st.stack,C_INT,-1);
-		return 0;
-	}
+                return 0;
+        }
 
 
-	//??????????? >>>  Possible needly check function parameters on C_STR,C_INT,C_INT <<< ???????????//
+//??????????? >>>  Possible needly check function parameters on C_STR,C_INT,C_INT <<< ???????????//
 	type=conv_num(st, (st.stack.stack_data[st.start+5]));
-	
+
 	switch(type)
 	{
-	case 0:	//Get Character Position
+            case 0:                                             //Get Character Position
 		if( st.end>st.start+6 )
 			sd=map_nick2sd(conv_str(st, (st.stack.stack_data[st.start+6])));
-		else
-			sd=script_rid2sd(st);
+                    else
+                        sd=script_rid2sd(st);
 		if( sd==NULL )
 		{	//wrong char name or char offline
 			push_val(st.stack,C_INT,-1);
-			return 0;
-		}
-		x=sd->bl.x;
-		y=sd->bl.y;
+                        return 0;
+                    }
+                    x=sd->bl.x;
+                    y=sd->bl.y;
 		mapname = sd->mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-		break;
-	case 1:	//Get NPC Position
+                    break;
+            case 1:                                             //Get NPC Position
 		if( st.end > st.start+6 )
 			nd=npc_name2id(conv_str(st, (st.stack.stack_data[st.start+6])));
-		else
+                    else
 			nd=(struct npc_data *)map_id2bl(st.oid);
 		if( nd==NULL )
 		{	//wrong npc name or char offline
 			push_val(st.stack,C_INT,-1);
-			return 0;
-		}
-		x=nd->bl.x;
-		y=nd->bl.y;
+                        return 0;
+                    }
+                    x=nd->bl.x;
+                    y=nd->bl.y;
 		mapname=map[nd->bl.m].mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-		break;
-	case 2:	//Get Pet Position
+                    break;
+            case 2:                                             //Get Pet Position
 		if( st.end>st.start+6 )
 			sd=map_nick2sd(conv_str(st, (st.stack.stack_data[st.start+6])));
-		else
-			sd=script_rid2sd(st);
+                    else
+                        sd=script_rid2sd(st);
 		if( sd==NULL )
 		{	//wrong char name or char offline
 			push_val(st.stack,C_INT,-1);
-			return 0;
-		}
-		pd=sd->pd;
+                        return 0;
+                    }
+                    pd=sd->pd;
 		if(pd==NULL)
 		{	//ped data not found
 			push_val(st.stack,C_INT,-1);
-			return 0;
-		}
-		x=pd->bl.x;
-		y=pd->bl.y;
+                        return 0;
+                    }
+                    x=pd->bl.x;
+                    y=pd->bl.y;
 		mapname=map[pd->bl.m].mapname;
 		ShowMessage(">>>>%s %d %d\n",mapname,x,y);
-		break;
-	case 3:	//Get Mob Position
+                    break;
+            case 3:                                             //Get Mob Position
 		push_val(st.stack,C_INT,-1);
-		return 0;
-	default:	//Wrong type parameter
+                        return 0;
+            default:                                            //Wrong type parameter
 		push_val(st.stack,C_INT,-1);
-		return 0;
+                        return 0;
 	}//end switch
 
 	sd=script_rid2sd(st);
 	if(sd)
 	{
-		//Set MapName$
+     //Set MapName$
 		num=st.stack.stack_data[st.start+2].u.num;
-		name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
 		set_reg(*sd,num,name,mapname);
 
-		//Set MapX
+     //Set MapX
 		num=st.stack.stack_data[st.start+3].u.num;
-		name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
 		set_reg(*sd,num,name,(void*)x);
-		
-		//Set MapY
+
+     //Set MapY
 		num=st.stack.stack_data[st.start+4].u.num;
-		name=(char *)(str_buf+str_data[num&0x00ffffff].str);
+        name=(char *)(str_buf+str_data[num&0x00ffffff].str);
 		set_reg(*sd,num,name,(void*)y);
-		
-		//Return Success value
+
+     //Return Success value
 		push_val(st.stack,C_INT,0);
-		return 0;
-	}
+        return 0;
+}
 	push_val(st.stack,C_INT,-1);
 	return 0;
 }
@@ -7163,50 +7169,50 @@ int buildin_isequipped(struct script_state &st)
 	sd = script_rid2sd(st);
 	if(sd)
 	{
-		for (i=0; id!=0; i++) {
-			int flag = 0;
-
+	for (i=0; id!=0; i++) {
+		int flag = 0;
+	
 			if(st.end > st.start+i+2)
 				id = conv_num(st,(st.stack.stack_data[st.start+i+2]));
 			else 
 				id = 0;
 
-			if (id <= 0)
-				continue;
+		if (id <= 0)
+			continue;
+		
+		for (j=0; j<10; j++) {
+			int index, type;
+			index = sd->equip_index[j];
+			if(index < 0) continue;
+			if(j == 9 && sd->equip_index[8] == index) continue;
+			if(j == 5 && sd->equip_index[4] == index) continue;
+			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+			type = itemdb_type(id);
 			
-			for (j=0; j<10; j++) {
-				int index, type;
-				index = sd->equip_index[j];
-				if(index < 0) continue;
-				if(j == 9 && sd->equip_index[8] == index) continue;
-				if(j == 5 && sd->equip_index[4] == index) continue;
-				if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
-				type = itemdb_type(id);
-				
-				if(sd->inventory_data[index]) {
-					if (type == 4 || type == 5) {
-						if (sd->inventory_data[index]->nameid == id)
-							flag = 1;
-					} else if (type == 6) {
-						for(k=0; k<sd->inventory_data[index]->slot; k++) {
-							if (sd->status.inventory[index].card[0]!=0x00ff &&
-								sd->status.inventory[index].card[0]!=0x00fe &&
+			if(sd->inventory_data[index]) {
+				if (type == 4 || type == 5) {
+					if (sd->inventory_data[index]->nameid == id)
+						flag = 1;
+				} else if (type == 6) {
+					for(k=0; k<sd->inventory_data[index]->slot; k++) {
+						if (sd->status.inventory[index].card[0]!=0x00ff &&
+							sd->status.inventory[index].card[0]!=0x00fe &&
 								sd->status.inventory[index].card[0]!=0xff00 &&
-								sd->status.inventory[index].card[k] == id) {
-								flag = 1;
-								break;
-							}
+							sd->status.inventory[index].card[k] == id) {
+							flag = 1;
+							break;
 						}
 					}
-					if (flag) break;
 				}
+				if (flag) break;
 			}
-			if (ret == -1)
-				ret = flag;
-			else
-				ret &= flag;
-			if (!ret) break;
 		}
+		if (ret == -1)
+			ret = flag;
+		else
+			ret &= flag;
+		if (!ret) break;
+	}
 	}
 	push_val(st.stack,C_INT,ret);
 	return 0;
@@ -7227,44 +7233,44 @@ int buildin_isequippedcnt(struct script_state &st)
 	int index, type;
 
 	sd = script_rid2sd(st);
-
+	
 	if(sd)
 	{
-		for (i=0; id!=0; i++) {
+	for (i=0; id!=0; i++) {
 
 			if(st.end > st.start+i+2)
 				id = conv_num(st,(st.stack.stack_data[st.start+i+2]));
 			else 
 				id = 0;
 
-			if (id <= 0)
-				continue;
+		if (id <= 0)
+			continue;
+		
+		for (j=0; j<10; j++) {
+			index = sd->equip_index[j];
+			if(index < 0) continue;
+			if(j == 9 && sd->equip_index[8] == index) continue;
+			if(j == 5 && sd->equip_index[4] == index) continue;
+			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+			type = itemdb_type(id);
 			
-			for (j=0; j<10; j++) {
-				index = sd->equip_index[j];
-				if(index < 0) continue;
-				if(j == 9 && sd->equip_index[8] == index) continue;
-				if(j == 5 && sd->equip_index[4] == index) continue;
-				if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
-				type = itemdb_type(id);
-				
-				if(sd->inventory_data[index]) {
-					if (type == 4 || type == 5) {
-						if (sd->inventory_data[index]->nameid == id)
-							ret++; //[Lupus]
-					} else if (type == 6) {
+			if(sd->inventory_data[index]) {
+				if (type == 4 || type == 5) {
+					if (sd->inventory_data[index]->nameid == id)
+						ret++; //[Lupus]
+				} else if (type == 6) {
 						for(k=0; k<sd->inventory_data[index]->flag.slot; k++) {
-							if (sd->status.inventory[index].card[0]!=0x00ff &&
-								sd->status.inventory[index].card[0]!=0x00fe &&
+						if (sd->status.inventory[index].card[0]!=0x00ff &&
+							sd->status.inventory[index].card[0]!=0x00fe &&
 								sd->status.inventory[index].card[0]!=0xff00 &&
-								sd->status.inventory[index].card[k] == id) {
-								ret++; //[Lupus]
-							}
+							sd->status.inventory[index].card[k] == id) {
+							ret++; //[Lupus]
 						}
-					}				
-				}
+					}
+				}				
 			}
 		}
+	}
 	}
 	push_val(st.stack,C_INT,ret);
 	return 0;
@@ -7285,90 +7291,90 @@ int buildin_isequipped(struct script_state &st)
 	int ret = -1;
 
 	sd = script_rid2sd(st);
-
+	
 	if(sd)
 	{
 		for (i=0; id!=0; i++)
 		{
-			int flag = 0;
-			
+		int flag = 0;
+	
 			if(st.end>st.start+(i+2))
 				id=conv_num(st,(st.stack.stack_data[st.start+(i+2)]));
 			else
 				id = 0;
 			
-			if (id <= 0)
-				continue;
-			
+		if (id <= 0)
+			continue;
+		
 			for (j=0; j<10; j++)
 			{
-				int index, type;
-				index = sd->equip_index[j];
-				if(index < 0) continue;
-				if(j == 9 && sd->equip_index[8] == index) continue;
-				if(j == 5 && sd->equip_index[4] == index) continue;
-				if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
-				type = itemdb_type(id);
-				
+			int index, type;
+			index = sd->equip_index[j];
+			if(index < 0) continue;
+			if(j == 9 && sd->equip_index[8] == index) continue;
+			if(j == 5 && sd->equip_index[4] == index) continue;
+			if(j == 6 && (sd->equip_index[5] == index || sd->equip_index[4] == index)) continue;
+			type = itemdb_type(id);
+			
 				if(sd->inventory_data[index])
 				{
 					if (type == 4 || type == 5)
 					{
-						if (sd->inventory_data[index]->nameid == id)
-							flag = 1;
+					if (sd->inventory_data[index]->nameid == id)
+						flag = 1;
 					}
 					else if (type == 6)
 					{	// Item Hash format:
-						// 1111 1111 1111 1111 1111 1111 1111 1111
-						// [ left  ] [ right ] [ NA ] [  armor  ]
+					// 1111 1111 1111 1111 1111 1111 1111 1111
+					// [ left  ] [ right ] [ NA ] [  armor  ]
 						for (k = 0; k < sd->inventory_data[index]->flag.slot; k++)
 						{	// --- Calculate hash for current card ---
-							// Defense equipment
-							// They *usually* have only 1 slot, so we just assign 1 bit
-							int hash = 0;
+						// Defense equipment
+						// They *usually* have only 1 slot, so we just assign 1 bit
+						int hash = 0;
 							if (sd->inventory_data[index]->type == 5)
 							{
-								hash = sd->inventory_data[index]->equip;
-							}
-							// Weapons
+							hash = sd->inventory_data[index]->equip;
+						}
+						// Weapons
 							// right hand: slot 1 - 0x0010000 ... slot 4 - 0x0080000
-							// left hand: slot 1 -  0x1000000 ... slot 4 - 0x8000000
-							// We can support up to 8 slots each, just in case
+						// left hand: slot 1 - 0x1000000 ... slot 4 - 0x8000000
+						// We can support up to 8 slots each, just in case
 							else if (sd->inventory_data[index]->type == 4)
 							{
-								if (sd->inventory_data[index]->equip & 2)	// right hand
-									hash = 0x10000 * (int)pow(2,k);	// x slot number
-								else if (sd->inventory_data[index]->equip & 32)	// left hand
-									hash = 0x1000000 * (int)pow(2,k);	// x slot number
+							if (sd->inventory_data[index]->equip & 2)	// right hand
+								hash = 0x10000 * (int)pow(2,k);	// x slot number
+							else if (sd->inventory_data[index]->equip & 32)	// left hand
+								hash = 0x1000000 * (int)pow(2,k);	// x slot number
 							}
 							else
-								continue;	// slotted item not armour nor weapon? we're not going to support it
-							
-							if (sd->setitem_hash & hash)	// check if card is already used by another set
-								continue;	// this item is used, move on to next card
-							
-							if( sd->status.inventory[index].card[0] != 0x00ff &&
-								sd->status.inventory[index].card[0] != 0x00fe &&
+							continue;	// slotted item not armour nor weapon? we're not going to support it
+
+						if (sd->setitem_hash & hash)	// check if card is already used by another set
+							continue;	// this item is used, move on to next card
+
+						if (sd->status.inventory[index].card[0] != 0x00ff &&
+							sd->status.inventory[index].card[0] != 0x00fe &&
 								sd->status.inventory[index].card[0] != 0xff00 &&
-								sd->status.inventory[index].card[k] == id )
-							{
-								// We have found a match
-								flag = 1;
-								// Set hash so this card cannot be used by another
-								sd->setitem_hash |= hash;
-								break;
-							}
+							sd->status.inventory[index].card[k] == id)
+						{
+							// We have found a match
+							flag = 1;
+							// Set hash so this card cannot be used by another
+							sd->setitem_hash |= hash;
+							break;
 						}
 					}
-					if (flag) break;
 				}
+				if (flag) break;
 			}
-			if (ret == -1)
-				ret = flag;
-			else
-				ret &= flag;
-			if (!ret) break;
 		}
+		if (ret == -1)
+			ret = flag;
+		else
+			ret &= flag;
+		if (!ret) break;
+	}
 	}
 	push_val(st.stack,C_INT,ret);
 	return 0;
@@ -7388,7 +7394,7 @@ int buildin_cardscnt(struct script_state &st)
 	int index, type;
 
 	sd = script_rid2sd(st);
-
+	
 	if(sd)
 	{
 		for (i=0; id!=0; i++)
@@ -7398,36 +7404,36 @@ int buildin_cardscnt(struct script_state &st)
 			else 
 				id = 0;
 			
-			if (id <= 0)
-				continue;
-			
-			index = current_equip_item_index; //we get CURRENT WEAPON inventory index from status.c [Lupus]
-			if(index < 0) continue;
-			
-			type = itemdb_type(id);
+		if (id <= 0)
+			continue;
+		
+		index = current_equip_item_index; //we get CURRENT WEAPON inventory index from status.c [Lupus]
+		if(index < 0) continue;
+
+		type = itemdb_type(id);
 			
 			if(sd->inventory_data[index])
 			{
 				if (type == 4 || type == 5)
 				{
-					if (sd->inventory_data[index]->nameid == id)
-						ret++;
+				if (sd->inventory_data[index]->nameid == id)
+					ret++;
 				}
 				else if (type == 6)
 				{
 					for(k=0; k<sd->inventory_data[index]->flag.slot; k++)
 					{
-						if( sd->status.inventory[index].card[0]!=0x00ff &&
-							sd->status.inventory[index].card[0]!=0x00fe &&
+					if (sd->status.inventory[index].card[0]!=0x00ff &&
+						sd->status.inventory[index].card[0]!=0x00fe &&
 							sd->status.inventory[index].card[0]!=0xff00 &&
 							sd->status.inventory[index].card[k] == id )
 						{
-							ret++;
-						}
+						ret++;
 					}
-				}				
-			}
+				}
+			}				
 		}
+	}
 	}
 	push_val(st.stack,C_INT,ret);
 //	push_val(st.stack,C_INT,current_equip_item_index);
@@ -7545,6 +7551,29 @@ int buildin_pcstrcharinfo(struct script_state &st)
 	return 0;
 }
 
+//=======================================================
+// strlen [Valaris]
+//-------------------------------------------------------
+int buildin_getstrlen(struct script_state &st)
+{
+	const char *str=conv_str(st, (st.stack.stack_data[st.start+2]));
+
+	int len=strlen(str);
+	push_val(st.stack,C_INT,len);
+	return 0;
+}
+
+//=======================================================
+// isalpha [Valaris]
+//-------------------------------------------------------
+int buildin_charisalpha(struct script_state &st)
+{
+	const char *str=conv_str(st, (st.stack.stack_data[st.start+2]));
+	int pos =conv_num(st, (st.stack.stack_data[st.start+3]));
+
+	push_val(st.stack,C_INT, isalpha(str[pos]) );
+	return 0;
+}
 //
 // 実行部main
 //
@@ -8232,7 +8261,7 @@ static int set_posword(const char *p)
 	const char* str[15];
 	char* np;
 	int i=0;
-	for(i=0;i<11;i++) {
+	for(i=0;i<MAX_EQUIP;i++) {
 		if((np=strchr(p,','))!=NULL) {
 			str[i]=p;
 			*np=0;

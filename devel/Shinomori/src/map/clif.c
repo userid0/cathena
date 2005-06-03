@@ -94,9 +94,9 @@ static const int packet_len_table[MAX_PACKET_DB] = {
    -1, -1, 20, 10, 32,  9, 34, 14,   2,  6, 48, 56, -1,  4,  5, 10,
 //#0x200
    26, -1,  26, 10, 18, 26, 11, 34,  14, 36, 10, 0,  0, -1, 24, 10, // 0x20c change to 0 (was 19)
-   22,  0,  26, 26, 42, -1, -1,  2,   0,282,282,10, 10, -1, -1, 66,
-   10, -1,  -1,  8, 10,  2,282, 18,  18, 15, 58, 57, 64, 5,  0,  0,
-    0,  0,   9, 11, -1
+   22,  0,  26, 26, 42, -1, -1,  2,   2,282,282,10, 10, -1, -1, 66,
+   10, -1,  -1,  8, 10,  2,282, 18,  18, 15, 58, 57, 64, 5, 69,  0,
+   12,  0,   9, 11, -1, -1, 10,  2, 282, 11
 };
 
 
@@ -1289,6 +1289,11 @@ int clif_spawnpc(struct map_session_data &sd)
 	if (map[sd.bl.m].flag.rain)
 		clif_specialeffect(sd.bl, 161, 1);
 
+	if(sd.state.viewsize==2) // tiny/big players [Valaris]
+		clif_specialeffect(sd.bl,423,0);
+	else if(sd.state.viewsize==1)
+		clif_specialeffect(sd.bl,421,0);
+		
 	return 0;
 }
 
@@ -2274,6 +2279,30 @@ int clif_guildstorageequiplist(struct map_session_data &sd,struct guild_storage 
 		WBUFW(buf,2)=4+n*20;
 		WFIFOSET(fd,WFIFOW(fd,2));
 	}
+	return 0;
+}
+
+
+
+// Guild XY locators [Valaris]
+int clif_guild_xy(struct map_session_data &sd)
+{
+	unsigned char buf[10];
+	WBUFW(buf,0)=0x1eb;
+	WBUFL(buf,2)=sd.status.account_id;
+	WBUFW(buf,6)=sd.bl.x;
+	WBUFW(buf,8)=sd.bl.y;
+	clif_send(buf,packet_len_table[0x1eb],&sd.bl,GUILD_SAMEMAP_WOS);
+	return 0;
+}
+int clif_guild_xy_remove(struct map_session_data &sd)
+{
+	unsigned char buf[10];
+	WBUFW(buf,0)=0x1eb;
+	WBUFL(buf,2)=sd.status.account_id;
+	WBUFW(buf,6)=0xFFFF;
+	WBUFW(buf,8)=0xFFFF;
+	clif_send(buf,packet_len_table[0x1eb],&sd.bl,GUILD_SAMEMAP_WOS);
 	return 0;
 }
 
@@ -3457,6 +3486,11 @@ int clif_getareachar_pc(struct map_session_data &sd, struct map_session_data &ds
 		clif_changelook(&dstsd.bl,LOOK_CLOTHES_COLOR,dstsd.status.clothes_color);
 	if(sd.status.manner < 0)
 		clif_changestatus(sd.bl,SP_MANNER,sd.status.manner);
+		
+	if(sd.state.viewsize==2) // tiny/big players [Valaris]
+		clif_specialeffect(sd.bl,423,0);
+	else if(sd.state.viewsize==1)
+		clif_specialeffect(sd.bl,421,0);
 
 	return 0;
 }
@@ -5572,7 +5606,7 @@ int clif_party_option(struct party &p,struct map_session_data *sd,int flag)
  * パーティ脱退（脱退前に呼ぶこと）
  *------------------------------------------
  */
-int clif_party_leaved(struct party &p,struct map_session_data *sd,unsigned long account_id,char *name,unsigned char flag)
+int clif_party_leaved(struct party &p,struct map_session_data *sd,unsigned long account_id,const char *name,unsigned char flag)
 {
 	unsigned char buf[64];
 	int i;
@@ -5634,6 +5668,22 @@ int clif_party_xy(struct party &p,struct map_session_data &sd)
 	WBUFW(buf,8)=sd.bl.y;
 	return clif_send(buf,packet_len_table[0x107],&sd.bl,PARTY_SAMEMAP_WOS);
 }
+/*==========================================
+ * Remove dot from minimap 
+ *------------------------------------------
+*/
+int clif_party_xy_remove(struct map_session_data &sd)
+{
+	unsigned char buf[16];
+	WBUFW(buf,0)=0x107;
+	WBUFL(buf,2)=sd.status.account_id;
+	WBUFW(buf,6)=0xFFFF;
+	WBUFW(buf,8)=0xFFFF;
+	clif_send(buf, packet_len_table[0x107], &sd.bl, PARTY_SAMEMAP_WOS);
+	return 0;
+}
+
+
 /*==========================================
  * パーティHP通知
  *------------------------------------------
@@ -7714,38 +7764,45 @@ int clif_parse_GetCharNameRequest(int fd, struct map_session_data &sd)
 
 	switch(bl->type) {
 	case BL_PC:
-	  {
+	{
 		struct map_session_data *ssd = (struct map_session_data *)bl;
 		struct party *p = NULL;
 		struct guild *g = NULL;
 
 		nullpo_retr(0,ssd);
 
-		memcpy(WFIFOP(fd,6), ssd->status.name, 24);
-		if (ssd->status.guild_id > 0 && (g = guild_search(ssd->status.guild_id)) != NULL &&
-		    (ssd->status.party_id == 0 || (p = party_search(ssd->status.party_id)) != NULL)) {
-			// ギルド所属ならパケット0195を返す
-			int i, ps = -1;
-			for(i = 0; i < g->max_member; i++) {
-				if (g->member[i].account_id == ssd->status.account_id &&
-				    g->member[i].char_id == ssd->status.char_id )
-					ps = g->member[i].position;
-			}
-			if (ps >= 0 && ps < MAX_GUILDPOSITION) {
-				WFIFOW(fd, 0) = 0x195;
-				if (p)
-					memcpy(WFIFOP(fd,30), p->name, 24);
-				else
-					WFIFOB(fd,30) = 0;
-				memcpy(WFIFOP(fd,54), g->name,24);
-				memcpy(WFIFOP(fd,78), g->position[ps].name, 24);
-				WFIFOSET(fd,packet_len_table[0x195]);
-				break;
+//		if(strlen(ssd->fakename)>1)
+//		{
+//			memcpy(WFIFOP(fd,6), ssd->fakename, 24);
+///		}
+//		else
+		{
+			memcpy(WFIFOP(fd,6), ssd->status.name, 24);
+			if (ssd->status.guild_id > 0 && (g = guild_search(ssd->status.guild_id)) != NULL &&
+				(ssd->status.party_id == 0 || (p = party_search(ssd->status.party_id)) != NULL)) {
+				// ギルド所属ならパケット0195を返す
+				int i, ps = -1;
+				for(i = 0; i < g->max_member; i++) {
+					if (g->member[i].account_id == ssd->status.account_id &&
+						g->member[i].char_id == ssd->status.char_id )
+						ps = g->member[i].position;
+				}
+				if (ps >= 0 && ps < MAX_GUILDPOSITION) {
+					WFIFOW(fd, 0) = 0x195;
+					if (p)
+						memcpy(WFIFOP(fd,30), p->name, 24);
+					else
+						WFIFOB(fd,30) = 0;
+					memcpy(WFIFOP(fd,54), g->name,24);
+					memcpy(WFIFOP(fd,78), g->position[ps].name, 24);
+					WFIFOSET(fd,packet_len_table[0x195]);
+					break;
+				}
 			}
 		}
 		WFIFOSET(fd,packet_len_table[0x95]);
-	  }
 		break;
+	}
 	case BL_PET:
 		//memcpy(WFIFOP(fd,6), ((struct pet_data*)bl)->name, 24);
 		memcpy(WFIFOP(fd,6), ((struct pet_data*)bl)->namep, 24);
@@ -11991,19 +12048,3 @@ int clif_disp_overhead(struct map_session_data &sd, const char* mes)
 	return 0;
 }
 
-//minimap fix [Kevin]
-
-/* Remove dot from minimap 
- *------------------------------------------
-*/
-int clif_party_xy_remove(struct map_session_data &sd)
-{
-	unsigned char buf[16];
-	WBUFW(buf,0)=0x107;
-	WBUFL(buf,2)=sd.status.account_id;
-	WBUFW(buf,6)=0xFFFF;
-	WBUFW(buf,8)=0xFFFF;
-
-	clif_send(buf, packet_len_table[0x107], &sd.bl, PARTY_SAMEMAP_WOS);
-	return 0;
-}

@@ -225,7 +225,8 @@ struct map_session_data
 		unsigned noexp :1;							// 41
 		unsigned detach :1;							// 42
 		unsigned potion_flag : 2;					// 43,44
-		unsigned _unused : 3;						// 3 bit left
+		unsigned viewsize : 2;						// 45,46
+		unsigned _unused : 1;						// 1 bit left
 	} state;
 
 	struct mmo_charstatus status;

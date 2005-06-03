@@ -2852,7 +2852,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 		// for azoth weapon [Valaris]
 		if(src->type == BL_PC && target->type == BL_MOB && sd->classchange) {
 			 if(rand()%10000 < sd->classchange) {
- 			 	int changeclass[]={
+ 			 	static int changeclass[]={
 				1001,1002,1004,1005,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1018,1019,1020,
 				1021,1023,1024,1025,1026,1028,1029,1030,1031,1032,1033,1034,1035,1036,1037,1040,1041,
 				1042,1044,1045,1047,1048,1049,1050,1051,1052,1053,1054,1055,1056,1057,1058,1060,1061,
@@ -4064,7 +4064,7 @@ static struct Damage battle_calc_weapon_attack_sub(
 
 	if(sd && sd->classchange && tmd && (rand()%10000 < sd->classchange))
 	{	//Classchange:
-		int changeclass[]={
+		static int changeclass[]={
 			1001,1002,1004,1005,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1018,1019,1020,
 			1021,1023,1024,1025,1026,1028,1029,1030,1031,1032,1033,1034,1035,1036,1037,1040,1041,
 			1042,1044,1045,1047,1048,1049,1050,1051,1052,1053,1054,1055,1056,1057,1058,1060,1061,
@@ -5179,7 +5179,7 @@ int battle_check_target( struct block_list *src, struct block_list *target,int f
 				return 1;
 		}
 		// Mob‚Åmaster_id‚ª‚ ‚Á‚Äspecial_mob_ai‚È‚çA¢Š«Žå‚ð‹‚ß‚é
-		if(md->master_id > 0) {
+		if (md->master_id > 0) {
 			if (md->master_id == target->id)	// Žå‚È‚çm’è
 				return 1;
 			if (md->state.special_mob_ai){
@@ -5364,6 +5364,8 @@ static struct {
 	{ "gm_all_skill_add_abra",	            &battle_config.gm_allskill_addabra		},
 	{ "gm_all_equipment",                  &battle_config.gm_allequip				},
 	{ "gm_skill_unconditional",            &battle_config.gm_skilluncond			},
+	{ "gm_join_chat",                      &battle_config.gm_join_chat				},
+	{ "gm_kick_chat",                      &battle_config.gm_kick_chat				},
 	{ "player_skillfree",                  &battle_config.skillfree				},
 	{ "player_skillup_limit",              &battle_config.skillup_limit			},
 	{ "weapon_produce_rate",               &battle_config.wp_rate					},
@@ -5566,15 +5568,15 @@ static struct {
 	{ "who_display_aid",	                  &battle_config.who_display_aid}, // [Ancyker], for a feature by...?
 	{ "display_hallucination",             &battle_config.display_hallucination}, // [Skotlex]
 	{ "use_statpoint_table",               &battle_config.use_statpoint_table}, // [Skotlex]
-	{ "dynamic_mobs",						&battle_config.dynamic_mobs},
+	{ "dynamic_mobs",                      &battle_config.dynamic_mobs},
 	{ "dynamic_mobs",                      &battle_config.dynamic_mobs},
 	{ "mob_remove_damaged",                &battle_config.mob_remove_damaged},
+	{ "mob_remove_delay",                  &battle_config.mob_remove_delay	},
 	{ "show_hp_sp_drain",                  &battle_config.show_hp_sp_drain}, // [Skotlex]
 	{ "show_hp_sp_gain",                   &battle_config.show_hp_sp_gain}, // [Skotlex]
+	{ "party_bonus",                       &battle_config.party_bonus	}, // added by [Valaris]
 
 	{ "mail_system",                       &battle_config.mail_system	}, // added by [Valaris]
-
-	{ "mob_remove_delay",                  &battle_config.mob_remove_delay	},
 };
 
 int battle_set_value(const char *w1, const char *w2)
@@ -5639,6 +5641,8 @@ void battle_set_defaults() {
 	battle_config.gm_allskill=0;
 	battle_config.gm_allequip=0;
 	battle_config.gm_skilluncond=0;
+	battle_config.gm_join_chat=0;
+	battle_config.gm_kick_chat=0;
 	battle_config.guild_max_castles=0;
 	battle_config.skillfree = 0;
 	battle_config.skillup_limit = 0;
@@ -5849,6 +5853,7 @@ void battle_set_defaults() {
 
 	battle_config.show_hp_sp_drain = 0; //Display drained hp/sp from attacks
 	battle_config.show_hp_sp_gain = 1;	//Display gained hp/sp from mob-kills
+	battle_config.party_bonus = 0;
 	battle_config.mail_system = 0;
 	
 }

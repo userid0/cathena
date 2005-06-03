@@ -1620,107 +1620,103 @@ void map_addnickdb(struct map_session_data &sd)
  */
 int map_quit(struct map_session_data &sd) 
 {
-	if (sd.state.event_disconnect) 
+	if( sd.state.event_disconnect )
 	{
-		if (script_config.event_script_type == 0) 
+		if( script_config.event_script_type == 0 )
 		{
 			struct npc_data *npc = npc_name2id(script_config.logout_event_name);
-			if(npc && npc->u.scr.ref) 
+			if( npc && npc->u.scr.ref )
 			{
 				run_script(npc->u.scr.ref->script,0,sd.bl.id,npc->bl.id); // PCLogoutNPC
 				ShowStatus ("Event '"CL_WHITE"%s"CL_RESET"' executed.\n", script_config.logout_event_name);
-				}
 			}
-		else 
+		}
+		else
 		{
 			ShowStatus("%d '"CL_WHITE"%s"CL_RESET"' events executed.\n",
-					npc_event_doall_id(script_config.logout_event_name, sd.bl.id), script_config.logout_event_name);
+				npc_event_doall_id(script_config.logout_event_name, sd.bl.id), script_config.logout_event_name);
 		}
 	}
-
+	
 	if(sd.chatID)	// チャットから出る
-			chat_leavechat(sd);
-
+		chat_leavechat(sd);
 	if(sd.trade_partner)	// 取引を中?する
-			trade_tradecancel(sd);
-
+		trade_tradecancel(sd);
 	if(sd.party_invite>0)	// パ?ティ?誘を拒否する
 		party_reply_invite(sd,sd.party_invite_account,0);
-
 	if(sd.guild_invite>0)	// ギルド?誘を拒否する
 		guild_reply_invite(sd,sd.guild_invite,0);
 	if(sd.guild_alliance>0)	// ギルド同盟?誘を拒否する
 		guild_reply_reqalliance(sd,sd.guild_alliance_account,0);
+	
+	party_send_logout(sd);	// パ?ティのログアウトメッセ?ジ送信
+	party_send_dot_remove(sd);//minimap dot fix [Kevin]
+	guild_send_memberinfoshort(sd,0);	// ギルドのログアウトメッセ?ジ送信
 
-		party_send_logout(sd);	// パ?ティのログアウトメッセ?ジ送信
-		
-		party_send_dot_remove(sd);//minimap dot fix [Kevin]
-
-		guild_send_memberinfoshort(sd,0);	// ギルドのログアウトメッセ?ジ送信
-
-		pc_cleareventtimer(sd);	// イベントタイマを破棄する
-
+	pc_cleareventtimer(sd);	// イベントタイマを破棄する
 	if(sd.state.storage_flag)
-			storage_guild_storage_quit(sd,0);
-		else
-			storage_storage_quit(sd);	// 倉庫を開いてるなら保存する
-
-		// check if we've been authenticated [celest]
+		storage_guild_storage_quit(sd,0);
+	else
+		storage_storage_quit(sd);	// 倉庫を開いてるなら保存する
+	
+	// check if we've been authenticated [celest]
 	if (sd.state.auth)
 		skill_castcancel(&sd.bl,0);	// 詠唱を中?する
-
+	
 	skill_stop_dancing(&sd.bl,1);// ダンス/演奏中?
-
 	if(sd.sc_data && sd.sc_data[SC_BERSERK].timer!=-1) //バ?サ?ク中の終了はHPを100に
 		sd.status.hp = 100;
-
+	
 	status_change_clear(&sd.bl,1);	// ステ?タス異常を解除する
 	skill_clear_unitgroup(&sd.bl);	// スキルユニットグル?プの削除
 	skill_cleartimerskill(&sd.bl);
 
-			pc_stop_walking(sd,0);
-			pc_stopattack(sd);
-			pc_delinvincibletimer(sd);
+	pc_stop_walking(sd,0);
+	pc_stopattack(sd);
+	pc_delinvincibletimer(sd);
 
 	pc_delspiritball(sd,sd.spiritball,1);
 	skill_gangsterparadise(&sd,0);
 	skill_unit_move(sd.bl,gettick(),0);
-
-	if (sd.state.auth)
-			status_calc_pc(sd,4);
-
-	if (!(sd.status.option & OPTION_HIDE))
+	
+	if( sd.state.auth )
+		status_calc_pc(sd,4);
+	
+	if( !(sd.status.option & OPTION_HIDE) )
 		clif_clearchar_area(sd.bl,2);
 
-	if(sd.status.pet_id && sd.pd) {
+	if( sd.status.pet_id && sd.pd )
+	{
 		pet_lootitem_drop(*(sd.pd),&sd);
-			pet_remove_map(sd);
-		if(sd.pet.intimate <= 0) {
+		pet_remove_map(sd);
+		if(sd.pet.intimate <= 0)
+		{
 			intif_delete_petdata(sd.status.pet_id);
 			sd.status.pet_id = 0;
 			sd.pd = NULL;
 			sd.petDB = NULL;
-			}
-			else
-			intif_save_petdata(sd.status.account_id,sd.pet);
 		}
-		if(pc_isdead(sd))
-			pc_setrestartvalue(sd,2);
-
-		pc_clean_skilltree(sd);
-		pc_makesavestatus(sd);
-		chrif_save(sd);
-		storage_storage_dirty(sd);
-		storage_storage_save(sd);
+		else
+			intif_save_petdata(sd.status.account_id,sd.pet);
+	}
+	if(pc_isdead(sd))
+		pc_setrestartvalue(sd,2);
+	
+	pc_clean_skilltree(sd);
+	pc_makesavestatus(sd);
+	chrif_save(sd);
+	storage_storage_dirty(sd);
+	storage_storage_save(sd);
 	map_delblock(sd.bl);
-
-	if( sd.npc_stackbuf != NULL) {
+	
+	if( sd.npc_stackbuf != NULL)
+	{
 		aFree( sd.npc_stackbuf );
 		sd.npc_stackbuf = NULL;
 	}
-
+	
 	chrif_char_offline(sd);
-
+	
 	{
 		struct charid2nick *p = (struct charid2nick *)numdb_search(charid_db,sd.status.char_id);
 		if(p) {

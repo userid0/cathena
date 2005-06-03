@@ -272,6 +272,8 @@ ACMD_FUNC(battleoption);
 ACMD_FUNC(iteminfo); // Lupus
 ACMD_FUNC(mapflag); // Lupus
 ACMD_FUNC(me); //added by massdriller, code by lordalfa
+ACMD_FUNC(fakename); //[Valaris]
+ACMD_FUNC(size); //[Valaris]
 
 /*==========================================
  *AtCommandInfo atcommand_info[]\‘¢‘Ì‚Ì’è‹`
@@ -569,6 +571,8 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_MapFlag,			"@mapflag",		99, atcommand_mapflag }, // [Lupus]
 
 	{ AtCommand_Me,				"@me",			20, atcommand_me }, //added by massdriller, code by lordalfa
+	{ AtCommand_FakeName,				"@fakename",			20, atcommand_fakename },
+	{ AtCommand_Size,				"@size",			20, atcommand_size },
 
 
 // add new commands before this line
@@ -9084,6 +9088,49 @@ bool atcommand_me(int fd, struct map_session_data &sd, const char* command, cons
 	return true;
 }
 
+/*==========================================
+ * @size
+ * => ?
+ *------------------------------------------
+ */
+bool atcommand_size(int fd, struct map_session_data &sd, const char* command, const char* message)
+{
+	size_t size=0;
+
+	if (!message || !*message)
+		return false;
+
+	if (sscanf(message,"%d", &size) < 1)
+		return false;
+
+	if(sd.state.viewsize) {
+		sd.state.viewsize=0;
+		pc_setpos(sd, sd.mapname, sd.bl.x, sd.bl.y, 3);
+	}
+
+	if(size==1) {
+		sd.state.viewsize=1;
+		clif_specialeffect(sd.bl,420,0);
+	} else if(size==2) {
+		sd.state.viewsize=2;
+		clif_specialeffect(sd.bl,422,0);
+	}
+	return true;
+}
+
+bool atcommand_fakename(int fd, struct map_session_data &sd, const char* command, const char* message)
+{
+//	if((!message || !*message) && strlen(sd.fakename) > 1)
+//	{
+//		sd.fakename[0]='\0';
+//		pc_setpos(sd, sd.mapname, sd->bl.x, sd->bl.y, 3);
+//		clif_displaymessage(sd.fd,"Returned to real name.");
+//	}
+//
+//	if (!message || !*message)
+//		clif_displaymessage(sd.fd,"You must enter a name.");
+	return true;
+}
 /*==========================================
  * @mapflag [flagap name] [1|0|on|off] [map name] by Lupus
  * => Shows information about the map flags [map name]

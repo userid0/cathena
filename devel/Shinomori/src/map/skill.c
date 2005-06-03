@@ -1345,7 +1345,7 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 		return 0;
 	if(bl->type == BL_PC && pc_isdead(*((struct map_session_data *)bl))) //?象がPCですでに死んでいたら何もしない
 		return 0;
-	if(bl->type == BL_PC && skillnotok(skillid, *((struct map_session_data *)bl)))
+	if(src->type == BL_PC && skillnotok(skillid, *((struct map_session_data *)src)))
 	        return 0; // [MouseJstr]
 	if(sc_data && sc_data[SC_HIDING].timer != -1) { //ハイディング?態で
 		if(skill_get_pl(skillid) != 2) //スキルの?性が地?性でなければ何もしない
@@ -3084,14 +3084,15 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case SA_CLASSCHANGE:
 		{
 			//クラスチェンジ用ボスモンスタ?ID
-			int changeclass[]={1038,1039,1046,1059,1086,1087,1112,1115,1157,1159,1190,1272,1312,1373,1492};
+			static int changeclass[]={1038,1039,1046,1059,1086,1087,1112,1115
+				,1157,1159,1190,1272,1312,1373,1492};
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 			if(dstmd) mob_class_change(*dstmd,changeclass, sizeof(changeclass)/sizeof(changeclass[0]));
 		}
 		break;
 	case SA_MONOCELL:
 		{
-			int poringclass[]={1002};
+			static int poringclass[]={1002};
 			clif_skill_nodamage(src,bl,skillid,skilllv,1);
 			if(dstmd) mob_class_change(*dstmd,poringclass,1);
 		}
@@ -3919,17 +3920,12 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 		clif_skill_nodamage(src,bl,skillid,skilllv,1);
 
 		if (dstsd) {
-			for (i=0;i<MAX_EQUIP;i++)
-			{
-				if (dstsd->equip_index[i]>0)
-				{
-					if( equip&EQP_WEAPON && (i == 8 || i == 9) && dstsd->inventory_data[dstsd->equip_index[i]]->type == 4 && !(dstsd->unstripable_equip&EQP_WEAPON) && !(tsc_data && tsc_data[SC_CP_WEAPON].timer != -1))
-					{
+			for (i=0;i<MAX_EQUIP;i++) {
+				if (dstsd->equip_index[i]>=0 && dstsd->inventory_data[dstsd->equip_index[i]]) {
+					if (equip &EQP_WEAPON && (i == 9 || (i == 8 && dstsd->inventory_data[dstsd->equip_index[8]]->type == 4)) && !(dstsd->unstripable_equip &EQP_WEAPON) && !(tsc_data && tsc_data[SC_CP_WEAPON].timer != -1)) {
 				   		sclist[0] = SC_STRIPWEAPON; // Okay, we found a weapon to strip - It can be a right-hand, left-hand or two-handed weapon
 						pc_unequipitem(*dstsd,dstsd->equip_index[i],3);
-					}
-					if (equip&EQP_SHIELD && i == 9 && dstsd->inventory_data[dstsd->equip_index[i]]->type == 5 && !(dstsd->unstripable_equip&EQP_SHIELD) && !(tsc_data && tsc_data[SC_CP_SHIELD].timer != -1))
-					{
+					} else if (equip &EQP_SHIELD && i == 8 && dstsd->inventory_data[dstsd->equip_index[8]]->type == 5 && !(dstsd->unstripable_equip &EQP_SHIELD) && !(tsc_data && tsc_data[SC_CP_SHIELD].timer != -1)) {
 						sclist[1] = SC_STRIPSHIELD; // Okay, we found a shield to strip - It is really a shield, not a two-handed weapon or a left-hand weapon
 						pc_unequipitem(*dstsd,dstsd->equip_index[i],3);
 					}
@@ -9032,7 +9028,7 @@ int skill_unit_move_sub( struct block_list &bl, va_list ap )
 	tick = (unsigned long)va_arg(ap,int);
 	flag = va_arg(ap,int);
 
-	if(target->type!=BL_PC && target->type!=BL_MOB)
+	if (target->type!=BL_PC && target->type!=BL_MOB)
 		return 0;
 
 	nullpo_retr(0, group=unit.group);
@@ -9070,7 +9066,7 @@ int skill_unit_move(struct block_list &bl,unsigned long tick,int flag)
  * 引?はグル?プと移動量
  *------------------------------------------
  */
-int skill_unit_move_unit_group(struct skill_unit_group *group, int m,int dx,int dy)
+int skill_unit_move_unit_group( struct skill_unit_group *group, int m,int dx,int dy)
 {
 	int i,j;
 	int tick = gettick();
@@ -9371,39 +9367,39 @@ int skill_produce_mix( struct map_session_data &sd,
 
 		switch (skill_produce_db[idx].req_skill)
 		{
-		case AM_PHARMACY:
-			clif_produceeffect(sd,2,nameid);/* 製?エフェクト */
+			case AM_PHARMACY:
+				clif_produceeffect(sd,2,nameid);/* 製?エフェクト */
 			clif_misceffect(sd.bl,5); /* 他人にも成功を通知 */
 			if(nameid >= 545 && nameid <= 547)
 			{	// Fame point system [DracoRPG]
 		  		sd.potion_success_counter++;
 		  		if(sd.potion_success_counter == 3) {
-					pc_addfame(sd,1,1); // Success to prepare 3 Concentrated Potions in a row = +1 fame point
-		  		}
+						pc_addfame(sd,1,1); // Success to prepare 3 Concentrated Potions in a row = +1 fame point
+		  			}
 				if(sd.potion_success_counter == 5) {
-					pc_addfame(sd,3,1); // Success to prepare 5 Concentrated Potions in a row = +3 fame point
-				}
+						pc_addfame(sd,3,1); // Success to prepare 5 Concentrated Potions in a row = +3 fame point
+					}
 		  		if(sd.potion_success_counter == 7) {
-					pc_addfame(sd,10,1); // Success to prepare 7 Concentrated Potions in a row = +10 fame point
-		  		}
+						pc_addfame(sd,10,1); // Success to prepare 7 Concentrated Potions in a row = +10 fame point
+		  			}
 				if(sd.potion_success_counter == 10) {
-					pc_addfame(sd,50,1);	// Success to prepare 10 Concentrated Potions in a row = +50 fame point
+						pc_addfame(sd,50,1);	// Success to prepare 10 Concentrated Potions in a row = +50 fame point
 					sd.potion_success_counter = 0;
-				}
+					}
 			}
 			else 
 				sd.potion_success_counter = 0;
-			break;
-		case ASC_CDP:
-			clif_produceeffect(sd,2,nameid);/* 暫定で製?エフェクト */
+				break;
+			case ASC_CDP:
+				clif_produceeffect(sd,2,nameid);/* 暫定で製?エフェクト */
 			clif_misceffect(sd.bl,5);
-			break;
-		default:  /* 武器製造、コイン製造 */
-			clif_produceeffect(sd,0,nameid); /* 武器製造エフェクト */
+				break;
+			default:  /* 武器製造、コイン製造 */
+				clif_produceeffect(sd,0,nameid); /* 武器製造エフェクト */
 			clif_misceffect(sd.bl,3);
 			if(equip && itemdb_wlv(nameid) >= 3 && ((ele? 1 : 0) + sc) >= 3)
-				pc_addfame(sd,10,0); // Success to forge a lv3 weapon with 3 additional ingredients = +10 fame point
-			break;
+					pc_addfame(sd,10,0); // Success to forge a lv3 weapon with 3 additional ingredients = +10 fame point
+				break;
 		}
 
 		if((flag = pc_additem(sd,tmp_item,1)))

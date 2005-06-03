@@ -2807,7 +2807,6 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 }
 
 /*==========================================
- *
  *------------------------------------------
  */
 int mob_class_change(struct mob_data &md, int value[], size_t count)
@@ -2838,11 +2837,10 @@ int mob_class_change(struct mob_data &md, int value[], size_t count)
 	clif_mob_class_change(md,class_);
 	md.class_ = class_;
 	max_hp = status_get_max_hp(&md.bl);
-	if(battle_config.monster_class_change_full_recover==1) {
+	if (battle_config.monster_class_change_full_recover) {
 		md.hp = max_hp;
 		memset(md.dmglog,0,sizeof(md.dmglog));
-	}
-	else
+	} else
 		md.hp = max_hp*hp_rate/100;
 
 	if(md.hp > max_hp) 

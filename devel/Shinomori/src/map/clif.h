@@ -5,7 +5,7 @@
 #include "base.h"
 #include "map.h"
 
-#define MAX_PACKET_DB		0x235
+#define MAX_PACKET_DB		0x23a
 #define MAX_PACKET_VER		18
 
 struct packet_db {
@@ -222,7 +222,7 @@ int clif_party_info(struct party &p,int fd);
 int clif_party_invite(struct map_session_data &sd,struct map_session_data &tsd);
 int clif_party_inviteack(struct map_session_data &sd,const char *nick,unsigned char flag);
 int clif_party_option(struct party &p,struct map_session_data *sd,int flag);
-int clif_party_leaved(struct party &p,struct map_session_data *sd,unsigned long account_id,char *name,unsigned char flag);
+int clif_party_leaved(struct party &p,struct map_session_data *sd,unsigned long account_id,const char *name,unsigned char flag);
 int clif_party_message(struct party &p,unsigned long account_id,const char *mes,size_t len);
 int clif_party_move(struct party &p,struct map_session_data &sd,unsigned char online);
 int clif_party_xy(struct party &p,struct map_session_data &sd);
@@ -252,6 +252,8 @@ int clif_guild_allianceack(struct map_session_data &sd,unsigned long flag);
 int clif_guild_delalliance(struct map_session_data &sd,unsigned long guild_id,unsigned long flag);
 int clif_guild_oppositionack(struct map_session_data &sd,unsigned char flag);
 int clif_guild_broken(struct map_session_data &sd,unsigned long flag);
+int clif_guild_xy(struct map_session_data &sd);
+int clif_guild_xy_remove(struct map_session_data &sd);
 
 
 // atcommand

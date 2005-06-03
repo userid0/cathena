@@ -133,6 +133,8 @@ struct Battle_Config
 	ulong gm_allskill_addabra;
 	ulong gm_allequip;
 	ulong gm_skilluncond;
+	ulong gm_join_chat;
+	ulong gm_kick_chat;
 	ulong skillfree;
 	ulong skillup_limit;
 	ulong wp_rate;
@@ -346,6 +348,9 @@ struct Battle_Config
 
 	ulong show_hp_sp_drain;
 	ulong show_hp_sp_gain;
+
+
+	ulong party_bonus;
 };
 
 extern struct Battle_Config battle_config;

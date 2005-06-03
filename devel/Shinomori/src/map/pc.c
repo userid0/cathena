@@ -462,7 +462,7 @@ int pc_setequipindex(struct map_session_data &sd)
 {
 	size_t i,j;
 
-	for(i=0;i<11;i++)
+	for(i=0;i<MAX_EQUIP;i++)
 		sd.equip_index[i] = -1;
 
 	for(i=0;i<MAX_INVENTORY;i++)
@@ -471,7 +471,7 @@ int pc_setequipindex(struct map_session_data &sd)
 			continue;
 		if(sd.status.inventory[i].equip)
 		{
-			for(j=0;j<11;j++)
+			for(j=0;j<MAX_EQUIP;j++)
 				if(sd.status.inventory[i].equip & equip_pos[j])
 					sd.equip_index[j] = i;
 			if(sd.status.inventory[i].equip & 0x0002) {
@@ -1619,7 +1619,7 @@ int pc_bonus(struct map_session_data &sd,int type,int val)
 		break;
 	case SP_DAMAGE_WHEN_UNEQUIP:
 		if(!sd.state.lr_flag) {
-			for (i=0; i<11; i++) {
+			for (i=0; i<MAX_EQUIP; i++) {
 				if (sd.inventory_data[current_equip_item_index]->equip & equip_pos[i]) {
 					sd.unequip_losehp[i] += val;
 					break;
@@ -1629,7 +1629,7 @@ int pc_bonus(struct map_session_data &sd,int type,int val)
 		break;
 	case SP_LOSESP_WHEN_UNEQUIP:
 		if(!sd.state.lr_flag) {
-			for (i=0; i<11; i++) {
+			for (i=0; i<MAX_EQUIP; i++) {
 				if (sd.inventory_data[current_equip_item_index]->equip & equip_pos[i]) {
 					sd.unequip_losesp[i] += val;
 					break;
@@ -4653,7 +4653,7 @@ int pc_resetlvl(struct map_session_data &sd,int type)
 	clif_updatestatus(sd,SP_UDEX);
 	clif_updatestatus(sd,SP_ULUK);	// End Addition
 
-	for(i=0;i<11;i++)
+	for(i=0;i<MAX_EQUIP;i++)
 	{	// unequip items that can't be equipped by base 1 [Valaris]
 		if(sd.equip_index[i] >= 0)
 			if(!pc_isequip(sd,sd.equip_index[i]))
@@ -7171,6 +7171,7 @@ static int pc_autosave_sub(struct map_session_data &sd,va_list ap)
 			intif_save_petdata(sd.status.account_id,sd.pet);
 		pc_makesavestatus(sd);
 		chrif_save(sd);
+		storage_storage_dirty(sd);
 		storage_storage_save(sd);
 		if(sd.state.storage_flag)
 			storage_guild_storagesave(sd);
