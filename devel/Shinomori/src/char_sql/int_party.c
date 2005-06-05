@@ -410,7 +410,7 @@ bool party_check_exp_share(struct party *p)
 {
 	size_t i, cnt_lo=0, cnt_hi=0;
 	size_t pl1=0,pl2=0,pl3=0;
-	unsigned long maxlv = 0, minlv = ~0;
+	unsigned short maxlv = 0, minlv = 0xFFFF;
 
         for(i=0;i<MAX_PARTY;i++){
 		unsigned short lv = p->member[i].lv;

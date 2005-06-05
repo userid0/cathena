@@ -8262,7 +8262,7 @@ static int set_posword(const char *p)
 	char* np;
 	int i=0;
 	for(i=0;i<MAX_EQUIP;i++) {
-		if((np=strchr(p,','))!=NULL) {
+		if((np=(char*)strchr(p,','))!=NULL) {
 			str[i]=p;
 			*np=0;
 			p=np+1;

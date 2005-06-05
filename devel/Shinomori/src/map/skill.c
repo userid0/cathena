@@ -1534,7 +1534,7 @@ int skill_attack( int attack_type, struct block_list* src, struct block_list *ds
 
 	switch(skillid){
 	case AS_SPLASHER:
-		clif_skill_damage(dsrc,bl,tick,dmg.amotion,dmg.dmotion, damage, dmg.div_, skillid, ~0, 5);
+		clif_skill_damage(dsrc,bl,tick,dmg.amotion,dmg.dmotion, damage, dmg.div_, skillid, 0xFFFF, 5);
 		break;
 	case ASC_BREAKER:	// [celest]
 		if (attack_type&BF_MAGIC) {	// only display damage for the 2nd attack
