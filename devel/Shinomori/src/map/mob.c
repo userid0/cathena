@@ -3938,7 +3938,7 @@ static int mob_readdb(void)
 			long exp, maxhp;
 			char *str[60], *p, *np; // 55->60 Lupus
 
-			if(line[0] == '/' && line[1] == '/')
+			if( !skip_empty_line(line) )
 				continue;
 
 			for(i=0,p=line;i<60;i++){
@@ -4091,7 +4091,7 @@ static int mob_readdb_mobavail(void)
 	}
 
 	while(fgets(line,1020,fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
 
@@ -4164,7 +4164,7 @@ static int mob_read_randommonster(void)
 		}
 		while(fgets(line,1020,fp)){
 			int class_,per;
-			if(line[0] == '/' && line[1] == '/')
+			if( !skip_empty_line(line) )
 				continue;
 			memset(str,0,sizeof(str));
 			for(j=0,p=line;j<3 && p;j++){
@@ -4271,7 +4271,7 @@ static int mob_readskilldb(void)
 			struct mob_skill *ms=NULL;
 			size_t j=0;
 
-			if(line[0] == '/' && line[1] == '/')
+			if( !skip_empty_line(line) )
 				continue;
 
 			memset(sp,0,sizeof(sp));
@@ -4367,7 +4367,7 @@ static int mob_readdb_race(void)
 	}
 	
 	while(fgets(line,1020,fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
 

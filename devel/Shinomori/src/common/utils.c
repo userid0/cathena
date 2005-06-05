@@ -166,7 +166,7 @@ bool e_mail_check(const char *email) {
 	if (email[strlen(email)-1] == '.')
 		return false;
 
-	last_arobas = (char*)strrchr(email, '@');
+	last_arobas = strrchr(email, '@');
 
 	if (strstr(last_arobas, "@.") != NULL ||
 	    strstr(last_arobas, "..") != NULL)

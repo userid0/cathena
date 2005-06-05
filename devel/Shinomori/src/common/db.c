@@ -165,7 +165,7 @@ void* db_search2 (struct dbt *table, const char *key)
 {
 	int i, sp;
 	struct dbn *p, *pn, *stack[64];
-	int slen = strlen(key);
+	size_t slen = strlen(key);
 
 	for (i = 0; i < HASH_SIZE; i++) {
 		if ((p = table->ht[i]) == NULL)

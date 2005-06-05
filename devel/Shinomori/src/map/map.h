@@ -227,6 +227,8 @@ struct map_session_data
 		unsigned potion_flag : 2;					// 43,44
 		unsigned viewsize : 2;						// 45,46
 		unsigned _unused : 1;						// 1 bit left
+		// Abracadabra bugfix by Aru
+		unsigned abra_flag : 1;
 	} state;
 
 	struct mmo_charstatus status;
@@ -566,6 +568,9 @@ struct map_session_data
 	unsigned short eventcount; // [celest]
 
 	unsigned short change_level;	// [celest]
+
+
+	char fakename[24];
 
 	unsigned long mail_counter;	// mail counter for mail system [Valaris]
 };

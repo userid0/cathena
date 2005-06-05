@@ -173,27 +173,18 @@ static int pet_unlocktarget(struct pet_data &pd)
 static int pet_attack(struct pet_data &pd,unsigned int tick,int data)
 {
 	struct mob_data *md;
-//	int mode,race;
+
 	short range;
 
-//	pd.state.state=MS_IDLE;
 
 	md=(struct mob_data *)map_id2bl(pd.target_id);
 	if(md == NULL || pd.bl.m != md->bl.m || md->bl.prev == NULL ||
 		distance(pd.bl.x,pd.bl.y,md->bl.x,md->bl.y) > 13)
-//	|| md->bl.type != BL_MOB
 	{
 		pet_unlocktarget(pd);
 		return 0;
 	}
-/*
-	mode=mob_db[pd.class_].mode;
-	race=mob_db[pd.class_].race;
-	if(mob_db[pd.class_].mexp <= 0 && !(mode&0x20) && (md->option & 0x06 && race != 4 && race != 6) ) {
-		pd.target_id=0;
-		return 0;
-	}
-*/
+
 	range = mob_db[pd.class_].range + 1;
 	if(distance(pd.bl.x,pd.bl.y,md->bl.x,md->bl.y) > range)
 		return 0;
@@ -211,7 +202,7 @@ static int pet_attack(struct pet_data &pd,unsigned int tick,int data)
 	return 0;
 }
 
-static int petskill_use(struct pet_data &pd, struct block_list &target, short skill_id, short skill_lv, unsigned int tick);
+
 static int petskill_castend(struct pet_data &pd,unsigned long tick,int data);
 static int petskill_castend2(struct pet_data &pd, struct block_list &target, short skill_id, short skill_lv, short skill_x, short skill_y, unsigned int tick);
 
@@ -221,7 +212,7 @@ static int petskill_castend2(struct pet_data &pd, struct block_list &target, sho
  */
 static int pet_attackskill(struct pet_data &pd, unsigned int tick, int data)
 {
-	//short mode,race;
+
 	struct mob_data *md;
 	
 //	pd.state.state=MS_IDLE;
@@ -230,19 +221,11 @@ static int pet_attackskill(struct pet_data &pd, unsigned int tick, int data)
 	if(md == NULL || pd.bl.m != md->bl.m || md->bl.prev == NULL ||
 		NULL==pd.a_skill ||
 		distance(pd.bl.x,pd.bl.y,md->bl.x,md->bl.y) > 13)
-//			|| md->bl.type != BL_MOB || (!agit_flag && md->class_ >= 1285 && md->class_ <= 1288)) // Cannot attack Guardians outside of WoE
 	{
 		pet_unlocktarget(pd);
 		return 0;
 	}
-/*
-	mode=mob_db[pd.class_].mode;
-	race=mob_db[pd.class_].race;
-	if(mob_db[pd.class_].mexp <= 0 && !(mode&0x20) && (md->option & 0x06 && race != 4 && race != 6) ) {
-		pd.target_id=0;
-		return 0;
-	}
-*/
+
 	petskill_use(pd, md->bl, pd.a_skill->id, pd.a_skill->lv, tick);
 	return 0;
 }
@@ -251,10 +234,16 @@ static int pet_attackskill(struct pet_data &pd, unsigned int tick, int data)
  * Pet Skill Use [Skotlex]
  *------------------------------------------
  */
-static int petskill_use(struct pet_data &pd, struct block_list &target, short skill_id, short skill_lv, unsigned int tick)
+int petskill_use(struct pet_data &pd, struct block_list &target, short skill_id, short skill_lv, unsigned int tick)
 {
 	int casttime;
 	struct castend_delay *dat;
+	
+	if(pd.state.casting_flag)
+		return 1;	//Will not interrupt an already casting skill.
+
+	if(pd.timer != -1)	//Cancel whatever else the pet is doing.
+		delete_timer(pd.timer, pet_timer);
 	
 	if(battle_config.monster_attack_direction_change)
 		pd.dir=map_calc_dir(pd.bl, target.x, target.y );
@@ -350,6 +339,9 @@ static int petskill_castend2(struct pet_data &pd, struct block_list &target, sho
 		}
 	}
 
+	if (pd.timer != -1) //The above skill casting could had changed the state (Abracadabra?)
+		return 0;
+
 	delaytime = skill_delayfix(&pd.bl,skill_get_delay(skill_id, skill_lv));
 	if (delaytime < MIN_PETTHINKTIME)
 		delaytime = status_get_adelay(&pd.bl);
@@ -357,6 +349,7 @@ static int petskill_castend2(struct pet_data &pd, struct block_list &target, sho
 	if (pd.target_id) //Resume attacking
 		pd.state.state=MS_ATTACK;
 	pd.timer=add_timer(pd.attackabletime,pet_timer,pd.bl.id,0);
+
 	return 0;
 }
 
@@ -1792,7 +1785,7 @@ int read_petdb()
 			
 			lines++;
 
-			if(line[0] == '/' && line[1] == '/')
+			if( !skip_empty_line(line) )
 				continue;
 
 			for(k=0,p=line;k<20;k++){

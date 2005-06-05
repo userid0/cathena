@@ -103,7 +103,7 @@ static int guild_read_castledb(void)
 	}
 
 	while(fgets(line,1020,fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
 		for(j=0,p=line;j<6 && p;j++){
@@ -1522,8 +1522,9 @@ int guild_castlealldataload(int len, unsigned char *buf)
 				guild_npc_request_info(c->guild_id, "::OnAgitInit");
 		}
 	}
-	if (ev == -1)
-		npc_event_doall("OnAgitInit");
+//What is this for? AgitStart already does this call, this seems to be redundant code from when WoE was not npc-controlled. [Skotlex]
+//	if (ev == -1)
+//		npc_event_doall("OnAgitInit");
 	return 0;
 }
 

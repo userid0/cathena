@@ -3334,7 +3334,7 @@ int char_lan_config_read(const char *lancfgName)
 	ShowMessage("Start reading of Lan Support configuration file\n");
 
 	while(fgets(line, sizeof(line)-1, fp)){
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) != 2)
@@ -3427,7 +3427,7 @@ void sql_config_read(const char *cfgName){ /* Kalaspuff, to get login_db */
 	}
 
 	while(fgets(line, sizeof(line)-1, fp)){
-		if(line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) != 2)
@@ -3508,7 +3508,7 @@ int char_config_read(const char *cfgName) {
 	}
 
 	while(fgets(line, sizeof(line)-1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		line[sizeof(line)-1] = '\0';

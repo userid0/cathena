@@ -4170,7 +4170,7 @@ int ladmin_config_read(const char *cfgName) {
 		ShowMessage(CL_NORM"---Start reading of Ladmin configuration file (%s)\n", cfgName);
 	}
 	while(fgets(line, sizeof(line)-1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		line[sizeof(line)-1] = '\0';

@@ -3024,12 +3024,16 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case SA_ABRACADABRA:
 		{
 			int abra_skillid = 0, abra_skilllv;
-			//require 1 yellow gemstone even with mistress card or Into the Abyss
-			if ((i = pc_search_inventory(*sd, 715)) < 0 ) { //bug fixed by Lupus (item pos can be 0, too!)
-				clif_skill_fail(*sd,sd->skillid,0,0);
-				break;
+			if (sd)
+			{ //Crash-fix [Skotlex]
+				//require 1 yellow gemstone even with mistress card or Into the Abyss
+				if((i = pc_search_inventory(*sd, 715)) < 0 )
+				{ //bug fixed by Lupus (item pos can be 0, too!)
+					clif_skill_fail(*sd,sd->skillid,0,0);
+					break;
+				}
+				pc_delitem(*sd, i, 1, 0);
 			}
-			pc_delitem(*sd, i, 1, 0);
 			do {
 				abra_skillid = rand() % 331;
 				if (skill_abra_db[abra_skillid].req_lv > skilllv ||
@@ -3040,9 +3044,23 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 			} while (abra_skillid == 0);
 			abra_skilllv = skill_get_max(abra_skillid) >  skilllv ? skilllv : skill_get_max(abra_skillid);
 			clif_skill_nodamage (src, bl, skillid, skilllv, 1);
-			sd->skillitem = abra_skillid;
-			sd->skillitemlv = abra_skilllv;
-			clif_item_skill (*sd, abra_skillid, abra_skilllv, "Abracadabra");
+			if (sd)
+			{	//Crash-protection against Abracadabra casting pets
+				sd->skillitem = abra_skillid;
+				sd->skillitemlv = abra_skilllv;
+				sd->state.abra_flag = 1;
+				clif_item_skill (*sd, abra_skillid, abra_skilllv, "Abracadabra");
+			}
+			else if(src->type == BL_PET)
+			{	// [Skotlex]
+				struct pet_data *pd = (struct pet_data *)src;
+				int inf = skill_get_inf(abra_skillid);
+				if (inf&4 || inf&16) { //Self-Skills, Supportive skills
+					nullpo_retr(1,(struct map_session_data *)pd->msd);
+					petskill_use(*pd, pd->msd->bl, abra_skillid, abra_skilllv, tick); 
+				} else //Assume offensive skills
+					petskill_use(*pd, *bl, abra_skillid, abra_skilllv, tick); 
+			}
 		}
 		break;
 
@@ -6687,6 +6705,13 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		return 0;
 	}
 
+	if (sd->state.abra_flag)
+	{
+		sd->skillitem = sd->skillitemlv = 0xFFFF;
+		if(type&1) sd->state.abra_flag = 0;
+		return 1;
+	}
+
 	if (sd->state.produce_flag &&
 		(sd->skillid == AM_PHARMACY || sd->skillid == ASC_CDP || sd->skillid == AC_MAKINGARROW))
 	{
@@ -9734,7 +9759,7 @@ int skill_readdb(void)
 	}
 	while(fgets(line,1020,fp)){
 		char *split[50];
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		j = skill_split_str(line,split,14);
 		if(j < 14 || split[13]==NULL)
@@ -9782,7 +9807,7 @@ int skill_readdb(void)
 	}
 	while(fgets(line,1020,fp)){
 		char *split[50];
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		j = skill_split_str(line,split,30);
 		if(j < 30 || split[29]==NULL)
@@ -9864,7 +9889,7 @@ int skill_readdb(void)
 	while(fgets(line,1020,fp)){
 		char *split[50];
 		memset(split,0,sizeof(split));	// [Valaris] thanks to fov
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		j = skill_split_str(line,split,5);
 		if(split[4]==NULL || j<5)
@@ -9894,7 +9919,7 @@ int skill_readdb(void)
         k = 0;
 	while (fgets(line,1020,fp)) {
 		char *split[50];
-		if (line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		j = skill_split_str(line,split,8);
 		if (split[7]==NULL || j<8)
@@ -9940,7 +9965,7 @@ int skill_readdb(void)
 		while(fgets(line,1020,fp)){
 			char *split[6 + MAX_PRODUCE_RESOURCE * 2];
 			int x,y;
-			if(line[0]=='/' && line[1]=='/')
+			if( !skip_empty_line(line) )
 				continue;
 			memset(split,0,sizeof(split));
 			j = skill_split_str(line,split,(3 + MAX_PRODUCE_RESOURCE * 2));
@@ -9976,7 +10001,7 @@ int skill_readdb(void)
 	while(fgets(line,1020,fp)){
 		char *split[16];
 		int x,y;
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(split,0,sizeof(split));
 		j = skill_split_str(line,split,13);
@@ -10008,7 +10033,7 @@ int skill_readdb(void)
 	k=0;
 	while(fgets(line,1020,fp)){
 		char *split[16];
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(split,0,sizeof(split));
 		j = skill_split_str(line,split,13);
@@ -10035,7 +10060,7 @@ int skill_readdb(void)
 	}
 	while(fgets(line,1020,fp)){
 		char *split[50];
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(split,0,sizeof(split));
 		j = skill_split_str(line,split,3);
@@ -10063,7 +10088,7 @@ int skill_readdb(void)
 	k=0;
 	while(fgets(line,1020,fp)){
 		char *split[16];
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(split,0,sizeof(split));
 		j = skill_split_str(line,split,2);

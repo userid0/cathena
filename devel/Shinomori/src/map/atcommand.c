@@ -103,32 +103,20 @@ ACMD_FUNC(petrename);
 ACMD_FUNC(recall);
 ACMD_FUNC(recallall);
 ACMD_FUNC(revive);
-ACMD_FUNC(character_stats_all);
-ACMD_FUNC(character_save);
 ACMD_FUNC(night);
 ACMD_FUNC(day);
 ACMD_FUNC(doom);
 ACMD_FUNC(doommap);
 ACMD_FUNC(raise);
 ACMD_FUNC(raisemap);
-ACMD_FUNC(character_baselevel);
-ACMD_FUNC(character_joblevel);
 ACMD_FUNC(kick);
 ACMD_FUNC(kickall);
 ACMD_FUNC(allskill);
 ACMD_FUNC(questskill);
-ACMD_FUNC(charquestskill);
 ACMD_FUNC(lostskill);
-ACMD_FUNC(charlostskill);
 ACMD_FUNC(spiritball);
 ACMD_FUNC(party);
 ACMD_FUNC(guild);
-ACMD_FUNC(charskreset);
-ACMD_FUNC(charstreset);
-ACMD_FUNC(charreset);
-ACMD_FUNC(charstpoint);
-ACMD_FUNC(charmodel);
-ACMD_FUNC(charskpoint);
 ACMD_FUNC(agitstart);
 ACMD_FUNC(agitend);
 ACMD_FUNC(reloaditemdb);
@@ -147,7 +135,6 @@ ACMD_FUNC(dye); //** by fritz
 ACMD_FUNC(hair_style); //** by fritz
 ACMD_FUNC(hair_color); //** by fritz
 ACMD_FUNC(stat_all); //** by fritz
-ACMD_FUNC(char_change_sex); // by Yor
 ACMD_FUNC(char_block); // by Yor
 ACMD_FUNC(char_ban); // by Yor
 ACMD_FUNC(char_unblock); // by Yor
@@ -274,6 +261,8 @@ ACMD_FUNC(mapflag); // Lupus
 ACMD_FUNC(me); //added by massdriller, code by lordalfa
 ACMD_FUNC(fakename); //[Valaris]
 ACMD_FUNC(size); //[Valaris]
+ACMD_FUNC(showexp); //moved from charcommand [Kevin]
+ACMD_FUNC(showdelay); //moved from charcommand [Kevin]
 
 /*==========================================
  *AtCommandInfo atcommand_info[]\‘¢‘Ì‚Ì’è‹`
@@ -373,8 +362,6 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_DoomMap,			"@doommap",			80, atcommand_doommap },
 	{ AtCommand_Raise,				"@raise",			80, atcommand_raise },
 	{ AtCommand_RaiseMap,			"@raisemap",		80, atcommand_raisemap },
-	{ AtCommand_CharacterBaseLevel,	"@charbaselvl",		60, atcommand_character_baselevel },
-	{ AtCommand_CharacterJobLevel,	"@charjlvl",		60, atcommand_character_joblevel },
 	{ AtCommand_Kick,				"@kick",			20, atcommand_kick }, // + right click menu for GM "(name) force to quit"
 	{ AtCommand_KickAll,			"@kickall",			99, atcommand_kickall },
 	{ AtCommand_AllSkill,			"@allskill",		60, atcommand_allskill },
@@ -382,9 +369,7 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_AllSkill,			"@skillall",		60, atcommand_allskill },
 	{ AtCommand_AllSkill,			"@skillsall",		60, atcommand_allskill },
 	{ AtCommand_QuestSkill,			"@questskill",		40, atcommand_questskill },
-	{ AtCommand_CharQuestSkill,		"@charquestskill",	60, atcommand_charquestskill },
 	{ AtCommand_LostSkill,			"@lostskill",		40, atcommand_lostskill },
-	{ AtCommand_CharLostSkill,		"@charlostskill",	60, atcommand_charlostskill },
 	{ AtCommand_SpiritBall,			"@spiritball",		40, atcommand_spiritball },
 	{ AtCommand_Party,				"@party",			 1, atcommand_party },
 	{ AtCommand_Guild,				"@guild",			50, atcommand_guild },
@@ -396,8 +381,6 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_Broadcast,			"@broadcast",		40, atcommand_broadcast }, // /b and /nb command
 	{ AtCommand_LocalBroadcast,		"@localbroadcast",	40, atcommand_localbroadcast }, // /lb and /nlb command
 	{ AtCommand_RecallAll,			"@recallall",		80, atcommand_recallall },
-	{ AtCommand_CharSkReset,		"@charskreset",		60, atcommand_charskreset },
-	{ AtCommand_CharStReset,		"@charstreset",		60, atcommand_charstreset },
 	{ AtCommand_ReloadItemDB,		"@reloaditemdb",	99, atcommand_reloaditemdb }, // admin command
 	{ AtCommand_ReloadMobDB,		"@reloadmobdb",		99, atcommand_reloadmobdb }, // admin command
 	{ AtCommand_ReloadSkillDB,		"@reloadskilldb",	99, atcommand_reloadskilldb }, // admin command
@@ -407,9 +390,6 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_ReloadBattleConf,	"@reloadbattleconf",99, atcommand_reloadbattleconf },
 	{ AtCommand_ReloadStatusDB,		"@reloadstatusdb",	99, atcommand_reloadstatusdb },
 	{ AtCommand_ReloadPcDB,			"@reloadpcdb",		99, atcommand_reloadpcdb },
-	{ AtCommand_CharModel,			"@charmodel",		50, atcommand_charmodel },
-	{ AtCommand_CharSKPoint,		"@charskpoint",		60, atcommand_charskpoint },
-	{ AtCommand_CharSTPoint,		"@charstpoint",		60, atcommand_charstpoint },
 	{ AtCommand_MapInfo,			"@mapinfo",			99, atcommand_mapinfo },
 	{ AtCommand_Dye,				"@dye",				40, atcommand_dye }, // by fritz
 	{ AtCommand_Dye,				"@ccolor",			40, atcommand_dye }, // by fritz
@@ -421,7 +401,6 @@ static AtCommandInfo atcommand_info[] = {
 	{ AtCommand_StatAll,			"@statsall",		60, atcommand_stat_all },
 	{ AtCommand_StatAll,			"@allstats",		60, atcommand_stat_all }, // by fritz
 	{ AtCommand_StatAll,			"@allstat",			60, atcommand_stat_all }, // by fritz
-//	{ AtCommand_CharChangeSex,		"@charchangesex",	60, atcommand_char_change_sex }, // by Yor
 	{ AtCommand_CharBlock,			"@block",			60, atcommand_char_block }, // by Yor
 	{ AtCommand_CharBlock,			"@charblock",		60, atcommand_char_block }, // by Yor
 	{ AtCommand_CharBan,			"@ban",				60, atcommand_char_ban }, // by Yor
@@ -711,7 +690,7 @@ bool msg_config_read(const char *cfgName)
 		}
 	while(fgets(line, sizeof(line)-1, fp))
 	{
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) == 2) {
 			if(strcasecmp(w1, "import") == 0) {
@@ -795,7 +774,7 @@ bool atcommand_config_read(const char *cfgName)
 	}
 
 	while (fgets(line, sizeof(line)-1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		if (sscanf(line, "%1023[^:]:%1023s", w1, w2) != 2)
@@ -9117,18 +9096,42 @@ bool atcommand_size(int fd, struct map_session_data &sd, const char* command, co
 	return true;
 }
 
+/*==========================================
+ * @fakename
+ * => Gives your character a fake name.
+ *------------------------------------------
+ */
 bool atcommand_fakename(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
-//	if((!message || !*message) && strlen(sd.fakename) > 1)
-//	{
-//		sd.fakename[0]='\0';
-//		pc_setpos(sd, sd.mapname, sd->bl.x, sd->bl.y, 3);
-//		clif_displaymessage(sd.fd,"Returned to real name.");
-//	}
-//
-//	if (!message || !*message)
-//		clif_displaymessage(sd.fd,"You must enter a name.");
+	char name[24];
+	if((!message || !*message) && strlen(sd.fakename) > 1) {
+		sd.fakename[0]='\0';
+		pc_setpos(sd, sd.mapname, sd.bl.x, sd.bl.y, 3);
+		clif_displaymessage(sd.fd,"Returned to real name.");
+		return true;
+	}
+
+	if (!message || !*message) {
+		clif_displaymessage(sd.fd,"You must enter a name.");
+		return true;
+	}
+
+
+	if (sscanf(message, "%23[^\n]", name) < 1) {
+		return true;
+	}
+	
+	if(strlen(name) < 2) {
+		clif_displaymessage(sd.fd,"Fake name must be at least two characters.");
+		return true;
+	}
+	
+	strcpy(sd.fakename,name);
+	pc_setpos(sd, sd.mapname, sd.bl.x, sd.bl.y, 3);
+	clif_displaymessage(sd.fd,"Fake name enabled.");
+	
 	return true;
+
 }
 /*==========================================
  * @mapflag [flagap name] [1|0|on|off] [map name] by Lupus
@@ -9141,3 +9144,4 @@ bool atcommand_mapflag(int fd, struct map_session_data &sd, const char* command,
 // WIP
 	return true;
 }
+

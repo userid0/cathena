@@ -813,7 +813,7 @@ int npc_globalmessage(const char *name,const char *mes)
 	if(nd==NULL) return 0;
 	if(name==NULL) return 0;
 
-	ltemp=(char*)strchr(name,'#');
+	ltemp=strchr(name,'#');
 	if(ltemp!=NULL) {
 		memcpy(ntemp,name,ltemp - name);	// 123#456 の # から後ろを削除する
 		ntemp[ltemp - name]=0x00;	// strncpy のバグ？使い方間違ってる？
@@ -1525,7 +1525,7 @@ static int npc_parse_shop(const char *w1,const char *w2,const char *w3,const cha
 
 	nd = (struct npc_data *) aCalloc (1, sizeof(struct npc_data) +
 		sizeof(nd->u.shop_item[0]) * (MAX_SHOPITEM + 1));
-	p = (char*)strchr(w4, ',');
+	p = strchr(w4, ',');
 
 	while (p && pos < MAX_SHOPITEM) {
 		int nameid, value;
@@ -1782,7 +1782,7 @@ static int npc_parse_script(const char *w1,const char *w2,const char *w3,const c
 		evflag = 1;
 	}
 
-	while((p=(char*)strchr(w3,':'))) 
+	while((p=strchr(w3,':'))) 
 	{
 		if (p[1] == ':') break;
 	}
@@ -2363,7 +2363,7 @@ void npc_parsesinglefile(const char *filename, struct npc_mark*& npcmarkerbase)
 			size_t i, j;
 			int count, w4pos;
 		lines++;
-			if( (line[0] == '/') && (line[1] == '/'))
+			if( !skip_empty_line(line) )
 				continue;
 
 		// 不要なスペースやタブの連続は詰める

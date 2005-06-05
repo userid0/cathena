@@ -1202,7 +1202,7 @@ static void read_constdb(void)
 		return ;
 	}
 	while(fgets(line,1020,fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		type=0;
 		if(sscanf(line,"%[A-Za-z0-9_],%d,%d",name,&val,&type)>=2 ||
@@ -8059,7 +8059,7 @@ printf("(%d) - %s\n", last, script+st.pos-4);
 	}
 
 	return (st.state!=END);
-		}
+}
 
 /*==========================================
  * スクリプトの実行
@@ -8262,7 +8262,7 @@ static int set_posword(const char *p)
 	char* np;
 	int i=0;
 	for(i=0;i<MAX_EQUIP;i++) {
-		if((np=(char*)strchr(p,','))!=NULL) {
+		if((np=strchr(p,','))!=NULL) {
 			str[i]=p;
 			*np=0;
 			p=np+1;
@@ -8300,7 +8300,7 @@ int script_config_read(const char *cfgName)
 		return 1;
 	}
 	while (fgets(line, sizeof(line) - 1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		i = sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
 		if (i != 2)

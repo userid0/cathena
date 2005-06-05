@@ -317,7 +317,7 @@ int itemdb_read_randomitem()
 		}
 
 		while(fgets(line,1020,fp)){
-			if(line[0]=='/' && line[1]=='/')
+			if( !skip_empty_line(line) )
 				continue;
 			memset(str,0,sizeof(str));
 			for(j=0,p=line;j<3 && p;j++){
@@ -376,7 +376,7 @@ static int itemdb_read_itemavail(void)
 	}
 
 	while (fgets(line, sizeof(line) - 1, fp)) {
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
 		for(j=0,p=line;j<2 && p;j++){
@@ -422,7 +422,7 @@ static int itemdb_read_itemgroup(void)
 	}
 
 	while(fgets(line,1020,fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
 		for(j=0,p=line;j<31 && p;j++){
@@ -608,7 +608,7 @@ static int itemdb_read_noequip(void)
 		return -1;
 	}
 	while(fgets(line,1020,fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
 		for(j=0,p=line;j<2 && p;j++){
@@ -651,7 +651,7 @@ static int itemdb_read_itemtrade(void)
 	}
 
 	while (fgets(line, sizeof(line) - 1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(str, 0, sizeof(str));
 		for (j = 0, p = line; j < 3 && p; j++) {
@@ -860,7 +860,7 @@ static int itemdb_readdb(void)
 		lines=0;
 		while(fgets(line,1020,fp)){
 			lines++;
-			if(line[0]=='/' && line[1]=='/')
+			if( !skip_empty_line(line) )
 				continue;
 			memset(str,0,sizeof(str));
 			for(j=0,np=p=line;j<18 && p;j++){

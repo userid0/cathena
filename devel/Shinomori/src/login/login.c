@@ -589,7 +589,7 @@ int read_gm_account(void) {
 	// int (id) + int (level) = 8 bytes * 4000 = 32k (limit of packets in windows)
 	while(fgets(line, sizeof(line)-1, fp) && GM_num < 4000) {
 		line_counter++;
-		if ((line[0] == '/' && line[1] == '/') || line[0] == '\0' || line[0] == '\n' || line[0] == '\r')
+		if( !skip_empty_line(line) )
 			continue;
 		is_range = (sscanf(line, "%d%*[-~]%d %d",&start_range,&end_range,&level)==3); // ID Range [MC Cameri]
 		if (!is_range && sscanf(line, "%d %d", &account_id, &level) != 2 && sscanf(line, "%d: %d", &account_id, &level) != 2)
@@ -811,7 +811,7 @@ int mmo_auth_init(void) {
 	}
 
 	while(fgets(line, sizeof(line)-1, fp) != NULL) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		line[sizeof(line)-1] = '\0';
 		// remove carriage return if exist
@@ -2553,7 +2553,7 @@ int parse_admin(int fd) {
 									while(fgets(line, sizeof(line)-1, fp)) {
 										while(line[0] != '\0' && (line[strlen(line)-1] == '\n' || line[strlen(line)-1] == '\r'))
 											line[strlen(line)-1] = '\0';
-										if ((line[0] == '/' && line[1] == '/') || line[0] == '\0')
+										if( !skip_empty_line(line) )
 											fprintf(fp2, "%s" RETCODE, line);
 										else {
 											if (sscanf(line, "%d %d", &GM_account, &GM_level) != 2 && sscanf(line, "%d: %d", &GM_account, &GM_level) != 2)
@@ -3553,7 +3553,7 @@ int login_lan_config_read(const char *lancfgName) {
 	ShowMessage("---Start reading Lan Support configuration file\n");
 
 	while(fgets(line, sizeof(line)-1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		line[sizeof(line)-1] = '\0';
@@ -3626,7 +3626,7 @@ int login_config_read(const char *cfgName) {
 
 	ShowMessage("---Start reading of Login Server configuration file (%s)\n", cfgName);
 	while(fgets(line, sizeof(line)-1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		line[sizeof(line)-1] = '\0';

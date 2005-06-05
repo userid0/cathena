@@ -3523,9 +3523,7 @@ static int pc_walk(int tid,unsigned long tick,int id,int data)
 		sd->walktimer = add_timer (tick+i, pc_walk, id, sd->walkpath.path_pos);
 	}
 
-	if (battle_config.disp_hpmeter <= pc_isGM(*sd))
-		clif_hpmeter(*sd);
-
+	clif_hpmeter(*sd);
 	return 0;
 }
 
@@ -7349,7 +7347,7 @@ int pc_readdb(void)
 	i=0;
 	while(fgets(line, sizeof(line)-1, fp)){
 		int bn,b1,b2,b3,b4,b5,b6,jn,j1,j2,j3,j4,j5,j6;
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		if(sscanf(line,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",&bn,&b1,&b2,&b3,&b4,&b5,&b6,&jn,&j1,&j2,&j3,&j4,&j5,&j6)!=14)
 			continue;
@@ -7386,7 +7384,7 @@ int pc_readdb(void)
 	while(fgets(line, sizeof(line)-1, fp)){
 		char *split[50];
 		int f=0, m=3;
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		for(j=0,p=line;j<14 && p;j++){
 			split[j]=p;
@@ -7433,7 +7431,7 @@ int pc_readdb(void)
 	while(fgets(line, sizeof(line)-1, fp)){
 		char *split[10];
 		size_t lv,n;
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		for(j=0,p=line;j<3 && p;j++){
 			split[j]=p;
@@ -7447,7 +7445,7 @@ int pc_readdb(void)
 		for(i=0;i<n;){
 			if( !fgets(line, sizeof(line)-1, fp) )
 				break;
-			if(line[0]=='/' && line[1]=='/')
+			if( !skip_empty_line(line) )
 				continue;
 
 			for(j=0,p=line;j<n && p;j++){
@@ -7476,7 +7474,7 @@ int pc_readdb(void)
 		//return 1;
 	} else {
 		while(fgets(line, sizeof(line)-1, fp)){
-			if(line[0]=='/' && line[1]=='/')
+			if( !skip_empty_line(line) )
 				continue;
 			if ((j=atoi(line))<0)
 				j=0;

@@ -710,7 +710,7 @@ int parse_friend_txt(struct mmo_charstatus *p)
 
 	while(fgets(line, sizeof(line)-1, fp)) {
 
-		if(line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		sscanf(line, "%ld,%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%s",
@@ -790,7 +790,7 @@ int mmo_char_init(void)
 		int j;
 		line_count++;
 
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		line[sizeof(line)-1] = '\0';
 
@@ -3455,7 +3455,7 @@ int lan_config_read(const char *lancfgName) {
 	ShowMessage ("---start reading of Lan Support configuration...\n");
 
 	while(fgets(line, sizeof(line)-1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		line[sizeof(line)-1] = '\0';
@@ -3515,7 +3515,7 @@ int char_config_read(const char *cfgName) {
 	}
 
 	while(fgets(line, sizeof(line)-1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		line[sizeof(line)-1] = '\0';

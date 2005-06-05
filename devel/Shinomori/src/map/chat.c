@@ -226,15 +226,16 @@ int chat_kickchat(struct map_session_data &sd, const char *kickusername)
 	size_t kickuser;
 
 	cd = (struct chat_data *)map_id2bl(sd.chatID);
-	if( cd == NULL || 
-		( (sd.bl.id != cd->owner->id) && pc_isGM(sd)>=battle_config.gm_kick_chat) )//gm kick protection by valaris
+	if( cd == NULL )
 		return 1;
 
 	for(kickuser=1; kickuser<cd->users; kickuser++)
 	{
-		if(cd->usersd[kickuser] && 0==strcmp(cd->usersd[kickuser]->status.name, kickusername) )
+		if( cd->usersd[kickuser] && 
+			0==strcmp(cd->usersd[kickuser]->status.name, kickusername) )
 		{
-			chat_leavechat( *(cd->usersd[kickuser]) );
+			if( pc_isGM(*cd->usersd[kickuser]) < battle_config.gm_kick_chat )
+				chat_leavechat( *(cd->usersd[kickuser]) );
 			return 0;
 		}
 	}

@@ -411,33 +411,34 @@ bool party_check_exp_share(struct party *p)
 	size_t i, cnt_lo=0, cnt_hi=0;
 	size_t pl1=0,pl2=0,pl3=0;
 	unsigned short maxlv = 0, minlv = 0xFFFF;
-
-        for(i=0;i<MAX_PARTY;i++){
+	
+	for(i=0;i<MAX_PARTY;i++)
+	{
 		unsigned short lv = p->member[i].lv;
 		if (p->member[i].online)
 		{
-                        if( lv < minlv ) minlv=lv;
+			if( lv < minlv ) minlv=lv;
 			else if (maxlv < lv)	maxlv = lv;
 			cnt_lo++;
 			if( lv >= 70 )			cnt_hi++;
-              }
-        }
+		}
+	}
 	// check for party with parents with child
-	if( (cnt_hi >= 2) && (cnt_lo == 3) && 
-		(!strcmp(p->member[0].map,p->member[1].map)) && 
+	if( (cnt_hi >= 2) && (cnt_lo == 3) &&
+		(!strcmp(p->member[0].map,p->member[1].map)) &&
 		(!strcmp(p->member[1].map,p->member[2].map)) )
 	{
-                pl1=char_nick2id(p->member[0].name);
-                pl2=char_nick2id(p->member[1].name);
-                pl3=char_nick2id(p->member[2].name);
+		pl1=char_nick2id(p->member[0].name);
+		pl2=char_nick2id(p->member[1].name);
+		pl3=char_nick2id(p->member[2].name);
 		ShowMessage("PARTY: group of 3 Id1 %d lv %d name %s Id2 %d lv %d name %s Id3 %d lv %d name %s\n",pl1,p->member[0].lv,p->member[0].name,pl2,p->member[1].lv,p->member[1].name,pl3,p->member[2].lv,p->member[2].name);
-                if (char_married(pl1,pl2) && char_child(pl1,pl3))
+		if (char_married(pl1,pl2) && char_child(pl1,pl3))
 			return true;
-                if (char_married(pl1,pl3) && char_child(pl1,pl2))
+		if (char_married(pl1,pl3) && char_child(pl1,pl2))
 			return true;
-                if (char_married(pl2,pl3) && char_child(pl2,pl1))
+		if (char_married(pl2,pl3) && char_child(pl2,pl1))
 			return true;
-        }
+	}
 	return (maxlv==0 || maxlv<=minlv+party_share_level);
 }
 

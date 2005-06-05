@@ -71,7 +71,7 @@ void pid_delete(void)
 void pid_create(const char* file)
 {
 	FILE *fp;
-	int len = strlen(file);
+	size_t len = strlen(file);
 	memcpy(pid_file,file,len+1);
 	if(len > 4 && pid_file[len - 4] == '.') {
 		pid_file[len - 4] = 0;

@@ -37,6 +37,30 @@ extern inline const char *strcpytolower(char *tar, const char *str)
 	return tar;
 }
 
+extern inline const char *skip_empty_line(const char *line)
+{	// skip whitespaces and returns (0x09-0x0D or 0x20) 
+	// and return NULL on EOF or following "//"
+	if(line)
+	{
+		while( isspace(*line++) );
+		if(*line && line[0]!='/' && line[1]!='/')
+			return line;
+	}
+	return NULL;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 struct StringBuf {
 	char *buf_;

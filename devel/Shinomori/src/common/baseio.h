@@ -642,7 +642,7 @@ public:
 		// int (id) + int (level) = 8 bytes * 4000 = 32k (limit of packets in windows)
 		while(fgets(line, sizeof(line)-1, fp) && line_counter < 4000) {
 			line_counter++;
-			if ((line[0] == '/' && line[1] == '/') || line[0] == '\0' || line[0] == '\n' || line[0] == '\r')
+			if( !skip_empty_line(line) )
 				continue;
 			is_range = (sscanf(line, "%d%*[-~]%d %d",&start_range,&end_range,&level)==3); // ID Range [MC Cameri]
 

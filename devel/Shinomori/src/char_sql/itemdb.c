@@ -103,7 +103,7 @@ int itemdb_readdb(void)
 		exit(1);
 	}
 	while(fgets(line,1020,fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
 		for(j=0,np=p=line;j<17 && p;j++){

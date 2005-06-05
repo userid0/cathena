@@ -37,9 +37,9 @@ CCMD_FUNC(petrename);
 CCMD_FUNC(petfriendly);
 CCMD_FUNC(stats);
 CCMD_FUNC(option);
+CCMD_FUNC(reset);
 CCMD_FUNC(save);
 CCMD_FUNC(stats_all);
-CCMD_FUNC(reset);
 CCMD_FUNC(spiritball);
 CCMD_FUNC(itemlist);
 CCMD_FUNC(effect);
@@ -47,8 +47,10 @@ CCMD_FUNC(storagelist);
 CCMD_FUNC(item);
 CCMD_FUNC(warp);
 CCMD_FUNC(zeny);
+CCMD_FUNC(warp);
 CCMD_FUNC(showexp);
 CCMD_FUNC(showdelay);
+
 
 #ifdef TXT_ONLY
 /* TXT_ONLY */
@@ -104,6 +106,7 @@ static CharCommandInfo charcommand_info[] = {
 	{ CharCommand_Unknown,             NULL,                1, NULL }
 };
 
+char chcmd_output[200];
 
 unsigned char get_charcommand_level(const CharCommandType type)
 {
@@ -143,7 +146,7 @@ bool charcommand_config_read(const char *cfgName)
 
 	while (fgets(line, sizeof(line)-1, fp))
 	{
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 
 		if (sscanf(line, "%1023[^:]:%1023s", w1, w2) != 2)
@@ -1202,10 +1205,6 @@ bool charcommand_zeny(int fd, struct map_session_data &sd,const char *command, c
 	return true;
 }
 
-/*===================================
- * Remove some messages
- *-----------------------------------
- */
 bool charcommand_showexp(int fd, struct map_session_data &sd,const char *command, const char *message)
 {
 	if( sd.state.noexp )

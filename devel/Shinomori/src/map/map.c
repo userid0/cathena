@@ -2422,7 +2422,7 @@ void map_readwater(const char *watertxt) {
 		waterlist=(struct s_waterlist*)aCalloc(MAX_MAP_PER_SERVER,sizeof(struct s_waterlist));
 	while(fgets(line,1020,fp) && n < MAX_MAP_PER_SERVER){
 		int wh,count;
-		if(line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		if((count=sscanf(line,"%s%d",w1,&wh)) < 1){
 			continue;
@@ -3018,6 +3018,7 @@ int map_readallmap(void)
 				maps_removed++;
 				i--;
 			}
+		memset (map[i].moblist, 0, sizeof(map[i].moblist));	//Initialize moblist [Skotlex]
 		map[i].mob_delete_timer = -1;	//Initialize timer [Skotlex]
 	}
 
@@ -3176,7 +3177,7 @@ int map_config_read(const char *cfgName)
 	}
 	
 	while(fgets(line, sizeof(line) -1, fp)) {
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) == 2) {
 			if (strcasecmp(w1, "userid")==0){
@@ -3271,7 +3272,7 @@ int inter_config_read(const char *cfgName)
 		return 1;
 	}
 	while(fgets(line,1020,fp)){
-		if(line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
 		if(i!=2)

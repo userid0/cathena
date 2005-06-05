@@ -366,7 +366,7 @@ int inter_guild_readdb() {
 	}
 	i = 0;
 	while(fgets(line, sizeof(line)-1, fp) && i < 100){
-		if (line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		guild_exp[i] = atoi(line);
 		i++;

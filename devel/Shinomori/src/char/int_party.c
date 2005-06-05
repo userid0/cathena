@@ -180,9 +180,10 @@ bool party_check_exp_share(struct party *p)
 {
 	size_t i, cnt_lo=0, cnt_hi=0;
 	size_t pl1=0,pl2=0,pl3=0;
-	unsigned long maxlv = 0, minlv = ~0;
-
-	for(i = 0; i < MAX_PARTY; i++) {
+	unsigned short maxlv = 0, minlv = 0xFFFF;
+	
+	for(i = 0; i < MAX_PARTY; i++)
+	{
 		unsigned short lv = p->member[i].lv;
 		if (p->member[i].online)
 		{
@@ -193,8 +194,8 @@ bool party_check_exp_share(struct party *p)
 		}
 	}
 	// check for party with parents with child
-	if( (cnt_hi >= 2) && (cnt_lo == 3) && 
-		(!strcmp(p->member[0].map,p->member[1].map)) && 
+	if( (cnt_hi >= 2) && (cnt_lo == 3) &&
+		(!strcmp(p->member[0].map,p->member[1].map)) &&
 		(!strcmp(p->member[1].map,p->member[2].map)) )
 	{
 		pl1=search_character_index(p->member[0].name);

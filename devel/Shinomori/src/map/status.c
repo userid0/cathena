@@ -1517,6 +1517,10 @@ int status_calc_pc(struct map_session_data& sd, int first)
 #else
 		clif_changelook(&sd.bl,LOOK_WEAPON,0);
 #endif
+	//Restoring cloth dye color after the view class changes. [Skotlex]
+	if(battle_config.save_clothcolor && sd.status.clothes_color > 0 &&
+		(sd.view_class != 22 || !battle_config.wedding_ignorepalette))
+			clif_changelook(&sd.bl,LOOK_CLOTHES_COLOR,sd.status.clothes_color);
 	}
 
 	if( memcmp(b_skill,sd.status.skill,sizeof(sd.status.skill)) || b_attackrange != sd.attackrange)
@@ -3216,7 +3220,8 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		return 0;
 	if(bl->type == BL_MOB)
 		if (status_isdead(bl)) return 0;
-		
+	if(bl->type == BL_PET)	//Pets cannot have status effects
+		return 0;
 	// it's exactly the same thing as line 3231, so not needed ^^;
 	//if(!status_get_sc_data(bl)) //null pointer right here [Kevin]
 	//	return 0;
@@ -5119,7 +5124,7 @@ int status_readdb(void) {
 	i=0;
 	while(fgets(line, sizeof(line)-1, fp)){
 		char *split[50];
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		for(j=0,p=line;j<21 && p;j++){
 			split[j]=p;
@@ -5153,7 +5158,7 @@ int status_readdb(void) {
 	}
 	i=0;
 	while(fgets(line, sizeof(line)-1, fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		for(j=0,p=line;j<MAX_LEVEL && p;j++){
 			if(sscanf(p,"%d",&k)==0)
@@ -5181,7 +5186,7 @@ int status_readdb(void) {
 	}
 	i=0;
 	while(fgets(line, sizeof(line)-1, fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		for(j=0,p=line;j<MAX_LEVEL && p;j++){
 			if(sscanf(p,"%d",&k)==0)
@@ -5209,7 +5214,7 @@ int status_readdb(void) {
 	i=0;
 	while(fgets(line, sizeof(line)-1, fp)){
 		char *split[20];
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		if(atoi(line)<=0)
 			continue;
@@ -5243,7 +5248,7 @@ int status_readdb(void) {
 	i=0;
 	while(fgets(line, sizeof(line)-1, fp)){
 		char *split[16];
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		if(atoi(line)<=0)
 			continue;

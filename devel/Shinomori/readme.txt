@@ -1,6 +1,6 @@
 my personal kingdom
 
-based on svn2000
+based on svn2059
 
 incomplete list of modifications compared to the stable branch
 ///////////////////////////////////////////////////////////
@@ -15,6 +15,9 @@ keep on updating with branch but do not copy any enhancement
 ///////////////////////////////////////////////////////////
 
 
+///////////////////////////////////////////////////////////
+checking of comments in config files is
+skipping all whitespace characters now
 ///////////////////////////////////////////////////////////
 changed dynamic mobs to a different dataset
 now _all_ script mobs are created with a cache and each mob

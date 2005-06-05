@@ -396,7 +396,7 @@ int dll_config_read(const char *cfgName)
 		return 1;
 	}
 	while (fgets(line, 1020, fp)) {
-		if(line[0] == '/' && line[1] == '/')
+		if( !skip_empty_line(line) )
 			continue;
 		if (sscanf(line,"%[^:]: %[^\r\n]", w1, w2) != 2)
 			continue;
@@ -409,7 +409,7 @@ int dll_config_read(const char *cfgName)
 			else auto_search = atoi(w2);
 		} else if (strcasecmp(w1, "addon") == 0) {
 			char filename[128];
-			sprintf (filename, "addons%c%s%s", w2, PATHSEP, DLL_EXT);
+			sprintf (filename, "addons%c%s%s", PATHSEP, w2, DLL_EXT);
 			dll_open(filename, true);
 		} else if (strcasecmp(w1, "import") == 0)
 			dll_config_read(w2);

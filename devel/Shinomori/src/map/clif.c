@@ -1474,6 +1474,7 @@ int clif_movechar(struct map_session_data &sd)
 	} else
 		clif_send(buf, len, &sd.bl, AREA_WOS);
 
+//Stupid client that needs this resent every time someone walks :X
 	if(battle_config.save_clothcolor &&
 		sd.status.clothes_color > 0 &&
 		(sd.view_class != 22 || !battle_config.wedding_ignorepalette)
@@ -2371,7 +2372,6 @@ int clif_updatestatus(struct map_session_data &sd,unsigned short type)
 		break;
 	case SP_HP:
 		WFIFOL(fd,4)=sd.status.hp;
-		if(battle_config.disp_hpmeter <= pc_isGM(sd))
 		clif_hpmeter(sd);
 		break;
 	case SP_SP:
@@ -5732,6 +5732,7 @@ int clif_hpmeter(struct map_session_data &sd)
 			sd2->bl.m == sd.bl.m &&
 			sd2->bl.x > x0 && sd2->bl.x < x1 &&
 			sd2->bl.y > y0 && sd2->bl.y < y1 &&
+			pc_isGM(*sd2) >= battle_config.disp_hpmeter &&
 			pc_isGM(*sd2) >= pc_isGM(sd) &&
 			&sd != sd2 && 
 			sd2->state.auth)
@@ -7771,11 +7772,11 @@ int clif_parse_GetCharNameRequest(int fd, struct map_session_data &sd)
 
 		nullpo_retr(0,ssd);
 
-//		if(strlen(ssd->fakename)>1)
-//		{
-//			memcpy(WFIFOP(fd,6), ssd->fakename, 24);
-///		}
-//		else
+		if( *ssd->fakename )
+		{
+			memcpy(WFIFOP(fd,6), ssd->fakename, 24);
+		}
+		else
 		{
 			memcpy(WFIFOP(fd,6), ssd->status.name, 24);
 			if (ssd->status.guild_id > 0 && (g = guild_search(ssd->status.guild_id)) != NULL &&
@@ -11568,7 +11569,7 @@ static int packetdb_readdb(void)
 	packet_ver = MAX_PACKET_VER;	// read into packet_db's version by default
 
 	while(fgets(line,1020,fp)){
-		if(line[0]=='/' && line[1]=='/')
+		if( !skip_empty_line(line) )
 			continue;
 		if (sscanf(line,"%[^:]: %[^\r\n]",w1,w2) == 2) {
 			if(strcasecmp(w1,"packet_ver")==0) {

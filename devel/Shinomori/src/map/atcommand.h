@@ -78,14 +78,9 @@ enum AtCommandType {
 	AtCommand_PetFriendly,
 	AtCommand_PetHungry,
 	AtCommand_PetRename,
-//	AtCommand_CharPetRename, // by Yor, Now #petrename
 	AtCommand_Recall,
-//	AtCommand_CharacterJob,  // Now #jobchange
 	AtCommand_Revive,
-//	AtCommand_CharacterStats, // Now #stats
 	AtCommand_CharacterStatsAll,
-//	AtCommand_CharacterOption, // Now #option
-//	AtCommand_CharacterSave, // Now #save
 	AtCommand_CharacterLoad,
 	AtCommand_Night,
 	AtCommand_Day,
@@ -93,15 +88,11 @@ enum AtCommandType {
 	AtCommand_DoomMap,
 	AtCommand_Raise,
 	AtCommand_RaiseMap,
-	AtCommand_CharacterBaseLevel,
-	AtCommand_CharacterJobLevel,
 	AtCommand_Kick,
 	AtCommand_KickAll,
 	AtCommand_AllSkill,
 	AtCommand_QuestSkill,
-	AtCommand_CharQuestSkill,
 	AtCommand_LostSkill,
-	AtCommand_CharLostSkill,
 	AtCommand_SpiritBall,
 	AtCommand_Party,
 	AtCommand_Guild,
@@ -131,7 +122,6 @@ enum AtCommandType {
 	AtCommand_Hstyle,
 	AtCommand_Hcolor,
 	AtCommand_StatAll,
-	AtCommand_CharChangeSex, // by Yor
 	AtCommand_CharBlock, // by Yor
 	AtCommand_CharBan, // by Yor
 	AtCommand_CharUnBlock, // by Yor
@@ -260,6 +250,8 @@ enum AtCommandType {
 	AtCommand_Unknown,
 	AtCommand_FakeName, // [Valaris]
 	AtCommand_Size, // [Valaris]
+	AtCommand_ShowDelay,
+	AtCommand_ShowExp,
 	AtCommand_MAX
 };
 

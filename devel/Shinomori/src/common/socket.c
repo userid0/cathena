@@ -623,7 +623,7 @@ public:
 			return 1;
 		}
 		while(fgets(line,1020,fp)){
-			if(line[0] == '/' && line[1] == '/')
+			if( !skip_empty_line(line) )
 				continue;
 			i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
 			if(i!=2)
@@ -2033,7 +2033,7 @@ public:
 
 		while(fgets(line, sizeof(line)-1, fp)) {
 
-			if (line[0] == '/' && line[1] == '/')
+			if( !skip_empty_line(line) )
 				continue;
 
 			line[sizeof(line)-1] = '\0';

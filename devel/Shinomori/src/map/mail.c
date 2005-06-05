@@ -20,7 +20,6 @@
 #include "pc.h"
 #include "mail.h"
 
-
 char mail_db[32] = "mail";
 
 int MAIL_CHECK_TIME = 120000;
