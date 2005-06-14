@@ -1,5 +1,6 @@
 
 #include "upnp.h"
+#include "dll.h"
 #include <stdio.h>
 #include <windows.h>
 #include <netfw.h>
@@ -7,16 +8,44 @@
 #include <comutil.h>
 #include <stdarg.h>
 
+ADDON_INFO = {
+	"UPnP",
+	ADDON_CORE,
+	"1.03",
+	DLL_VERSION,
+	"UPNP / Firewall Plugin by eAthena"
+};
+
+ADDON_EVENTS_TABLE = {
+	{ "upnp_init", "DLL_Init" },
+	{ "upnp_final", "DLL_Final" },
+	{ "CheckWindowsVersion", "DLL_Test" },
+	{ NULL, NULL }
+};
+
+	ADDON_CALL_TABLE = NULL;
 	INetFwProfile* profile = NULL;
 	IStaticPortMappingCollection *collection = NULL;
 
+	int validWindowsVersion = -1;
+	int enableUPnP = 1;
+	
 	int release_mappings = 1;
-	int upnpPort = 0;
-
 	int close_ports = 1;
+
+	int upnpPort = 0;
 	int firewallPort = 0;
 
+	int firewall_enabled = 0;
+	int upnp_enabled = 0;
+
 inline void ShowMessage (const char *msg, ...){
+	va_list ap;
+	va_start(ap, msg);
+	vprintf (msg, ap);
+	va_end (ap);
+}
+inline void ShowDebug (const char *msg, ...){
 #ifdef _DEBUG
 	va_list ap;
 	va_start(ap, msg);
@@ -51,7 +80,7 @@ int Firewall_init ()
 
 	profile->get_FirewallEnabled(&enabled);
 	if (enabled == VARIANT_FALSE) {
-		ShowMessage ("Firewall not enabled\n");
+		ShowDebug ("Firewall not enabled\n");
 		manager->Release();
 		policy->Release();
 		return 0;
@@ -59,7 +88,7 @@ int Firewall_init ()
 
 	profile->get_ExceptionsNotAllowed(&enabled);
 	if (enabled == VARIANT_TRUE) {
-		ShowMessage ("Firewall exceptions not allowed\n");
+		ShowDebug ("Firewall exceptions not allowed\n");
 		manager->Release();
 		policy->Release();
 		return 0;
@@ -68,7 +97,7 @@ int Firewall_init ()
 	if (manager) manager->Release();
 	if (policy) policy->Release();
 
-	ShowMessage ("Firewall init done\n");
+	ShowDebug ("Firewall init done\n");
 
 	return 1;
 }
@@ -85,21 +114,21 @@ int Firewall_AddPort (char *desc, int portNum)
 	profile->get_GloballyOpenPorts(&ports);
 	if (!ports)
 		return 0;
-	ShowMessage ("Get ports\n");
+	ShowDebug ("Get ports\n");
 
 	ports->Item(portNum, NET_FW_IP_PROTOCOL_TCP, &port);
 	if (port) {
-		ShowMessage("Port %d found\n", portNum);
+		ShowDebug("Port %d found\n", portNum);
 		port->get_Enabled(&enabled);
-		ShowMessage("Check... ");
+		ShowDebug("Check... ");
 		if (enabled == VARIANT_TRUE) {
-			ShowMessage ("Already enabled\n");
+			ShowDebug ("Already enabled\n");
 			return 0;
 		}
-		ShowMessage ("Not enabled\n");
+		ShowDebug ("Not enabled\n");
 	}
 
-	ShowMessage ("Create port\n");
+	ShowDebug ("Create port\n");
 	CoCreateInstance(__uuidof(NetFwOpenPort), NULL, CLSCTX_INPROC_SERVER,
 		__uuidof(INetFwOpenPort), (void**)&port);
 	if (!port) {
@@ -113,7 +142,7 @@ int Firewall_AddPort (char *desc, int portNum)
 	port->put_Name(name);
 	ports->Add(port);
 	firewallPort = portNum;
-	ShowMessage ("Add port %d done\n", portNum);
+	ShowDebug ("Add port %d done\n", portNum);
 
 	if (port) port->Release();
 	if (ports) ports->Release();
@@ -138,7 +167,7 @@ int Firewall_RemovePort (int portNum)
 int Firewall_finalize ()
 {
 	if (close_ports && firewallPort > 0) {
-		ShowMessage ("Reclosing firewall on port %d\n", firewallPort);
+		ShowMessage ("Reclosing firewall on port %d.\n", firewallPort);
 		Firewall_RemovePort (firewallPort);
 	}
 	if (profile) profile->Release();
@@ -149,23 +178,23 @@ int UPNP_init ()
 {	
 	IUPnPNAT *nat = NULL;
 
-	ShowMessage ("init NAT...");
+	ShowDebug ("init NAT...");
 	CoCreateInstance(__uuidof(UPnPNAT), NULL, CLSCTX_ALL,
 		__uuidof(IUPnPNAT), (void**)&nat);
 	if (!nat) {
-		ShowMessage ("Failed\n");
+		ShowDebug ("Failed\n");
 		return 0;
 	}
-	ShowMessage ("\n");
+	ShowDebug ("\n");
 
-	ShowMessage ("Getting collection...");
+	ShowDebug ("Getting collection...");
 	nat->get_StaticPortMappingCollection(&collection);
 	if (!collection) {
-		ShowMessage ("Failed\n");
+		ShowDebug ("Failed\n");
 		nat->Release();
 		return 0;
 	}
-	ShowMessage ("\n");
+	ShowDebug ("\n");
 
 	if (nat) nat->Release();
 	return 1;
@@ -179,21 +208,21 @@ int UPNP_AddPort (char *desc, char *ip, int portNum)
 	if (!collection)
 		return 0;
 
-	ShowMessage ("Checking if mapping to %s:%d exists\n", ip, portNum);
+	ShowDebug ("Checking if mapping to %s:%d exists\n", ip, portNum);
 	collection->get_Item(portNum, protocol, &mapping);
 	if (mapping != NULL) {
-		ShowMessage ("Removing old mapping\n");
+		ShowDebug ("Removing old mapping\n");
 		UPNP_RemovePort (portNum);
 		mapping->Release();
 	}
 
-	ShowMessage ("Adding port mapping...");
+	ShowDebug ("Adding port mapping...");
 	collection->Add(portNum, protocol, portNum, address, true, name, &mapping);
 	if (!mapping) {
-		ShowMessage ("Failed\n");
+		ShowDebug ("Failed\n");
 		return 0;
 	}
-	ShowMessage ("Success\n");
+	ShowDebug ("Success\n");
 	upnpPort = portNum;
 
 	return 1;
@@ -210,7 +239,7 @@ int UPNP_RemovePort (int portNum)
 int UPNP_finalize ()
 {
 	if(release_mappings && upnpPort > 0) {
-		ShowMessage ("Releasing port mappings on %d\n", upnpPort);
+		ShowMessage ("Releasing port mappings on %d.\n", upnpPort);
 		UPNP_RemovePort (upnpPort);
 	}
 	if (collection) collection->Release();
@@ -224,35 +253,112 @@ int CheckWindowsVersion ()
 	vi.dwOSVersionInfoSize = sizeof(vi);
 	GetVersionEx(&vi);
 
-	if (vi.dwMajorVersion >=5 && vi.dwMinorVersion >= 1)
-		return 1;
-
-	return 0;
+	validWindowsVersion = (vi.dwMajorVersion >=5 && vi.dwMinorVersion >= 1);
+	return validWindowsVersion;
 }
 
-int do_init ()
+int upnp_final ()
 {
-	int ret = 0;
-	
-	if (CheckWindowsVersion() == 0)
-		return 0;
+	if (upnp_enabled)
+		UPNP_finalize ();
+	if (firewall_enabled)
+		Firewall_finalize ();
+	CoUninitialize();
 
-	CoInitializeEx(0, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-	UPNP_init();
-	Firewall_init();
-	//profile->put_FirewallEnabled(VARIANT_TRUE);
-	
 	return 1;
 }
 
-int do_final ()
+int upnp_init ()
 {
-	if (CheckWindowsVersion() == 0)
+	char line[1024], w1[1024], w2[1024];
+	char *server_type;
+	char *server_name;
+	char *conf_file[2];
+	char *port_name;
+	int port_num;
+	char *natip = NULL;
+	FILE *fp;
+	int i;
+
+	if (validWindowsVersion == -1)
+		CheckWindowsVersion();
+	if (!validWindowsVersion)
 		return 0;
 
-	UPNP_finalize ();
-	Firewall_finalize ();
-	CoUninitialize();
+	server_type = (char *)addon_call_table[0];
+	server_name = (char *)addon_call_table[1];
 
+	switch(*server_type)
+	{
+	case ADDON_LOGIN:	// login
+		conf_file[0] = "conf/login_athena.conf";
+		port_name = "login_port";
+		port_num = 6900;
+		break;
+	case ADDON_CHAR:	// char
+		conf_file[0] = "conf/char_athena.conf";
+		port_name = "char_port";
+		port_num = 6121;
+		break;
+	case ADDON_MAP:	// map
+		conf_file[0] = "conf/map_athena.conf";
+		port_name = "map_port";
+		port_num = 5121;
+		break;
+	default:
+		return 0;
+	}
+	
+	conf_file[1] = "addons/upnp.conf";
+
+	for (i = 0; i < 2; i++)
+	{
+		fp = fopen(conf_file[i], "r");
+		if (fp == NULL)
+			continue;
+
+		while(fgets(line, sizeof(line) -1, fp)) {
+			if (line[0] == '/' && line[1] == '/')
+				continue;
+			if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) == 2) {
+				if(strcmpi(w1,"enable_upnp")==0){
+					enableUPnP = atoi(w2);
+				} else if(strcmpi(w1,"release_mappings")==0){
+					release_mappings = atoi(w2);
+				} else if(strcmpi(w1,"close_ports")==0){
+					close_ports = atoi(w2);
+				} else if(strcmpi(w1,port_name)==0){
+					port_num = atoi(w2);
+				}// else if(strcmpi(w1,"lan_ip")==0){
+				//	;
+				//}
+			}
+		}
+		fclose(fp);
+	}
+
+	if (!enableUPnP)
+		return 0;
+
+	CoInitializeEx(0, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+	firewall_enabled = Firewall_init();
+	upnp_enabled = UPNP_init();
+
+	if (firewall_enabled &&
+		Firewall_AddPort(server_name, port_num))
+		ShowMessage ("Firewall port %d successfully opened.\n", port_num);
+
+	if (upnp_enabled) {
+		if (!natip) {
+			unsigned int *addr = (unsigned int *)addon_call_table[12];
+			int localaddr = ntohl(addr[0]);
+			natip = (char *)&localaddr;
+			ShowDebug("natip=%d.%d.%d.%d\n", natip[0], natip[1], natip[2], natip[3]);
+		}
+		if (natip[0] == 192 && natip[1] == 168 &&
+			UPNP_AddPort(server_name, natip, port_num))
+			ShowMessage ("UPnP mapping successfull.\n");
+	}
+	
 	return 1;
 }

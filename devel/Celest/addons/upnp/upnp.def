@@ -1,9 +1,9 @@
 ;you should put names of all functions here
 ;which you want to export
 EXPORTS
-	do_init
-	do_final
-	Firewall_AddPort
-	UPNP_AddPort
-	release_mappings;
-	close_ports;
+	upnp_init
+	upnp_final
+	addon_info
+	addon_call_table
+	addon_event_table
+	CheckWindowsVersion
