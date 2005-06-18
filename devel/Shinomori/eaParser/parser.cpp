@@ -703,11 +703,19 @@ void _pop_stack(struct _parser* parser)
 	if (parser->nstack < 1) return;
 	parser->nstack--;
 	if (parser->stack[parser->nstack].token.lexeme)
+	{
 		free(parser->stack[parser->nstack].token.lexeme);
+		parser->stack[parser->nstack].token.lexeme=NULL;
+	}
 	if (parser->stack[parser->nstack].symbol.Name)
+	{
 		free(parser->stack[parser->nstack].symbol.Name);
-	if (parser->stack[parser->nstack].rtchildren){
+		parser->stack[parser->nstack].symbol.Name=NULL;
+	}
+	if (parser->stack[parser->nstack].rtchildren)
+	{
 		free(parser->stack[parser->nstack].rtchildren);
+		parser->stack[parser->nstack].rtchildren = NULL;
 		parser->stack[parser->nstack].nrtchild = 0;
 		parser->stack[parser->nstack].rtchildofs = 0;
 	}

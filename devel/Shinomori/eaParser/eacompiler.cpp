@@ -7,6 +7,7 @@
 #include "eacompiler.h"
 
 #include "base.h"
+#include "basesafeptr.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -174,15 +175,26 @@ class MiniString
 public:
 	MiniString(const char *in=NULL)	{string=NULL; copy(in);}
 	MiniString(const MiniString &in){string=NULL; copy(in.string);}
-	~MiniString()					{clear();}
+	virtual ~MiniString()			{clear();}
 
 	const MiniString &operator=(const MiniString &a)	{ copy(a.string); return *this; }
 	const char*	operator=(const char *in)				{ copy(in); return string; }
+	const char* get()									{ return string; }
 	operator char*()									{ return string; }
 	operator const char*() const						{ return string; }
 
-	bool operator==(const char *b) const {return (0==strcmp(this->string, b));}
-	bool operator!=(const char *b) const {return (0!=strcmp(this->string, b));}
+	bool operator==(const char *b) const		{return (0==strcmp(this->string, b));}
+	bool operator==(const MiniString &b) const	{return (0==strcmp(this->string, b.string));}
+	bool operator!=(const char *b) const		{return (0!=strcmp(this->string, b));}
+	bool operator!=(const MiniString &b) const	{return (0!=strcmp(this->string, b.string));}
+	bool operator> (const char *b) const		{return (0> strcmp(this->string, b));}
+	bool operator> (const MiniString &b) const	{return (0> strcmp(this->string, b.string));}
+	bool operator< (const char *b) const		{return (0< strcmp(this->string, b));}
+	bool operator< (const MiniString &b) const	{return (0< strcmp(this->string, b.string));}
+	bool operator>=(const char *b) const		{return (0>=strcmp(this->string, b));}
+	bool operator>=(const MiniString &b) const	{return (0>=strcmp(this->string, b.string));}
+	bool operator<=(const char *b) const		{return (0<=strcmp(this->string, b));}
+	bool operator<=(const MiniString &b) const	{return (0<=strcmp(this->string, b.string));}
 
 	friend bool operator==(const char *a, const MiniString &b) {return (0==strcmp(a, b.string));}
 	friend bool operator!=(const char *a, const MiniString &b) {return (0!=strcmp(a, b.string));}
@@ -193,76 +205,98 @@ public:
 
 class Variant
 {
-	typedef enum _variant_type
+	class _value
 	{
-		VAR_NONE = 0,
-		VAR_INTEGER,
-		VAR_STRING,
-		VAR_FLOAT,
-		VAR_ARRAY
-	} VARTYPE;
+		friend class Variant;
 
-	VARTYPE cType;
-	size_t cSize;	// Array Elements
+		typedef enum _value_type
+		{
+			VAR_NONE = 0,
+			VAR_INTEGER,
+			VAR_STRING,
+			VAR_FLOAT,
+			VAR_ARRAY,
+		} VARTYPE;
 
-	union
-	{
-		int64		cInteger;
-		double		cFloat;
-
+		VARTYPE cType;
 		union
 		{
-			char*		cString;
-			size_t		cStrLen;
+			// integer
+			int64			cInteger;
+			// double
+			double			cFloat;
+			// string
+			struct
+			{
+				char*		cString;
+				size_t		cStrLen;
+			};
+			// array
+			struct
+			{
+				_value*		cArray;
+				size_t		cSize;
+			};
 		};
-		union
+	public:
+		///////////////////////////////////////////////////////////////////////
+		//
+		_value() : cType(VAR_NONE), cInteger(0)
+		{}
+		~_value()
 		{
-			Variant*	cArray;
-			size_t		cSize;
-		};		
+			clear();
+		}
+		///////////////////////////////////////////////////////////////////////
+		//
+		void clear()
+		{	
+			if(cInteger)
+			{
+				switch(cType)
+				{
+				case VAR_ARRAY:
+					if(cArray) delete [] cArray;
+				case VAR_STRING:
+					if(cString) delete [] cString;
+				//case VAR_INTEGER:
+				//case VAR_FLOAT:
+				//case VAR_VARIABLE:
+				}
+				cType = VAR_NONE;
+				cInteger = 0;
+				cSize = 0;
+			}
+		}
+		///////////////////////////////////////////////////////////////////////
+		bool isValid() const	{ return cType != VAR_NONE; }	
+		bool isInt() const		{ return cType == VAR_INTEGER; }	
+		bool isFloat() const	{ return cType == VAR_FLOAT; }	
+		bool isString() const	{ return cType == VAR_STRING; }	
+		bool isArray() const	{ return cType == VAR_ARRAY; }
+		size_t getSize() const	{ return (cType== VAR_ARRAY) ? cSize : 1; }
+		///////////////////////////////////////////////////////////////////////
+		void setarray(size_t cnt)
+		{
+
+		}
+
+
 	};
 
-	void clear()
-	{	
-		if(cInteger)
-		{
-			switch(cType)
-			{
-			case VAR_ARRAY:
-				if(cArray) delete [] cArray;
-			case VAR_STRING:
-				if(cString) delete [] cString;
-			//case VAR_INTEGER:
-			//case VAR_FLOAT:
-			}
-			cType = VAR_NONE;
-			cInteger = 0;
-			cSize = 0;
-		}
-	}
+	TPtrCommon< _value > cValue;
+
 public:
 	///////////////////////////////////////////////////////////////////////////
 	// Construction/Destruction
-	Variant()
-	{
-		cType = VAR_NONE;
-		cInteger = NULL;
-		cSize = 0;
-	}
-	~Variant()
-	{
-		clear();
-	}
+	Variant()	{}
+	~Variant()	{}
 	///////////////////////////////////////////////////////////////////////////
 	// Copy/Assignment
-	Variant(const Variant &v)
-	{
-		cType = VAR_NONE;
-		cInteger = NULL;
-		cSize = 0;
-		this->assign(v);
-	}
-
+	Variant(const Variant &v)					{ assign(v); }
+	Variant(int val)							{ assign(val); }
+	Variant(double val)							{ assign(val); }
+	Variant(const char* val)					{ assign(val); }
 	const Variant& operator=(const Variant &v)	{ return assign(v);	  }
 	const Variant& operator=(const int val)		{ return assign(val); }
 	const Variant& operator=(const double val)	{ return assign(val); }
@@ -270,300 +304,75 @@ public:
 
 	///////////////////////////////////////////////////////////////////////////
 	// compare
-	bool operator ==(const Variant &v) const { return this==&v; }
-	bool operator !=(const Variant &v) const { return this==&v; }
+	bool operator ==(const Variant &v) const 
+	{
+		if( cValue != v.cValue )
+		{	// different pointers, compare content
+			return cValue.get() == v.cValue.get();
+		}
+		return true; 
+	}
+	bool operator !=(const Variant &v) const 
+	{ 
+		if( cValue != v.cValue )
+		{	// different pointers, compare content
+			return cValue.get() != v.cValue.get();
+		}
+		return false;
+	}
 
 	///////////////////////////////////////////////////////////////////////////
 	// Type Initialize Variant (aka copy)
 	const Variant& assign(const Variant& v)
 	{
-		this->clear();
-		if(v.cType!=VAR_NONE)
-		{
-			size_t i;
-			cType = v.cType;
-			switch(cType)
-			{
-			case VAR_ARRAY:
-				cSize = v.cSize;
-				cArray = new Variant[cSize];
-				for(i=0; i<cSize; i++)
-					cArray[i] = v.cArray[i];
-			case VAR_STRING:
-				cStrLen = v.cStrLen;
-				cString = new char[1+cStrLen];
-				memcpy(cString, v.cString,1+cStrLen);
-			case VAR_INTEGER:
-				cInteger = v.cInteger;
-			case VAR_FLOAT:
-				cFloat = v.cFloat;
-			}
-		}
+		cValue = v.cValue;
 		return *this;
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Type Initialize Integer
-	Variant(int val)
-	{
-		cType = VAR_NONE;
-		cInteger = NULL;
-		cSize = 0;
-		this->assign(val);
-	}
 	const Variant& assign(int val)
 	{
-		clear();
-		cType = VAR_INTEGER;
-		cInteger = val;
+//		cValue = val;
 		return *this;
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Type Initialize double
-	Variant(double val)
-	{
-		cType = VAR_NONE;
-		cInteger = NULL;
-		cSize = 0;
-		this->assign(val);
-	}
 	const Variant& assign(double val)
 	{
-		clear();
-		cType = VAR_FLOAT;
-		cFloat = val;
+//		cValue = val;
 		return *this;
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Type Initialize String
-	Variant(const char* val)
-	{
-		cType = VAR_NONE;
-		cInteger = NULL;
-		this->assign(val);
-	}
 	const Variant& assign(const char* val)
 	{
-		clear();
-		cType = VAR_STRING;
-		
-		cStrLen = (val) ? strlen(val) : 0;
-		cString = new char[cStrLen+1];
-		if(val)
-			memcpy(cString,val,cStrLen+1);
-		else
-			*cString=0;
+//		cValue = val;
 		return *this;
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Create Array
-	void initialize_array(size_t cnt)
+	void setarray(size_t cnt)
 	{
-		clear();
-		if( cnt>1 )
-		{
-			cType = VAR_ARRAY;
-			cSize = cnt;
-			cArray = new Variant[cSize];
-		}
+		cValue->setarray(cnt);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	// Access to elements
-	bool isValid() const	{ return cType!=VAR_NONE; }	
-	bool isInt() const		{ return cType==VAR_INTEGER; }	
-	bool isFloat() const	{ return cType==VAR_FLOAT; }	
-	bool isString() const	{ return cType==VAR_STRING; }	
-	bool isArray() const	{ return cType==VAR_ARRAY; }
-	size_t getSize() const	{ return (cType==VAR_ARRAY) ? cSize : 1; }
+	bool isValid() const	{ return cValue->isValid(); }
+	bool isInt() const		{ return cValue->isInt(); }
+	bool isFloat() const	{ return cValue->isFloat(); }
+	bool isString() const	{ return cValue->isString(); }
+	bool isArray() const	{ return cValue->isArray(); }
+	size_t getSize() const	{ return cValue->getSize(); }
 
 	///////////////////////////////////////////////////////////////////////////
 	// Access to elements
-	Variant& operator[](size_t inx)
+	const Variant& operator[](size_t inx) const
 	{	// on Arrays return the element, out of bounds return element 0
 		// other array accesses return this object
-		return (cType==VAR_ARRAY) ? ((inx<cSize) ? cArray[inx] : cArray[0]) : *this;
+		//return (cValue.cType==cValue.VAR_ARRAY) ? ((inx<cValue.cSize) ? cValue.cArray[inx] : cValue.cArray[0]) : *this;
+		return *this;
 	}
-
-	///////////////////////////////////////////////////////////////////////////
-	// Access operators
-	operator int() const	
-	{
-		switch(cType)
-		{
-		case VAR_NONE:
-		{	// nothing equals 0
-			return 0;
-		}
-		case VAR_INTEGER:
-		{	// direct
-			return (int)cInteger;
-		}
-		case VAR_FLOAT:
-		{	// cast
-			return (int)cFloat;
-		}
-		case VAR_STRING:
-		{	// convert
-			return (cString) ? atoi(cString) : 0;
-		}
-		case VAR_ARRAY:
-		{	// first element
-			return (int)cArray[0];
-		}
-		}// end switch
-	}
-	operator double() const
-	{
-		switch(cType)
-		{
-		case VAR_NONE:
-		{	// nothing equals 0
-			return 0;
-		}
-		case VAR_INTEGER:
-		{	// cast
-			return (double)cInteger;
-		}
-		case VAR_FLOAT:
-		{	// direct
-			return cFloat;
-		}
-		case VAR_STRING:
-		{	// convert
-			return (cString) ? atof(cString) : 0;
-		}
-		case VAR_ARRAY:
-		{	// first element
-			return (double)cArray[0];
-		}
-		}// end switch
-	}
-
-	///////////////////////////////////////////////////////////////////////////
-	// Conversion
-	bool convert2integer()
-	{
-		*this = (int)(*this);
-		return true;
-	}
-	bool convert2float()
-	{
-		*this = (double)(*this);
-		return true;
-	}
-	bool convert2string()
-	{
-		char buffer[128]="";
-		switch(cType)
-		{
-		case VAR_NONE:
-		{	
-			*this = buffer;
-			break;
-		}
-		case VAR_INTEGER:
-		{	
-			sprintf(buffer, "%i", (int)cInteger);
-			*this = buffer;
-			break;
-		}
-		case VAR_FLOAT:
-		{	
-			sprintf(buffer, "%.6lf", cFloat);
-			*this = buffer;
-			break;
-		}
-		case VAR_STRING:
-		{	break;
-		}
-		case VAR_ARRAY:
-		{	// first element
-			
-			cArray[0].convert2string();
-
-			// take ownership of the string from cArray[0]
-			char *temp = cArray[0].cString;
-			cArray[0].cString = NULL;
-
-			// clear this
-			clear();
-
-			// and change to string
-			cType = VAR_STRING;
-			cStrLen = (temp) ? strlen(temp) : 0;
-			cString = temp;
-
-			break;
-		}
-		}// end switch
-		
-		return true;
-	}
-	bool convert2array(size_t cnt)
-	{
-		size_t i;
-		switch(cType)
-		{
-		case VAR_NONE:
-		{	
-			initialize_array(cnt);
-			break;
-		}
-		case VAR_INTEGER:
-		{	
-			int temp = (int)cInteger;
-			initialize_array(cnt);
-			for(i=0;i<cnt; i++)
-				cArray[i] = temp;
-			break;
-		}
-		case VAR_FLOAT:
-		{	
-			double temp = cFloat;
-			initialize_array(cnt);
-			for(i=0;i<cnt; i++)
-				cArray[i] = temp;
-			break;
-		}
-		case VAR_STRING:
-		{
-			// take ownership of the string
-			char *temp = cString;
-			cString = NULL;
-
-			// clear this
-			initialize_array(cnt);
-
-			// copy the string
-			for(i=1;i<cnt; i++)
-				cArray[i] = temp;
-
-			// give cArray[0] ownership to the string
-			cArray[0].cType = VAR_STRING;
-			cArray[0].cString = temp;
-			cArray[0].cStrLen = (temp) ? strlen(temp):0;
-		
-			break;
-
-		}
-		case VAR_ARRAY:
-		{	// this would work for all types but is not practical 
-			// until smart pointers are introduced 
-			
-			// copy this
-			Variant temp = *this;
-			// 
-			initialize_array(cnt);
-			for(i=0;i<cnt; i++)
-				cArray[i] = temp;
-
-			break;
-		}
-		}// end switch
-		
-		return true;
-	}
-
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -610,28 +419,442 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 
 
-class StackProgramm
+class CProgramm
 {
-public:
-	TArrayDST<unsigned char>	Programm;
-	TArrayDST<Variable*>		Vars;
-
-	bool FindVariable(const char *name, size_t &inx)
+protected:
+	class CLabel : public MiniString
 	{	
-		register size_t i;
-		for(i=0; i<Vars.size(); i++)
+	public:
+		int		pos;
+		size_t	use;
+
+		CLabel(const char* n=NULL, int p=-1) : MiniString(n), pos(p),use(0)	{}
+		virtual ~CLabel()	{}
+
+	};
+
+	TslistDCT<CLabel>			cLabelList;	// label list
+
+	TArrayDST<unsigned char>	cProgramm;	// the stack programm
+	size_t						cVarCnt;	// number of temporal variables
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// construct destruct
+	CProgramm() : cVarCnt(0)
+	{}
+	virtual ~CProgramm()
+	{}
+
+	///////////////////////////////////////////////////////////////////////////
+	// compares
+	virtual operator==(const CProgramm& p) const	{ return this==&p; }
+	virtual operator!=(const CProgramm& p) const	{ return this!=&p; }
+
+	///////////////////////////////////////////////////////////////////////////
+	// debug
+	void dump()
+	{
+		size_t i;
+		for(i=0; i<cProgramm.size(); i++)
 		{
-			if( Vars[i] && Vars[i]->cName == name )
-			{
-				inx=i;
-				return true;
-			}
+			printf("%3i ", cProgramm[i]);
+			if(15==i%16) printf("\n");
 		}
-		return false;
 	}
 
 
+	///////////////////////////////////////////////////////////////////////////
+	// label functions
+	const char* insertLabel(const char* name, int pos=-1)
+	{
+		size_t inx;
+
+		cLabelList.insert(name);
+		if( cLabelList.find(name,0, inx) )
+		{
+			if(pos>=0 && cLabelList[inx].pos>=0)
+				return NULL;
+			else if(pos>=0)
+				cLabelList[inx].pos = pos;
+			cLabelList[inx].use++;
+			return (const char*)(cLabelList[inx]);
+		}
+		return NULL;
+	}
+	int getLabel(const char* name)
+	{
+		size_t inx;
+		if( cLabelList.find(name,0, inx) )
+		{
+			return cLabelList[inx].pos;
+		}
+		return -1;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// replacing temporary jump targets
+	bool replaceJumps(size_t start, size_t end, unsigned char cmd, int val)
+	{
+		size_t pos;
+		while( start<end && start<cProgramm.size() )
+		{	// need to copy the position, 
+			// it gets incremented on access internally
+			pos=start;
+			unsigned char c = getCommand(start);
+			if( c==cmd )
+			{	
+				replaceCommand(VX_GOTO,pos);
+
+				pos=start;
+				if( 0==getInt(start) )
+					replaceInt(cmd,pos);
+			}
+			else
+			{
+				switch( c )
+				{
+				// commands followed by an int or float (4 byte)
+				case OP_NIF:
+				case OP_IF:
+				case OP_CALLBUILDIN:
+				case OP_CALLSCRIPT:
+				case OP_PUSH_FLOAT:
+				case VX_BREAK:
+				case VX_CONT:
+				case VX_GOTO:
+				case OP_PUSH_INT:
+					start += 4;
+					break;
+				// commands followed by a string (pointer size)
+				case OP_GOTO:
+				case OP_PUSH_VAR:
+				case OP_PUSH_VALUE:
+				case OP_PUSH_STRING:
+					start += sizeof(size_t);
+					break;
+				}
+			}
+		}
+		return true;
+	}
+	
+	///////////////////////////////////////////////////////////////////////////
+	// access functions
+	unsigned char getCommand(size_t &inx)
+	{
+		if( inx < cProgramm.size() )
+			return cProgramm[inx++];
+		return OP_END;
+	}
+	size_t insertCommand(unsigned char val, size_t &inx)
+	{
+		cProgramm.insert(val, inx++);
+		return inx;
+	}
+	size_t replaceCommand(unsigned char val, size_t &inx)
+	{
+		cProgramm[inx++] = val;
+		return inx;
+	}
+	size_t appendCommand(unsigned char val)
+	{
+		size_t pos = cProgramm.size();
+		cProgramm.append(val);
+		return pos;
+	}
+
+	unsigned char getChar(size_t &inx)
+	{
+		if( inx < cProgramm.size() )
+			return cProgramm[inx++];
+		return 0;
+	}
+	size_t insertChar(unsigned char val, size_t &inx)
+	{
+		cProgramm.insert(val, inx++);
+		return inx;
+	}
+	size_t replaceChar(unsigned char val, size_t &inx)
+	{
+		cProgramm[inx++] = val;
+		return inx;
+	}
+	size_t appendChar(unsigned char val)
+	{
+		size_t pos = cProgramm.size();
+		cProgramm.append(val);
+		return pos;
+	}
+	int getInt(size_t &inx)
+	{	// getting a 32bit integer
+		if( inx+3 < cProgramm.size() )
+		{	
+			return 	  ((unsigned long)cProgramm[inx++])
+					| ((unsigned long)cProgramm[inx++]<<0x08)
+					| ((unsigned long)cProgramm[inx++]<<0x10)
+					| ((unsigned long)cProgramm[inx++]<<0x18);
+		}
+		return 0;
+	}
+	size_t insertInt(int val, size_t &inx)
+	{	// setting a 32bit integer
+		cProgramm.insert(GetByte(val,0), inx++);
+		cProgramm.insert(GetByte(val,1), inx++);
+		cProgramm.insert(GetByte(val,2), inx++);
+		cProgramm.insert(GetByte(val,3), inx++);
+		return inx;
+	}
+	size_t replaceInt(int val, size_t &inx)
+	{	// setting a 32bit integer
+		cProgramm[inx++] = GetByte(val,0);
+		cProgramm[inx++] = GetByte(val,1);
+		cProgramm[inx++] = GetByte(val,2);
+		cProgramm[inx++] = GetByte(val,3);
+		return inx;
+	}
+	size_t appendInt(int val)
+	{	// setting a 32bit integer
+		size_t pos = cProgramm.size();
+		cProgramm.append(GetByte(val,0));
+		cProgramm.append(GetByte(val,1));
+		cProgramm.append(GetByte(val,2));
+		cProgramm.append(GetByte(val,3));
+		return pos;
+	}
+	float getFloat(size_t &inx)
+	{	// getting a 32bit float
+		if( inx+3 < cProgramm.size() )
+		{
+			union
+			{
+				float valf;
+				char buf[4];
+			}storage;
+
+			storage.buf[0] = cProgramm[inx++];
+			storage.buf[1] = cProgramm[inx++];
+			storage.buf[2] = cProgramm[inx++];
+			storage.buf[3] = cProgramm[inx++];
+			return storage.valf;
+		}
+		return 0;
+	}
+	size_t insertFloat(float val, size_t &inx)
+	{	// setting a 32bit float
+		union
+		{
+			float valf;
+			char buf[4];
+		}storage;
+		storage.valf=val;
+
+		cProgramm.insert(storage.buf[0], inx++ );
+		cProgramm.insert(storage.buf[1], inx++ );
+		cProgramm.insert(storage.buf[2], inx++ );
+		cProgramm.insert(storage.buf[3], inx++ );
+
+		return inx;
+	}
+	size_t replaceFloat(float val, size_t &inx)
+	{	// setting a 32bit float
+		union
+		{
+			float valf;
+			char buf[4];
+		}storage;
+		storage.valf=val;
+
+		cProgramm[inx++] = storage.buf[0];
+		cProgramm[inx++] = storage.buf[1];
+		cProgramm[inx++] = storage.buf[2];
+		cProgramm[inx++] = storage.buf[3];
+
+		return inx;
+	}
+	size_t appendFloat(float val)
+	{	// setting a 32bit float
+		union
+		{
+			float valf;
+			char buf[4];
+		}storage;
+		storage.valf=val;
+		size_t pos = cProgramm.size();
+		cProgramm.append(storage.buf[0]);
+		cProgramm.append(storage.buf[1]);
+		cProgramm.append(storage.buf[2]);
+		cProgramm.append(storage.buf[3]);
+
+		return pos;
+	}
+	const char* getString(size_t &inx)
+	{	// getting a pointer, 64bit ready
+		// msb to lsb order for faster reading
+		if( inx+sizeof(size_t) <= cProgramm.size() )
+		{
+			size_t i, vali = 0;
+			for(i=0; i<sizeof(size_t); i++)
+				vali = vali<<8 | cProgramm[inx++];
+			return (const char*)vali;
+		}
+		return "";
+	}
+	size_t insertString(const char*val, size_t &inx)
+	{	// setting a pointer, 64bit ready
+		// msb to lsb order for faster reading
+		size_t i, vali = (size_t)val;
+		for(i=0; i<sizeof(size_t); i++)
+		{
+			cProgramm.insert( vali&0xFF, inx+sizeof(size_t)-1-i );
+			vali >>= 8;
+		}
+		inx += sizeof(size_t);
+		return inx;
+	}
+	size_t appendString(const char*val)
+	{	// setting a pointer, 64bit ready
+		// msb to lsb order for faster reading
+		size_t i, vali = (size_t)val;
+		size_t pos = cProgramm.size();
+		for(i=0; i<sizeof(size_t); i++)
+		{
+			cProgramm.append( (vali>>(8*(sizeof(size_t)-1-i)))&0xFF);
+		}
+		return pos;
+	}
+	size_t getCurrentPosition()	{ return cProgramm.size(); }
+
 };
+
+class CFunction : public CProgramm
+{
+	// <Func Decl>  ::= <Scalar> Id '(' <Params>  ')' <Block>	// fixed parameter count
+    //                | 'function' 'script' <Name Id> <Block>	// variable parameter
+	MiniString	cID;
+	size_t		cParaCnt;
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// construct destruct
+	CFunction() : cID(NULL),cParaCnt(0)
+	{}
+	CFunction(const char* n, size_t p=0) : cID(n),cParaCnt(p)
+	{}
+	virtual ~CFunction()
+	{}
+	///////////////////////////////////////////////////////////////////////////
+	// compares
+	virtual operator==(const char *name) const	{ return 0==strcmp(cID,name); }
+	virtual operator!=(const char *name) const	{ return 0!=strcmp(cID,name); }
+	virtual operator==(const CFunction& p) const	{ return this==&p; }
+	virtual operator!=(const CFunction& p) const	{ return this!=&p; }
+};
+
+class CScript : public CProgramm
+{
+	//	<Script Decl> ::= '-' 'script' <Name Id> <Sprite Id> ',' <Block>
+    //                  | <File Id> ',' DecLiteral ',' DecLiteral ',' DecLiteral 'script' <Name Id> <Sprite Id> ',' <Block>
+	MiniString cID;
+	MiniString cName;
+	MiniString cMap;
+	unsigned short cX;
+	unsigned short cY;
+	unsigned char cDir;
+	unsigned short cSprite;
+public:
+	///////////////////////////////////////////////////////////////////////////
+	// construct destruct
+	CScript() : cID(NULL),cName(NULL),cMap(NULL),cX(0),cY(0),cDir(0),cSprite(0)
+	{}
+	CScript(const char* id, const char* name, const char* map, unsigned short x,unsigned short y, unsigned char dir, unsigned short sprite)
+		: cID(id),cName(name),cMap(map),cX(x),cY(y),cDir(dir),cSprite(sprite)
+	{}
+	virtual ~CScript()
+	{}
+	///////////////////////////////////////////////////////////////////////////
+	// compares
+	virtual operator==(const char *name) const	{ return 0==strcmp(cID,name); }
+	virtual operator!=(const char *name) const	{ return 0!=strcmp(cID,name); }
+	virtual operator==(const CScript& p) const	{ return this==&p; }
+	virtual operator!=(const CScript& p) const	{ return this!=&p; }
+
+};
+
+
+class CScriptEnvironment
+{
+	TArrayDCT<CFunction>	cFunctionTable;
+	TArrayDCT<CScript>		cScriptTable;
+	TslistDCT<MiniString>	cStringTable;
+public:
+	CScriptEnvironment()	{}
+	~CScriptEnvironment()	{}
+
+	const char* insert2Stringtable(const char*str)
+	{
+		size_t pos;
+		cStringTable.insert( str );
+		if( cStringTable.find(str,0,pos) )
+		{	// look up the sting to get it's index
+			return cStringTable[pos];
+		}
+		return NULL;
+	}
+
+	int getFunctionID(const char* name) const
+	{
+		for(size_t i=0; i<cFunctionTable.size(); i++)
+		{
+			if( cFunctionTable[i] == name )
+				return i;
+		}
+		return -1;
+	}
+	int getScriptID(const char* name)
+	{
+		for(size_t i=0; i<cScriptTable.size(); i++)
+		{
+			if( cScriptTable[i] == name )
+				return i;
+		}
+		return -1;
+	}
+	int addFunction(const char *name, size_t param)
+	{
+		size_t pos;
+		for(pos=0; pos<cFunctionTable.size(); pos++)
+		{
+			if( cFunctionTable[pos] == name )
+				return pos;
+		}
+		if( cFunctionTable.append( CFunction(name,param) ) )
+			return pos;
+		return -1;
+	}
+	int addScript(const char* id, const char* name, const char* map, unsigned short x,unsigned short y, unsigned char dir, unsigned short sprite)
+	{
+		size_t pos;
+		for(pos=0; pos<cScriptTable.size(); pos++)
+		{
+			if( cScriptTable[pos] == name )
+				return pos;
+		}
+
+		if( cScriptTable.append( CScript(id, name, map, x, y, dir, sprite) ) )
+			return pos;
+		return -1;
+	}
+	CFunction	&function(size_t pos)
+	{	// will automatically throw on out-of-bound
+		return cFunctionTable[pos];	
+	}
+	CScript		&script(size_t pos)
+	{	// will automatically throw on out-of-bound
+		return cScriptTable[pos];	
+	}
+
+};
+
+CScriptEnvironment env;
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // the user stack
@@ -645,20 +868,19 @@ class UserStack : private noncopyable
 	size_t					cParaBase;	// function parameter start index
 
 	size_t					cPC;		// Programm Counter
-	StackProgramm*			cProg;
+	CProgramm*				cProg;
 
 
 	bool process()
 	{
 		bool run = true;
 		bool ok =true;
-		while(run && ok)
+		while(cProg && run && ok)
 		{
-			switch( cProg->Programm[cPC] )
+			switch( cProg->getCommand(cPC) )
 			{
 			case OP_NOP:
 			{
-				cPC++;
 				break;
 			}
 
@@ -669,7 +891,6 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 				cStack[cSC-1] = cStack[cSC];
-				cPC++;
 				break;
 			}
 				
@@ -678,7 +899,6 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] += cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_SUB:		// <Op AddSub> '-' <Op MultDiv>
@@ -686,7 +906,6 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] -= cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_MUL:		// <Op MultDiv> '*' <Op Unary>
@@ -694,7 +913,6 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] *= cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_DIV:		// <Op MultDiv> '/' <Op Unary>
@@ -702,14 +920,12 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] /= cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_MOD:		// <Op MultDiv> '%' <Op Unary>
 			{
 				cSC--;
 //				cStack[cSC-1] /= cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_BIN_XOR:	// <Op BinXOR> '^' <Op BinAND>
@@ -717,7 +933,6 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] ^= cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_BIN_AND:		// <Op BinAND> '&' <Op Equate>
@@ -725,7 +940,6 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] &= cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_BIN_OR:		// <Op BinOr> '|' <Op BinXOR>
@@ -733,21 +947,18 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] |= cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_LOG_AND:	// <Op And> '&&' <Op BinOR>
 			{
 				cSC--;
 //				cStack[cSC-1] = (int)cStack[cSC-1] && (int)cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_LOG_OR:		// <Op Or> '||' <Op And>
 			{
 				cSC--;
 //				cStack[cSC-1] = (int)cStack[cSC-1] || (int)cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_RSHIFT:		// <Op Shift> '>>' <Op AddSub>
@@ -755,7 +966,6 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] = (int)cStack[cSC-1] >> (int)cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_LSHIFT:		// <Op Shift> '<<' <Op AddSub>
@@ -763,49 +973,42 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] = (int)cStack[cSC-1] << (int)cStack[cSC];
-				cPC++;
 				break;
 			}
 			case OP_EQUATE:		// <Op Equate> '==' <Op Compare>
 			{
 				cSC--;
 //				cStack[cSC-1] = (cStack[cSC-1]==cStack[cSC]);
-				cPC++;
 				break;
 			}
 			case OP_UNEQUATE:	// <Op Equate> '!=' <Op Compare>
 			{
 				cSC--;
 //				cStack[cSC-1] = (cStack[cSC-1]!=cStack[cSC]);
-				cPC++;
 				break;
 			}
 			case OP_ISGT:		// <Op Compare> '>'  <Op Shift>
 			{
 				cSC--;
 //				cStack[cSC-1] = (cStack[cSC-1]>cStack[cSC]);
-				cPC++;
 				break;
 			}
 			case OP_ISGTEQ:		// <Op Compare> '>=' <Op Shift>
 			{
 				cSC--;
 //				cStack[cSC-1] = (cStack[cSC-1]>=cStack[cSC]);
-				cPC++;
 				break;
 			}
 			case OP_ISLT:		// <Op Compare> '<'  <Op Shift>
 			{
 				cSC--;
 //				cStack[cSC-1] = (cStack[cSC-1]<cStack[cSC]);
-				cPC++;
 				break;
 			}
 			case OP_ISLTEQ:		// <Op Compare> '<=' <Op Shift>
 			{
 				cSC--;
 //				cStack[cSC-1] = (cStack[cSC-1]<=cStack[cSC]);
-				cPC++;
 				break;
 			}
 			/////////////////////////////////////////////////////////////////
@@ -814,8 +1017,7 @@ class UserStack : private noncopyable
 			case OP_SELECT:	// <Op Or> '?' <Op If> ':' <Op If>
 			{
 				cSC -= 2;
-				cStack[cSC-1] = ((int)cStack[cSC-1]) ? cStack[cSC] : cStack[cSC+1];
-				cPC++;
+//				cStack[cSC-1] = ((int)cStack[cSC-1]) ? cStack[cSC] : cStack[cSC+1];
 				break;
 			}
 
@@ -824,20 +1026,17 @@ class UserStack : private noncopyable
 			// take one stack values and push a value
 			case OP_NOT:	// '!'    <Op Unary>
 			{
-				cStack[cSC-1] = !((int)cStack[cSC-1]);
-				cPC++;
+//				cStack[cSC-1] = !((int)cStack[cSC-1]);
 				break;
 			}
 			case OP_INVERT:	// '~'    <Op Unary>
 			{
-				cStack[cSC-1] = ~((int)cStack[cSC-1]);
-				cPC++;
+//				cStack[cSC-1] = ~((int)cStack[cSC-1]);
 				break;
 			}
 			case OP_NEGATE:	// '-'    <Op Unary>
 			{
 //				cStack[cSC-1] = -cStack[cSC-1];
-				cPC++;
 				break;
 			}
 
@@ -848,7 +1047,6 @@ class UserStack : private noncopyable
 			case OP_SIZEOF:		// sizeof '(' Id ')'
 			{
 //				cStack[cSC-1] = cStack[cSC-1].size();
-				cPC++;
 				break;
 			}
 
@@ -859,7 +1057,6 @@ class UserStack : private noncopyable
 			{	// <Op Unary> is first on the stack, <Type> is second
 				cSC--;
 //				cStack[cSC-1].cast(cStack[cSC]);
-				cPC++;
 				break;
 			}
 
@@ -870,27 +1067,22 @@ class UserStack : private noncopyable
 			{	
 //				cStack[cSC-1]++;
 //				cStack[cSC-1] = cStack[cSC-1].value();
-				cPC++;
 				break;
 			}
 			case OP_PRESUB:		// '--'   <Op Unary>
 			{	
 //				cStack[cSC-1]--;
 //				cStack[cSC-1] = cStack[cSC-1].value();
-				cPC++;
 				break;
 			}
 			/////////////////////////////////////////////////////////////////
 			// Post operations
 			// take one stack variable and push a value
-			
-			
 			case OP_POSTADD:	// <Op Pointer> '++'
 			{	
 //				Variant temp = cStack[cSC-1].value();
 //				cStack[cSC-1]++;
 //				cStack[cSC-1] = temp;
-				cPC++;
 				break;
 			}
 			case OP_POSTSUB:	// <Op Pointer> '--'
@@ -898,7 +1090,6 @@ class UserStack : private noncopyable
 //				Variant temp = cStack[cSC-1].value();
 //				cStack[cSC-1]--;
 //				cStack[cSC-1] = temp;
-				cPC++;
 				break;
 			}
 
@@ -912,7 +1103,6 @@ class UserStack : private noncopyable
 				printf("not implemented yet\n");
 
 				cSC--;
-				cPC++;
 				break;
 			}
 
@@ -924,7 +1114,6 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 //				cStack[cSC-1] = cStack[cSC-1][ cStack[cSC] ];
-				cPC++;
 				break;
 			}
 
@@ -932,16 +1121,29 @@ class UserStack : private noncopyable
 			/////////////////////////////////////////////////////////////////
 			// standard function calls
 			// check the values on stack before or inside the call of function
-			case OP_CALL:	// Id '(' <Expr> ')'
+			case OP_CALLSCRIPT:
+							// Id '(' <Expr> ')'
 							// Id '(' ')'
 							// Id <Call List> ';'
 							// Id ';'
 			{
 
 				printf("not implemented yet\n");
-
 				cSC--;
-				cPC++;
+				break;
+			}
+			/////////////////////////////////////////////////////////////////
+			// standard function calls
+			// check the values on stack before or inside the call of function
+			case OP_CALLBUILDIN:
+							// Id '(' <Expr> ')'
+							// Id '(' ')'
+							// Id <Call List> ';'
+							// Id ';'
+			{
+
+				printf("not implemented yet\n");
+				cSC--;
 				break;
 			}
 
@@ -967,6 +1169,11 @@ class UserStack : private noncopyable
 
 				break;
 			}
+			case VX_GOTO:	// goto position
+			{
+
+				break;
+			}
 
 
 			/////////////////////////////////////////////////////////////////
@@ -982,52 +1189,46 @@ class UserStack : private noncopyable
 
 			case OP_PUSH_INT:	// followed by an integer
 			{
-				unsigned char *buf = &(cProg->Programm[cPC]);
-				int temp = (int)MakeDWord( buf[1],buf[2],buf[3],buf[4] );
+				
+				int temp = cProg->getInt(cPC);
 				cStack[cSC] = temp;
 				cSC++;
-				cPC += 5;
 				break;
 			}
 			case OP_PUSH_STRING:	// followed by a string (pointer)
 			{
-				unsigned char *buf = &(cProg->Programm[cPC]);
-				const char* temp = (const char*)MakeDWord( buf[1],buf[2],buf[3],buf[4] );
+				const char* temp = cProg->getString(cPC);
 				cStack[cSC] = temp;
 				cSC++;
-				cPC += 5;
 				break;
 			}
 			case OP_PUSH_FLOAT:	// followed by a float
 			{
-				unsigned char *buf = &(cProg->Programm[cPC]);
-				const char* temp = (const char*)MakeDWord( buf[1],buf[2],buf[3],buf[4] );
-				cStack[cSC] = atof(temp);
+				float temp = cProg->getFloat(cPC);
+				cStack[cSC] = temp;
 				cSC++;
-				cPC += 5;
 				break;
 			}
 			case OP_PUSH_VAR:	// followed by a string containing a variable name
 			{
-				unsigned char *buf = &(cProg->Programm[cPC]);
-				const char* temp = (const char*)MakeDWord( buf[1],buf[2],buf[3],buf[4] );
-				cStack[cSC] = atof(temp);
+				unsigned char vartype = cProg->getChar(cPC);
+				const char*   varname = cProg->getString(cPC);
+//				cStack[cSC] = findvariable(varname, vartype);
 				cSC++;
-				cPC += 5;
 				break;
 			}
 			case OP_POP:	// decrements the stack by one
 			{
 				cSC--;
-				cPC++;
 				break;
 			}
 			case VX_LABEL:	// followed my a string var containing the label name
 							// 	<Label Stm>     ::= Id ':'
-			{	// just skipping
-				cPC+=5;
+			{	// just skipping the string
+				cPC+=4;
 				break;
 			}
+			case OP_END:
 			default:
 			{
 				run=false;
@@ -1072,11 +1273,10 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#define CFLAG_NONE		0x00000000
-#define CFLAG_LVALUE	0x00000001
-#define CFLAG_USE_BREAK	0x00000002
-#define CFLAG_USE_CONT	0x00000004
-
+#define CFLAG_NONE		0x00000000	// no restrictions
+#define CFLAG_LVALUE	0x00000001	// a variable is required
+#define CFLAG_USE_BREAK	0x00000002	// allow break + jump offset 
+#define CFLAG_USE_CONT	0x00000004	// allow continue + jump offset 
 
 
 
@@ -1114,7 +1314,7 @@ void PrintChildTerminals(struct _list *baselist)
 	}
 }
 
-bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
+bool StackProg(struct _list *baselist, size_t level, unsigned long flags, CProgramm& prog)
 {
 	size_t i;
 	bool accept = false;
@@ -1140,6 +1340,7 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 			case PT_SEMI:
 				printf("PT_SEMI - ");
 				printf("clear stack\n");
+				prog.appendCommand(OP_POP);
 				accept = true;
 				break;
 
@@ -1148,6 +1349,9 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				printf("%s - %s ", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
+					prog.appendCommand(OP_PUSH_INT);
+					prog.appendInt( axtoi(baselist->token.lexeme) );
+
 					printf("accepted\n");
 					accept = true;
 				}	
@@ -1163,6 +1367,9 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				printf("%s - %s ", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
+					prog.appendCommand(OP_PUSH_INT);
+					prog.appendInt( atoi(baselist->token.lexeme) );
+
 					printf("accepted\n");
 					accept = true;
 				}	
@@ -1178,6 +1385,27 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				printf("%s - %s ", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
+					prog.appendCommand(OP_PUSH_INT);
+					prog.appendInt( (baselist->token.lexeme)? baselist->token.lexeme[1]:0 );
+
+					printf("accepted\n");
+					accept = true;
+				}	
+				else
+				{
+					printf("left hand assignment, not accepted\n");
+				}	
+
+				break;
+
+			case PT_FLOATLITERAL:
+				printf("PT_FLOATLITERAL - ");
+				printf("%s - %s ", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
+				if( 0 == (flags&CFLAG_LVALUE) )
+				{
+					prog.appendCommand(OP_PUSH_FLOAT);
+					prog.appendFloat( (float)atof(baselist->token.lexeme) );
+
 					printf("accepted\n");
 					accept = true;
 				}	
@@ -1193,8 +1421,27 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				printf("%s - %s ", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
-					printf("accepted\n");
-					accept = true;
+					
+					// get the string without leading quotation mark
+					const char *ip;
+					char *str = (baselist->token.lexeme) ? baselist->token.lexeme+1 : " ";
+					size_t endpos = strlen(str)-1;
+					str[endpos]=0; // cut off the trailing quotation mark
+					ip = env.insert2Stringtable( str );
+					str[endpos]='"'; // put back the trailing quotation mark
+					
+					if( ip )
+					{	
+						prog.appendCommand(OP_PUSH_STRING);
+						prog.appendString( ip );
+
+						printf("accepted\n");
+						accept = true;
+					}
+					else
+					{
+						printf("error when inserting to stringtable\n");
+					}
 				}	
 				else
 				{
@@ -1206,6 +1453,9 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				printf("PT_MINUS - ");
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
+					prog.appendCommand(OP_PUSH_INT);
+					prog.appendInt( 0 );
+
 					printf(" menu element accepted\n");
 					accept = true;
 				}	
@@ -1218,12 +1468,33 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 
 			case PT_ID:
 				printf("PT_ID - ");
-				if( 0 != (flags&CFLAG_LVALUE) )
-					printf("Variable Name accepted: %s - %s\n", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
-				else
-					printf("Variable Value accepted: %s - %s\n", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
+				if( baselist->token.lexeme )
+				{
+					const char *ip = env.insert2Stringtable( baselist->token.lexeme );
+					if(ip)
+					{
+						if( 0 != (flags&CFLAG_LVALUE) )
+						{
+							prog.appendCommand(OP_PUSH_VAR);
+							prog.appendString( ip );
 
-				accept = true;
+							printf("Variable Name accepted: %s - %s\n", baselist->symbol.Name, baselist->token.lexeme);
+						}
+						else
+						{
+							prog.appendCommand(OP_PUSH_VALUE);
+							prog.appendString( ip );
+
+							printf("Variable Value accepted: %s - %s\n", baselist->symbol.Name, baselist->token.lexeme);
+						}
+						accept = true;
+					}
+					else
+					{
+						printf("error when inserting to stringtable\n");
+					}
+
+				}
 				break;
 
 			default:
@@ -1231,14 +1502,11 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				printf("Term  - ");
 				printf("%s - %s\n", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
 
-				// accept any terminal right now
-				accept = true;
+				// accept any terminal for debug only
+				//accept = true;
 
 				break;
-				
 			}
-
-
 		}
 		///////////////////////////////////////////////////////////////////////
 		else
@@ -1246,7 +1514,7 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 
 			if( baselist->count==1 )
 			{	// only one child, just go down
-				accept = StackProg(baselist->list[0], level+1, flags);
+				accept = StackProg(baselist->list[0], level+1, flags, prog);
 			}
 			else
 			// check the childs
@@ -1257,20 +1525,34 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 			case PT_LABELSTM:
 			{	// expecting 2 terminals in here, the first is the labelname, the second a ":"
 				printf("PT_LABELSTM - ");
-				if( baselist->count !=2 || 
-					!CheckTerminal(baselist->list[0], PT_ID) ||		// first has to be a terminal
-					!CheckTerminal(baselist->list[1], PT_COLON) )	//
+
+				size_t pos = prog.getCurrentPosition();
+				const char*ip = prog.insertLabel( baselist->list[0]->token.lexeme, pos );
+				if(ip)
+				{
+					accept = true;
+					printf("accepting label: ");
+					PrintChildTerminals(baselist);
+					printf("\n");
+				}
+				else
 				{
 					printf("error in label statement: ");
 					PrintChildTerminals(baselist);
 					printf("\n");
-					
 				}
-				else
-				{	// we have 2 correct terminals here
-					printf("accepting label: ");
-					PrintChildTerminals(baselist);
-					printf("\n");
+				break;
+			}
+			///////////////////////////////////////////////////////////////////
+			// goto control statements
+			case PT_GOTOSTMS:
+			{	// <Goto Stms>  ::= goto Id ';'
+
+				prog.appendCommand(OP_GOTO);
+				const char*ip = prog.insertLabel( baselist->list[1]->token.lexeme );
+				if(ip)
+				{
+					prog.appendString( ip );
 					accept = true;
 				}
 				break;
@@ -1281,39 +1563,34 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 			{	// expecting 3 terminals in here, the first and third can be terminals or nonterminales
 				// the second desides which assignment is to choose
 				// check terminal count and operation type
-				if( baselist->count ==3 )
+				
+				// put first the source
+				// so the result will be as single value (int, string or float) on stack
+				accept  = StackProg(baselist->list[2], level+1, flags & ~CFLAG_LVALUE, prog);
+				
+				// then put the target as variable, 
+				// this should check for L-Values
+				accept &= StackProg(baselist->list[0], level+1, flags | CFLAG_LVALUE, prog);
+
+				// push the command
+				switch( baselist->list[1]->symbol.idx )
 				{
-					switch( baselist->list[1]->symbol.idx )
-					{
-					case PT_EQ:
-					case PT_PLUSEQ:
-					case PT_MINUSEQ:
-					case PT_TIMESEQ:
-					case PT_DIVEQ:
-					case PT_CARETEQ:
-					case PT_AMPEQ:
-					case PT_PIPEEQ:
-					case PT_LTLTEQ:
-					case PT_GTGTEQ:
-						accept = true;
-						break;
-					}
+				case PT_EQ:			prog.appendCommand(OP_ASSIGN);     break;
+				case PT_PLUSEQ:		prog.appendCommand(OP_ASSIGN_ADD); break;
+				case PT_MINUSEQ:	prog.appendCommand(OP_ASSIGN_SUB); break;
+				case PT_TIMESEQ:	prog.appendCommand(OP_ASSIGN_MUL); break;
+				case PT_DIVEQ:		prog.appendCommand(OP_ASSIGN_DIV); break;
+				case PT_CARETEQ:	prog.appendCommand(OP_ASSIGN_XOR); break;
+				case PT_AMPEQ:		prog.appendCommand(OP_ASSIGN_AND); break;
+				case PT_PIPEEQ:		prog.appendCommand(OP_ASSIGN_OR);  break;
+				case PT_GTGTEQ:		prog.appendCommand(OP_ASSIGN_RSH); break;
+				case PT_LTLTEQ:		prog.appendCommand(OP_ASSIGN_LSH); break;
 				}
-				if(accept)
-				{	// check target and source
-					
-					// put first the source
-					// so the result will be as single value (int, string or float) on stack
-					accept  = StackProg(baselist->list[2], level+1, flags & ~CFLAG_LVALUE);
-					
-					// then put the target as variable, 
-					// this should check for L-Values
-					accept &= StackProg(baselist->list[0], level+1, flags | CFLAG_LVALUE);
-				}
+
 				printf("PT_OPASSIGN - ");
 				if(accept)
 				{
-					printf("accepting assignment %s: ", baselist->list[1]->symbol.Name);
+					printf("accepting assignment %s: ", baselist->list[1]->symbol.Name, prog);
 					PrintChildTerminals(baselist);
 					printf("\n");
 					accept = true;
@@ -1335,20 +1612,44 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 					CheckTerminal(baselist->list[0], PT_ID) )
 				{	// first terminal is ok
 					// go through childs now
-					
 					if( baselist->count == 3 )
 					{	// ID <something> ';'
 						// process the <something>, need values
-						accept = StackProg(baselist->list[1], level+1,flags & ~CFLAG_LVALUE); // need values
+						accept = StackProg(baselist->list[1], level+1,flags & ~CFLAG_LVALUE, prog); // need values
 					}
 					else if( baselist->count == 2 )
 					{	// ID ';'
 						accept = true;
 					}
 
+					unsigned char command = OP_NOP;
+					int id = env.getFunctionID( baselist->list[0]->token.lexeme );
+					if( id>=0 )
+					{	// found in function table
+						command = OP_CALLBUILDIN;
+					}
+					else
+					{
+						id = env.getScriptID( baselist->list[0]->token.lexeme );
+						if( id>=0 )
+						{
+							command = OP_CALLSCRIPT;
+						}
+						else
+						{
+							accept=false;
+						}
+					}
+
 					printf("PT_CALLSTM - ");
 					if(accept)
 					{
+						// push the command
+						prog.appendCommand(command);
+						// push the function ID
+						prog.appendInt(id);
+
+
 						printf("accepting call statement: ");
 						PrintChildTerminals(baselist);
 						printf("\n");
@@ -1357,12 +1658,14 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 					{
 						printf("error in call statement: ");
 						PrintChildTerminals(baselist);
+						if( OP_NOP==command )
+							printf(" - Function does not exist");
 						printf("\n");
 					}
 
 					// process the final ';' if exist
 					if( CheckTerminal(baselist->list[baselist->count-1], PT_SEMI) )
-						accept = StackProg(baselist->list[baselist->count-1], level+1,flags);
+						accept &= StackProg(baselist->list[baselist->count-1], level+1,flags, prog);
 				}
 				break;
 			}
@@ -1372,12 +1675,11 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				for(i=0; i< baselist->count; i+=2)
 				{
 					// a variable
-					accept &= StackProg(baselist->list[i], level+1,flags);
+					accept &= StackProg(baselist->list[i], level+1,flags, prog);
 					// followed by a comma (exept the last)
 					if( i+1<baselist->count )
 						accept &= CheckTerminal(baselist->list[i+1], PT_COMMA);
 				}
-
 				break;
 			}
 			///////////////////////////////////////////////////////////////////
@@ -1392,16 +1694,40 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 					if( baselist->count == 4 )
 					{	// ID '(' <something> ')'
 						// process the <something>, need values
-						accept = StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE); // need values
+						accept = StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog); // need values
 					}
 					else if( baselist->count == 3 )
 					{	// ID '(' ')'
 						accept = true;
 					}
 
+					unsigned char command = OP_NOP;
+					int id = env.getFunctionID( baselist->list[0]->token.lexeme );
+					if( id>=0 )
+					{	// found in function table
+						command = OP_CALLBUILDIN;
+					}
+					else
+					{
+						id = env.getScriptID( baselist->list[0]->token.lexeme );
+						if( id>=0 )
+						{
+							command = OP_CALLSCRIPT;
+						}
+						else
+						{
+							accept=false;
+						}
+					}
+
 					printf("PT_RETVALUES - ");
 					if(accept)
 					{
+						// push the command
+						prog.appendCommand(command);
+						// push the function ID
+						prog.appendInt(id);
+
 						printf("accepting call statement: ");
 						PrintChildTerminals(baselist);
 						printf("\n");
@@ -1410,12 +1736,14 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 					{
 						printf("error in call statement: ");
 						PrintChildTerminals(baselist);
+						if( OP_NOP==command )
+							printf(" - Function does not exist");
 						printf("\n");
 					}
 
 					// process the final ';' if exist
 					if( CheckTerminal(baselist->list[baselist->count-1], PT_SEMI) )
-						accept = StackProg(baselist->list[baselist->count-1], level+1,flags);
+						accept &= StackProg(baselist->list[baselist->count-1], level+1,flags, prog);
 				}
 				break;
 			}			
@@ -1436,83 +1764,142 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 					accept = true;
 					for(i=0; i<baselist->count; i++)
 					{
-						accept = StackProg(baselist->list[i], level+1,flags);
+						accept = StackProg(baselist->list[i], level+1,flags, prog);
 						if( !accept ) break;
 					}
 				}
 				else if( baselist->count ==5 && CheckTerminal(baselist->list[0], PT_IF) )
 				{	// if '(' <Expr> ')' <Normal Stm>
 					// put in <Expr>
-					accept = StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE); // need the result on the stack
+					accept = StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog); // need the result on the stack
 					printf("Conditional Jump False -> Label1\n");
+					prog.appendCommand(OP_NIF);
+					size_t inspos1 = prog.appendInt(0);	// placeholder
 					// put in <Normal Stm>
-					accept &= StackProg(baselist->list[4], level+1,flags);
+					accept &= StackProg(baselist->list[4], level+1,flags, prog);
 					printf("Label1\n");
+					// calculate and insert the correct jump 
+					prog.replaceInt( prog.getCurrentPosition() ,inspos1);
 				}
 				else if( baselist->count ==7 && CheckTerminal(baselist->list[0], PT_IF) )
 				{	// if '(' <Expr> ')' <Normal Stm> else <Normal Stm>
 					// put in <Expr>
-					accept = StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE); // need the result on the stack
+					accept = StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog); // need the result on the stack
 					printf("Conditional Jump False -> Label1\n");
+					prog.appendCommand(OP_NIF);
+					size_t inspos1 = prog.appendInt(0);	// placeholder
 					// put in <Normal Stm>
-					accept &= StackProg(baselist->list[4], level+1,flags);
+					accept &= StackProg(baselist->list[4], level+1,flags, prog);
 					printf("Goto -> Label2\n");
+					prog.appendCommand(VX_GOTO);
+					size_t inspos2 = prog.appendInt(0);	// placeholder
 					printf("Label1\n");
-					accept &= StackProg(baselist->list[6], level+1,flags);
+					// calculate and insert the correct jump 
+					prog.replaceInt( prog.getCurrentPosition() ,inspos1);
+					// put in <Normal Stm2>
+					accept &= StackProg(baselist->list[6], level+1,flags, prog);
 					printf("Label2\n");
+					prog.replaceInt( prog.getCurrentPosition(), inspos2);			
 				}
 				else if( baselist->count ==9 && CheckTerminal(baselist->list[0], PT_FOR) )
 				{	// for '(' <Arg> ';' <Arg> ';' <Arg> ')' <Normal Stm>
 					// execute <Arg1>
-					accept  = StackProg(baselist->list[2], level+1,flags);
+					accept  = StackProg(baselist->list[2], level+1,flags, prog);
 					// execute ";" to clear the stack;
-					accept &= StackProg(baselist->list[3], level+1,flags);
-
+					accept &= StackProg(baselist->list[3], level+1,flags, prog);
 					printf("Label1\n");
+					size_t tarpos1 = prog.getCurrentPosition();// position marker
 					// execute <Arg2>, need a value
-					accept &= StackProg(baselist->list[4], level+1,flags & ~CFLAG_LVALUE);
+					accept &= StackProg(baselist->list[4], level+1,flags & ~CFLAG_LVALUE, prog);
 
 					printf("Conditional Jump False -> Label2\n");
+					prog.appendCommand(OP_NIF);
+					size_t inspos2 = prog.appendInt(0);	// placeholder
 
 					// execute the loop body
-					accept &= StackProg(baselist->list[8], level+1, flags | CFLAG_USE_BREAK | CFLAG_USE_CONT);
+					size_t rstart = prog.getCurrentPosition();
+					accept &= StackProg(baselist->list[8], level+1, flags | CFLAG_USE_BREAK | CFLAG_USE_CONT, prog);
+					size_t rend   = prog.getCurrentPosition();
 
 					// execute the incrementor <Arg3>
-//!! only postincrements are working with this
-					accept &= StackProg(baselist->list[6], level+1,flags);
+					accept &= StackProg(baselist->list[6], level+1,flags, prog);
 					// execute ";" to clear the stack;
-					accept &= StackProg(baselist->list[5], level+1,flags);
+					accept &= StackProg(baselist->list[5], level+1,flags, prog);
 
 					printf("Goto -> Label1\n");
+					size_t srcpos1=prog.getCurrentPosition();
+					prog.appendCommand(VX_GOTO);
+					prog.appendInt(tarpos1);
 
 					printf("Label2\n");
+					size_t tarpos2 = prog.getCurrentPosition();
+					prog.replaceInt( tarpos2 ,inspos2);
+
+					// execute ";" to clear the stack;
+					accept &= StackProg(baselist->list[3], level+1,flags, prog);
+
+					// convert break -> goto Label2
+					// convert continue -> goto Label1
+					prog.replaceJumps(rstart,rend,VX_BREAK,tarpos2);
+					prog.replaceJumps(rstart,rend,VX_CONT,tarpos1);
 
 				}
 				else if( baselist->count ==5 && CheckTerminal(baselist->list[0], PT_WHILE) )
 				{	// while '(' <Expr> ')' <Normal Stm>
 
 					printf("Label1\n");
+					size_t tarpos1 = prog.getCurrentPosition();// position marker
+
 					// execute <Expr>
-					accept  = StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+					accept  = StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 					printf("Conditional Jump False -> Label2\n");
+					prog.appendCommand(OP_NIF);
+					size_t inspos2 = prog.appendInt(0);	// placeholder offset
 
 					// execute <Normal Stm>
-					accept &= StackProg(baselist->list[4], level+1,flags);
+					size_t rstart = prog.getCurrentPosition();
+					accept &= StackProg(baselist->list[4], level+1,flags | CFLAG_USE_BREAK | CFLAG_USE_CONT, prog);
+					size_t rend = prog.getCurrentPosition();
 
 					printf("Goto -> Label1\n");
+					prog.appendCommand(VX_GOTO);
+					prog.appendInt(tarpos1);
+
 					printf("Label2\n");
+					size_t tarpos2 = prog.getCurrentPosition();
+					prog.replaceInt( tarpos2 ,inspos2);
+					// convert break -> goto Label2
+					// convert continue -> goto Label1
+					prog.replaceJumps(rstart,rend,VX_BREAK,tarpos2);
+					prog.replaceJumps(rstart,rend,VX_CONT,tarpos1);
+
 				}
 				else if( baselist->count ==7 && CheckTerminal(baselist->list[0], PT_DO) )
 				{	// do <Normal Stm> while '(' <Expr> ')' ';'
 
 					printf("Label1\n");
+					size_t tarpos1 = prog.getCurrentPosition();// position marker
+
 					// execute <Normal Stm>
-					accept  = StackProg(baselist->list[1], level+1,flags);
+					size_t rstart = prog.getCurrentPosition();
+					accept  = StackProg(baselist->list[1], level+1,flags | CFLAG_USE_BREAK | CFLAG_USE_CONT, prog);
+					size_t rend = prog.getCurrentPosition();
 
 					// execute <Expr>
-					accept &= StackProg(baselist->list[4], level+1,flags & ~CFLAG_LVALUE);
+					accept &= StackProg(baselist->list[4], level+1,flags & ~CFLAG_LVALUE, prog);
 					printf("Conditional Jump True -> Label1\n");
+					prog.appendCommand(OP_IF);
+					prog.appendInt(tarpos1);
+
+					size_t tarpos2 = prog.getCurrentPosition();
+					accept &= StackProg(baselist->list[6], level+1,flags & ~CFLAG_LVALUE, prog);
+
+					// convert break -> goto Label2
+					// convert continue -> goto Label1
+					prog.replaceJumps(rstart,rend,VX_BREAK,tarpos2);
+					prog.replaceJumps(rstart,rend,VX_CONT,tarpos1);
+
 				}
 				else if( baselist->count ==7 && CheckTerminal(baselist->list[0], PT_SWITCH) )
 				{	// switch '(' <Expr> ')' '{' <Case Stms> '}'
@@ -1525,22 +1912,48 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				break;
 			}
 			///////////////////////////////////////////////////////////////////
+			// break/continue control statements
+			case PT_LCTRSTMS:
+			{	// 'break' ';'
+				// 'continue' ';'
+				if( (baselist->list[0] && baselist->list[0]->symbol.idx == PT_CONTINUE) && (0!=(flags & CFLAG_USE_CONT)) )
+				{
+					prog.appendCommand(VX_BREAK);
+					prog.appendInt( 0 );
+					
+					accept = true;
+				}
+				else if( (baselist->list[0] && baselist->list[0]->symbol.idx == PT_BREAK) && (0!=(flags & CFLAG_USE_BREAK)) )
+				{
+					prog.appendCommand(VX_CONT);
+					prog.appendInt( 0 );
+
+					accept = true;
+				}
+				if(!accept)
+					printf("keyword '%s' not allowed in this scope\n", baselist->list[0]->token.lexeme);
+				break;
+			}
+
+			///////////////////////////////////////////////////////////////////
 			// operands
 			case PT_OPADDSUB:
 			{	// <Op AddSub> '+' <Op MultDiv>
 				// <Op AddSub> '-' <Op MultDiv>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				switch( baselist->list[1]->symbol.idx )
 				{
 				case PT_PLUS:
 					printf("PT_PLUS\n");
+					prog.appendCommand(OP_ADD);
 					break;
 				case PT_MINUS:
 					printf("PT_MINUS\n");
+					prog.appendCommand(OP_SUB);
 					break;
 				}// end switch
 				break;
@@ -1551,19 +1964,22 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				// <Op MultDiv> '%' <Op Unary>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				switch( baselist->list[1]->symbol.idx )
 				{
 				case PT_TIMES:
 					printf("PT_TIMES\n");
+					prog.appendCommand(OP_MUL);
 					break;
 				case PT_DIV:
 					printf("PT_DIV\n");
+					prog.appendCommand(OP_DIV);
 					break;
 				case PT_PERCENT:
 					printf("PT_PERCENT\n");
+					prog.appendCommand(OP_MOD);
 					break;
 				}// end switch
 				break;
@@ -1572,22 +1988,28 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 			{	// <Op And> '&&' <Op BinOR>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				if( baselist->list[1]->symbol.idx == PT_AMPAMP )
+				{
 					printf("PT_OPAND\n");
+					prog.appendCommand(OP_LOG_AND);
+				}
 				break;
 			}
 			case PT_OPOR:
 			{	// <Op Or> '||' <Op And>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				if( baselist->list[1]->symbol.idx == PT_PIPEPIPE )
+				{
 					printf("PT_PIPEPIPE\n");
+					prog.appendCommand(OP_LOG_OR);
+				}
 				break;
 			}
 
@@ -1595,43 +2017,53 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 			{	// <Op BinAND> '&' <Op Equate>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				if( baselist->list[1]->symbol.idx == PT_AMP )
+				{
 					printf("PT_OPBINAND\n");
+					prog.appendCommand(OP_BIN_AND);
+				}
 				break;
 			}
 			case PT_OPBINOR:
 			{	// <Op BinOr> '|' <Op BinXOR>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				if( baselist->list[1]->symbol.idx == PT_PIPE )
+				{
 					printf("PT_OPBINOR\n");
+					prog.appendCommand(OP_BIN_OR);
+				}
 				break;
 			}
 			case PT_OPBINXOR:
 			{	// <Op BinXOR> '^' <Op BinAND>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				if( baselist->list[1]->symbol.idx == PT_CARET )
+				{
 					printf("PT_OPBINOR\n");
+					prog.appendCommand(OP_BIN_XOR);
+				}
 				break;
 			}
 			case PT_OPCAST:
 			{	// '(' <Type> ')' <Op Unary>
 
 				// put the operands on stack, first the value then the target type
-				accept  = StackProg(baselist->list[3], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[1], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[3], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[1], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				printf("PT_OPCAST\n");
+				prog.appendCommand(OP_CAST);
 				break;
 			}
 			case PT_OPCOMPARE:
@@ -1641,22 +2073,26 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				// <Op Compare> '<=' <Op Shift>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				switch( baselist->list[1]->symbol.idx )
 				{
 				case PT_GT:
 					printf("PT_GT\n");
+					prog.appendCommand(OP_ISGT);
 					break;
 				case PT_GTEQ:
 					printf("PT_GTEQ\n");
+					prog.appendCommand(OP_ISGTEQ);
 					break;
 				case PT_LT:
 					printf("PT_LT\n");
+					prog.appendCommand(OP_ISLT);
 					break;
 				case PT_LTEQ:
 					printf("PT_LTEQ\n");
+					prog.appendCommand(OP_ISLTEQ);
 					break;
 				}// end switch
 				break;
@@ -1667,26 +2103,41 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				// <Op Equate> '!=' <Op Compare>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				switch( baselist->list[1]->symbol.idx )
 				{
 				case PT_EQEQ:
 					printf("PT_EQUAL\n");
+					prog.appendCommand(OP_EQUATE);
 					break;
 				case PT_EXCLAMEQ:
 					printf("PT_UNEQUAL\n");
+					prog.appendCommand(OP_UNEQUATE);
 					break;
 				}// end switch
 				break;
 			}
 			case PT_OPIF:
 			{	// <Op Or> '?' <Op If> ':' <Op If>
-
-				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
-				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);
+				// => if( or ) opif1 else opif2
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				printf("Conditional Jump False -> Label1\n");
+				prog.appendCommand(OP_NIF);
+				size_t inspos1 = prog.appendInt(0);	// placeholder
+				// put in <Op If1>
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
+				printf("Goto -> Label2\n");
+				prog.appendCommand(VX_GOTO);
+				size_t inspos2 = prog.appendInt(0);	// placeholder
+				printf("Label1\n");
+				// calculate and insert the correct jump offset
+				prog.replaceInt( prog.getCurrentPosition() ,inspos1);
+				// put in <Op If2>
+				accept &= StackProg(baselist->list[4], level+1,flags & ~CFLAG_LVALUE, prog);
+				printf("Label2\n");
+				prog.replaceInt( prog.getCurrentPosition() ,inspos2);
 
 				printf("PT_SELECT\n");
 				break;
@@ -1696,21 +2147,23 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				// <Op Pointer> '.' <RetValues>    ! member function
 				// <Op Pointer> '[' <Expr> ']'     ! array
 
-
 				switch( baselist->list[1]->symbol.idx )
 				{
 				case PT_DOT:
 					// put the operands on stack
-					accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE);	// base variable
-					accept &= StackProg(baselist->list[2], level+1,flags | CFLAG_LVALUE);	// member variable or function
+					accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE, prog);	// base variable
+					accept &= StackProg(baselist->list[2], level+1,flags | CFLAG_LVALUE, prog);	// member variable or function
 
 					if( CheckNonTerminal(baselist->list[2], PT_ID) )
 					{	// have to select the correct variable inside base according to the member name
 						// and put this variable on the stack
+
+						prog.appendCommand(OP_MEMBER);
 						printf("PT_MEMBERACCESS variable %s\n", accept?"ok":"failed");
 					}
 					else if( CheckNonTerminal(baselist->list[2], PT_RETVALUES) )
 					{
+						// function call is already done
 						printf("PT_MEMBERACCESS function %s\n", accept?"ok":"failed");
 					}
 					else
@@ -1721,9 +2174,10 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 					break;
 				case PT_LBRACKET:
 					// put the operands on stack
-					accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE);	// variable
-					accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE);	// index
+					accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE, prog);	// variable
+					accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);	// index
 
+					prog.appendCommand(OP_ARRAY);
 					printf("PT_ARRAYACCESS %s %s\n", (flags)?"variable":"value", (accept)?"successful":"failed");
 					break;
 				}// end switch
@@ -1734,15 +2188,17 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				// <Op Pointer> '--'
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE); // put the variable itself on stack
+				accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE, prog); // put the variable itself on stack
 
 				switch( baselist->list[1]->symbol.idx )
 				{
 				case PT_PLUSPLUS:
 					printf("PT_OPPOST_PLUSPLUS, \n");
+					prog.appendCommand(OP_POSTADD);
 					break;
 				case PT_MINUSMINUS:
 					printf("PT_OPPOST_MINUSMINUS\n");
+					prog.appendCommand(OP_POSTSUB);
 					break;
 				}// end switch
 
@@ -1753,15 +2209,17 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				// '--'   <Op Unary>
 
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE); // put the variable itself on stack
+				accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE, prog); // put the variable itself on stack
 
 				switch( baselist->list[1]->symbol.idx )
 				{
 				case PT_PLUSPLUS:
 					printf("PT_OPPRE_PLUSPLUS, \n");
+					prog.appendCommand(OP_PREADD);
 					break;
 				case PT_MINUSMINUS:
 					printf("PT_OPPRE_MINUSMINUS\n");
+					prog.appendCommand(OP_PRESUB);
 					break;
 				}// end switch
 
@@ -1770,18 +2228,19 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 			case PT_OPSHIFT:
 			{	// <Op Shift> '<<' <Op AddSub>
 				// <Op Shift> '>>' <Op AddSub>
-
-
 				// put the operands on stack
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
+				accept &= StackProg(baselist->list[2], level+1,flags & ~CFLAG_LVALUE, prog);
 
 				switch( baselist->list[1]->symbol.idx )
 				{
-				case PT_PLUSPLUS:
-					printf("PT_OPPRE_PLUSPLUS, \n");
+				case PT_GTGT:
+					printf("PT_GTGT, \n");
+					prog.appendCommand(OP_RSHIFT);
 					break;
-				case PT_MINUSMINUS:
-					printf("PT_OPPRE_MINUSMINUS\n");
+				case PT_LTLT:
+					printf("PT_LTLT\n");
+					prog.appendCommand(OP_LSHIFT);
 					break;
 				}// end switch
 
@@ -1795,10 +2254,13 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				switch( baselist->list[2]->symbol.idx )
 				{
 				case PT_ID:
-					accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE); // put the variable itself on stack
+					accept  = StackProg(baselist->list[0], level+1,flags | CFLAG_LVALUE, prog); // put the variable itself on stack
+					prog.appendCommand(OP_SIZEOF);
 					printf("PT_OPSIZEOF ID, \n");
 					break;
-				case PT_MINUSMINUS:
+				default:
+					prog.appendCommand(OP_PUSH_INT);
+					prog.appendInt( 1 );
 					printf("PT_OPSIZEOF TYPE, put the corrosponding value on stack\n");
 					break;
 				}// end switch
@@ -1810,25 +2272,28 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				// '~'    <Op Unary>
 				//'-'    <Op Unary>
 
-				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[0], level+1,flags & ~CFLAG_LVALUE, prog);
 				// put the operands on stack
 				switch( baselist->list[2]->symbol.idx )
 				{
 				case PT_EXCLAM:
 					printf("PT_OPUNARY_NOT\n");
+					prog.appendCommand(OP_NOT);
 					break;
 				case PT_TILDE:
 					printf("PT_OPUNARY_INVERT\n");
+					prog.appendCommand(OP_INVERT);
 					break;
 				case PT_MINUS:
 					printf("PT_OPUNARY_NEGATE\n");
+					prog.appendCommand(OP_NEGATE);
 					break;
 				}// end switch
 				break;
 			}
 			case PT_VALUE:
 			{	// '(' <Expr> ')'
-				accept  = StackProg(baselist->list[1], level+1,flags & ~CFLAG_LVALUE);
+				accept  = StackProg(baselist->list[1], level+1,flags & ~CFLAG_LVALUE, prog);
 				break;
 			}
 			///////////////////////////////////////////////////////////////////
@@ -1840,7 +2305,7 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				{
 					if( !CheckTerminal(baselist->list[i], PT_COMMA) )
 					{
-						accept = StackProg(baselist->list[i], level+1,flags);
+						accept = StackProg(baselist->list[i], level+1,flags, prog);
 						if( !accept ) break;
 					}
 				}
@@ -1854,7 +2319,7 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				accept = true;
 				for(i=0; i<baselist->count; i++)
 				{
-					accept = StackProg(baselist->list[i], level+1,flags);
+					accept = StackProg(baselist->list[i], level+1,flags, prog);
 					if( !accept ) break;
 				}
 				break;
@@ -1866,11 +2331,11 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 				printf("NTerm - ");
 				printf("%s - %s\n", baselist->symbol.Name, (baselist->token.lexeme)?baselist->token.lexeme:"");
 
-				// accept non-terminal
+				// accept non-terminal but go through their childs
 				accept = true;
 				for(i=0; i<baselist->count; i++)
 				{
-					accept = StackProg(baselist->list[i], level+1,flags);
+					accept = StackProg(baselist->list[i], level+1,flags, prog);
 					if( !accept ) break;
 				}
 				break;
@@ -1884,6 +2349,145 @@ bool StackProg(struct _list *baselist, size_t level, unsigned long flags)
 }
 
 
+bool CompileScriptExNameID(struct _list *nameid, char name[])
+{
+	bool ret = false;
+	if( nameid && nameid->symbol.idx==PT_EXNAMEID)
+	{	// inside a <exName Id>
+		size_t i;
+		for(i=0; i<nameid->count; i++)
+		{
+			if( nameid->list[i]->symbol.idx==PT_ID || nameid->list[i]->symbol.idx==PT_APOID)
+			{
+				strcat(name, nameid->list[i]->token.lexeme );
+				strcat(name, " ");
+				ret = true;
+			}
+			else if( nameid->count > 1 && nameid->list[i]->symbol.idx==PT_EXNAMEID)
+				ret &= CompileScriptExNameID(nameid->list[i], name);
+			else
+			{
+				ret = false;
+				break;
+			}
+		}
+	}
+	return ret;
+
+}
+
+bool CompileScriptNameID(struct _list *baselist, char id[], char name[])
+{
+	bool ret=false;
+	name[0]=0;
+	id[0]=0;
+
+	if(baselist && ( baselist->symbol.idx== PT_EXNAMEID || baselist->symbol.idx== PT_NAMEID) )
+	{
+		struct _list *nameid=baselist;
+		// go into the first
+		if( nameid->count==3 && nameid->symbol.idx==PT_NAMEID )
+		{
+			if( nameid->list[2]->symbol.idx==PT_ID )
+				strcpy(id,nameid->list[2]->token.lexeme);	// terminal ID
+
+			if( nameid->list[0]->symbol.idx==PT_EXNAMEID)
+				nameid=nameid->list[0];						// nonterminal <exName Id>
+			else
+				nameid=NULL;
+		}
+		else if(nameid->count==1 && nameid->symbol.idx==PT_NAMEID)
+		{	// non-collapsed parse tree
+			nameid=nameid->list[0];
+		}
+		
+		CompileScriptExNameID(nameid,name);
+
+		if(strlen(name)>0)
+			name[strlen(name)-1]=0;
+
+		if( baselist->symbol.idx != PT_NAMEID || baselist->count!=3 )
+		{	// identical name and id 
+			strcpy(id,name);
+		}
+	}
+
+	return ret;
+}
+unsigned short CompileScriptSpriteID(struct _list *spriteid)
+{
+	if( spriteid && spriteid->count==1 && spriteid->symbol.idx==PT_SPRITEID)
+		return atoi(spriteid->list[0]->token.lexeme );
+	else if( spriteid && spriteid->symbol.idx==PT_DECLITERAL)
+		return atoi(spriteid->token.lexeme );
+	else
+		return 0xFFFF;
+		
+}
+bool CompileScriptFileID(struct _list *fileid, char map[])
+{
+	if( fileid->count==3 && fileid->symbol.idx==PT_FILEID )
+	{
+		strcpy(map, fileid->list[0]->token.lexeme);
+		strcat(map, ".");
+		strcat(map, fileid->list[2]->token.lexeme);
+		return true;
+	}
+	else
+	{
+		map[0]=0;
+		return false;
+	}
+}
+
+bool CompileScriptHeader(struct _list *baselist, char id[], char name[], char map[], unsigned short &x, unsigned short &y, unsigned char &dir, unsigned short &sprite)
+{	// '-' 'script' <Name Id> <Sprite Id> ',' <Block>
+	// 'function' 'script' <Name Id> <Block>
+	// <File Id> ',' DecLiteral ',' DecLiteral ',' DecLiteral 'script' <Name Id> <Sprite Id> ',' <Block>
+	// 
+	// <Name Id>   ::= <exName Id>
+	//               | <exName Id> '::' Id
+	// 
+	// <exName Id> ::= Id
+	//               | ApoId
+	//               | Id <exName Id> 
+	//               | ApoId <exName Id> 
+	// <Sprite Id> ::= DecLiteral
+	//               | '-' DecLiteral
+	// 
+	// <File Id>   ::= Id '.' Id
+
+	bool ret = false;
+	if(baselist)
+	{
+		if( baselist->count==6  && CheckTerminal(baselist->list[1], PT_SCRIPT) )
+		{	// version 1
+			map[0]=0;
+			x=y=0xFFFF;
+			dir=0;
+			sprite = CompileScriptSpriteID(baselist->list[3]);
+			ret = CompileScriptNameID( baselist->list[2], id, name);
+		}
+		else if( baselist->count==4  && CheckTerminal(baselist->list[1], PT_SCRIPT) )
+		{	// version 2
+			map[0]=0;
+			x=y=0xFFFF;
+			dir=0;
+			sprite = 0xFFFF;
+			ret = CompileScriptNameID( baselist->list[2], id, name);
+		}
+		else if(baselist->count==12 && CheckTerminal(baselist->list[7], PT_SCRIPT) )
+		{	// version 3
+			ret = CompileScriptFileID( baselist->list[0], map);
+			ret&= CompileScriptNameID( baselist->list[8], id, name);
+			x		= atoi( baselist->list[2]->token.lexeme );
+			y		= atoi( baselist->list[4]->token.lexeme );
+			dir		= atoi( baselist->list[6]->token.lexeme );
+			sprite	= CompileScriptSpriteID(baselist->list[9]);			
+		}
+	}
+	return ret;
+}
 
 bool CompileHeads(struct _list *baselist)
 {
@@ -1906,8 +2510,41 @@ bool CompileHeads(struct _list *baselist)
 			///////////////////////////////////////////////////////////////////
 			// 
 			case PT_FUNCPROTO:
-			{	// not handling now
+			{	// ::= <Scalar> Id '(' <DParams>  ')' ';'
+				//	 | <Scalar> Id '(' <Params> ')' ';'
+				//	 | <Scalar> Id '(' ')' ';'
+
+				env.addFunction( baselist->list[1]->token.lexeme, 0 );
+
+				printf("function declaration: ");
+				PrintChildTerminals(baselist);
+				printf("\n");
 				accept = true;
+				break;
+			}
+			case PT_BLOCK:
+			{	// single <Block> without header (for small scripts)
+				CProgramm prog;
+				accept = StackProg(baselist, 0, 0, prog);
+				prog.appendCommand(OP_END);
+
+				printf("\n");
+				printf("binary output\n");
+				prog.dump();
+				printf("\n");
+
+				if( accept )
+				{
+					printf("accept block: ");
+					PrintChildTerminals(baselist);
+					printf("\n");
+				}
+				else
+				{
+					printf("failed block: ");
+					PrintChildTerminals(baselist);
+					printf("\n");
+				}
 				break;
 
 			}
@@ -1917,10 +2554,21 @@ bool CompileHeads(struct _list *baselist)
 
 				if( CheckTerminal(baselist->list[1], PT_ID) )
 				{
-					// generate a new script, all memories and classes
+					// generate a new function script
+					int pos = env.addFunction( baselist->list[1]->token.lexeme, 0 );
+					if( pos>=0 )
+					{	// compile the <block>
+						CProgramm &prog = env.function(pos);
+						accept = StackProg(baselist->list[baselist->count-1], 0, 0, prog);
+						prog.appendCommand(OP_END);
 
-					// compile the <block>
-					accept = StackProg(baselist->list[baselist->count-1], 0, 0);
+
+						printf("\n");
+						printf("binary output\n");
+						prog.dump();
+						printf("\n");
+					}
+
 				}
 
 				if( accept )
@@ -1948,10 +2596,24 @@ bool CompileHeads(struct _list *baselist)
 					(baselist->count==4  && CheckTerminal(baselist->list[1], PT_SCRIPT)) ||
 					(baselist->count==12 && CheckTerminal(baselist->list[7], PT_SCRIPT))  )
 				{
-					// generate a new script, all memories and classes
+					char name[128], id[128], map[128];
+					unsigned short x,y,sprite;
+					unsigned char dir;
+					CompileScriptHeader(baselist,id, name, map, x, y, dir, sprite);
 
-					// compile the <block>
-					accept = StackProg(baselist->list[baselist->count-1], 0, 0);
+					// generate a new script
+					int pos= env.addScript(id, name, map, x, y, dir, sprite);
+					if( pos>=0 )
+					{	// compile the <block>
+						CProgramm &prog = env.script(pos);
+						accept = StackProg(baselist->list[baselist->count-1], 0, 0, prog);
+						prog.appendCommand(OP_END);
+
+						printf("\n");
+						printf("binary output\n");
+						prog.dump();
+						printf("\n");
+					}
 				}
 
 				if( accept )
@@ -1980,7 +2642,7 @@ bool CompileHeads(struct _list *baselist)
 			}
 			default:
 			{	
-				PrintChildTerminals(baselist); printf(" not allowed\n");
+				PrintChildTerminals(baselist); printf(" not allowed on this scope\n");
 				break;
 			}
 			}// switch
@@ -2001,10 +2663,12 @@ void startcompile(struct _parser* parser)
 	memset(&baselist,0,sizeof(struct _list));
 
 	reduce_tree(parser, 0, &baselist,0);
-
+fflush(stdout);
 	print_listtree(baselist.list[0],0);
-
+fflush(stdout);
 	CompileHeads(baselist.list[0]);
+fflush(stdout);
+	printf("\nready\n");
 
 /*
 	size_t i;

@@ -60,89 +60,91 @@
 #define PT_GTGT          48 /* '>>' */
 #define PT_GTGTEQ        49 /* '>>=' */
 #define PT_APOID         50 /* ApoId */
-#define PT_BREAK         51 /* break */
-#define PT_CASE          52 /* case */
-#define PT_CHARLITERAL   53 /* CharLiteral */
-#define PT_CONST         54 /* const */
-#define PT_CONTINUE      55 /* continue */
-#define PT_DECLITERAL    56 /* DecLiteral */
-#define PT_DEFAULT       57 /* default */
-#define PT_DO            58 /* do */
-#define PT_DOUBLE        59 /* double */
-#define PT_ELSE          60 /* else */
-#define PT_FLOATLITERAL  61 /* FloatLiteral */
-#define PT_FOR           62 /* for */
-#define PT_FUNCTION      63 /* function */
-#define PT_GLOBAL        64 /* global */
-#define PT_GOTO          65 /* goto */
-#define PT_HEXLITERAL    66 /* HexLiteral */
-#define PT_ID            67 /* Id */
-#define PT_IF            68 /* if */
-#define PT_INT           69 /* int */
-#define PT_RETURN        70 /* return */
-#define PT_SCRIPT        71 /* script */
-#define PT_SIZEOF        72 /* sizeof */
-#define PT_STRING        73 /* string */
-#define PT_STRINGLITERAL 74 /* StringLiteral */
-#define PT_SWITCH        75 /* switch */
-#define PT_TEMP          76 /* temp */
-#define PT_WHILE         77 /* while */
-#define PT_ARG           78 /* <Arg> */
-#define PT_ARRAY         79 /* <Array> */
-#define PT_BLOCK         80 /* <Block> */
-#define PT_CALLARG       81 /* <Call Arg> */
-#define PT_CALLLIST      82 /* <Call List> */
-#define PT_CALLSTM       83 /* <Call Stm> */
-#define PT_CARG          84 /* <CArg> */
-#define PT_CASESTMS      85 /* <Case Stms> */
-#define PT_DECL          86 /* <Decl> */
-#define PT_DECLS         87 /* <Decls> */
-#define PT_EXNAMEID      88 /* <exName Id> */
-#define PT_EXPR          89 /* <Expr> */
-#define PT_EXPRLIST      90 /* <Expr List> */
-#define PT_FILEID        91 /* <File Id> */
-#define PT_FIXVALUE      92 /* <FixValue> */
-#define PT_FUNCDECL      93 /* <Func Decl> */
-#define PT_FUNCPROTO     94 /* <Func Proto> */
-#define PT_GOTOSTMS      95 /* <Goto Stms> */
-#define PT_LABELSTM      96 /* <Label Stm> */
-#define PT_LCTRSTMS      97 /* <LCtr Stms> */
-#define PT_MOD           98 /* <Mod> */
-#define PT_NAMEID        99 /* <Name Id> */
-#define PT_NORMALSTM     100 /* <Normal Stm> */
-#define PT_OPADDSUB      101 /* <Op AddSub> */
-#define PT_OPAND         102 /* <Op And> */
-#define PT_OPASSIGN      103 /* <Op Assign> */
-#define PT_OPBINAND      104 /* <Op BinAND> */
-#define PT_OPBINOR       105 /* <Op BinOR> */
-#define PT_OPBINXOR      106 /* <Op BinXOR> */
-#define PT_OPCAST        107 /* <Op Cast> */
-#define PT_OPCOMPARE     108 /* <Op Compare> */
-#define PT_OPEQUATE      109 /* <Op Equate> */
-#define PT_OPIF          110 /* <Op If> */
-#define PT_OPMULTDIV     111 /* <Op MultDiv> */
-#define PT_OPOR          112 /* <Op Or> */
-#define PT_OPPOINTER     113 /* <Op Pointer> */
-#define PT_OPPOST        114 /* <Op Post> */
-#define PT_OPPRE         115 /* <Op Pre> */
-#define PT_OPSHIFT       116 /* <Op Shift> */
-#define PT_OPSIZEOF      117 /* <Op SizeOf> */
-#define PT_OPUNARY       118 /* <Op Unary> */
-#define PT_PARAM         119 /* <Param> */
-#define PT_PARAMS        120 /* <Params> */
-#define PT_RETURNSTMS    121 /* <Return Stms> */
-#define PT_RETVALUES     122 /* <RetValues> */
-#define PT_SCALAR        123 /* <Scalar> */
-#define PT_SCRIPTDECL    124 /* <Script Decl> */
-#define PT_SPRITEID      125 /* <Sprite Id> */
-#define PT_STM           126 /* <Stm> */
-#define PT_STMLIST       127 /* <Stm List> */
-#define PT_TYPE          128 /* <Type> */
-#define PT_TYPES         129 /* <Types> */
-#define PT_VALUE         130 /* <Value> */
-#define PT_VAR           131 /* <Var> */
-#define PT_VARDECL       132 /* <Var Decl> */
-#define PT_VARLIST       133 /* <Var List> */
+#define PT_AUTO          51 /* auto */
+#define PT_BREAK         52 /* break */
+#define PT_CASE          53 /* case */
+#define PT_CHARLITERAL   54 /* CharLiteral */
+#define PT_CONST         55 /* const */
+#define PT_CONTINUE      56 /* continue */
+#define PT_DECLITERAL    57 /* DecLiteral */
+#define PT_DEFAULT       58 /* default */
+#define PT_DO            59 /* do */
+#define PT_DOUBLE        60 /* double */
+#define PT_ELSE          61 /* else */
+#define PT_FLOATLITERAL  62 /* FloatLiteral */
+#define PT_FOR           63 /* for */
+#define PT_FUNCTION      64 /* function */
+#define PT_GLOBAL        65 /* global */
+#define PT_GOTO          66 /* goto */
+#define PT_HEXLITERAL    67 /* HexLiteral */
+#define PT_ID            68 /* Id */
+#define PT_IF            69 /* if */
+#define PT_INT           70 /* int */
+#define PT_RETURN        71 /* return */
+#define PT_SCRIPT        72 /* script */
+#define PT_SIZEOF        73 /* sizeof */
+#define PT_STRING        74 /* string */
+#define PT_STRINGLITERAL 75 /* StringLiteral */
+#define PT_SWITCH        76 /* switch */
+#define PT_TEMP          77 /* temp */
+#define PT_WHILE         78 /* while */
+#define PT_ARG           79 /* <Arg> */
+#define PT_ARRAY         80 /* <Array> */
+#define PT_BLOCK         81 /* <Block> */
+#define PT_CALLARG       82 /* <Call Arg> */
+#define PT_CALLLIST      83 /* <Call List> */
+#define PT_CALLSTM       84 /* <Call Stm> */
+#define PT_CARG          85 /* <CArg> */
+#define PT_CASESTMS      86 /* <Case Stms> */
+#define PT_DECL          87 /* <Decl> */
+#define PT_DECLS         88 /* <Decls> */
+#define PT_DPARAM        89 /* <DParam> */
+#define PT_DPARAMS       90 /* <DParams> */
+#define PT_EXNAMEID      91 /* <exName Id> */
+#define PT_EXPR          92 /* <Expr> */
+#define PT_EXPRLIST      93 /* <Expr List> */
+#define PT_FILEID        94 /* <File Id> */
+#define PT_FIXVALUE      95 /* <FixValue> */
+#define PT_FUNCDECL      96 /* <Func Decl> */
+#define PT_FUNCPROTO     97 /* <Func Proto> */
+#define PT_GOTOSTMS      98 /* <Goto Stms> */
+#define PT_LABELSTM      99 /* <Label Stm> */
+#define PT_LCTRSTMS      100 /* <LCtr Stms> */
+#define PT_MOD           101 /* <Mod> */
+#define PT_NAMEID        102 /* <Name Id> */
+#define PT_NORMALSTM     103 /* <Normal Stm> */
+#define PT_OPADDSUB      104 /* <Op AddSub> */
+#define PT_OPAND         105 /* <Op And> */
+#define PT_OPASSIGN      106 /* <Op Assign> */
+#define PT_OPBINAND      107 /* <Op BinAND> */
+#define PT_OPBINOR       108 /* <Op BinOR> */
+#define PT_OPBINXOR      109 /* <Op BinXOR> */
+#define PT_OPCAST        110 /* <Op Cast> */
+#define PT_OPCOMPARE     111 /* <Op Compare> */
+#define PT_OPEQUATE      112 /* <Op Equate> */
+#define PT_OPIF          113 /* <Op If> */
+#define PT_OPMULTDIV     114 /* <Op MultDiv> */
+#define PT_OPOR          115 /* <Op Or> */
+#define PT_OPPOINTER     116 /* <Op Pointer> */
+#define PT_OPPOST        117 /* <Op Post> */
+#define PT_OPPRE         118 /* <Op Pre> */
+#define PT_OPSHIFT       119 /* <Op Shift> */
+#define PT_OPSIZEOF      120 /* <Op SizeOf> */
+#define PT_OPUNARY       121 /* <Op Unary> */
+#define PT_PARAM         122 /* <Param> */
+#define PT_PARAMS        123 /* <Params> */
+#define PT_RETURNSTMS    124 /* <Return Stms> */
+#define PT_RETVALUES     125 /* <RetValues> */
+#define PT_SCALAR        126 /* <Scalar> */
+#define PT_SCRIPTDECL    127 /* <Script Decl> */
+#define PT_SPRITEID      128 /* <Sprite Id> */
+#define PT_STM           129 /* <Stm> */
+#define PT_STMLIST       130 /* <Stm List> */
+#define PT_TYPE          131 /* <Type> */
+#define PT_VALUE         132 /* <Value> */
+#define PT_VAR           133 /* <Var> */
+#define PT_VARDECL       134 /* <Var Decl> */
+#define PT_VARLIST       135 /* <Var List> */
 
 ///////////////////////////////////////////////////////////////////////////////
 // command opcodes for stack interpreter
@@ -255,8 +257,10 @@ typedef enum
 
 	/////////////////////////////////////////////////////////////////
 	// standard function calls
-	// check the values on stack before or inside the call of function
-	OP_CALL				= 42,	// Id '(' <Expr> ')'
+	// check the parameters on stack before or inside the call of function
+	OP_CALLSCRIPT		= 42,
+	OP_CALLBUILDIN		= 43,
+								// Id '(' <Expr> ')'
 								// Id '(' ')'
 								// Id <Call List> ';'
 								// Id ';'
@@ -268,12 +272,12 @@ typedef enum
 	// conditional branch
 	// take one value from stack 
 	// and add 1 or the branch offset to the programm counter
-	OP_NIF				= 43,	// if '(' <Expr> ')' <Normal Stm>
-	OP_IF				= 44,	// if '(' <Expr> ')' <Normal Stm>
+	OP_NIF				= 44,	// if '(' <Expr> ')' <Normal Stm>
+	OP_IF				= 45,	// if '(' <Expr> ')' <Normal Stm>
 	/////////////////////////////////////////////////////////////////
 	// unconditional branch
 	// add the branch offset to the programm counter
-	OP_GOTO				= 45,	// goto Id ';'
+	OP_GOTO				= 46,	// goto Id ';'
 
 	// maybe also implementing short and far jumps
 
@@ -289,15 +293,22 @@ typedef enum
 								// Id
 								// <Call Arg>  ::= '-'
 
-	OP_PUSH_INT			=46,	// followed by an integer
-	OP_PUSH_STRING		=47,	// followed by a string (pointer)
-	OP_PUSH_FLOAT		=48,	// followed by a float
-	OP_PUSH_VAR			=49,	// followed by a string containing a variable name
-	OP_POP				=50,	// decrements the stack by one
+	OP_PUSH_INT			=47,	// followed by an integer
+	OP_PUSH_STRING		=48,	// followed by a string (pointer)
+	OP_PUSH_FLOAT		=49,	// followed by a splitted float
+	OP_PUSH_VAR			=50,	// followed by a string containing the variable name
+	OP_PUSH_VALUE		=51,	// followed by a string containing the variable name
+	OP_POP				=52,	// decrements the stack by one
 
+	OP_END				=53,	// Quit the interpreter immediately
 	// others
-	VX_LABEL			=51,	// followed my a string var containing the label name
+	VX_LABEL			=54,	// followed my a string var containing the label name
 								// 	<Label Stm>     ::= Id ':'
+
+	VX_BREAK			=55,	// temporary nodes
+	VX_CONT				=56,
+	VX_GOTO				=57,
+
 
 
 };
@@ -367,9 +378,8 @@ void startcompile(struct _parser* parser);
 	label1
 	<Arg2>
 	_opif!_ label2
-	<Arg3> (only pre operations)
 	<Normal Stm>
-	<Arg3> (exept pre operations)
+	<Arg3>
 	goto label1
 	label2
 

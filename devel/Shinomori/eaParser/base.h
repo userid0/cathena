@@ -2731,15 +2731,17 @@ protected:
 
 		if(tar>src)
 		{	// last to first run
-			while(cnt>0)
+			register size_t i=cnt;
+			while(i>0)
 			{
-				cnt--;
-				tar[cnt] = src[cnt];
+				i--;
+				tar[i] = src[i];
 			}
 		}
 		else if(tar<src)
 		{	// first to last run
-			for(size_t i=0; i<cnt; i++)
+			register size_t i;
+			for(i=0; i<cnt; i++)
 				tar[i] = src[i];
 
 		}
@@ -2772,8 +2774,8 @@ protected:
 
 		if(tar>src)
 		{	// last to first run
-			size_t i=cnt;
-			while(cnt>0)
+			register size_t i=cnt;
+			while(i>0)
 			{
 				i--;
 				tar[i] = src[i];
@@ -2781,7 +2783,8 @@ protected:
 		}
 		else if(tar<src)
 		{	// first to last run
-			for(size_t i=0; i<cnt; i++)
+			register size_t i;
+			for(i=0; i<cnt; i++)
 				tar[i] = src[i];
 
 		}
@@ -2814,8 +2817,8 @@ protected:
 
 		if(tar>src)
 		{	// last to first run
-			size_t i=cnt;
-			while(cnt>0)
+			register size_t i=cnt;
+			while(i>0)
 			{
 				i--;
 				tar[i] = src[i];
@@ -2823,7 +2826,8 @@ protected:
 		}
 		else if(tar<src)
 		{	// first to last run
-			for(size_t i=0; i<cnt; i++)
+			register size_t i;
+			for(i=0; i<cnt; i++)
 				tar[i] = src[i];
 
 		}
@@ -2856,8 +2860,8 @@ protected:
 
 		if(tar>src)
 		{	// last to first run
-			size_t i=cnt;
-			while(cnt>0)
+			register size_t i=cnt;
+			while(i>0)
 			{
 				i--;
 				tar[i] = src[i];
@@ -2865,7 +2869,8 @@ protected:
 		}
 		else if(tar<src)
 		{	// first to last run
-			for(size_t i=0; i<cnt; i++)
+			register size_t i;
+			for(i=0; i<cnt; i++)
 				tar[i] = src[i];
 
 		}
