@@ -503,31 +503,11 @@ extern inline char tolower(char val)	{ return tolower((int)((unsigned char)val))
 
 extern inline unsigned char GetByte(unsigned long val, size_t num)
 {
-	switch(num)
-	{
-	case 0:
-		return (unsigned char)((val & 0x000000FF)      );
-	case 1:
-		return (unsigned char)((val & 0x0000FF00)>>0x08);
-	case 2:
-		return (unsigned char)((val & 0x00FF0000)>>0x10);
-	case 3:
-		return (unsigned char)((val & 0xFF000000)>>0x18);
-	default:
-		return 0;	//better throw something here
-	}
+	return (unsigned char)((val >> (0x08*num))&0xFF      );
 }
 extern inline unsigned short GetWord(unsigned long val, size_t num)
 {
-	switch(num)
-	{
-	case 0:
-		return (unsigned short)((val & 0x0000FFFF)      );
-	case 1:
-		return (unsigned short)((val & 0xFFFF0000)>>0x10);
-	default:
-		return 0;	//better throw something here
-	}	
+	return (unsigned char)((val >> (0x10*num))&0xFF      );
 }
 extern inline unsigned short MakeWord(unsigned char byte0, unsigned char byte1)
 {
@@ -1831,6 +1811,7 @@ template <class T> class TArrayDST : public TArray<T>
 	// friends
 	friend class String;
 	friend class SubString;
+	friend class MiniString;
 	virtual const T* array() const	{return cField;}
 protected:
 	///////////////////////////////////////////////////////////////////////////

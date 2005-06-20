@@ -83,7 +83,7 @@ void cbgetinput(struct _parse_input* pinput)
 
 void usage(const char*p)
 {
-	printf("usage: %s <.cgt file> <input file>\n", (p)?p:"<binary");
+	printf("usage: %s <.cgt file> <input file>\n", (p)?p:"<binary>");
 }
 
 

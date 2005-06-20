@@ -264,7 +264,7 @@ typedef enum
 								// Id '(' ')'
 								// Id <Call List> ';'
 								// Id ';'
-	// followed by a string containing the name of the function and
+	// followed by the function id
 	// followed by the number of valid parameters
 
 
@@ -295,19 +295,25 @@ typedef enum
 
 	OP_PUSH_INT			=47,	// followed by an integer
 	OP_PUSH_STRING		=48,	// followed by a string (pointer)
-	OP_PUSH_FLOAT		=49,	// followed by a splitted float
+	OP_PUSH_FLOAT		=49,	// followed by a float
 	OP_PUSH_VAR			=50,	// followed by a string containing the variable name
 	OP_PUSH_VALUE		=51,	// followed by a string containing the variable name
-	OP_POP				=52,	// decrements the stack by one
+	OP_PUSH_TEMPVAR		=52,	// followed by the number of the temp variable 
+	OP_PUSH_TEMPVALUE	=53,	// followed by the number of the temp variable 
+	OP_RESIZE			=54,	// resize a var array
+	OP_CLEAR			=55,	// clear a variable
+	OP_POP				=56,	// clear the stack
 
-	OP_END				=53,	// Quit the interpreter immediately
+	OP_START			=57,	// Program Start
+	OP_END				=58,	// Quit the interpreter immediately
+
+
 	// others
-	VX_LABEL			=54,	// followed my a string var containing the label name
-								// 	<Label Stm>     ::= Id ':'
+	VX_LABEL			=59,	// temporary node followed by a temporary target address
+	VX_BREAK			=60,	// temporary node followed by a temporary target address
+	VX_CONT				=61,	// temporary node followed by a temporary target address
 
-	VX_BREAK			=55,	// temporary nodes
-	VX_CONT				=56,
-	VX_GOTO				=57,
+	VX_GOTO				=62,	// direct jump node followed by the target address
 
 
 
