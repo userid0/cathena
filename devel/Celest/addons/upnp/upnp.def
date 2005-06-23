@@ -3,7 +3,7 @@
 EXPORTS
 	upnp_init
 	upnp_final
-	addon_info
-	addon_call_table
-	addon_event_table
+	plugin_info
+	plugin_call_table
+	plugin_event_table
 	CheckWindowsVersion

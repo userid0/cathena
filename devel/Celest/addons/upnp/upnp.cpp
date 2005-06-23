@@ -1,6 +1,6 @@
 
 #include "upnp.h"
-#include "dll.h"
+#include "plugin.h"
 #include <stdio.h>
 #include <windows.h>
 #include <netfw.h>
@@ -8,22 +8,21 @@
 #include <comutil.h>
 #include <stdarg.h>
 
-ADDON_INFO = {
+PLUGIN_INFO = {
 	"UPnP",
-	ADDON_CORE,
-	"1.03",
-	DLL_VERSION,
+	PLUGIN_CORE,
+	"1.032",
+	PLUGIN_VERSION,
 	"UPNP / Firewall Plugin by eAthena"
 };
 
-ADDON_EVENTS_TABLE = {
-	{ "upnp_init", "DLL_Init" },
-	{ "upnp_final", "DLL_Final" },
-	{ "CheckWindowsVersion", "DLL_Test" },
+PLUGIN_EVENTS_TABLE = {
+	{ "upnp_init", "Plugin_Init" },
+	{ "upnp_final", "Plugin_Final" },
+	{ "CheckWindowsVersion", "Plugin_Test" },
 	{ NULL, NULL }
 };
 
-	ADDON_CALL_TABLE = NULL;
 	INetFwProfile* profile = NULL;
 	IStaticPortMappingCollection *collection = NULL;
 
@@ -276,7 +275,7 @@ int upnp_init ()
 	char *conf_file[2];
 	char *port_name;
 	int port_num;
-	char *natip = NULL;
+	char natip[16];
 	FILE *fp;
 	int i;
 
@@ -285,22 +284,23 @@ int upnp_init ()
 	if (!validWindowsVersion)
 		return 0;
 
-	server_type = (char *)addon_call_table[0];
-	server_name = (char *)addon_call_table[1];
+	natip[0] = '\0';
+	server_type = (char *)plugin_call_table[0];
+	server_name = (char *)plugin_call_table[1];
 
 	switch(*server_type)
 	{
-	case ADDON_LOGIN:	// login
+	case PLUGIN_LOGIN:	// login
 		conf_file[0] = "conf/login_athena.conf";
 		port_name = "login_port";
 		port_num = 6900;
 		break;
-	case ADDON_CHAR:	// char
+	case PLUGIN_CHAR:	// char
 		conf_file[0] = "conf/char_athena.conf";
 		port_name = "char_port";
 		port_num = 6121;
 		break;
-	case ADDON_MAP:	// map
+	case PLUGIN_MAP:	// map
 		conf_file[0] = "conf/map_athena.conf";
 		port_name = "map_port";
 		port_num = 5121;
@@ -309,7 +309,7 @@ int upnp_init ()
 		return 0;
 	}
 	
-	conf_file[1] = "addons/upnp.conf";
+	conf_file[1] = "plugins/upnp.conf";
 
 	for (i = 0; i < 2; i++)
 	{
@@ -329,9 +329,9 @@ int upnp_init ()
 					close_ports = atoi(w2);
 				} else if(strcmpi(w1,port_name)==0){
 					port_num = atoi(w2);
-				}// else if(strcmpi(w1,"lan_ip")==0){
-				//	;
-				//}
+				} else if(strcmpi(w1,"nat_ip")==0){
+					strncpy(natip, w2, 15);
+				}
 			}
 		}
 		fclose(fp);
@@ -349,14 +349,14 @@ int upnp_init ()
 		ShowMessage ("Firewall port %d successfully opened.\n", port_num);
 
 	if (upnp_enabled) {
-		if (!natip) {
-			unsigned int *addr = (unsigned int *)addon_call_table[12];
+		if (natip[0] == '\0') {
+			unsigned int *addr = (unsigned int *)plugin_call_table[12];
 			int localaddr = ntohl(addr[0]);
-			natip = (char *)&localaddr;
-			ShowDebug("natip=%d.%d.%d.%d\n", natip[0], natip[1], natip[2], natip[3]);
+			unsigned char *ip = (unsigned char *)&localaddr;
+			sprintf(natip, "%d.%d %d.%d", ip[0], ip[1], ip[2], ip[3]);
+			ShowDebug("natip=%s\n", natip);
 		}
-		if (natip[0] == 192 && natip[1] == 168 &&
-			UPNP_AddPort(server_name, natip, port_num))
+		if (UPNP_AddPort(server_name, natip, port_num))
 			ShowMessage ("UPnP mapping successfull.\n");
 	}
 	
