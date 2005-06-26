@@ -9,77 +9,10 @@
 
 #include "eacompiler.h"
 
+#include "basesafeptr.h"
 
 
 
-//
-// This function is called when the scanner matches a token
-//
-// Our implementation handles the "Comment Start" symbol, and scans through
-// the input until the token closure is found
-//
-// All other tokens are refered to the default match function
-//
-char cbmatchtoken(struct _parser* parser, void* user, short type, char* name, short symbol)
-{
-	short c;
-	switch(type) {
-	case SymbolTypeCommentStart: // /* */
-		while((c = scanner_get_char(parser)) != EEOF) {
-			if (c == '*') {
-				scanner_next_char(parser);
-				c = scanner_get_char(parser);
-				if (c != EEOF) {
-					if (c == '/') {
-						scanner_next_char(parser);
-						return 0;
-					}
-				}
-			}
-			scanner_next_char(parser);
-		}
-		parser->symbol = 0; // eof
-		return 0;
-	default:
-		return scanner_def_matchtoken(parser,user,type,name,symbol);
-	}
-}
-
-//
-// This function is called when the scanner needs more data
-//
-// If the pinput->bpreserve flag is set(because the scanner may need
-// to backtrack), then the data in the current input buffer must be
-// preserved.  This is done by increasing the buffer size and copying
-// the old data to the new buffer.
-// If the pinput->bpreserve flag is not set, the new data can be copied
-// over the existing buffer.
-//
-// If the input buffer is empty after this callback returns(because no
-// more data was added), the scanner function will return either:
-//   1] the last accepted token
-//   2] an eof, if no token has been accepted yet
-//
-void cbgetinput(struct _parse_input* pinput)
-{
-	size_t nr;
-	if (!feof((FILE*)pinput->user)) {
-		if (pinput->bpreserve) {
-			// copy the existing buffer to a new, larger one
-			char* p = (char*)malloc(2048 + pinput->ncount);
-			pinput->nbufsize += 2048;
-			memcpy(p, pinput->buf, pinput->ncount);
-			free(pinput->buf);
-			pinput->buf = p;
-			nr = fread(pinput->buf+pinput->ncount, 1, 2048, (FILE*)pinput->user);
-			pinput->ncount += nr; // increase the character count
-		} else {
-			nr = fread(pinput->buf, 1, pinput->nbufsize, (FILE*)pinput->user);
-			pinput->nofs = 0;    // reset the offset
-			pinput->ncount = nr; // set the character count
-		}
-	}
-}
 
 void usage(const char*p)
 {
@@ -89,74 +22,131 @@ void usage(const char*p)
 
 
 
-
-
+// assuming call convention ...(string1, string2)
+// string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
+char* jstrescapecpy (char* pt, const char* sp) {
+	//copy from here
+	char *p =pt;
+	if( (NULL==pt) || (NULL==sp) ) return NULL;
+	while(*sp) {
+		switch (*sp) {
+			case '\'':
+				*p++ = '\\';
+				*p++ = *sp++;
+				break;
+			case '\\':
+				*p++ = '\\';
+				*p++ = *sp++;
+				break;
+			default:
+				*p++ = *sp++;
+		}
+	}
+	*p++ = '\0';
+	return pt;
+}
 
 
 // Accepts 2 arguments <.cgt file> <input file>
 int main(int argc, char *argv[])
 {
-	int run = 1;
+
+	char buf1[128] = "hallo'ballo";
+	char buf2[128];
+
+char *p = jstrescapecpy(buf2,buf1);
+
+	CScriptEnvironment env;
+	CScriptCompiler compiler(env);
+
+
+	ulong tick = GetTickCount();
+
+	bool run = true;
 	FILE*		fin = 0;
-	struct _parser* parser = 0;
-	struct _parse_config* parser_config = 0;
+	CParser* parser = 0;
+	CParseConfig* parser_config = 0;
 
 	if (argc < 3){
 		usage(argv[0]);
 		return EXIT_FAILURE;
 	}
 	// Open .cgt file
-	parser_config = parser_config_create_file(argv[1]);
+	parser_config = new CParseConfig(argv[1]);
 	if (!parser_config){
 		printf("Could not open cgt file %s\n", argv[1]);
 		return EXIT_FAILURE;
 	}
-	parser = parser_create(parser_config);
+	parser = new CParser(parser_config);
 	if (!parser){
 		printf("Error creating parser\n");
 		return EXIT_FAILURE;
 	}
 
 	// Open input file
-	fin = fopen(argv[2], "rb");
-	if (!fin) {
+	if( !parser->input.open(argv[2]) ) {
 		printf("Could not open input file %s\n", argv[1]);
 		return EXIT_FAILURE;
 	}
 
-	// set the input
-	parser->input.buf = (char*)malloc(2048);
-	parser->input.nbufsize = 2048;
-	parser->input.cbneedinput = cbgetinput;
-	parser->input.user = fin;
-
-	// set match callback
-	parser->cbmatchtoken = cbmatchtoken;
 
 	
 	while(run)
 	{
-		short p = parser_parse(parser);
-		if (p < 0){
-			printf("Parse Error: line %i\n", parser->line);
+		short p = parser->parse();
+		if (p < 0)
+		{	// an error
+			printf("Parse Error: line %i, col %i\n", parser->input.line, parser->input.column);
 			return EXIT_FAILURE;
-		} else if(0 == p){
-			run = 0;
+		}
+		else if(0 == p)
+		{	// finished
+			run = false;
+		}
+
+
+		if( parser->rt[0].symbol.idx==PT_DECL && parser->rt[0].rtchildren.size() )
+		{
+			CStackElement *child = &(parser->rt[(parser->rt[0].rtchildren[0])]);
+			if( child &&
+				( child->symbol.idx == PT_SCRIPTDECL ||
+				  child->symbol.idx == PT_BLOCK ||
+				  child->symbol.idx == PT_FUNCDECL ||
+				  child->symbol.idx == PT_FUNCPROTO ) )
+			{
+				
+//				printf("(%i)----------------------------------------\n", parser->rt.size());
+//				parser->print_rt_tree(0,0);
+
+
+				//////////////////////////////////////////////////////////
+				// tree transformation
+				parsenode pnode(*parser);
+				pnode.print_tree();
+
+
+				//////////////////////////////////////////////////////////
+				// compiling
+				if( !compiler.CompileTree(pnode) )
+					run = false;
+
+				printf("\nready\n");
+				
+				//////////////////////////////////////////////////////////
+				// reinitialize parser
+				parser->reinit();
+//				printf("............................................\n");
+			}
 		}
 	}
 
-
-
 	// Print parse tree
-	print_rt_tree(parser, 0, 0);
+//	parser->print_rt_tree(0, 0);
 
+	if (parser)  delete parser;
+	if (parser_config) delete parser_config;
 
-	startcompile(parser);
-
-
-
-	if (parser) parser_delete(parser);
-	if (parser_config) parser_config_delete(parser_config);
+	printf("time: %i", GetTickCount()-tick);
 
 	return EXIT_SUCCESS;
 }
