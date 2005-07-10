@@ -110,43 +110,45 @@
 #define PT_FUNCDECL      96 /* <Func Decl> */
 #define PT_FUNCPROTO     97 /* <Func Proto> */
 #define PT_GOTOSTMS      98 /* <Goto Stms> */
-#define PT_LABELSTM      99 /* <Label Stm> */
-#define PT_LCTRSTMS      100 /* <LCtr Stms> */
-#define PT_MOD           101 /* <Mod> */
-#define PT_NAMEID        102 /* <Name Id> */
-#define PT_NORMALSTM     103 /* <Normal Stm> */
-#define PT_OPADDSUB      104 /* <Op AddSub> */
-#define PT_OPAND         105 /* <Op And> */
-#define PT_OPASSIGN      106 /* <Op Assign> */
-#define PT_OPBINAND      107 /* <Op BinAND> */
-#define PT_OPBINOR       108 /* <Op BinOR> */
-#define PT_OPBINXOR      109 /* <Op BinXOR> */
-#define PT_OPCAST        110 /* <Op Cast> */
-#define PT_OPCOMPARE     111 /* <Op Compare> */
-#define PT_OPEQUATE      112 /* <Op Equate> */
-#define PT_OPIF          113 /* <Op If> */
-#define PT_OPMULTDIV     114 /* <Op MultDiv> */
-#define PT_OPOR          115 /* <Op Or> */
-#define PT_OPPOINTER     116 /* <Op Pointer> */
-#define PT_OPPOST        117 /* <Op Post> */
-#define PT_OPPRE         118 /* <Op Pre> */
-#define PT_OPSHIFT       119 /* <Op Shift> */
-#define PT_OPSIZEOF      120 /* <Op SizeOf> */
-#define PT_OPUNARY       121 /* <Op Unary> */
-#define PT_PARAM         122 /* <Param> */
-#define PT_PARAMS        123 /* <Params> */
-#define PT_RETURNSTMS    124 /* <Return Stms> */
-#define PT_RETVALUES     125 /* <RetValues> */
-#define PT_SCALAR        126 /* <Scalar> */
-#define PT_SCRIPTDECL    127 /* <Script Decl> */
-#define PT_SPRITEID      128 /* <Sprite Id> */
-#define PT_STM           129 /* <Stm> */
-#define PT_STMLIST       130 /* <Stm List> */
-#define PT_TYPE          131 /* <Type> */
-#define PT_VALUE         132 /* <Value> */
-#define PT_VAR           133 /* <Var> */
-#define PT_VARDECL       134 /* <Var Decl> */
-#define PT_VARLIST       135 /* <Var List> */
+#define PT_INITLIST      99 /* <InitList> */
+#define PT_LABELSTM      100 /* <Label Stm> */
+#define PT_LCTRSTMS      101 /* <LCtr Stms> */
+#define PT_MOD           102 /* <Mod> */
+#define PT_MULTILIST     103 /* <MultiList> */
+#define PT_NAMEID        104 /* <Name Id> */
+#define PT_NORMALSTM     105 /* <Normal Stm> */
+#define PT_OPADDSUB      106 /* <Op AddSub> */
+#define PT_OPAND         107 /* <Op And> */
+#define PT_OPASSIGN      108 /* <Op Assign> */
+#define PT_OPBINAND      109 /* <Op BinAND> */
+#define PT_OPBINOR       110 /* <Op BinOR> */
+#define PT_OPBINXOR      111 /* <Op BinXOR> */
+#define PT_OPCAST        112 /* <Op Cast> */
+#define PT_OPCOMPARE     113 /* <Op Compare> */
+#define PT_OPEQUATE      114 /* <Op Equate> */
+#define PT_OPIF          115 /* <Op If> */
+#define PT_OPMULTDIV     116 /* <Op MultDiv> */
+#define PT_OPOR          117 /* <Op Or> */
+#define PT_OPPOINTER     118 /* <Op Pointer> */
+#define PT_OPPOST        119 /* <Op Post> */
+#define PT_OPPRE         120 /* <Op Pre> */
+#define PT_OPSHIFT       121 /* <Op Shift> */
+#define PT_OPSIZEOF      122 /* <Op SizeOf> */
+#define PT_OPUNARY       123 /* <Op Unary> */
+#define PT_PARAM         124 /* <Param> */
+#define PT_PARAMS        125 /* <Params> */
+#define PT_RETURNSTMS    126 /* <Return Stms> */
+#define PT_RETVALUES     127 /* <RetValues> */
+#define PT_SCALAR        128 /* <Scalar> */
+#define PT_SCRIPTDECL    129 /* <Script Decl> */
+#define PT_SPRITEID      130 /* <Sprite Id> */
+#define PT_STM           131 /* <Stm> */
+#define PT_STMLIST       132 /* <Stm List> */
+#define PT_TYPE          133 /* <Type> */
+#define PT_VALUE         134 /* <Value> */
+#define PT_VAR           135 /* <Var> */
+#define PT_VARDECL       136 /* <Var Decl> */
+#define PT_VARLIST       137 /* <Var List> */
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -237,8 +239,8 @@ typedef enum
 	/////////////////////////////////////////////////////////////////
 	// Pre operations
 	// take one stack variable and push a value
-	OP_PREADD			= 35,	// '++'   <Op Unary>
-	OP_PRESUB			= 36,	// '--'   <Op Unary>
+	OP_PREADD			= 35,	// '++'   <Op Pointer>
+	OP_PRESUB			= 36,	// '--'   <Op Pointer>
 
 	/////////////////////////////////////////////////////////////////
 	// Post operations
@@ -296,36 +298,42 @@ typedef enum
 	OP_PUSH_FLOAT		=55,	// followed by a float 4 byte
 	OP_PUSH_VAR			=56,	// followed by a string containing the variable name strlen() bytes + EOS
 	OP_PUSH_VALUE		=57,	// followed by a string containing the variable name strlen() bytes + EOS
-	OP_PUSH_TEMPVAR1	=58,	// followed by the number of the temp variable 1byte
-	OP_PUSH_TEMPVAR2	=59,	// followed by the number of the temp variable 2byte
-	OP_PUSH_TEMPVAR3	=60,	// followed by the number of the temp variable 3byte
-	OP_PUSH_TEMPVAR4	=61,	// followed by the number of the temp variable 4byte
-	OP_PUSH_TEMPVALUE1	=62,	// followed by the number of the temp variable 1byte 
-	OP_PUSH_TEMPVALUE2	=63,	// followed by the number of the temp variable 2byte
-	OP_PUSH_TEMPVALUE3	=64,	// followed by the number of the temp variable 3byte
-	OP_PUSH_TEMPVALUE4	=65,	// followed by the number of the temp variable 4byte
-	OP_RESIZE			=66,	// resize a var array
-	OP_CLEAR			=67,	// clear a variable
-	OP_POP				=68,	// clear the stack
+	OP_PUSH_PARAM		=58,	// followed by the number of the parameter 1byte
+	OP_PUSH_TEMPVAR1	=59,	// followed by the number of the temp variable 1byte
+	OP_PUSH_TEMPVAR2	=60,	// followed by the number of the temp variable 2byte
+	OP_PUSH_TEMPVAR3	=61,	// followed by the number of the temp variable 3byte
+	OP_PUSH_TEMPVAR4	=62,	// followed by the number of the temp variable 4byte
+	OP_PUSH_TEMPVALUE1	=63,	// followed by the number of the temp variable 1byte 
+	OP_PUSH_TEMPVALUE2	=64,	// followed by the number of the temp variable 2byte
+	OP_PUSH_TEMPVALUE3	=65,	// followed by the number of the temp variable 3byte
+	OP_PUSH_TEMPVALUE4	=66,	// followed by the number of the temp variable 4byte
+	OP_VECTORIZE1		=67,	// followed by the number of array elements 1byte 
+	OP_VECTORIZE2		=68,	// followed by the number of array elements 2byte
+	OP_VECTORIZE3		=69,	// followed by the number of array elements 3byte
+	OP_VECTORIZE4		=70,	// followed by the number of array elements 4byte
+	OP_RESIZE			=71,	// followed by dimension (char), resize a var array, remove elements or pad variables of type NONE
 
-	OP_START			=69,	// Program Start followed by 3byte Programm length
-	OP_END				=70,	// Quit the interpreter immediately
-	OP_RETURN			=71,	// return, quit if last scope	
+	OP_CLEAR			=72,	// clear a variable
+	OP_POP				=73,	// clear the stack
+
+	OP_START			=74,	// Program Start followed by 3byte Programm length
+	OP_END				=75,	// Quit the interpreter immediately
+	OP_RETURN			=76,	// return, quit if last scope	
 
 
 	// Jumps
 	/////////////////////////////////////////////////////////////////
 	// conditional branch
-	OP_NIF				= 72,	// if '(' <Expr> ')' <Normal Stm> followed by the target address
-	OP_IF				= 73,	// if '(' <Expr> ')' <Normal Stm> followed by the target address
+	OP_NIF				=77,	// if '(' <Expr> ')' <Normal Stm> followed by the target address
+	OP_IF				=78,	// if '(' <Expr> ')' <Normal Stm> followed by the target address
 	/////////////////////////////////////////////////////////////////
 	// unconditional branch
-	OP_GOTO				= 74,	// goto Id ';' followed by the target address
+	OP_GOTO				=79,	// goto Id ';' followed by the target address
 
-	VX_LABEL			= 75,	// temporary node followed by a temporary target address 0
-	VX_BREAK			= 76,	// temporary node followed by a temporary target address 0
-	VX_CONT				= 77,	// temporary node followed by a temporary target address 0
-	VX_GOTO				= 78,	// direct jump node followed by the target address
+	VX_LABEL			=80,	// temporary node followed by a temporary target address 0
+	VX_BREAK			=81,	// temporary node followed by a temporary target address 0
+	VX_CONT				=82,	// temporary node followed by a temporary target address 0
+	VX_GOTO				=83,	// direct jump node followed by the target address
 
 };
 
@@ -542,6 +550,16 @@ public:
 
 
 ///////////////////////////////////////////////////////////////////////////////
+//
+// Parse Tree Transformation
+//  * Simplification 
+//    - node reduction (ok)
+//    - list unrolling (ok)
+//  * Optimisation
+//    - combining constants ( )
+//    - removing unreachable nodes ( )
+//    - reordering integer multiplication/division ( )
+//
 ///////////////////////////////////////////////////////////////////////////////
 
 class parsenode : public global, public CLogger
@@ -558,8 +576,11 @@ class parsenode : public global, public CLogger
 	unsigned short			cSymbol;
 	MiniString				cSymbolName;
 	MiniString				cLexeme;
+	unsigned short			cLine;
+	unsigned short			cColumn;
 
-	void insertnode(unsigned short t, unsigned short s, const MiniString& n, const MiniString& l)
+
+	void insertnode(unsigned short t, unsigned short s, const MiniString& n, const MiniString& l, unsigned short line, unsigned short col)
 	{
 		// add element to List
 		parsenodep* temp = new parsenodep[cCount+1];
@@ -569,7 +590,7 @@ class parsenode : public global, public CLogger
 			delete[] cList;
 		}
 		cList = temp;
-		cList[cCount] = new parsenode(t,s,n,l);
+		cList[cCount] = new parsenode(t,s,n,l,line,col);
 		cCount++;
 	}
 
@@ -577,8 +598,8 @@ public:
 	///////////////////////////////////////////////////////////////////////////
 	// construct/destruct
 	parsenode(): cList(NULL),cCount(0),cType(0),cSymbol(0)	{}
-	parsenode(unsigned short t, unsigned short s, const MiniString& n, const MiniString& l)
-		:  cList(NULL),cCount(0),cType(t),cSymbol(s),cSymbolName(n),cLexeme(l)
+	parsenode(unsigned short t, unsigned short s, const MiniString& n, const MiniString& l, unsigned short line, unsigned short col)
+		:  cList(NULL),cCount(0),cType(t),cSymbol(s),cSymbolName(n),cLexeme(l),cLine(line),cColumn(col)
 	{}
 
 	parsenode(const CParser& parser) :  cList(NULL),cCount(0),cType(0),cSymbol(0)
@@ -593,6 +614,8 @@ public:
 			cSymbol		= temp.cList[0]->cSymbol;
 			cSymbolName	= temp.cList[0]->cSymbolName;
 			cLexeme		= temp.cList[0]->cLexeme;
+			cLine		= temp.cList[0]->cLine;
+			cColumn		= temp.cList[0]->cColumn;
 			// and put a dummy parsenode as list element in
 			temp.cList[0]->cList = NULL;
 		}
@@ -651,7 +674,7 @@ public:
 			parsenodep newlist = this;
 			if( flat==0)
 			{
-				this->insertnode(se->symbol.Type, se->symbol.idx, se->symbol.Name, se->cToken.cLexeme);
+				this->insertnode(se->symbol.Type, se->symbol.idx, se->symbol.Name, se->cToken.cLexeme, se->cToken.line, se->cToken.column);
 				newlist = this->cList[this->cCount-1];
 			}
 			for(j=se->rtchildren.size()-1;j>=0;--j)
@@ -672,7 +695,7 @@ public:
 				}
 				else
 				{
-					newlist->insertnode(child->symbol.Type, child->symbol.idx, child->symbol.Name, child->cToken.cLexeme);
+					newlist->insertnode(child->symbol.Type, child->symbol.idx, child->symbol.Name, child->cToken.cLexeme, se->cToken.line, se->cToken.column);
 				}
 			}
 		}
@@ -689,7 +712,17 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 class CProgramm : public CLogger
 {
+	friend class UserStack;
+
 protected:
+	typedef struct
+	{
+	public:
+		unsigned char	cCommand;
+		int				cParam1;
+		int				cParam2;
+		const char*		cString;
+	} CCommand;
 	class CLabel : public MiniString
 	{	
 	public:
@@ -720,33 +753,251 @@ public:
 
 
 	///////////////////////////////////////////////////////////////////////////
-	// label functions
-	size_t size()	{ return cProgramm.size(); }
+	// 
+	size_t size()				{ return cProgramm.size(); }
+	size_t getCurrentPosition()	{ return cProgramm.size(); }
+
+	///////////////////////////////////////////////////////////////////////////
+	// fetch command and parameters; and go to next command
+	bool getCommand(size_t &inx, CCommand& cmd)
+	{
+		cmd.cCommand = getCommand(inx);
+		switch( cmd.cCommand )
+		{
+			// commands followed by an int (1 byte)
+			case OP_PUSH_PARAM:
+			case OP_PUSH_INT1:
+			case OP_PUSH_TEMPVAR1:
+			case OP_PUSH_TEMPVALUE1:
+			case OP_VECTORIZE1:
+			case OP_RESIZE:
+			case OP_CAST:
+				cmd.cParam1 = getChar(inx);
+				break;
+			// commands followed by an int (2 byte)
+			case OP_PUSH_INT2:
+			case OP_PUSH_TEMPVAR2:
+			case OP_PUSH_TEMPVALUE2:
+			case OP_VECTORIZE2:
+				cmd.cParam1 = getShort(inx);
+				break;
+			// commands followed by an int (3 byte)
+			case OP_PUSH_INT3:
+			case OP_PUSH_TEMPVAR3:
+			case OP_PUSH_TEMPVALUE3:
+			case OP_VECTORIZE3:
+				cmd.cParam1 = getAddr(inx);
+				break;
+			// commands followed by an int or float (4 byte)
+			case OP_PUSH_INT4:
+			case OP_PUSH_TEMPVAR4:
+			case OP_PUSH_TEMPVALUE4:
+			case OP_VECTORIZE4:
+			case OP_PUSH_FLOAT:
+			case OP_START:
+				cmd.cParam1 = getInt(inx);
+				break;
+			// commands followed by an address
+			case OP_NIF:
+			case OP_IF:
+			case VX_BREAK:
+			case VX_CONT:
+			case VX_GOTO:
+			case OP_GOTO:
+			case OP_PUSH_ADDR:
+				cmd.cParam1 = getAddr(inx);
+				break;
+
+			// commands followed by an int (1 byte) and a second unsigned char param
+			case OP_CALLBUILDIN1:
+			case OP_CALLSCRIPT1:
+				cmd.cParam1 = getChar(inx);
+				cmd.cParam2 = getChar(inx);
+				break;
+
+			// commands followed by an int (2 byte) and a second unsigned char param
+			case OP_CALLBUILDIN2:
+			case OP_CALLSCRIPT2:
+				cmd.cParam1 = (unsigned short)getShort(inx);
+				cmd.cParam2 = getChar(inx);
+				break;
+			// commands followed by an int (3 byte) and a second unsigned char param
+			case OP_CALLBUILDIN3:
+			case OP_CALLSCRIPT3:
+				cmd.cParam1 = getAddr(inx);
+				cmd.cParam2 = getChar(inx);
+				break;
+
+			// commands followed by an int (4 byte) and a second unsigned char param
+			case OP_CALLBUILDIN4:
+			case OP_CALLSCRIPT4:
+				cmd.cParam1 = getInt(inx);
+				cmd.cParam2 = getChar(inx);
+				break;
+
+			// commands followed by a string
+			case OP_PUSH_VAR:
+			case OP_PUSH_VALUE:
+			case OP_PUSH_STRING:
+				cmd.cString = getString(inx);
+				break;
+		}
+		return true;
+	}
 
 
 	///////////////////////////////////////////////////////////////////////////
+	size_t nextCommand(size_t pos)
+	{
+		switch( getCommand(pos) )
+		{
+		// commands with no parameters
+		case OP_NOP:
+		case OP_ASSIGN:
+		case OP_ASSIGN_ADD:
+		case OP_ASSIGN_SUB:
+		case OP_ASSIGN_MUL:
+		case OP_ASSIGN_DIV:
+		case OP_ASSIGN_XOR:
+		case OP_ASSIGN_AND:
+		case OP_ASSIGN_OR:
+		case OP_ASSIGN_RSH:
+		case OP_ASSIGN_LSH:
+		case OP_SELECT:
+		case OP_LOG_OR:
+		case OP_LOG_AND:
+		case OP_BIN_OR:
+		case OP_BIN_XOR:
+		case OP_BIN_AND:
+		case OP_EQUATE:
+		case OP_UNEQUATE:
+		case OP_ISGT:
+		case OP_ISGTEQ:
+		case OP_ISLT:
+		case OP_ISLTEQ:
+		case OP_LSHIFT:
+		case OP_RSHIFT:
+		case OP_ADD:
+		case OP_SUB:
+		case OP_MUL:
+		case OP_DIV:
+		case OP_MOD:
+		case OP_NOT:
+		case OP_INVERT:
+		case OP_NEGATE:
+		case OP_SIZEOF:
+		case OP_PREADD:
+		case OP_PRESUB:
+		case OP_POSTADD:
+		case OP_POSTSUB:
+		case OP_MEMBER:
+		case OP_ARRAY:
+		case OP_CLEAR:
+		case OP_POP:
+		case OP_END:
+		case OP_RETURN:
+			return pos;
+
+		// commands with int parameters (1 bytes)
+		case OP_PUSH_PARAM:
+		case OP_PUSH_INT1:
+		case OP_PUSH_TEMPVAR1:
+		case OP_PUSH_TEMPVALUE1:
+		case OP_VECTORIZE1:
+		case OP_RESIZE:
+		case OP_CAST:
+			return pos+1;
+
+		// commands with int parameters (2 bytes)
+		case OP_PUSH_INT2:
+		case OP_PUSH_TEMPVAR2:
+		case OP_PUSH_TEMPVALUE2:
+		case OP_VECTORIZE2:
+			return pos+2;
+
+		// commands with int parameters (3 bytes)
+		case OP_PUSH_INT3:
+		case OP_PUSH_TEMPVAR3:
+		case OP_PUSH_TEMPVALUE3:
+		case OP_VECTORIZE3:
+			return pos+3;
+
+		// commands with int or float parameters (4 bytes)
+		case OP_START:
+		case OP_PUSH_FLOAT:
+		case OP_PUSH_INT4:
+		case OP_PUSH_TEMPVAR4:
+		case OP_PUSH_TEMPVALUE4:
+		case OP_VECTORIZE4:
+			return pos+4;
+
+		// commands with addr parameters
+		case OP_NIF:
+		case OP_IF:
+		case VX_BREAK:
+		case VX_CONT:
+		case VX_GOTO:
+		case OP_GOTO:
+		case OP_PUSH_ADDR:
+			return pos+4;
+
+		// commands with addr (1 bytes)and char parameters 
+		case OP_CALLSCRIPT1:
+		case OP_CALLBUILDIN1:
+			return pos+2;
+
+		// commands with addr (2 bytes)and char parameters 
+		case OP_CALLSCRIPT2:
+		case OP_CALLBUILDIN2:
+			return pos+3;
+
+		// commands with addr (3 bytes)and char parameters 
+		case OP_CALLSCRIPT3:
+		case OP_CALLBUILDIN3:
+			return pos+4;
+		
+		// commands with addr (4 bytes)and char parameters 
+		case OP_CALLSCRIPT4:
+		case OP_CALLBUILDIN4:
+			return pos+5;
+
+		// commands with string parameters (sizeof(pointer) bytes)
+		case OP_PUSH_STRING:
+		case OP_PUSH_VAR:
+		case OP_PUSH_VALUE:
+			getString(pos);
+			return pos;
+		}
+	}
+	///////////////////////////////////////////////////////////////////////////
 	// label functions
 	int insertLabel(const char* name, int pos=-1)
-	{
+	{	// add a label ino labellist, update the target position in programm if given
 		size_t inx;
 		cLabelList.insert(name);
 		if( cLabelList.find(name,0, inx) )
 		{
-			if(pos>=0 && cLabelList[inx].pos>=0)
-				return NULL;
-			else if(pos>=0)
-				cLabelList[inx].pos = pos;
+			if(pos>=0 && cLabelList[inx].pos>=0)	// try to reposition a label with given position
+				return -1;
+			else if(pos>=0)							// have a position now
+				cLabelList[inx].pos = pos;			// set it
 			cLabelList[inx].use++;
 			return inx;
 		}
 		return -1;
 	}
 	bool isLabel(const char* name, size_t &inx)
-	{
+	{	// check if name is a label and return the label identifier
 		return cLabelList.find(name,0, inx);
 	}
-	int getLabelInx(const char* name)
-	{
+	const char *getLabelName(size_t inx)
+	{	// return the name of a label for a given identifier
+		if( inx<cLabelList.size() )
+			return cLabelList[inx];
+		return "";
+	}
+	int getLabelTarget(const char* name)
+	{	// get the target position in programm of label by name
 		size_t inx;
 		if( cLabelList.find(name,0, inx) )
 		{
@@ -754,88 +1005,48 @@ public:
 		}
 		return -1;
 	}
-	const char *getLabelName(size_t inx)
-	{
-		if( inx<cLabelList.size() )
-			return cLabelList[inx];
-		return "";
-	}
 	int getLabelTarget(size_t inx)
-	{
+	{	// get the target position in programm of label by identifier
 		if( inx<cLabelList.size() )
 			return cLabelList[inx].pos;
-		return (cProgramm.size()>0) ? cProgramm.size()-1 : 0;
+		return (cProgramm.size()>0) ? cProgramm.size()-1 : 0;	
+		// in error case; return the last active program position (usually the end marker)
 	}
 	bool ConvertLabels()
-	{
-		unsigned char cmd;
-		size_t i, pos;
+	{	// convert labels into goto commands or push_addr commands
+		CCommand ccmd;
+		size_t i, pos, tmp;
 		int inx;
 		i=0;
+
 		while( i<cProgramm.size() )
 		{	// need to copy the position, 
-			// it gets incremented on access internally
+			// it gets internally incremented on accesses
 			pos=i;
-			cmd = getCommand(i);
-			if( cmd==OP_GOTO )
+			getCommand(i, ccmd);
+			if( ccmd.cCommand==VX_GOTO )
 			{	
-				inx = getInt(i);
+				tmp = pos;
+				// read the old command sequence
+				getCommand(pos);
+				inx = getAddr(pos);
+				// recalculate
 				inx = getLabelTarget( inx );
-
-				replaceCommand(VX_GOTO,pos);
-				replaceInt(inx,pos);
+				// write the new command sequence
+				replaceCommand(OP_GOTO,tmp);
+				replaceAddr(inx,tmp);
 			}
-			if( cmd==VX_LABEL )
+			if( ccmd.cCommand==VX_LABEL )
 			{	
-				inx = getInt(i);
+				tmp = pos;
+				// read the old command sequence
+				getCommand(pos);
+				inx = getAddr(pos);
+				// recalculate
 				inx = getLabelTarget( inx );
-
-				replaceCommand(OP_PUSH_ADDR,pos);
-				replaceInt(inx,pos);
-			}
-			else
-			{
-				switch( cmd )
-				{
-				// commands followed by an int or float (4 byte)
-				case OP_START:
-				case OP_NIF:
-				case OP_IF:
-				case OP_CALLBUILDIN1:
-				case OP_CALLBUILDIN2:
-				case OP_CALLBUILDIN3:
-				case OP_CALLBUILDIN4:
-				case OP_CALLSCRIPT1:
-				case OP_CALLSCRIPT2:
-				case OP_CALLSCRIPT3:
-				case OP_CALLSCRIPT4:
-				case OP_PUSH_FLOAT:
-				case VX_BREAK:
-				case VX_CONT:
-				case VX_GOTO:
-				case OP_GOTO:
-				case OP_PUSH_ADDR:
-				case OP_PUSH_INT1:
-				case OP_PUSH_INT2:
-				case OP_PUSH_INT3:
-				case OP_PUSH_INT4:
-				case OP_PUSH_TEMPVAR1:
-				case OP_PUSH_TEMPVAR2:
-				case OP_PUSH_TEMPVAR3:
-				case OP_PUSH_TEMPVAR4:
-				case OP_PUSH_TEMPVALUE1:
-				case OP_PUSH_TEMPVALUE2:
-				case OP_PUSH_TEMPVALUE3:
-				case OP_PUSH_TEMPVALUE4:
-					i += 4;
-					break;
-				// commands followed by a string (pointer size)
-				case OP_PUSH_VAR:
-				case OP_PUSH_VALUE:
-				case OP_PUSH_STRING:
-					getString(i);
-					break;
-				}
+				// write the new command sequence
+				replaceCommand(OP_PUSH_ADDR,tmp);
+				replaceAddr(inx,tmp);
 			}
 		}
 		return true;
@@ -844,67 +1055,32 @@ public:
 	///////////////////////////////////////////////////////////////////////////
 	// replacing temporary jump targets
 	bool replaceJumps(size_t start, size_t end, unsigned char cmd, int val)
-	{
-		size_t pos;
+	{	// convert a specifiv temporary jump command into goto commands
+		CCommand ccmd;
+		size_t pos, tmp;
 		while( start<end && start<cProgramm.size() )
 		{	// need to copy the position, 
 			// it gets incremented on access internally
 			pos=start;
-			unsigned char c = getCommand(start);
-			if( c==cmd )
-			{	
-				replaceCommand(VX_GOTO,pos);
-
-				pos=start;
-				if( 0==getInt(start) )
-					replaceInt(val,pos);
-			}
-			else
-			{
-				switch( c )
-				{
-				// commands followed by an int or float (4 byte)
-				case OP_START:
-				case OP_NIF:
-				case OP_IF:
-				case OP_CALLBUILDIN1:
-				case OP_CALLBUILDIN2:
-				case OP_CALLBUILDIN3:
-				case OP_CALLBUILDIN4:
-				case OP_CALLSCRIPT1:
-				case OP_CALLSCRIPT2:
-				case OP_CALLSCRIPT3:
-				case OP_CALLSCRIPT4:
-				case OP_PUSH_FLOAT:
-				case VX_BREAK:
-				case VX_CONT:
-				case VX_GOTO:
-				case OP_GOTO:
-				case OP_PUSH_ADDR:
-				case OP_PUSH_INT1:
-				case OP_PUSH_INT2:
-				case OP_PUSH_INT3:
-				case OP_PUSH_INT4:
-				case OP_PUSH_TEMPVAR1:
-				case OP_PUSH_TEMPVAR2:
-				case OP_PUSH_TEMPVAR3:
-				case OP_PUSH_TEMPVAR4:
-				case OP_PUSH_TEMPVALUE1:
-				case OP_PUSH_TEMPVALUE2:
-				case OP_PUSH_TEMPVALUE3:
-				case OP_PUSH_TEMPVALUE4:
-					start += 4;
-					break;
-				// commands followed by a string (pointer size)
-				case OP_PUSH_VAR:
-				case OP_PUSH_VALUE:
-				case OP_PUSH_STRING:
-					getString(start);
-					break;
-				}
+			getCommand(start, ccmd);
+			if( ccmd.cCommand==cmd )
+			{	// just replace the command
+				replaceCommand(OP_GOTO,pos);
+				// replace the jump taget if not set already
+				tmp=pos;
+				if( 0==getAddr(pos) )
+					replaceAddr(val,tmp);
 			}
 		}
 		return true;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// merging
+	size_t append(const CProgramm& p)
+	{
+		size_t pos = this->getCurrentPosition();
+		this->append(p);
+		return pos;
 	}
 	
 	///////////////////////////////////////////////////////////////////////////
@@ -1064,74 +1240,38 @@ public:
 		return pos;
 	}
 	///////////////////////////////////////////////////////////////////////////
-	float getFloat(size_t &inx)
+	// converting float via union, !!not portable!!
+	static float int2float(int num)
 	{	// getting a 32bit float
-		if( inx+3 < cProgramm.size() )
-		{
-			union
-			{
-				float valf;
-				char buf[4];
-			}storage;
-
-			storage.buf[0] = cProgramm[inx++];
-			storage.buf[1] = cProgramm[inx++];
-			storage.buf[2] = cProgramm[inx++];
-			storage.buf[3] = cProgramm[inx++];
-			return storage.valf;
-		}
-		return 0;
-	}
-	size_t insertFloat(float val, size_t &inx)
-	{	// setting a 32bit float
-		size_t pos = inx;
 		union
 		{
 			float valf;
-			char buf[4];
+			unsigned char buf[4];
 		}storage;
-		storage.valf=val;
-
-		cProgramm.insert(storage.buf[0], 1, inx++ );
-		cProgramm.insert(storage.buf[1], 1, inx++ );
-		cProgramm.insert(storage.buf[2], 1, inx++ );
-		cProgramm.insert(storage.buf[3], 1, inx++ );
-		return pos;
+		storage.buf[0] = (unsigned char)(0xFF & (num));
+		storage.buf[1] = (unsigned char)(0xFF & (num>>0x08));
+		storage.buf[2] = (unsigned char)(0xFF & (num>>0x10));
+		storage.buf[3] = (unsigned char)(0xFF & (num>>0x18));
+		return storage.valf;
 	}
-	size_t replaceFloat(float val, size_t &inx)
-	{	// setting a 32bit float
-		size_t pos = inx;
+	static int float2int(float num)
+	{	// getting a 32bit float
 		union
 		{
 			float valf;
-			char buf[4];
+			unsigned char buf[4];
 		}storage;
-		storage.valf=val;
+		storage.valf = num;
 
-		cProgramm[inx++] = storage.buf[0];
-		cProgramm[inx++] = storage.buf[1];
-		cProgramm[inx++] = storage.buf[2];
-		cProgramm[inx++] = storage.buf[3];
-		return pos;
-	}
-	size_t appendFloat(float val)
-	{	// setting a 32bit float
-		size_t pos = cProgramm.size();
-		union
-		{
-			float valf;
-			char buf[4];
-		}storage;
-		storage.valf=val;
+		return	  (((unsigned int)storage.buf[0]) )
+				| (((unsigned int)storage.buf[1]) << 0x08 )
+				| (((unsigned int)storage.buf[2]) << 0x10)
+				| (((unsigned int)storage.buf[3]) << 0x18);
 
-		cProgramm.append(storage.buf[0]);
-		cProgramm.append(storage.buf[1]);
-		cProgramm.append(storage.buf[2]);
-		cProgramm.append(storage.buf[3]);
-
-		return pos;
 	}
 	///////////////////////////////////////////////////////////////////////////
+/*
+!! inserting pointers is unused
 	const char* getTableString(size_t &inx)
 	{	// getting a pointer, 64bit ready
 		// msb to lsb order for faster reading
@@ -1181,6 +1321,7 @@ public:
 		}
 		return pos;
 	}
+*/
 	///////////////////////////////////////////////////////////////////////////
 	const char* getString(size_t &inx)
 	{	
@@ -1227,191 +1368,41 @@ public:
 		}
 		return pos;
 	}
-	///////////////////////////////////////////////////////////////////////////
-	size_t getCurrentPosition()	{ return cProgramm.size(); }
+	//!! no replacestring !!
 
 	///////////////////////////////////////////////////////////////////////////
-	size_t nextCommand(size_t pos)
+	// append variable size command, 
+	// assuming command numbers for cmd1,2,3,4 are following directly
+	size_t appendVarCommand(unsigned char cmd, int val)
 	{
-		switch( getCommand(pos) )
+		size_t pos = cProgramm.size();
+		// chars           0 ...        255
+		// shorts     -32768 ...      32767
+		// addr            0 ...   16777216
+		// int   -2147483648 ... 2147483647
+		if(val>= 0     && val<=255)
 		{
-		// commands with no parameters
-		case OP_NOP:
-		case OP_ASSIGN:
-		case OP_ASSIGN_ADD:
-		case OP_ASSIGN_SUB:
-		case OP_ASSIGN_MUL:
-		case OP_ASSIGN_DIV:
-		case OP_ASSIGN_XOR:
-		case OP_ASSIGN_AND:
-		case OP_ASSIGN_OR:
-		case OP_ASSIGN_RSH:
-		case OP_ASSIGN_LSH:
-		case OP_SELECT:
-		case OP_LOG_OR:
-		case OP_LOG_AND:
-		case OP_BIN_OR:
-		case OP_BIN_XOR:
-		case OP_BIN_AND:
-		case OP_EQUATE:
-		case OP_UNEQUATE:
-		case OP_ISGT:
-		case OP_ISGTEQ:
-		case OP_ISLT:
-		case OP_ISLTEQ:
-		case OP_LSHIFT:
-		case OP_RSHIFT:
-		case OP_ADD:
-		case OP_SUB:
-		case OP_MUL:
-		case OP_DIV:
-		case OP_MOD:
-		case OP_NOT:
-		case OP_INVERT:
-		case OP_NEGATE:
-		case OP_SIZEOF:
-		case OP_CAST:
-		case OP_PREADD:
-		case OP_PRESUB:
-		case OP_POSTADD:
-		case OP_POSTSUB:
-		case OP_MEMBER:
-		case OP_ARRAY:
-		case OP_RESIZE:
-		case OP_CLEAR:
-		case OP_POP:
-		case OP_END:
-		case OP_RETURN:
-			return pos;
-
-		// commands with int (float) parameters (4 bytes)
-		case OP_START:
-		case OP_NIF:
-		case OP_IF:
-		case OP_PUSH_FLOAT:
-		case VX_BREAK:
-		case VX_CONT:
-		case VX_GOTO:
-		case OP_GOTO:
-		case OP_PUSH_ADDR:
-		case OP_PUSH_INT1:
-		case OP_PUSH_INT2:
-		case OP_PUSH_INT3:
-		case OP_PUSH_INT4:
-		case OP_PUSH_TEMPVAR1:
-		case OP_PUSH_TEMPVAR2:
-		case OP_PUSH_TEMPVAR3:
-		case OP_PUSH_TEMPVAR4:
-		case OP_PUSH_TEMPVALUE1:
-		case OP_PUSH_TEMPVALUE2:
-		case OP_PUSH_TEMPVALUE3:
-		case OP_PUSH_TEMPVALUE4:
-		return pos+4;
-
-		// commands with int and char parameters (5 bytes)
-		case OP_CALLSCRIPT1:
-		case OP_CALLSCRIPT2:
-		case OP_CALLSCRIPT3:
-		case OP_CALLSCRIPT4:
-		case OP_CALLBUILDIN1:
-		case OP_CALLBUILDIN2:
-		case OP_CALLBUILDIN3:
-		case OP_CALLBUILDIN4:
-			return pos+5;
-
-		// commands with string parameters (sizeof(pointer) bytes)
-		case OP_PUSH_STRING:
-		case OP_PUSH_VAR:
-		case OP_PUSH_VALUE:
-			getString(pos);
-			return pos;
+			this->appendCommand(cmd+0);
+			this->appendChar(val);
 		}
-	}
-	///////////////////////////////////////////////////////////////////////////
-	size_t getParameter(size_t pos)
-	{
-		switch( getCommand(pos) )
+		else if(val>=-32768 && val<=32767)
 		{
-		// commands with no parameters
-		case OP_NOP:
-		case OP_ASSIGN:
-		case OP_ASSIGN_ADD:
-		case OP_ASSIGN_SUB:
-		case OP_ASSIGN_MUL:
-		case OP_ASSIGN_DIV:
-		case OP_ASSIGN_XOR:
-		case OP_ASSIGN_AND:
-		case OP_ASSIGN_OR:
-		case OP_ASSIGN_RSH:
-		case OP_ASSIGN_LSH:
-		case OP_SELECT:
-		case OP_LOG_OR:
-		case OP_LOG_AND:
-		case OP_BIN_OR:
-		case OP_BIN_XOR:
-		case OP_BIN_AND:
-		case OP_EQUATE:
-		case OP_UNEQUATE:
-		case OP_ISGT:
-		case OP_ISGTEQ:
-		case OP_ISLT:
-		case OP_ISLTEQ:
-		case OP_LSHIFT:
-		case OP_RSHIFT:
-		case OP_ADD:
-		case OP_SUB:
-		case OP_MUL:
-		case OP_DIV:
-		case OP_MOD:
-		case OP_NOT:
-		case OP_INVERT:
-		case OP_NEGATE:
-		case OP_SIZEOF:
-		case OP_CAST:
-		case OP_PREADD:
-		case OP_PRESUB:
-		case OP_POSTADD:
-		case OP_POSTSUB:
-		case OP_MEMBER:
-		case OP_ARRAY:
-		case OP_RESIZE:
-		case OP_CLEAR:
-		case OP_NIF:
-		case OP_IF:
-		case OP_POP:
-		case OP_END:
-		case OP_RETURN:
-			return 0;
-
-		// commands with int (float) parameters (4 bytes)
-		case OP_START:
-		case OP_PUSH_ADDR:
-		case OP_PUSH_INT1:
-		case OP_PUSH_INT2:
-		case OP_PUSH_INT3:
-		case OP_PUSH_INT4:
-		case OP_PUSH_FLOAT:
-		case OP_CALLSCRIPT1:
-		case OP_CALLSCRIPT2:
-		case OP_CALLSCRIPT3:
-		case OP_CALLSCRIPT4:
-		case OP_CALLBUILDIN1:
-		case OP_CALLBUILDIN2:
-		case OP_CALLBUILDIN3:
-		case OP_CALLBUILDIN4:
-		case VX_BREAK:
-		case VX_CONT:
-		case VX_GOTO:
-		case VX_LABEL:
-		case OP_GOTO:
-
-		// commands with string parameters (sizeof(pointer) bytes)
-		case OP_PUSH_STRING:
-		case OP_PUSH_VAR:
-		case OP_PUSH_VALUE:
-			return pos;
+			this->appendCommand(cmd+1);
+			this->appendShort(val);
 		}
+		else if(val>= 0     && val<=16777216)
+		{
+			this->appendCommand(cmd+2);
+			this->appendAddr(val);
+		}
+		else // -2147483648 ... 2147483647
+		{
+			this->appendCommand(cmd+3);
+			this->appendInt(val);
+		}
+		return pos;
 	}
+
 	///////////////////////////////////////////////////////////////////////////
 	// debug
 	void dump()
@@ -1440,176 +1431,179 @@ public:
 	void printCommand(size_t &pos)
 	{
 		this->logging("%4i: ",pos);
-		switch( getCommand(pos) )
+		CCommand ccmd;
+		if( getCommand(pos, ccmd) )
 		{
-		// commands with no parameters
-		case OP_NOP:
-			this->logging("nop"); break;
-		case OP_ASSIGN:
-			this->logging("assign"); break;
-		case OP_ASSIGN_ADD:
-			this->logging("assign add"); break;
-		case OP_ASSIGN_SUB:
-			this->logging("assign sub"); break;
-		case OP_ASSIGN_MUL:
-			this->logging("assign mul"); break;
-		case OP_ASSIGN_DIV:
-			this->logging("assign div"); break;
-		case OP_ASSIGN_XOR:
-			this->logging("assign xor"); break;
-		case OP_ASSIGN_AND:
-			this->logging("assign and"); break;
-		case OP_ASSIGN_OR:
-			this->logging("assign or"); break;
-		case OP_ASSIGN_RSH:
-			this->logging("assign rightshift"); break;
-		case OP_ASSIGN_LSH:
-			this->logging("assign leftshift"); break;
-		case OP_SELECT:
-			this->logging("select"); break;
-		case OP_LOG_OR:
-			this->logging("logic or"); break;
-		case OP_LOG_AND:
-			this->logging("logic and"); break;
-		case OP_BIN_OR:
-			this->logging("binary or"); break;
-		case OP_BIN_XOR:
-			this->logging("binary xor"); break;
-		case OP_BIN_AND:
-			this->logging("binary and"); break;
-		case OP_EQUATE:
-			this->logging("equal"); break;
-		case OP_UNEQUATE:
-			this->logging("uneqal"); break;
-		case OP_ISGT:
-			this->logging("compare greater then"); break;
-		case OP_ISGTEQ:
-			this->logging("compare greater/equal then"); break;
-		case OP_ISLT:
-			this->logging("compare less then"); break;
-		case OP_ISLTEQ:
-			this->logging("compare less/equal then"); break;
-		case OP_LSHIFT:
-			this->logging("leftshift"); break;
-		case OP_RSHIFT:
-			this->logging("rightshift"); break;
-		case OP_ADD:
-			this->logging("add"); break;
-		case OP_SUB:
-			this->logging("sub"); break;
-		case OP_MUL:
-			this->logging("mul"); break;
-		case OP_DIV:
-			this->logging("div"); break;
-		case OP_MOD:
-			this->logging("modulo"); break;
-		case OP_NOT:
-			this->logging("logic not"); break;
-		case OP_INVERT:
-			this->logging("binary invert"); break;
-		case OP_NEGATE:
-			this->logging("arithmetic negate"); break;
-		case OP_SIZEOF:
-			this->logging("sizeof"); break;
-		case OP_CAST:
-			this->logging("cast"); break;
-		case OP_PREADD:
-			this->logging("preop add"); break;
-		case OP_PRESUB:
-			this->logging("preop sub"); break;
-		case OP_POSTADD:
-			this->logging("postop add"); break;
-		case OP_POSTSUB:
-			this->logging("postop sub"); break;
-		case OP_MEMBER:
-			this->logging("member access"); break;
-		case OP_ARRAY:
-			this->logging("array access"); break;
-		case OP_RESIZE:
-			this->logging("array resize"); break;
-		case OP_CLEAR:
-			this->logging("clear variable"); break;
-		case OP_POP:
-			this->logging("pop stack"); break;
-		case OP_END:
-			this->logging("quit"); break;
-		case OP_RETURN:
-			this->logging("return"); break;
+			switch( ccmd.cCommand )
+			{
+			// commands with no parameters
+			case OP_NOP:
+				this->logging("nop"); break;
+			case OP_ASSIGN:
+				this->logging("assign"); break;
+			case OP_ASSIGN_ADD:
+				this->logging("assign add"); break;
+			case OP_ASSIGN_SUB:
+				this->logging("assign sub"); break;
+			case OP_ASSIGN_MUL:
+				this->logging("assign mul"); break;
+			case OP_ASSIGN_DIV:
+				this->logging("assign div"); break;
+			case OP_ASSIGN_XOR:
+				this->logging("assign xor"); break;
+			case OP_ASSIGN_AND:
+				this->logging("assign and"); break;
+			case OP_ASSIGN_OR:
+				this->logging("assign or"); break;
+			case OP_ASSIGN_RSH:
+				this->logging("assign rightshift"); break;
+			case OP_ASSIGN_LSH:
+				this->logging("assign leftshift"); break;
+			case OP_SELECT:
+				this->logging("select"); break;
+			case OP_LOG_OR:
+				this->logging("logic or"); break;
+			case OP_LOG_AND:
+				this->logging("logic and"); break;
+			case OP_BIN_OR:
+				this->logging("binary or"); break;
+			case OP_BIN_XOR:
+				this->logging("binary xor"); break;
+			case OP_BIN_AND:
+				this->logging("binary and"); break;
+			case OP_EQUATE:
+				this->logging("equal"); break;
+			case OP_UNEQUATE:
+				this->logging("uneqal"); break;
+			case OP_ISGT:
+				this->logging("compare greater then"); break;
+			case OP_ISGTEQ:
+				this->logging("compare greater/equal then"); break;
+			case OP_ISLT:
+				this->logging("compare less then"); break;
+			case OP_ISLTEQ:
+				this->logging("compare less/equal then"); break;
+			case OP_LSHIFT:
+				this->logging("leftshift"); break;
+			case OP_RSHIFT:
+				this->logging("rightshift"); break;
+			case OP_ADD:
+				this->logging("add"); break;
+			case OP_SUB:
+				this->logging("sub"); break;
+			case OP_MUL:
+				this->logging("mul"); break;
+			case OP_DIV:
+				this->logging("div"); break;
+			case OP_MOD:
+				this->logging("modulo"); break;
+			case OP_NOT:
+				this->logging("logic not"); break;
+			case OP_INVERT:
+				this->logging("binary invert"); break;
+			case OP_NEGATE:
+				this->logging("arithmetic negate"); break;
+			case OP_SIZEOF:
+				this->logging("sizeof"); break;
+			case OP_PREADD:
+				this->logging("preop add"); break;
+			case OP_PRESUB:
+				this->logging("preop sub"); break;
+			case OP_POSTADD:
+				this->logging("postop add"); break;
+			case OP_POSTSUB:
+				this->logging("postop sub"); break;
+			case OP_MEMBER:
+				this->logging("member access"); break;
+			case OP_ARRAY:
+				this->logging("array access"); break;
+			case OP_CLEAR:
+				this->logging("clear variable"); break;
+			case OP_POP:
+				this->logging("pop stack"); break;
+			case OP_END:
+				this->logging("quit"); break;
+			case OP_RETURN:
+				this->logging("return"); break;
 
-		// commands with int (float) parameters (4 bytes)
-		case OP_START:
-			this->logging("start (progsize=%i)", getInt(pos)); break;
-		case OP_PUSH_ADDR:
-			this->logging("push Addr '%i'", getInt(pos)); break;
-		case OP_PUSH_INT1:
-		case OP_PUSH_INT2:
-		case OP_PUSH_INT3:
-		case OP_PUSH_INT4:
-			this->logging("push int '%i'", getInt(pos)); break;
-		case OP_PUSH_FLOAT:
-			this->logging("push float '%f'", getFloat(pos)); break;
-		case VX_BREAK:
-			this->logging("break (error: not converted) '%i'", getInt(pos)); break;
-		case VX_CONT:
-			this->logging("continue (error: not converted) '%i'", getInt(pos)); break;
-		case VX_GOTO:
-			this->logging("jump to '%i'", getInt(pos)); break;
-		case OP_PUSH_TEMPVAR1:
-		case OP_PUSH_TEMPVAR2:
-		case OP_PUSH_TEMPVAR3:
-		case OP_PUSH_TEMPVAR4:
-			this->logging("push temp variable '%i'", getInt(pos)); break;
-		case OP_PUSH_TEMPVALUE1:
-		case OP_PUSH_TEMPVALUE2:
-		case OP_PUSH_TEMPVALUE3:
-		case OP_PUSH_TEMPVALUE4:
-			this->logging("push value from temp variable '%i'", getInt(pos)); break;
+			// commands with int (float) parameters (4 bytes)
+			case OP_START:
+				this->logging("start (progsize=%i)", ccmd.cParam1); break;
+			case OP_PUSH_ADDR:
+				this->logging("push addr '%i'", ccmd.cParam1); break;
+			case OP_PUSH_INT1:
+				this->logging("push uchar '%i'", ccmd.cParam1); break;
+			case OP_PUSH_INT2:
+				this->logging("push short '%i'", ccmd.cParam1); break;
+			case OP_PUSH_INT3:
+				this->logging("push int3 '%i'", ccmd.cParam1); break;
+			case OP_PUSH_INT4:
+				this->logging("push int '%i'", ccmd.cParam1); break;
+			case OP_PUSH_FLOAT:
+				this->logging("push float '%f'", int2float(ccmd.cParam1) ); break;
+			case OP_PUSH_PARAM:
+				this->logging("push function parameter '%i'", ccmd.cParam1); break;
+			case OP_PUSH_TEMPVAR1:
+			case OP_PUSH_TEMPVAR2:
+			case OP_PUSH_TEMPVAR3:
+			case OP_PUSH_TEMPVAR4:
+				this->logging("push temp variable '%i'", ccmd.cParam1); break;
+			case OP_PUSH_TEMPVALUE1:
+			case OP_PUSH_TEMPVALUE2:
+			case OP_PUSH_TEMPVALUE3:
+			case OP_PUSH_TEMPVALUE4:
+				this->logging("push value from temp variable '%i'", ccmd.cParam1); break;
+			case OP_RESIZE:
+				this->logging("array resize (%i dimension(s))", ccmd.cParam1); break;
+			case OP_CAST:
+				this->logging("cast to %i", ccmd.cParam1); break;
+			case OP_VECTORIZE1:
+			case OP_VECTORIZE2:
+			case OP_VECTORIZE3:
+			case OP_VECTORIZE4:
+				this->logging("vectorize '%i' elements", ccmd.cParam1); break;
+
+			case OP_NIF:
+				this->logging("conditional jump on false to '%i'", ccmd.cParam1); break;
+			case OP_IF:
+				this->logging("conditional jump on true to '%i'", ccmd.cParam1); break;
+			case OP_GOTO:
+				this->logging("jump to '%i'", ccmd.cParam1); break;
+			case VX_BREAK:
+				this->logging("break (error: not converted) '%i'", ccmd.cParam1); break;
+			case VX_CONT:
+				this->logging("continue (error: not converted) '%i'", ccmd.cParam1); break;
+			case VX_GOTO:
+				this->logging("jump to '%i' (error: not converted)", ccmd.cParam1); break;
+			case VX_LABEL:
+			{
+				size_t inx = ccmd.cParam1;
+				this->logging("label '%s' jump to %i (error: not converted)", getLabelName(inx), getLabelTarget(inx)); break;
+			}
+				
+
+			// commands with int and char parameters
+			case OP_CALLSCRIPT1:
+			case OP_CALLSCRIPT2:
+			case OP_CALLSCRIPT3:
+			case OP_CALLSCRIPT4:
+				this->logging("call script '%i' (%i args)", ccmd.cParam1, ccmd.cParam2); break;
+			case OP_CALLBUILDIN1:
+			case OP_CALLBUILDIN2:
+			case OP_CALLBUILDIN3:
+			case OP_CALLBUILDIN4:
+				this->logging("call buildin '%i' (%i args)", ccmd.cParam1, ccmd.cParam2); break;
 
 
-		case OP_NIF:
-			this->logging("conditional jump on false to '%i'", getInt(pos)); break;
-		case OP_IF:
-			this->logging("conditional jump on true to '%i'", getInt(pos)); break;
-		case OP_GOTO:
-		{
-			size_t inx = getInt(pos);
-			this->logging("goto label '%s' jump to %i", getLabelName(inx), getLabelTarget(inx)); break;
-		}
-		case VX_LABEL:
-		{
-			size_t inx = getInt(pos);
-			this->logging("label '%s' jump to %i", getLabelName(inx), getLabelTarget(inx)); break;
-		}
-			
+			// commands with string parameters (sizeof(pointer) bytes)
+			case OP_PUSH_STRING:
+				this->logging("push string '%s'", ccmd.cString); break;
+			case OP_PUSH_VAR:
+				this->logging("push global variable '%s'", ccmd.cString); break;
+			case OP_PUSH_VALUE:
+				this->logging("push value from global variable '%s'", ccmd.cString); break;
+			}
 
-		// commands with int and char parameters (5 bytes)
-		case OP_CALLSCRIPT1:
-		case OP_CALLSCRIPT2:
-		case OP_CALLSCRIPT3:
-		case OP_CALLSCRIPT4:
-		{	
-			int p = getInt(pos);
-			int a = getChar(pos);
-			this->logging("call script '%i' (%i args)", p, a); break;
-		}
-		case OP_CALLBUILDIN1:
-		case OP_CALLBUILDIN2:
-		case OP_CALLBUILDIN3:
-		case OP_CALLBUILDIN4:
-		{
-			int p = getInt(pos);
-			int a = getChar(pos);
-			this->logging("call buildin '%i' (%i args)", p, a); break;
-		}
-
-
-		// commands with string parameters (sizeof(pointer) bytes)
-		case OP_PUSH_STRING:
-			this->logging("push string '%s'", getString(pos)); break;
-		case OP_PUSH_VAR:
-			this->logging("push global variable '%s'", getString(pos)); break;
-		case OP_PUSH_VALUE:
-			this->logging("push value from global variable '%s'", getString(pos)); break;
 		}
 	}
 };
@@ -1841,12 +1835,12 @@ class CScriptCompiler : public CLogger
 		CFLAG_GLOBAL	= 0x00000002,	// a global variable/value is required
 		CFLAG_USE_BREAK	= 0x00000004,	// allow break + jump offset 
 		CFLAG_USE_CONT	= 0x00000008	// allow continue + jump offset 
-
 	};
 	///////////////////////////////////////////////////////
 	// variable types
 	typedef enum
 	{
+		VAR_PARAM,		// function parameter
 		VAR_TEMP,		// temp variable
 		VAR_GACCOUNT,	// global account variable
 		VAR_GCHAR,		// global character variable
@@ -1894,6 +1888,7 @@ class CScriptCompiler : public CLogger
 	///////////////////////////////////////////////////////////////////////////
 	// class data
 	TslistDCT<CVariable>	cTempVar;		// variable list
+	TslistDCT<CVariable>	cParaVar;		// parameter list
 	CScriptEnvironment		&cEnv;			// the current script environment
 
 
@@ -1914,6 +1909,21 @@ class CScriptCompiler : public CLogger
 	bool isVariable(const char* name, size_t &inx)
 	{
 		return cTempVar.find(name,0, inx);
+	}
+	int insertParameter(const char* name, vartype t)
+	{
+		size_t inx;
+		size_t id = cTempVar.size();
+		cParaVar.insert( CVariable(name,id,t) );
+		if( cParaVar.find(name, 0, inx) )
+		{
+			return inx;
+		}
+		return -1;
+	}
+	bool isParameter(const char* name, size_t &inx)
+	{
+		return cParaVar.find(name,0, inx);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1938,18 +1948,18 @@ private:
 	// debug functions
 	void PrintTerminal(const parsenode &node)
 	{
-//		const char *lp = (node.Type()==1)?node.Lexeme():node.SymbolName();
-//		this->logging("%s", (lp)?lp:"");
+		const char *lp = (node.Type()==1)?node.Lexeme():node.SymbolName();
+		this->logging("%s", (lp)?lp:"");
 	}
 	void PrintChildTerminals(const parsenode &node)
 	{
-//		const char *lp;
-//		size_t i;
-//		for(i=0; i<node.count(); i++)
-//		{
-//			lp = (node[i].Type()==1)?node[i].Lexeme():node[i].SymbolName();
-//			this->logging("%s ", (lp)?lp:"");
-//		}
+		const char *lp;
+		size_t i;
+		for(i=0; i<node.count(); i++)
+		{
+			lp = (node[i].Type()==1)?node[i].Lexeme():node[i].SymbolName();
+			this->logging("%s ", (lp)?lp:"");
+		}
 	}
 	//////////////////////////////////////////////////////////////////////////
 	// main compile loop, is called recursively with all parse tree nodes
@@ -1986,9 +1996,8 @@ private:
 				this->logging("%s - %s ", node.SymbolName(), node.Lexeme());
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
-					prog.appendCommand(OP_PUSH_INT4);
-					prog.appendInt( axtoi(node.Lexeme()) );
 
+					prog.appendVarCommand( OP_PUSH_INT1, axtoi(node.Lexeme()) );
 					this->logging("accepted\n");
 					accept = true;
 				}	
@@ -2004,9 +2013,7 @@ private:
 				this->logging("%s - %s ", node.SymbolName(), node.Lexeme());
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
-					prog.appendCommand(OP_PUSH_INT4);
-					prog.appendInt( atoi(node.Lexeme()) );
-
+					prog.appendVarCommand( OP_PUSH_INT1, atoi(node.Lexeme()) );
 					this->logging("accepted\n");
 					accept = true;
 				}	
@@ -2022,9 +2029,7 @@ private:
 				this->logging("%s - %s ", node.SymbolName(), node.Lexeme());
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
-					prog.appendCommand(OP_PUSH_INT4);
-					prog.appendInt( (node.Lexeme())? node.Lexeme()[1]:0 );
-
+					prog.appendVarCommand( OP_PUSH_INT1, (node.Lexeme())? node.Lexeme()[1]:0 );
 					this->logging("accepted\n");
 					accept = true;
 				}	
@@ -2041,7 +2046,7 @@ private:
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
 					prog.appendCommand(OP_PUSH_FLOAT);
-					prog.appendFloat( (float)atof(node.Lexeme()) );
+					prog.appendInt( CProgramm::float2int( (float)atof(node.Lexeme()) ) );
 
 					this->logging("accepted\n");
 					accept = true;
@@ -2091,9 +2096,7 @@ private:
 				this->logging("PT_MINUS - ");
 				if( 0 == (flags&CFLAG_LVALUE) )
 				{
-					prog.appendCommand(OP_PUSH_INT4);
-					prog.appendInt( 0 );
-
+					prog.appendVarCommand( OP_PUSH_INT1, 0 );
 					this->logging(" menu element accepted\n");
 					accept = true;
 				}	
@@ -2112,7 +2115,7 @@ private:
 					if( prog.isLabel(node.Lexeme(), inx) )
 					{	// a label
 						prog.appendCommand(VX_LABEL);
-						prog.appendInt( inx );
+						prog.appendAddr( inx );
 						accept = true;
 
 						this->logging("Label accepted: %s - %s (%i)\n", node.SymbolName(), node.Lexeme(), inx);
@@ -2120,81 +2123,90 @@ private:
 					////////////////////////////
 					// else check for constant keyword
 					////////////////////////////
-					// else check for parameter keyword
+					// else check for global parameter keyword
 					////////////////////////////
-					else
+					else 
 					{	// a variable name
-						// temp variable or global storage
+						// function parameter, temp variable or global storage
 						size_t inx;
-						bool first = false;
-						accept = isVariable(node.Lexeme(),inx);
-						if( !accept )
-						{	// first encounter on an undeclared variable
-							// assume declaration as "auto temp"
-							this->logging("first encounter of variable '%s', assuming type of \"auto temp\"\n", node.Lexeme());
-							first = true;
+						accept = isParameter(node.Lexeme(), inx);
+						if( accept )
+						{	// a function parameter
+							prog.appendCommand(OP_PUSH_PARAM);
+							prog.appendChar(inx);
 
-							insertVariable( node.Lexeme(), VAR_TEMP);
+							this->logging("Local Function Parameter accepted: %s - %s (%i)\n", node.SymbolName(), node.Lexeme(), inx);
+						}
+						else
+						{	// a variable
+							bool first = false;
 							accept = isVariable(node.Lexeme(),inx);
-						}
+							if( !accept )
+							{	// first encounter on an undeclared variable
+								// assume declaration as "auto temp"
+								this->logging("first encounter of variable '%s', assuming type of \"auto temp\"\n", node.Lexeme());
+								first = true;
 
-						if(accept)
-						{
-							if( 0!=(flags&CFLAG_GLOBAL) && cTempVar[inx].type == VAR_TEMP)
-							{	// only a temp variable but have been asked for a global one
-
-								this->logging("Global Variable required: %s - %s\n", node.SymbolName(), node.Lexeme());
-								accept = false;
+								insertVariable( node.Lexeme(), VAR_TEMP);
+								accept = isVariable(node.Lexeme(),inx);
 							}
-						}
 
-						if(accept)
-						{
-							if( cTempVar[inx].type == VAR_TEMP )
-							{	// a local temp variable 
-								if( first || 0 != (flags&CFLAG_LVALUE) )
-								{
-									prog.appendCommand(OP_PUSH_TEMPVAR4);
-									prog.appendInt( cTempVar[inx].id );
+							if(accept)
+							{
+								if( 0!=(flags&CFLAG_GLOBAL) && cTempVar[inx].type == VAR_TEMP)
+								{	// only a temp variable but have been asked for a global one
 
-									this->logging("Local Variable Name accepted: %s - %s (%i)\n", node.SymbolName(), node.Lexeme(), cTempVar[inx].id);
+									this->logging("Global Variable required: %s - %s\n", node.SymbolName(), node.Lexeme());
+									accept = false;
+								}
+							}
 
-									if(first)
+							if(accept)
+							{
+								if( cTempVar[inx].type == VAR_TEMP )
+								{	// a local temp variable 
+									if( first || 0 != (flags&CFLAG_LVALUE) )
 									{
-										prog.appendCommand(OP_CLEAR);
-										this->logging("initialisation of local variable\n");
+										prog.appendVarCommand( OP_PUSH_TEMPVAR1, cTempVar[inx].id );
+
+										this->logging("Local Variable Name accepted: %s - %s (%i)\n", node.SymbolName(), node.Lexeme(), cTempVar[inx].id);
+
+										if(first)
+										{
+											prog.appendCommand(OP_CLEAR);
+											this->logging("initialisation of local variable\n");
+										}
+									}
+									else
+									{
+										prog.appendVarCommand( OP_PUSH_TEMPVALUE1, cTempVar[inx].id );
+
+										this->logging("Local Variable Value accepted: %s - %s (%i)\n", node.SymbolName(), node.Lexeme(), cTempVar[inx].id);
 									}
 								}
 								else
-								{
-									prog.appendCommand(OP_PUSH_TEMPVALUE4);
-									prog.appendInt( cTempVar[inx].id );
+								{	// a global variable
+									if( 0 != (flags&CFLAG_LVALUE) )
+									{
+										prog.appendCommand(OP_PUSH_VAR);
+										prog.appendString( node.Lexeme() );
 
-									this->logging("Local Variable Value accepted: %s - %s (%i)\n", node.SymbolName(), node.Lexeme(), cTempVar[inx].id);
-								}
-							}
-							else
-							{	// a global variable
-								if( 0 != (flags&CFLAG_LVALUE) )
-								{
-									prog.appendCommand(OP_PUSH_VAR);
-									prog.appendString( node.Lexeme() );
+										this->logging("Global Variable Name accepted: %s - %s\n", node.SymbolName(), node.Lexeme());
+									}
+									else
+									{
+										prog.appendCommand(OP_PUSH_VALUE);
+										prog.appendString( node.Lexeme() );
 
-									this->logging("Global Variable Name accepted: %s - %s\n", node.SymbolName(), node.Lexeme());
-								}
-								else
-								{
-									prog.appendCommand(OP_PUSH_VALUE);
-									prog.appendString( node.Lexeme() );
-
-									this->logging("Global Variable Value accepted: %s - %s\n", node.SymbolName(), node.Lexeme());
+										this->logging("Global Variable Value accepted: %s - %s\n", node.SymbolName(), node.Lexeme());
+									}
 								}
 							}
 						}
-					}
-					if(!accept)
-					{
-						this->logging("Error in variable statement: %s - %s\n", node.SymbolName(), node.Lexeme());
+						if(!accept)
+						{
+							this->logging("Error in variable statement: %s - %s\n", node.SymbolName(), node.Lexeme());
+						}
 					}
 
 				}
@@ -2220,7 +2232,7 @@ private:
 				accept = CompileMain(node[0], level+1, flags, prog, userval);
 			}
 			else
-			// check the childs
+			// process the childs depending on this node
 			switch(node.Symbol())
 			{
 			///////////////////////////////////////////////////////////////////
@@ -2228,76 +2240,151 @@ private:
 			case PT_VARDECL:
 			{	// <Var Decl> ::= <Type> <Var List>  ';'
 				// ignore <Type> here as it was done in the pre-run
-				// just go into the <Var List>
-
-				// compile the variable list
-				accept = CompileMain(node[1], level+1, flags, prog, userval);
+				// just compile the variable list
+				int varcount; // not necessary though but maybe nice to have
+				if( node[1].Symbol() == PT_VARLIST || node[1].Symbol() == PT_VAR )
+					accept = CompileMain(node[1], level+1, flags, prog, varcount);
+				else
+				{	// <Type> Id ;
+					size_t inx;
+					accept = isVariable(node[1].Lexeme(),inx);
+					if( accept && cTempVar[inx].type==VAR_TEMP )
+					{						
+						this->logging("Local Variable Name accepted: %s - %s (%i)\n", node[1].SymbolName(), node[1].Lexeme(), cTempVar[inx].id);
+						prog.appendVarCommand( OP_PUSH_TEMPVAR1, cTempVar[inx].id );
+						this->logging("clear variable\n");
+						prog.appendCommand(OP_CLEAR);
+					}
+				}
+				this->logging("clear stack\n");
+				prog.appendCommand(OP_POP);
 				break;
 			}
 			case PT_VAR:
-			{	// <Var>      ::= Id <Array>
-				//              | Id <Array> '=' <Op If>
-				// basically accept this statement
-				accept = true;
-				bool onStack = false;
-
-				if(node[1].Symbol()==PT_ARRAY && node[1].count()>0)
-				{	// compile the array resizer
-					// put the target as variable, 
-					// this should check for L-Values
-					accept &= CompileMain(node[0], level+1, flags | CFLAG_LVALUE, prog, userval);
-					// put the size argument
-					accept &= CompileMain(node[1][1], level+2, flags & ~CFLAG_LVALUE, prog, userval);
-
-					this->logging("PT_OPRESIZE\n");
-					prog.appendCommand(OP_RESIZE);
-
-					onStack = true;
-				}
-
-				if( accept && node.count()==4 )
-				{	// assignment
-
-					if( !onStack )
-					{	// put the target as variable, 
-						// this should check for L-Values
-						accept &= CompileMain(node[0], level+1, flags | CFLAG_LVALUE, prog, userval);
-					}
-					
-					// put the source
-					// the result will be as single value (int, string or float) on stack
-					accept &= CompileMain(node[3], level+1, flags & ~CFLAG_LVALUE, prog, userval);
-
-					this->logging("PT_OPASSIGN\n");
-					prog.appendCommand(OP_ASSIGN);
-					onStack = true;
-				}
-				else
-				{	// need to clear local variables but leave globals as they are
+			{	//	<Var>      ::= Id <Array>
+				//				 | Id <Array> '=' <MultiList>
+				//				 | Id 
+				//				 | Id         '=' <Op If>
+				switch( node.count() )
+				{
+				case 1:	// Id
+				{
 					size_t inx;
 					accept = isVariable(node[0].Lexeme(),inx);
-					if( accept && cTempVar[inx].type==VAR_TEMP )
-					{
-						if( !onStack )
-						{	// put the target as variable, 
-							// this should check for L-Values
-							accept &= CompileMain(node[0], level+1, flags | CFLAG_LVALUE, prog, userval);
-						}
-						
-						prog.appendCommand(OP_CLEAR);
+					if(accept && cTempVar[inx].type==VAR_TEMP)
+					{					
+						this->logging("Local Variable Name accepted: %s - %s (%i)\n", node.SymbolName(), node.Lexeme(), cTempVar[inx].id);
+						prog.appendVarCommand( OP_PUSH_TEMPVAR1, cTempVar[inx].id );
 						this->logging("clear variable\n");
-
-						onStack = true;
+						prog.appendCommand(OP_CLEAR);
 					}
+					break;
 				}
+				case 3:	// Id '=' <Op If>
+				{
+					// put the target as variable, this should check for L-Values
+					accept  = CompileMain(node[0], level+1, flags | CFLAG_LVALUE, prog, userval);
 
-				if( onStack )
-				{	// clear the stack
-					prog.appendCommand(OP_POP);
-					this->logging("clear stack\n");
+					// the result will be as single value (int, string or float) on stack
+					accept &= CompileMain(node[2], level+1, flags & ~CFLAG_LVALUE, prog, userval);
+					this->logging("PT_OPASSIGN\n");
+					prog.appendCommand(OP_ASSIGN);
+					break;
+				}
+				case 2:	// Id <Array>
+				{
+					// put the target as variable, this should check for L-Values
+					accept  = CompileMain(node[0], level+1, flags | CFLAG_LVALUE, prog, userval);
+
+					// compile the array resizer
+					// put the size argument (inside node 1 is a "[ size ]" structure
+					if( node[1].Symbol()==PT_ARRAY )
+					{
+						int dimension=0;
+						// compile size arguments
+						accept &= CompileMain(node[1], level+1, flags & ~CFLAG_LVALUE, prog, dimension);
+						if(dimension<=255)
+						{
+							this->logging("PT_OPRESIZE\n");
+							prog.appendCommand(OP_RESIZE);
+							prog.appendChar(dimension);
+						}
+						else
+						{
+							this->logging("only 255 dimensions supported\n");
+							accept=false;
+						}
+					}
+					else
+					{	// no array to init
+						accept = false;
+					}
+					break;
+				}
+				case 4:	// Id <Array> '=' <MultiList>
+				{	
+					// put the target as variable, this should check for L-Values
+					accept  = CompileMain(node[0], level+1, flags | CFLAG_LVALUE, prog, userval);
+
+					if( node[1].Symbol()==PT_ARRAY )
+					{
+						// ignore the array resizer
+						// since the dimension is given by the data
+					}
+					else
+					{	// no array to init
+						accept = false;
+					}
+					if(accept)
+					{	/////////////////////////////////////////////
+						// get number of initialisation elements
+						accept &= CompileMain(node[3], level+1, flags & ~CFLAG_LVALUE, prog, userval);
+						// assign the initial
+						this->logging("PT_OPASSIGN - \n");
+						prog.appendCommand(OP_ASSIGN);
+					}
+					break;
+				}
+				}//end switch
+				break;
+			}
+			case PT_ARRAY:
+			{	// '[' val ']' <Array>
+				int elem;
+				accept  = CompileMain(node[1], level+1, flags & ~CFLAG_LVALUE, prog, elem);
+				userval++;
+				if(node.count()==4)// next dimension
+					accept &= CompileMain(node[3], level+1, flags & ~CFLAG_LVALUE, prog, userval);
+				break;
+			}
+			case PT_MULTILIST:
+			{	// '{' <InitList> '}'
+				int dimension = 0;		
+				accept  = CompileMain(node[1], level+1, flags & ~CFLAG_LVALUE, prog, dimension);
+				if(dimension==0 && accept) dimension++; // single element (not a initlist)
+				// vectorize the elements on the stack
+				prog.appendVarCommand( OP_VECTORIZE1, dimension );
+				break;
+			}
+			case PT_INITLIST:
+			{	// ::= <Op If> ',' <InitList>
+				// 	 | <MultiList> ',' <InitList>
+				// 	 | <Op If>
+				// 	 | <MultiList>
+				accept = true;
+				for(i=0; i<node.count(); i++)
+				{
+					if(node[i].Symbol()==PT_INITLIST)
+						accept &= CompileMain(node[i], level+1, flags & ~CFLAG_LVALUE, prog, userval);
+					else if(node[i].Symbol()!=PT_COMMA)
+					{
+						userval++;
+						accept &= CompileMain(node[i], level+1, flags & ~CFLAG_LVALUE, prog, userval);
+					}
 				}
 				break;
 			}
+
 
 			///////////////////////////////////////////////////////////////////
 			// a label
@@ -2327,11 +2414,11 @@ private:
 			case PT_GOTOSTMS:
 			{	// <Goto Stms>  ::= goto Id ';'
 
-				prog.appendCommand(OP_GOTO);
+				prog.appendCommand(VX_GOTO);
 				int inx = prog.insertLabel( node[1].Lexeme() );
 				if(inx>=0)
 				{
-					prog.appendInt( inx );
+					prog.appendAddr( inx );
 					accept = true;
 				}
 				break;
@@ -2402,7 +2489,7 @@ private:
 						// process the <something>, need values
 						accept = CompileMain(node[1], level+1,flags & ~CFLAG_LVALUE, prog, paramcnt); // need values
 
-						// if not a call list as parameter
+						// if not a call list as parameter it is a single parameter
 						if( !CheckNonTerminal(node[1], PT_CALLLIST) )
 							paramcnt++;
 
@@ -2421,7 +2508,7 @@ private:
 						id = cEnv.getFunctionID( node[0].Lexeme() );
 						if( id>=0 )
 						{	// found in function table
-							command = OP_CALLBUILDIN4;
+							command = OP_CALLBUILDIN1;
 							if( (size_t)paramcnt < cEnv.function(id).Param() )
 							{
 								this->logging("number of parameters insufficient (%i given, %i needed) - ",paramcnt,cEnv.function(id).Param());
@@ -2433,7 +2520,7 @@ private:
 							id = cEnv.getScriptID( node[0].Lexeme() );
 							if( id>=0 )
 							{
-								command = OP_CALLSCRIPT4;
+								command = OP_CALLSCRIPT1;
 							}
 							else
 							{
@@ -2445,10 +2532,8 @@ private:
 
 					if(accept)
 					{
-						// push the command
-						prog.appendCommand(command);
-						// push the function ID
-						prog.appendInt(id);
+						// push the command and function ID
+						prog.appendVarCommand( command, id );
 						prog.appendChar(paramcnt);
 						this->logging("accepting call statement: ");
 						PrintChildTerminals(node);
@@ -2487,7 +2572,7 @@ private:
 						// process the <something>, need values
 						accept = CompileMain(node[2], level+1,flags & ~CFLAG_LVALUE, prog, paramcnt); // need values
 
-						// if not a expression list as parameter
+						// if not a expression list as parameter it is a single parameter
 						if( !CheckNonTerminal(node[2], PT_EXPRLIST) )
 							paramcnt++;
 
@@ -2507,7 +2592,7 @@ private:
 						id = cEnv.getFunctionID( node[0].Lexeme() );
 						if( id>=0 )
 						{	// found in function table
-							command = OP_CALLBUILDIN4;
+							command = OP_CALLBUILDIN1;
 							if( (size_t)paramcnt < cEnv.function(id).Param() )
 							{
 								this->logging("number of parameters insufficient (%i given, %i needed) - ",paramcnt,cEnv.function(id).Param());
@@ -2519,7 +2604,7 @@ private:
 							id = cEnv.getScriptID( node[0].Lexeme() );
 							if( id>=0 )
 							{
-								command = OP_CALLSCRIPT4;
+								command = OP_CALLSCRIPT1;
 							}
 							else
 							{
@@ -2529,10 +2614,8 @@ private:
 					}
 					if(accept)
 					{
-						// push the command
-						prog.appendCommand(command);
-						// push the function ID
-						prog.appendInt(id);
+						// push the command and function ID
+						prog.appendVarCommand( command, id );
 						prog.appendChar(paramcnt);
 
 						this->logging("accepting call statement: ");
@@ -2557,9 +2640,9 @@ private:
 			}
 			///////////////////////////////////////////////////////////////////
 			// comma seperated operands
-			case PT_VARLIST:
 			case PT_CALLLIST:
 			case PT_EXPRLIST:
+			case PT_VARLIST:
 			{	// go through childs, spare the comma
 				accept = true;
 				for(i=0; i<node.count() && accept; i++)
@@ -2569,7 +2652,8 @@ private:
 						accept = CompileMain(node[i], level+1,flags, prog, userval);
 
 						if( !CheckNonTerminal(node[i], PT_CALLLIST) &&
-							!CheckNonTerminal(node[i], PT_EXPRLIST) )
+							!CheckNonTerminal(node[i], PT_EXPRLIST) &&
+							!CheckNonTerminal(node[i], PT_VARLIST) )
 							userval++;
 					}
 				}
@@ -2630,12 +2714,12 @@ private:
 					accept = CompileMain(node[2], level+1,flags & ~CFLAG_LVALUE, prog, userval); // need the result on the stack
 					this->logging("Conditional Jump False -> Label1\n");
 					prog.appendCommand(OP_NIF);
-					size_t inspos1 = prog.appendInt(0);	// placeholder
+					size_t inspos1 = prog.appendAddr(0);	// placeholder
 					// put in <Normal Stm>
 					accept &= CompileMain(node[4], level+1,flags, prog, userval);
 					this->logging("Label1\n");
 					// calculate and insert the correct jump 
-					prog.replaceInt( prog.getCurrentPosition() ,inspos1);
+					prog.replaceAddr( prog.getCurrentPosition() ,inspos1);
 				}
 				else if( node.count() ==7 && CheckTerminal(node[0], PT_IF) )
 				{	// if '(' <Expr> ')' <Normal Stm> else <Normal Stm>
@@ -2643,19 +2727,19 @@ private:
 					accept = CompileMain(node[2], level+1,flags & ~CFLAG_LVALUE, prog, userval); // need the result on the stack
 					this->logging("Conditional Jump False -> Label1\n");
 					prog.appendCommand(OP_NIF);
-					size_t inspos1 = prog.appendInt(0);	// placeholder
+					size_t inspos1 = prog.appendAddr(0);	// placeholder
 					// put in <Normal Stm>
 					accept &= CompileMain(node[4], level+1,flags, prog, userval);
 					this->logging("Goto -> Label2\n");
-					prog.appendCommand(VX_GOTO);
-					size_t inspos2 = prog.appendInt(0);	// placeholder
+					prog.appendCommand(OP_GOTO);
+					size_t inspos2 = prog.appendAddr(0);	// placeholder
 					this->logging("Label1\n");
 					// calculate and insert the correct jump 
-					prog.replaceInt( prog.getCurrentPosition() ,inspos1);
+					prog.replaceAddr( prog.getCurrentPosition() ,inspos1);
 					// put in <Normal Stm2>
 					accept &= CompileMain(node[6], level+1,flags, prog, userval);
 					this->logging("Label2\n");
-					prog.replaceInt( prog.getCurrentPosition(), inspos2);			
+					prog.replaceAddr( prog.getCurrentPosition(), inspos2);			
 				}
 				else if( node.count() ==9 && CheckTerminal(node[0], PT_FOR) )
 				{	// for '(' <Arg> ';' <Arg> ';' <Arg> ')' <Normal Stm>
@@ -2670,7 +2754,7 @@ private:
 
 					this->logging("Conditional Jump False -> Label2\n");
 					prog.appendCommand(OP_NIF);
-					size_t inspos2 = prog.appendInt(0);	// placeholder
+					size_t inspos2 = prog.appendAddr(0);	// placeholder
 
 					// execute the loop body
 					size_t rstart = prog.getCurrentPosition();
@@ -2685,12 +2769,12 @@ private:
 
 					this->logging("Goto -> Label1\n");
 					size_t srcpos1=prog.getCurrentPosition();
-					prog.appendCommand(VX_GOTO);
-					prog.appendInt(tarpos1);
+					prog.appendCommand(OP_GOTO);
+					prog.appendAddr(tarpos1);
 
 					this->logging("Label2\n");
 					size_t tarpos2 = prog.getCurrentPosition();
-					prog.replaceInt( tarpos2 ,inspos2);
+					prog.replaceAddr( tarpos2 ,inspos2);
 
 					// convert break -> goto Label2
 					// convert continue -> goto Label1
@@ -2709,7 +2793,7 @@ private:
 
 					this->logging("Conditional Jump False -> Label2\n");
 					prog.appendCommand(OP_NIF);
-					size_t inspos2 = prog.appendInt(0);	// placeholder offset
+					size_t inspos2 = prog.appendAddr(0);	// placeholder offset
 
 					// execute <Normal Stm>
 					size_t rstart = prog.getCurrentPosition();
@@ -2717,12 +2801,12 @@ private:
 					size_t rend = prog.getCurrentPosition();
 
 					this->logging("Goto -> Label1\n");
-					prog.appendCommand(VX_GOTO);
-					prog.appendInt(tarpos1);
+					prog.appendCommand(OP_GOTO);
+					prog.appendAddr(tarpos1);
 
 					this->logging("Label2\n");
 					size_t tarpos2 = prog.getCurrentPosition();
-					prog.replaceInt( tarpos2 ,inspos2);
+					prog.replaceAddr( tarpos2 ,inspos2);
 					// convert break -> goto Label2
 					// convert continue -> goto Label1
 					prog.replaceJumps(rstart,rend,VX_BREAK,tarpos2);
@@ -2744,7 +2828,7 @@ private:
 					accept &= CompileMain(node[4], level+1,flags & ~CFLAG_LVALUE, prog, userval);
 					this->logging("Conditional Jump True -> Label1\n");
 					prog.appendCommand(OP_IF);
-					prog.appendInt(tarpos1);
+					prog.appendAddr(tarpos1);
 
 					size_t tarpos2 = prog.getCurrentPosition();
 					accept &= CompileMain(node[6], level+1,flags & ~CFLAG_LVALUE, prog, userval);
@@ -2771,9 +2855,7 @@ private:
 
 						this->logging("create temporary variable %s (%i)\n", varname, inx);
 
-						prog.appendCommand(OP_PUSH_TEMPVAR4);
-						prog.appendInt( inx );
-
+						prog.appendVarCommand( OP_PUSH_TEMPVAR1, inx );
 						this->logging("push temporary variable %s (%i)\n", varname, inx);
 
 						// compile <Expr>
@@ -2827,8 +2909,7 @@ private:
 							{	// normal case statements, not the default case
 
 								// push the temprary variable
-								prog.appendCommand(OP_PUSH_TEMPVALUE4);
-								prog.appendInt( inx );
+								prog.appendVarCommand( OP_PUSH_TEMPVALUE1, inx );
 								this->logging("push temporary variable %s (%i)\n", varname, inx);
 
 								// push the case value
@@ -2839,12 +2920,12 @@ private:
 				
 								this->logging("Conditional Jump True -> CaseLabel%i\n", i);
 								prog.appendCommand(OP_IF);
-								stmlist[i].gotomarker = prog.appendInt(0);	// placeholder
+								stmlist[i].gotomarker = prog.appendAddr(0);	// placeholder
 							}
 						}
 						this->logging("Goto -> LabelEnd/Default\n");
-						prog.appendCommand(VX_GOTO);
-						defpos = prog.appendInt(0);	// placeholder
+						prog.appendCommand(OP_GOTO);
+						defpos = prog.appendAddr(0);	// placeholder
 						if(hasdefault>=0)
 							stmlist[hasdefault].gotomarker = defpos;
 					}
@@ -2859,7 +2940,7 @@ private:
 								// fill in the target address
 								address = prog.getCurrentPosition();
 								if( stmlist[i].gotomarker>0 )
-									prog.replaceInt(address, stmlist[i].gotomarker);
+									prog.replaceAddr(address, stmlist[i].gotomarker);
 
 								// compile the statement
 								accept = CompileMain(*stmlist[i].stm, level+1,flags | CFLAG_USE_BREAK, prog, userval);
@@ -2869,7 +2950,7 @@ private:
 
 						if(hasdefault<0)
 						{	// no default case, so redirect the last goto to the end
-							prog.replaceInt(rend, defpos);
+							prog.replaceAddr(rend, defpos);
 						}
 						// convert break -> goto REND
 						prog.replaceJumps(rstart,rend,VX_BREAK, rend );
@@ -2885,14 +2966,14 @@ private:
 				if( (node.count()>0 && node[0].Symbol() == PT_CONTINUE) && (0!=(flags & CFLAG_USE_CONT)) )
 				{
 					prog.appendCommand(VX_CONT);
-					prog.appendInt( 0 );
+					prog.appendAddr( 0 );
 					
 					accept = true;
 				}
 				else if( (node.count()>0 && node[0].Symbol() == PT_BREAK) && (0!=(flags & CFLAG_USE_BREAK)) )
 				{
 					prog.appendCommand(VX_BREAK);
-					prog.appendInt( 0 );
+					prog.appendAddr( 0 );
 
 					accept = true;
 				}
@@ -3022,14 +3103,27 @@ private:
 				break;
 			}
 			case PT_OPCAST:
-			{	// '(' <Type> ')' <Op Unary>
+			{	// '(' <Scalar> ')' <Op Unary>
 
 				// put the operands on stack, first the value then the target type
 				accept  = CompileMain(node[3], level+1,flags & ~CFLAG_LVALUE, prog, userval);
-				accept &= CompileMain(node[1], level+1,flags & ~CFLAG_LVALUE, prog, userval);
 
-				this->logging("PT_OPCAST\n");
-				prog.appendCommand(OP_CAST);
+				if( PT_AUTO != node[1].Symbol() )
+				{
+					if( PT_INT    == node[1].Symbol() ||
+						PT_STRING == node[1].Symbol() ||
+						PT_DOUBLE == node[1].Symbol() )
+					{						
+						prog.appendCommand(OP_CAST);
+						prog.appendChar( PT_INT );
+						this->logging("PT_OPCAST\n");
+					}
+					else
+					{
+						accept = false;
+						this->logging("wrong cast target\n");
+					}
+				}
 				break;
 			}
 			case PT_OPCOMPARE:
@@ -3091,19 +3185,19 @@ private:
 				accept  = CompileMain(node[0], level+1,flags & ~CFLAG_LVALUE, prog, userval);
 				this->logging("Conditional Jump False -> Label1\n");
 				prog.appendCommand(OP_NIF);
-				size_t inspos1 = prog.appendInt(0);	// placeholder
+				size_t inspos1 = prog.appendAddr(0);	// placeholder
 				// put in <Op If1>
 				accept &= CompileMain(node[2], level+1,flags & ~CFLAG_LVALUE, prog, userval);
 				this->logging("Goto -> Label2\n");
-				prog.appendCommand(VX_GOTO);
-				size_t inspos2 = prog.appendInt(0);	// placeholder
+				prog.appendCommand(OP_GOTO);
+				size_t inspos2 = prog.appendAddr(0);	// placeholder
 				this->logging("Label1\n");
 				// calculate and insert the correct jump offset
-				prog.replaceInt( prog.getCurrentPosition() ,inspos1);
+				prog.replaceAddr( prog.getCurrentPosition() ,inspos1);
 				// put in <Op If2>
 				accept &= CompileMain(node[4], level+1,flags & ~CFLAG_LVALUE, prog, userval);
 				this->logging("Label2\n");
-				prog.replaceInt( prog.getCurrentPosition() ,inspos2);
+				prog.replaceAddr( prog.getCurrentPosition() ,inspos2);
 
 				this->logging("PT_SELECT\n");
 				break;
@@ -3227,8 +3321,7 @@ private:
 					this->logging("PT_OPSIZEOF ID, \n");
 					break;
 				default:
-					prog.appendCommand(OP_PUSH_INT4);
-					prog.appendInt( 1 );
+					prog.appendVarCommand( OP_PUSH_INT1, 1 );
 					this->logging("PT_OPSIZEOF TYPE, put the corrosponding value on stack\n");
 					break;
 				}// end switch
@@ -3239,10 +3332,12 @@ private:
 			{	// '!'    <Op Unary>
 				// '~'    <Op Unary>
 				//'-'    <Op Unary>
+				//'+'    <Op Unary>
 
-				accept  = CompileMain(node[0], level+1,flags & ~CFLAG_LVALUE, prog, userval);
+				accept  = CompileMain(node[1], level+1,flags & ~CFLAG_LVALUE, prog, userval);
+
 				// put the operands on stack
-				switch( node[2].Symbol() )
+				switch( node[0].Symbol() )
 				{
 				case PT_EXCLAM:
 					this->logging("PT_OPUNARY_NOT\n");
@@ -3256,6 +3351,8 @@ private:
 					this->logging("PT_OPUNARY_NEGATE\n");
 					prog.appendCommand(OP_NEGATE);
 					break;
+				//case PT_PLUS:	// can just ignore
+				//	break;		
 				}// end switch
 				break;
 			}
@@ -3341,37 +3438,42 @@ private:
 		//              | <Var>
 
 		bool accept = false;
-		const parsenode *var;
 		if( node.Symbol()==PT_VARLIST )
-			var = &(node[0]);
-		else 
-			var = &node;	
-		if(var && var->Symbol()==PT_VAR)
-		{
-			if( var->count()>0 )
-			{	// <Var>  ::= Id <Array>
-				//			| Id <Array> '=' <Op If>
-				// only do the id here
-				if( var->operator[](0).Symbol()==PT_ID )
+		{	// <Var> , <VarList>
+			// <Var> , <Var> , ...
+			size_t i;
+			accept = true;
+			for(i=0; i<node.count(); i++)
+			{
+				if( node[i].Symbol() == PT_VARLIST ||
+					node[i].Symbol() == PT_VAR || 
+					node[i].Symbol() == PT_ID )
 				{
-					size_t id;
-					if( isVariable(var->operator[](0).Lexeme(), id) )
-					{
-						this->logging( "variable '%s'already defined\n", var->operator[](0).Lexeme());
-					}
-					else
-					{
-						insertVariable( var->operator[](0).Lexeme(), type);
-						accept = true;
-						this->logging( "accepting variable '%s' of type %i\n", var->operator[](0).Lexeme(), type);
-					}
+					accept &= CompileVarList(node[i], level, flags, prog, userval, type);
 				}
 			}
 		}
-		if( node.count()==3 )
-		{	// var ',' varlist
-			// go into "varlist"
-			accept &= CompileVarList(node[2], level, flags, prog, userval, type);
+		else if( node.Symbol() == PT_VAR )
+		{	// <Var>  ::= Id 
+			//			| Id '=' <Op If>
+			// <Var>  ::= Id <Array>
+			//			| Id <Array> '=' { <InitList> }
+			// only do the id here
+			accept = CompileVarList(node[0], level+1, flags, prog, userval, type);
+		}
+		else if( node.Symbol()==PT_ID )
+		{
+			size_t id;
+			if( isVariable(node.Lexeme(), id) )
+			{
+				this->logging( "variable '%s'already defined\n", node.Lexeme());
+			}
+			else
+			{
+				insertVariable( node.Lexeme(), type);
+				accept = true;
+				this->logging( "accepting variable '%s' of type %i\n", node.Lexeme(), type);
+			}
 		}
 		return accept;
 	}
@@ -3524,6 +3626,11 @@ private:
 				strcpy(id,name);
 			}
 		}
+		else if( node.Symbol()== PT_ID )
+		{	// just a simple id
+			strcpy(name, node.Lexeme() );
+			strcpy(id, node.Lexeme() );
+		}
 		return ret;
 	}
 	///////////////////////////////////////////////////////////////////////////
@@ -3604,7 +3711,7 @@ private:
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// counting number of parameters in nonterminal DParams and Params
-	size_t CompileParams(const parsenode &node)
+	size_t CompileParams(const parsenode &node, bool insert=false)
 	{	
 		size_t cnt = 0, i;
 
@@ -3619,7 +3726,19 @@ private:
 
 					if( !CheckNonTerminal(node[i], PT_DPARAMS) &&
 						!CheckNonTerminal(node[i], PT_PARAMS) )
+					{
 						cnt++;
+
+						if( CheckNonTerminal(node[i], PT_PARAM) )
+						{	// register the function parameters like variables
+							//	<Param>      ::= const <Scalar> Id
+							//				   |       <Scalar> Id
+							//				   | const          Id
+							//				   |                Id
+							insertParameter(node[i][node[i].count()-1].Lexeme(), VAR_PARAM);
+						}
+					}
+
 				}
 			}
 		}
@@ -3711,8 +3830,9 @@ public:
 
 				if( CheckTerminal(node[1], PT_ID) )
 				{
+					cTempVar.clear(); // clear tempvars here
 					// count parameters (will return 0 when using an incorrect nonterminal, which is correct)
-					size_t cnt = CompileParams(node[3]);
+					size_t cnt = CompileParams(node[3], true);
 					// generate a new function script
 					int pos = cEnv.addFunction( node[1].Lexeme(), cnt );
 					if( pos>=0 )
@@ -3726,8 +3846,6 @@ public:
 						}
 						else
 						{
-							cTempVar.clear();
-
 							prog.appendCommand(OP_START);
 							size_t sizepos=prog.appendInt(0);
 							if( CompileLabels(node, 0, 0, prog, userval) )

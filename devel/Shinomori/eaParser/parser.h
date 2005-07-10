@@ -426,6 +426,7 @@ public:
 	void print_rt_tree(int rtpos, int indent);
 	void print_rt();
 	void print_stack();
+	void print_expects();
 	
 
 	///////////////////////////////////////////////////////////////////////////

@@ -20,41 +20,14 @@ void usage(const char*p)
 }
 
 
-
-
-// assuming call convention ...(string1, string2)
-// string1 buffer has to be large enough, generates run time errors by memory overwrite when failed
-char* jstrescapecpy (char* pt, const char* sp) {
-	//copy from here
-	char *p =pt;
-	if( (NULL==pt) || (NULL==sp) ) return NULL;
-	while(*sp) {
-		switch (*sp) {
-			case '\'':
-				*p++ = '\\';
-				*p++ = *sp++;
-				break;
-			case '\\':
-				*p++ = '\\';
-				*p++ = *sp++;
-				break;
-			default:
-				*p++ = *sp++;
-		}
-	}
-	*p++ = '\0';
-	return pt;
-}
+void vartest();
 
 
 // Accepts 2 arguments <.cgt file> <input file>
 int main(int argc, char *argv[])
 {
+	vartest();
 
-	char buf1[128] = "hallo'ballo";
-	char buf2[128];
-
-char *p = jstrescapecpy(buf2,buf1);
 
 	CScriptEnvironment env;
 	CScriptCompiler compiler(env);
@@ -97,14 +70,17 @@ char *p = jstrescapecpy(buf2,buf1);
 		if (p < 0)
 		{	// an error
 			printf("Parse Error: line %i, col %i\n", parser->input.line, parser->input.column);
-			return EXIT_FAILURE;
+
+			parser->print_expects();
+
+			run = false;
 		}
 		else if(0 == p)
 		{	// finished
 			run = false;
 		}
-
-
+		
+		
 		if( parser->rt[0].symbol.idx==PT_DECL && parser->rt[0].rtchildren.size() )
 		{
 			CStackElement *child = &(parser->rt[(parser->rt[0].rtchildren[0])]);
@@ -115,8 +91,8 @@ char *p = jstrescapecpy(buf2,buf1);
 				  child->symbol.idx == PT_FUNCPROTO ) )
 			{
 				
-//				printf("(%i)----------------------------------------\n", parser->rt.size());
-//				parser->print_rt_tree(0,0);
+				printf("(%i)----------------------------------------\n", parser->rt.size());
+				parser->print_rt_tree(0,0);
 
 
 				//////////////////////////////////////////////////////////
@@ -130,19 +106,18 @@ char *p = jstrescapecpy(buf2,buf1);
 				if( !compiler.CompileTree(pnode) )
 					run = false;
 
-				printf("\nready\n");
 				
 				//////////////////////////////////////////////////////////
 				// reinitialize parser
 				parser->reinit();
-//				printf("............................................\n");
+				printf("............................................(%i)\n", global::getcount());
 			}
 		}
 	}
 
 	// Print parse tree
 //	parser->print_rt_tree(0, 0);
-
+	printf("\nready\n");
 	if (parser)  delete parser;
 	if (parser_config) delete parser_config;
 
@@ -150,3 +125,4 @@ char *p = jstrescapecpy(buf2,buf1);
 
 	return EXIT_SUCCESS;
 }
+

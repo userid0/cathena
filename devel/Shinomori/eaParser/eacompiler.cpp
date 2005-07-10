@@ -1,4 +1,3 @@
-
 #include "eacompiler.h"
 
 
@@ -21,55 +20,151 @@ class Variant
 			VAR_ARRAY,
 		} VARTYPE;
 
-		VARTYPE cType;
+		VARTYPE			cType;
 		union
-		{
-			// integer
-			int64			cInteger;
+		{	// integer
+			int64		cInteger;
 			// double
-			double			cFloat;
-			// string
-			struct
-			{
-				char*		cString;
-				size_t		cStrLen;
-			};
+			double		cFloat;
+			// string (actually a pointer to a MiniString object since a class cannot be a union member)
+			void*		cString;
 			// array
-			struct
-			{
-				_value*		cArray;
-				size_t		cSize;
-			};
+			Variant*	cArray;
 		};
+		size_t			cSize;
 	public:
 		///////////////////////////////////////////////////////////////////////
-		//
-		_value() :cType(VAR_NONE), cInteger(0)
+		// default constructor/destructor
+		_value() :cType(VAR_NONE), cInteger(0), cSize(1)
 		{}
 		~_value()
 		{
 			clear();
 		}
 		///////////////////////////////////////////////////////////////////////
+		// type constructors
+		_value(const _value &v) :cType(VAR_NONE), cInteger(0), cSize(1)
+		{	assign(v);
+		}
+		_value(const int val) :cType(VAR_INTEGER), cInteger(val), cSize(1)
+		{}
+		_value(const double val) :cType(VAR_FLOAT), cFloat(val), cSize(1)
+		{}
+		_value(const char* val) :cType(VAR_STRING), cString(new MiniString(val)), cSize(1)
+		{}
+		_value(const MiniString& val) :cType(VAR_STRING), cString(new MiniString(val)), cSize(1)
+		{}
+
+		///////////////////////////////////////////////////////////////////////
+		//
+		const _value& operator=(const _value &v)
+		{
+			assign(v);
+			return *this; 
+		}
+		const _value& operator=(const int val)
+		{
+			assign(val);
+			return *this; 
+		}
+		const _value& operator=(const double val)
+		{
+			assign(val);
+			return *this; 
+		}
+		const _value& operator=(const char* val)
+		{
+			assign(val);
+			return *this; 
+		}
+		const _value& operator=(const MiniString& val)
+		{
+			assign(val);
+			return *this; 
+		}
+		///////////////////////////////////////////////////////////////////////
+		//
+		void assign(const _value &v)
+		{
+			clear();
+			switch(v.cType)
+			{
+			//case VAR_NONE: // already initialized for this
+			case VAR_INTEGER:
+				cType = VAR_INTEGER;
+				cSize=1;
+				cInteger = v.cInteger; 
+				break;
+			case VAR_FLOAT:
+				cType = VAR_FLOAT;
+				cSize=1;
+				cFloat = v.cFloat; 
+				break;
+			case VAR_STRING:
+				cType = VAR_STRING;
+				cSize=1;
+				cString = (void*)(new MiniString( *((MiniString*)v.cString)) );
+				break;
+			case VAR_ARRAY:
+			{
+				size_t i;
+				cType = VAR_ARRAY;
+				cSize=v.cSize;
+				cArray = new Variant[cSize];
+				for(i=0; i<cSize; i++)
+					cArray[i] = v.cArray[i];
+				break;
+			}
+			}
+		}
+		void assign(const int val)
+		{
+			clear();
+			cType = VAR_INTEGER;
+			cSize=1;
+			cInteger = val; 
+		}
+		void assign(const double val)
+		{
+			clear();
+			cType = VAR_FLOAT;
+			cSize=1;
+			cFloat = val;
+		}
+		void assign(const char* val)
+		{
+			clear();
+			cType = VAR_STRING;
+			cSize=1;
+			cString = (void*)(new MiniString(val));
+		}
+		void assign(const MiniString& val)
+		{
+			clear();
+			cType = VAR_STRING;
+			cSize=1;
+			cString = (void*)(new MiniString(val));
+		}
+
+		///////////////////////////////////////////////////////////////////////
 		//
 		void clear()
 		{	
-			if(cInteger)
+			switch(cType)
 			{
-				switch(cType)
-				{
-				case VAR_ARRAY:
-					if(cArray) delete [] cArray;
-				case VAR_STRING:
-					if(cString) delete [] cString;
-				//case VAR_INTEGER:
-				//case VAR_FLOAT:
-				//case VAR_VARIABLE:
-				}
-				cType = VAR_NONE;
-				cInteger = 0;
-				cSize = 0;
+			case VAR_ARRAY:
+				if(cArray) delete [] cArray;
+				break;
+			case VAR_STRING:
+				if(cString) delete ((MiniString*)cString);
+				break;
+			//case VAR_INTEGER:
+			//case VAR_FLOAT:
+			//case VAR_VARIABLE:
 			}
+			cType = VAR_NONE;
+			cInteger = 0;
+			cSize = 0;
 		}
 		///////////////////////////////////////////////////////////////////////
 		bool isValid() const	{ return cType != VAR_NONE; }	
@@ -80,12 +175,51 @@ class Variant
 		size_t getSize() const	{ return (cType== VAR_ARRAY) ? cSize : 1; }
 		///////////////////////////////////////////////////////////////////////
 		void setarray(size_t cnt)
-		{
-
+		{	// generate an array from this node and set cArray[0] with current content
+			Variant *temp = new Variant[cnt];
+			// copy stuff into cArray[0]
+			temp[0].cValue->cType = this->cType;
+			temp[0].cValue->cSize = this->cSize;
+			switch(this->cType)
+			{
+			//case VAR_NONE: // already initialized for this
+			case VAR_INTEGER:
+				temp[0].cValue->cInteger = this->cInteger; 
+				break;
+			case VAR_FLOAT:
+				temp[0].cValue->cFloat = this->cFloat; 
+				break;
+			case VAR_STRING:
+				temp[0].cValue->cString = this->cString;
+				break;
+			case VAR_ARRAY:
+				temp[0].cValue->cArray = this->cArray;
+				break;
+			}
+			// make this an array
+			this->cType = VAR_ARRAY;
+			this->cArray= temp;
+			this->cSize = cnt;
+		}
+		///////////////////////////////////////////////////////////////////////
+		void addarray(size_t cnt)
+		{	
+			if( this->cType == VAR_ARRAY )
+			{	// go into elements
+				size_t i;
+				for(i=0; i<cSize; i++)
+					cArray[i].addarray(cnt);
+			}
+			else
+			{	// make this node an array
+				setarray(cnt);
+			}
 		}
 
-
+		friend int compare(const Variant& va, const Variant& vb);
 	};
+
+	friend class Variant::_value;
 
 	TPtrCommon< _value > cValue;
 
@@ -96,68 +230,79 @@ public:
 	~Variant()	{}
 	///////////////////////////////////////////////////////////////////////////
 	// Copy/Assignment
-	Variant(const Variant &v)					{ assign(v); }
+	Variant(const Variant &v, bool ref=false)	{ assign(v, ref); }
 	Variant(int val)							{ assign(val); }
 	Variant(double val)							{ assign(val); }
 	Variant(const char* val)					{ assign(val); }
-	const Variant& operator=(const Variant &v)	{ return assign(v);	  }
-	const Variant& operator=(const int val)		{ return assign(val); }
-	const Variant& operator=(const double val)	{ return assign(val); }
-	const Variant& operator=(const char* val)	{ return assign(val); }
+	const Variant& operator=(const Variant &v)	{ assign(v);   return *this; }
+	const Variant& operator=(const int val)		{ assign(val); return *this; }
+	const Variant& operator=(const double val)	{ assign(val); return *this; }
+	const Variant& operator=(const char* val)	{ assign(val); return *this; }
 
-	///////////////////////////////////////////////////////////////////////////
-	// compare
-	bool operator ==(const Variant &v) const 
-	{
-		if( cValue != v.cValue )
-		{	// different pointers, compare content
-			return cValue.get() == v.cValue.get();
-		}
-		return true; 
-	}
-	bool operator !=(const Variant &v) const 
-	{ 
-		if( cValue != v.cValue )
-		{	// different pointers, compare content
-			return cValue.get() != v.cValue.get();
-		}
-		return false;
-	}
+	///////////////////////////////////////////////////////////////////////
+	// type of the variant
+	bool isReference() const	{ return cValue.isReference(); }
+	void makeValue() const		{ cValue.setaccess(AUTOREF); }		// enable copy-on-write
+	void makeVariable() const	{ cValue.setaccess(AUTOCOUNT); }	// disable copy-on-write
 
 	///////////////////////////////////////////////////////////////////////////
 	// Type Initialize Variant (aka copy)
-	const Variant& assign(const Variant& v)
+	void assign(const Variant& v, bool ref=false)
 	{
-		cValue = v.cValue;
-		return *this;
+		if( cValue.isReference() )
+			cValue = v.cValue;			// just share the pointer
+		else
+			*(cValue) = *(v.cValue);	// copy the content
+		if(ref) cValue.setaccess(AUTOCOUNT); // disable copy-on-write for references
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Type Initialize Integer
-	const Variant& assign(int val)
+	void assign(int val)
 	{
-//		cValue = val;
-		return *this;
+		cValue->assign(val);
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Type Initialize double
-	const Variant& assign(double val)
+	void assign(double val)
 	{
-//		cValue = val;
-		return *this;
+		cValue->assign(val);
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Type Initialize String
-	const Variant& assign(const char* val)
+	void assign(const char* val)
 	{
-//		cValue = val;
-		return *this;
+		cValue->assign(val);
 	}
 	///////////////////////////////////////////////////////////////////////////
-	// Create Array
+	// Create Array from actual element
 	void setarray(size_t cnt)
-	{
-		cValue->setarray(cnt);
+	{	
+		if(cnt>0)
+		{
+			cValue->setarray(cnt);
+		}
+		else
+			clear();
 	}
+	///////////////////////////////////////////////////////////////////////////
+	// Create Array by vectorizing deepest elements
+	void addarray(size_t cnt)
+	{	
+		if(cnt>0)
+		{
+			cValue->addarray(cnt);
+		}
+		else
+			clear();
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// clear this
+	void clear()
+	{
+		cValue->clear();
+	}
+
 
 	///////////////////////////////////////////////////////////////////////////
 	// Access to elements
@@ -169,13 +314,873 @@ public:
 	size_t getSize() const	{ return cValue->getSize(); }
 
 	///////////////////////////////////////////////////////////////////////////
-	// Access to elements
+	// Access to array elements
 	const Variant& operator[](size_t inx) const
 	{	// on Arrays return the element, out of bounds return element 0
 		// other array accesses return this object
-		//return (cValue.Type()==cValue.VAR_ARRAY) ? ((inx<cValue.cSize) ? cValue.cArray[inx] : cValue.cArray[0]) : *this;
+		return (cValue->isArray()) ? ((inx<cValue->getSize()) ? cValue->cArray[inx] : cValue->cArray[0]) : *this;
 		return *this;
 	}
+	Variant& operator[](size_t inx)
+	{	// on Arrays return the element, out of bounds return element 0
+		// other array accesses return this object
+		return (cValue->isArray()) ? ((inx<cValue->getSize()) ? cValue->cArray[inx] : cValue->cArray[0]) : *this;
+		return *this;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// local conversions
+	void convert2string()
+	{
+		if(cValue->cType!=_value::VAR_STRING)
+		{
+			switch(cValue->cType)
+			{
+			case _value::VAR_NONE:
+				assign("");
+				break;
+			case _value::VAR_INTEGER:
+				assign( MiniString((int)(cValue->cInteger)) );
+				break;
+			case _value::VAR_FLOAT:
+				assign( MiniString(cValue->cFloat) );
+				break;
+			//case VAR_STRING:
+			//	break;
+			case _value::VAR_ARRAY:
+				assign( cValue->cArray[0].getString() );
+				break;
+			}
+		}
+	}
+	void convert2float()
+	{
+		if(cValue->cType!=_value::VAR_FLOAT)
+		{
+			assign( this->getFloat() );
+		}
+	}
+	void convert2int()
+	{
+		if(cValue->cType!=_value::VAR_INTEGER)
+		{
+			assign( this->getInt() );
+		}
+	}
+	void convert2number()
+	{
+		if(cValue->cType!=_value::VAR_INTEGER && cValue->cType!=_value::VAR_FLOAT)
+		{
+			if( this->getFloat() != floor(this->getFloat()) )
+				assign( this->getFloat() );
+			else
+				assign( this->getInt() );
+		}
+	}
+	void cast(int type)
+	{	//!! using parser opcodes here
+		switch(type)
+		{
+		case PT_INT:
+			convert2int();
+		case PT_STRING:
+			convert2string();
+		case PT_DOUBLE:
+			convert2float();
+		}
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// access conversion 
+	MiniString getString() const
+	{
+		switch(cValue->cType)
+		{
+		case _value::VAR_NONE:
+			break;
+		case _value::VAR_INTEGER:
+			return MiniString((int)(cValue->cInteger));
+		case _value::VAR_FLOAT:
+			return MiniString(cValue->cFloat);
+		case _value::VAR_STRING:
+			return *((MiniString*)(cValue->cString));
+		case _value::VAR_ARRAY:
+			return cValue->cArray[0].getString();
+		}	
+		return MiniString("");
+	}
+	double getFloat() const
+	{
+		switch(cValue->cType)
+		{
+		case _value::VAR_NONE:
+			break;
+		case _value::VAR_INTEGER:
+			return (int)(cValue->cInteger);
+		case _value::VAR_FLOAT:
+			return cValue->cFloat;
+		case _value::VAR_STRING:
+			return atof(*((MiniString*)(cValue->cString)));
+		case _value::VAR_ARRAY:
+			return cValue->cArray[0].getFloat();
+		}	
+		return 0.0;
+	}
+	int getInt() const
+	{
+		switch(cValue->cType)
+		{
+		case _value::VAR_NONE:
+			break;
+		case _value::VAR_INTEGER:
+			return (int)(cValue->cInteger);
+		case _value::VAR_FLOAT:
+			return (int)( floor(0.5+cValue->cFloat) );
+		case _value::VAR_STRING:
+			return atoi(*((MiniString*)(cValue->cString)));
+		case _value::VAR_ARRAY:
+			return cValue->cArray[0].getInt();
+		}	
+		return 0;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// unary operations
+	const Variant operator-() const
+	{
+		if( isValid() )
+		{
+			Variant temp(*this);
+			if( temp.isArray() )
+			{	// go through the array
+				size_t i;
+				for(i=0; i<temp.cValue->cSize; i++)
+					temp.cValue->cArray[i] = -(temp.cValue->cArray[i]);
+			}
+			else 
+			{
+				temp.convert2number();
+				if( temp.isFloat() )
+					temp.cValue->cFloat = -(temp.cValue->cFloat);
+				else
+					temp.cValue->cInteger = -(temp.cValue->cInteger);
+			}
+			return temp;
+		}
+		return *this;
+	}
+	const Variant operator~() const
+	{
+		if( isValid() )
+		{
+			Variant temp(*this);
+			if( temp.isArray() )
+			{	// go through the array
+				size_t i;
+				for(i=0; i<temp.cValue->cSize; i++)
+					temp.cValue->cArray[i] = ~(temp.cValue->cArray[i]);
+			}
+			else
+			{
+				temp.convert2int();
+				temp.cValue->cInteger = ~(temp.cValue->cInteger);
+			}
+			return temp;
+		}
+		return *this;
+	}
+	const Variant operator!() const
+	{
+		if( isValid() )
+		{
+			Variant temp(*this);
+			if( temp.isArray() )
+			{	// go through the array
+				size_t i;
+				for(i=0; i<temp.cValue->cSize; i++)
+					temp.cValue->cArray[i] = !(temp.cValue->cArray[i]);
+			}
+			else
+			{
+				temp.convert2int();
+				temp.cValue->cInteger = !(temp.cValue->cInteger);
+			}
+			return temp;
+		}
+		return *this;
+	}
+
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// arithmetic operations
+	const Variant& operator+=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] += v.cValue->cArray[i];
+
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] += v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] += v.cValue->cArray[i];
+			}
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isString() || v.isString() )
+		{	// add as strings
+			convert2string();
+			MiniString* pstr = (MiniString*)(cValue->cString);
+			*pstr += v.getString();
+		}
+		else if( isFloat() || v.isFloat() )
+		{
+			convert2float();
+			cValue->cFloat += v.getFloat();
+		}
+		else
+		{
+			convert2int();
+			cValue->cInteger += v.getInt();
+		}
+		return *this;
+	}
+	friend Variant operator+(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp += vb;
+		return temp;
+	}
+
+	const Variant& operator-=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] -= v.cValue->cArray[i];
+
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] -= v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] -= v.cValue->cArray[i];
+			}
+		}
+		////////////////////////////
+		// simple types at the end
+		//else if( isString() || v.isString() )
+		//{	// '-' not defined for strings
+		//}
+		else if( isFloat() || v.isFloat() )
+		{
+			convert2float();
+			cValue->cFloat -= v.getFloat();
+		}
+		else
+		{
+			convert2int();
+			cValue->cInteger -= v.getInt();
+		}
+		return *this;
+	}
+	friend Variant operator-(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp -= vb;
+		return temp;
+
+	}
+
+	const Variant& operator*=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] *= v.cValue->cArray[i];
+			// for the rest of the elements, multiply with 0
+			for(   ; i<cValue->cSize; i++)
+				cValue->cArray[i] *= 0;
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] *= v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] *= v.cValue->cArray[i];
+			}
+		}
+		////////////////////////////
+		// simple types at the end
+		//else if( isString() || v.isString() )
+		//{	// '-' not defined for strings
+		//}
+		else if( isFloat() || v.isFloat() )
+		{
+			convert2float();
+			cValue->cFloat *= v.getFloat();
+		}
+		else
+		{
+			convert2int();
+			cValue->cInteger *= v.getInt();
+		}
+		return *this;
+	}
+	friend Variant operator*(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp *= vb;
+		return temp;
+
+	}
+	const Variant& operator/=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] /= v.cValue->cArray[i];
+			// for the rest of the elements, divide by 0 -> invalid
+			for(   ; i<cValue->cSize; i++)
+				cValue->cArray[i].clear();
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] /= v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] /= v.cValue->cArray[i];
+			}
+		}
+		////////////////////////////
+		// simple types at the end
+		//else if( isString() || v.isString() )
+		//{	// '-' not defined for strings
+		//}
+		else if( isFloat() || v.isFloat() )
+		{
+			
+			if( 0==v.getFloat() )
+				clear();
+			else
+			{
+				convert2float();
+				cValue->cFloat /= v.getFloat();
+			}
+		}
+		else
+		{
+			if( 0==v.getInt() )
+				clear();
+			else
+			{
+				convert2int();
+				cValue->cInteger /= v.getInt();
+			}
+		}
+		return *this;
+	}
+	friend Variant operator/(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp /= vb;
+		return temp;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// Define postfix increment operator.
+	Variant operator++(int)
+	{
+		Variant temp(*this);
+		if( isValid() )
+		{
+			if( isArray() )
+			{	
+				size_t i;
+				for(i=0; i<cValue->cSize; i++)
+					cValue->cArray[i]++;
+			}
+			else 
+			{	
+				convert2number();
+				*this+=1;
+			}
+		}
+		return temp;
+	}
+	Variant operator--(int)
+	{
+		Variant temp(*this);
+		if( isValid() )
+		{
+			if( isArray() )
+			{	
+				size_t i;
+				for(i=0; i<cValue->cSize; i++)
+					--cValue->cArray[i];
+			}
+			else 
+			{	
+				convert2number();
+				*this-=1;
+			}
+		}
+		return temp;
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// Define prefix increment operator.
+	Variant& operator++() 
+	{
+		if( isValid() )
+		{
+			if( isArray() )
+			{	
+				size_t i;
+				for(i=0; i<cValue->cSize; i++)
+					++cValue->cArray[i];
+			}
+			else 
+			{	
+				convert2number();
+				*this+=1;
+			}
+		}
+		return *this;
+	}
+	Variant& operator--() 
+	{
+		if( isValid() )
+		{
+			if( isArray() )
+			{	
+				size_t i;
+				for(i=0; i<cValue->cSize; i++)
+					--cValue->cArray[i];
+			}
+			else 
+			{	
+				convert2number();
+				*this-=1;
+			}
+		}
+		return *this;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	// binary/logic operations
+	const Variant& operator&=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] &= v.cValue->cArray[i];
+			// for the rest of the elements, use 0
+			for(   ; i<cValue->cSize; i++)
+				cValue->cArray[i] = 0;
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] &= v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] &= v.cValue->cArray[i];
+			}
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isString() || v.isString() )
+		{	// make it append two strings
+			convert2string();
+			MiniString* pstr = (MiniString*)(cValue->cString);
+			*pstr += v.getString();
+		}
+		else
+		{
+			convert2int();
+			cValue->cInteger &= v.getInt();
+		}
+		return *this;
+	}
+	friend Variant operator&(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp &= vb;
+		return temp;
+	}
+	const Variant& operator|=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] |= v.cValue->cArray[i];
+			// for the rest of the elements, do nothing
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] |= v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] |= v.cValue->cArray[i];
+			}
+		}
+		////////////////////////////
+		// simple types at the end
+		//else if( isString() || v.isString() )
+		//{	// not defined for strings
+		//}
+		else
+		{
+			convert2int();
+			cValue->cInteger |= v.getInt();
+		}
+		return *this;
+	}
+	friend Variant operator|(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp |= vb;
+		return temp;
+	}
+	const Variant& operator^=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] ^= v.cValue->cArray[i];
+			// for the rest of the elements, do nothing
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] ^= v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] ^= v.cValue->cArray[i];
+			}
+		}
+		////////////////////////////
+		// simple types at the end
+		//else if( isString() || v.isString() )
+		//{	// not defined for strings
+		//}
+		else
+		{
+			convert2int();
+			cValue->cInteger ^= v.getInt();
+		}
+		return *this;
+	}
+	friend Variant operator^(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp ^= vb;
+		return temp;
+	}
+	const Variant& operator>>=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] >>= v.cValue->cArray[i];
+			// for the rest of the elements, do nothing
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] >>= v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] >>= v.cValue->cArray[i];
+			}
+		}
+		else
+		{
+			convert2int();
+			cValue->cInteger >>= v.getInt();
+		}
+		return *this;
+	}
+	friend Variant operator>>(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp >>= vb;
+		return temp;
+	}
+	const Variant& operator<<=(const Variant& v)
+	{
+		if( !isValid() || !v.isValid() )
+		{	// invalid inputs, invalid output
+			clear();
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( isArray() && v.isArray() )
+		{	// add two arrays
+			// don't check for dimension mismatches, just pad with zeros
+			size_t i, val = min(cValue->cSize, v.cValue->cSize);
+			for(i=0; i<val; i++)
+				cValue->cArray[i] <<= v.cValue->cArray[i];
+			// for the rest of the elements, do nothing
+		}
+		else if( isArray() && !v.isArray() )
+		{	// add a given skalar recursively to a local array
+			size_t i;
+			for(i=0; i<cValue->cSize; i++)
+				cValue->cArray[i] <<= v;
+		}
+		else if( !isArray() && v.isArray() )
+		{	// add a local skalar to a given array
+			size_t i;
+			Variant temp(*this);
+			this->setarray(v.cValue->cSize);
+			for(i=0; i<v.cValue->cSize; i++)
+			{	
+				this->cValue->cArray[i]  = temp;
+				this->cValue->cArray[i] <<= v.cValue->cArray[i];
+			}
+		}
+		else
+		{
+			convert2int();
+			cValue->cInteger <<= v.getInt();
+		}
+		return *this;
+	}
+	friend Variant operator<<(const Variant& va, const Variant& vb)
+	{
+		Variant temp(va);
+		temp <<= vb;
+		return temp;
+	}
+	friend Variant operator&&(const Variant& va, const Variant& vb)
+	{
+		return Variant( va.getInt() && vb.getInt() );
+	}
+	friend Variant operator||(const Variant& va, const Variant& vb)
+	{
+		return Variant( va.getInt() || vb.getInt() );
+	}
+	///////////////////////////////////////////////////////////////////////////
+	// compare operations
+	friend int compare(const Variant& va, const Variant& vb)
+	{
+		if( va.cValue == vb.cValue )
+		{	// identic pointers
+			return 0;
+		}
+		else if( !va.isValid() && !vb.isValid() )
+		{	// both invalid
+			return 0;
+		}
+		else if( !va.isValid() || !vb.isValid() )
+		{	// only one invalud
+			return (!va.isValid()) ? -1 : 1;
+		}
+		////////////////////////////
+		// simple types at the end
+		else if( va.isArray() && vb.isArray() )
+		{	// two arrays
+			if( va.cValue->cSize != vb.cValue->cSize )
+				return va.cValue->cSize - vb.cValue->cSize;
+			else
+			{
+				size_t i;
+				int val;
+				for(i=0; i<va.cValue->cSize; i++)
+				{
+					val = compare(va.cValue->cArray[i], vb.cValue->cArray[i]);
+					if( val!=0 )
+						return val;
+				}
+				return 0;
+			}
+		}
+		else if( va.isArray() && !vb.isArray() )
+		{	
+			return 1;
+		}
+		else if( !va.isArray() && vb.isArray() )
+		{	
+			return -1;
+		}
+		else if( va.isString() || vb.isString() )
+		{	
+			return ::compare( va.getString(), vb.getString() );
+		}
+		else if( va.isFloat() || vb.isFloat() )
+		{
+			double v = va.getFloat() - vb.getFloat();
+			return (v<0) ? -1 : (v>0) ? 1 : 0;
+		}
+		else if( va.isInt() || vb.isInt() )
+		{
+			return va.getInt() - vb.getInt();
+		}
+		return 0;
+	}
+	bool operator==(const Variant& v) const
+	{
+		return 0==compare(*this,v);
+	}
+	bool operator!=(const Variant& v) const
+	{
+		return 0!=compare(*this,v);
+	}
+	bool operator< (const Variant& v) const
+	{
+		return 0< compare(*this,v);
+	}
+	bool operator<=(const Variant& v) const
+	{
+		return 0<=compare(*this,v);
+	}
+	bool operator> (const Variant& v) const
+	{
+		return 0> compare(*this,v);
+	}
+	bool operator>=(const Variant& v) const
+	{
+		return 0>=compare(*this,v);
+	}
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -186,7 +1191,6 @@ public:
 
 class Variable
 {
-
 	Variable(const Variable&);					// no copy
 	const Variable& operator=(const Variable&);	// no assign
 
@@ -230,24 +1234,25 @@ class UserStack : private noncopyable
 	size_t					cSC;		// stack counter
 	size_t					cSB;		// initial stack start index
 	size_t					cParaBase;	// function parameter start index
+	size_t					cTempBase;	// TempVar start index
 
 	size_t					cPC;		// Programm Counter
 	CProgramm*				cProg;
 
-
 	bool process()
 	{
 		bool run = true;
-		bool ok =true;
-		while(cProg && run && ok)
+		CProgramm::CCommand ccmd;
+
+		while(cProg && run && cProg->getCommand(cPC, ccmd) )
 		{
-			switch( cProg->getCommand(cPC) )
+			switch( ccmd.cCommand )
 			{
+			case OP_START:
 			case OP_NOP:
 			{
 				break;
 			}
-
 			/////////////////////////////////////////////////////////////////
 			// assignment operations
 			// take two stack values and push up one
@@ -255,124 +1260,132 @@ class UserStack : private noncopyable
 			{
 				cSC--;
 				cStack[cSC-1] = cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
-				
 			case OP_ADD:		// <Op AddSub> '+' <Op MultDiv>
 			case OP_ASSIGN_ADD:	// <Op If> '+='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] += cStack[cSC];
+				cStack[cSC-1] += cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_SUB:		// <Op AddSub> '-' <Op MultDiv>
 			case OP_ASSIGN_SUB:	// <Op If> '-='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] -= cStack[cSC];
+				cStack[cSC-1] -= cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_MUL:		// <Op MultDiv> '*' <Op Unary>
 			case OP_ASSIGN_MUL:	// <Op If> '*='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] *= cStack[cSC];
+				cStack[cSC-1] *= cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_DIV:		// <Op MultDiv> '/' <Op Unary>
 			case OP_ASSIGN_DIV:	// <Op If> '/='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] /= cStack[cSC];
+				cStack[cSC-1] /= cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_MOD:		// <Op MultDiv> '%' <Op Unary>
 			{
 				cSC--;
-//				cStack[cSC-1] /= cStack[cSC];
+				cStack[cSC-1] /= cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_BIN_XOR:	// <Op BinXOR> '^' <Op BinAND>
 			case OP_ASSIGN_XOR:	// <Op If> '^='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] ^= cStack[cSC];
+				cStack[cSC-1] ^= cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_BIN_AND:		// <Op BinAND> '&' <Op Equate>
 			case OP_ASSIGN_AND:	// <Op If> '&='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] &= cStack[cSC];
+				cStack[cSC-1] &= cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_BIN_OR:		// <Op BinOr> '|' <Op BinXOR>
 			case OP_ASSIGN_OR:	// <Op If> '|='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] |= cStack[cSC];
+				cStack[cSC-1] |= cStack[cSC];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_LOG_AND:	// <Op And> '&&' <Op BinOR>
 			{
 				cSC--;
-//				cStack[cSC-1] = (int)cStack[cSC-1] && (int)cStack[cSC];
+				cStack[cSC-1] = cStack[cSC-1] && cStack[cSC];
 				break;
 			}
 			case OP_LOG_OR:		// <Op Or> '||' <Op And>
 			{
 				cSC--;
-//				cStack[cSC-1] = (int)cStack[cSC-1] || (int)cStack[cSC];
+				cStack[cSC-1] = cStack[cSC-1] || cStack[cSC];
 				break;
 			}
 			case OP_RSHIFT:		// <Op Shift> '>>' <Op AddSub>
 			case OP_ASSIGN_RSH:	// <Op If> '>>='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] = (int)cStack[cSC-1] >> (int)cStack[cSC];
+				cStack[cSC-1] = cStack[cSC-1] >> cStack[cSC];
 				break;
 			}
 			case OP_LSHIFT:		// <Op Shift> '<<' <Op AddSub>
 			case OP_ASSIGN_LSH:	// <Op If> '<<='  <Op>
 			{
 				cSC--;
-//				cStack[cSC-1] = (int)cStack[cSC-1] << (int)cStack[cSC];
+				cStack[cSC-1] = cStack[cSC-1] << cStack[cSC];
 				break;
 			}
 			case OP_EQUATE:		// <Op Equate> '==' <Op Compare>
 			{
 				cSC--;
-//				cStack[cSC-1] = (cStack[cSC-1]==cStack[cSC]);
+				cStack[cSC-1] = (cStack[cSC-1]==cStack[cSC]);
 				break;
 			}
 			case OP_UNEQUATE:	// <Op Equate> '!=' <Op Compare>
 			{
 				cSC--;
-//				cStack[cSC-1] = (cStack[cSC-1]!=cStack[cSC]);
+				cStack[cSC-1] = (cStack[cSC-1]!=cStack[cSC]);
 				break;
 			}
 			case OP_ISGT:		// <Op Compare> '>'  <Op Shift>
 			{
 				cSC--;
-//				cStack[cSC-1] = (cStack[cSC-1]>cStack[cSC]);
+				cStack[cSC-1] = (cStack[cSC-1]>cStack[cSC]);
 				break;
 			}
 			case OP_ISGTEQ:		// <Op Compare> '>=' <Op Shift>
 			{
 				cSC--;
-//				cStack[cSC-1] = (cStack[cSC-1]>=cStack[cSC]);
+				cStack[cSC-1] = (cStack[cSC-1]>=cStack[cSC]);
 				break;
 			}
 			case OP_ISLT:		// <Op Compare> '<'  <Op Shift>
 			{
 				cSC--;
-//				cStack[cSC-1] = (cStack[cSC-1]<cStack[cSC]);
+				cStack[cSC-1] = (cStack[cSC-1]<cStack[cSC]);
 				break;
 			}
 			case OP_ISLTEQ:		// <Op Compare> '<=' <Op Shift>
 			{
 				cSC--;
-//				cStack[cSC-1] = (cStack[cSC-1]<=cStack[cSC]);
+				cStack[cSC-1] = (cStack[cSC-1]<=cStack[cSC]);
 				break;
 			}
 			/////////////////////////////////////////////////////////////////
@@ -381,7 +1394,7 @@ class UserStack : private noncopyable
 			case OP_SELECT:	// <Op Or> '?' <Op If> ':' <Op If>
 			{
 				cSC -= 2;
-//				cStack[cSC-1] = ((int)cStack[cSC-1]) ? cStack[cSC] : cStack[cSC+1];
+				cStack[cSC-1] = (cStack[cSC-1]!=0) ? cStack[cSC] : cStack[cSC+1];
 				break;
 			}
 
@@ -390,17 +1403,17 @@ class UserStack : private noncopyable
 			// take one stack values and push a value
 			case OP_NOT:	// '!'    <Op Unary>
 			{
-//				cStack[cSC-1] = !((int)cStack[cSC-1]);
+				cStack[cSC-1] = !(cStack[cSC-1]);
 				break;
 			}
 			case OP_INVERT:	// '~'    <Op Unary>
 			{
-//				cStack[cSC-1] = ~((int)cStack[cSC-1]);
+				cStack[cSC-1] = ~(cStack[cSC-1]);
 				break;
 			}
 			case OP_NEGATE:	// '-'    <Op Unary>
 			{
-//				cStack[cSC-1] = -cStack[cSC-1];
+				cStack[cSC-1] = -(cStack[cSC-1]);
 				break;
 			}
 
@@ -410,7 +1423,8 @@ class UserStack : private noncopyable
 								// sizeof '(' <Type> ')' // replaces with OP_PUSH_INT on compile time
 			case OP_SIZEOF:		// sizeof '(' Id ')'
 			{
-//				cStack[cSC-1] = cStack[cSC-1].size();
+				cStack[cSC-1].makeValue();
+				cStack[cSC-1] = (int)cStack[cSC-1].getSize();
 				break;
 			}
 
@@ -419,8 +1433,7 @@ class UserStack : private noncopyable
 			// take one stack values and push the result
 			case OP_CAST:	// '(' <Type> ')' <Op Unary>   !CAST
 			{	// <Op Unary> is first on the stack, <Type> is second
-				cSC--;
-//				cStack[cSC-1].cast(cStack[cSC]);
+				cStack[cSC-1].cast(ccmd.cParam1);
 				break;
 			}
 
@@ -429,14 +1442,14 @@ class UserStack : private noncopyable
 			// take one stack variable and push a value
 			case OP_PREADD:		// '++'   <Op Unary>
 			{	
-//				cStack[cSC-1]++;
-//				cStack[cSC-1] = cStack[cSC-1].value();
+				++cStack[cSC-1];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			case OP_PRESUB:		// '--'   <Op Unary>
 			{	
-//				cStack[cSC-1]--;
-//				cStack[cSC-1] = cStack[cSC-1].value();
+				--cStack[cSC-1];
+				cStack[cSC-1].makeValue();
 				break;
 			}
 			/////////////////////////////////////////////////////////////////
@@ -444,20 +1457,22 @@ class UserStack : private noncopyable
 			// take one stack variable and push a value
 			case OP_POSTADD:	// <Op Pointer> '++'
 			{	
-//				Variant temp = cStack[cSC-1].value();
-//				cStack[cSC-1]++;
-//				cStack[cSC-1] = temp;
+				Variant temp = cStack[cSC-1];
+				temp.makeValue();
+				cStack[cSC-1]++;
+				cStack[cSC-1].makeValue();
+				cStack[cSC-1] = temp;
 				break;
 			}
 			case OP_POSTSUB:	// <Op Pointer> '--'
 			{	
-//				Variant temp = cStack[cSC-1].value();
-//				cStack[cSC-1]--;
-//				cStack[cSC-1] = temp;
+				Variant temp(cStack[cSC-1]);
+				temp.makeValue();
+				cStack[cSC-1]--;
+				cStack[cSC-1].makeValue();
+				cStack[cSC-1] = temp;
 				break;
 			}
-
-
 
 			/////////////////////////////////////////////////////////////////
 			// Member Access
@@ -469,19 +1484,15 @@ class UserStack : private noncopyable
 				cSC--;
 				break;
 			}
-
-
 			/////////////////////////////////////////////////////////////////
 			// Array
 			// take a variable and a value from stack and push a varible
 			case OP_ARRAY:		// <Op Pointer> '[' <Expr> ']'  ! array
 			{
 				cSC--;
-//				cStack[cSC-1] = cStack[cSC-1][ cStack[cSC] ];
+				cStack[cSC-1].assign( cStack[cSC-1][ cStack[cSC].getInt() ], true);
 				break;
 			}
-
-
 			/////////////////////////////////////////////////////////////////
 			// standard function calls
 			// check the values on stack before or inside the call of function
@@ -511,7 +1522,6 @@ class UserStack : private noncopyable
 							// Id <Call List> ';'
 							// Id ';'
 			{
-
 				printf("not implemented yet\n");
 				cSC--;
 				break;
@@ -521,30 +1531,63 @@ class UserStack : private noncopyable
 			// conditional branch
 			// take one value from stack 
 			// and add 1 or the branch offset to the programm counter
-			case OP_NIF:	// if '(' <Expr> ')' <Normal Stm>
+			case OP_NIF:
 			{
+				cSC--;
+				if( cStack[cSC]==0 )
+					cPC = ccmd.cParam1;
 
 				break;
 			}
 			case OP_IF:		// if '(' <Expr> ')' <Normal Stm>
 			{
+				if( cStack[cSC]!=0 )
+					cPC = ccmd.cParam1;
 
 				break;
 			}
 			/////////////////////////////////////////////////////////////////
 			// unconditional branch
 			// add the branch offset to the programm counter
-			case OP_GOTO:	// goto Id ';'
+			case OP_GOTO:	// goto position
 			{
-
-				break;
-			}
-			case VX_GOTO:	// goto position
-			{
-
+				cPC = ccmd.cParam1;
 				break;
 			}
 
+			case OP_CLEAR:
+			{
+				cStack[cSC-1].clear();
+				break;
+			}
+			case OP_RESIZE:
+			{	//this->logging("array resize (%i dimension(s))", ccmd.cParam1); break;
+				// there are (ccmd.cParam1) elements on stack containing the dimemsions oth the multi-array
+				size_t i, dim = ccmd.cParam1;
+				cSC -= dim;
+				cStack[cSC-1].clear();
+				for(i=0; i<dim; i++)
+				{	// number of elements in this dimension
+					cStack[cSC-1].addarray( cStack[cSC+i].getInt() );
+				}
+				break;
+			}
+			case OP_VECTORIZE1:
+			case OP_VECTORIZE2:
+			case OP_VECTORIZE3:
+			case OP_VECTORIZE4:
+			{	//this->logging("vectorize '%i' elements", ccmd.cParam1); break;
+				size_t i,k, cnt = ccmd.cParam1;
+				cSC -= cnt;
+				cStack[cSC].setarray( cnt );
+				for(i=1; i<cnt; i++)
+				{	// put the elements into the array
+					cStack[cSC][i] = cStack[cSC+i];				
+				}
+				// and virtually push the vectorized element
+				cSC ++;
+				break;
+			}
 
 			/////////////////////////////////////////////////////////////////
 			// explicit stack pushes
@@ -557,59 +1600,100 @@ class UserStack : private noncopyable
 			// Id
 			// <Call Arg>  ::= '-'
 
+			case OP_PUSH_ADDR:
 			case OP_PUSH_INT1:	// followed by an integer
 			case OP_PUSH_INT2:
 			case OP_PUSH_INT3:
 			case OP_PUSH_INT4:
 			{
-				
-				int temp = cProg->getInt(cPC);
-				cStack[cSC] = temp;
+				cStack[cSC].makeValue();
+				cStack[cSC] = ccmd.cParam1;
 				cSC++;
 				break;
 			}
 			case OP_PUSH_STRING:	// followed by a string (pointer)
 			{
-				const char* temp = cProg->getString(cPC);
-				cStack[cSC] = temp;
+				cStack[cSC].makeValue();
+				cStack[cSC] = ccmd.cString;
 				cSC++;
 				break;
 			}
 			case OP_PUSH_FLOAT:	// followed by a float
 			{
-				float temp = cProg->getFloat(cPC);
-				cStack[cSC] = temp;
+				cStack[cSC].makeValue();
+				cStack[cSC] = (double)CProgramm::int2float(ccmd.cParam1);
 				cSC++;
 				break;
 			}
 			case OP_PUSH_VAR:	// followed by a string containing a variable name
 			{
-				unsigned char vartype = cProg->getChar(cPC);
-				const char*   varname = cProg->getString(cPC);
-//				cStack[cSC] = findvariable(varname, vartype);
+				cStack[cSC].makeValue();
+//				cStack[cSC] = findvariable(ccmd.cString);
+				cStack[cSC].makeVariable();
 				cSC++;
 				break;
 			}
-			case OP_POP:	// decrements the stack by one
+			case OP_PUSH_VALUE:
 			{
+				cStack[cSC].makeValue();
+//				cStack[cSC] = findvariable(ccmd.cString);
+				cStack[cSC].makeVariable();
+				cSC++;
+				break;
+			}
+			case OP_PUSH_PARAM:
+			{
+				cStack[cSC].makeValue();
+				cStack[cSC] = cStack[cParaBase+ccmd.cParam1];
+				cStack[cSC].makeVariable();
+				cSC++;
+				break;
+			}
+			case OP_PUSH_TEMPVAR1:
+			case OP_PUSH_TEMPVAR2:
+			case OP_PUSH_TEMPVAR3:
+			case OP_PUSH_TEMPVAR4:
+			{
+				cStack[cSC].makeValue();
+				cStack[cSC] = cStack[cSB+ccmd.cParam1];
+				cStack[cSC].makeVariable();
+				cSC++;
+				break;
+			}
+			case OP_PUSH_TEMPVALUE1:
+			case OP_PUSH_TEMPVALUE2:
+			case OP_PUSH_TEMPVALUE3:
+			case OP_PUSH_TEMPVALUE4:
+			{
+				cStack[cSC].makeValue();
+				cStack[cSC] = cStack[cSB+ccmd.cParam1];
+				cSC++;
+				break;
+			}
+
+			case OP_POP:	// decrements the stack by one
+			{	// maybe better reset the stack
 				cSC--;
 				break;
 			}
+
+
 			case VX_LABEL:
-			{
-				break;
-			}
+			case VX_BREAK:
+			case VX_CONT:
+			case VX_GOTO:
+				printf("non-converted temporal opcodes\n");
+
+			case OP_RETURN:
 			case OP_END:
 			default:
 			{
 				run=false;
-				ok=false;
 				break;
 			}
 			}// end switch
 		}// end while
 	}
-
 
 public:
 	///////////////////////////////////////////////////////////////////////////
@@ -633,9 +1717,76 @@ public:
 
 
 	}
-
 };
 
 
 
 
+void vartest()
+{
+	/////////////////////////
+	Variant a,b,c;
+	a = 8.6;
+
+	Variant ref(a,true);
+	ref += 2;
+
+	printf("%s\n", (const char*)a.getString());
+	printf("%s\n", (const char*)ref.getString());
+
+	b = "hallo";
+
+	ref = a+b;
+
+	printf("%s\n", (const char*)a.getString());
+	printf("%s\n", (const char*)ref.getString());
+
+	ref++;
+	printf("%s\n", (const char*)a.getString());
+	printf("%s\n", (const char*)ref.getString());
+
+	b.setarray(3);
+	b[1] = 1;
+	b[2] = 2.2;
+
+	c = a;
+	c = b;
+	printf("%s\n", (const char*)c[0].getString());
+	printf("%s\n", (const char*)c[1].getString());
+	printf("%s\n\n", (const char*)c[2].getString());
+	c = a+b;
+	printf("%s\n", (const char*)c[0].getString());
+	printf("%s\n", (const char*)c[1].getString());
+	printf("%s\n\n", (const char*)c[2].getString());
+	b = c++;
+	printf("%s\n", (const char*)c[0].getString());
+	printf("%s\n", (const char*)c[1].getString());
+	printf("%s\n\n", (const char*)c[2].getString());
+	printf("%s\n", (const char*)b[0].getString());
+	printf("%s\n", (const char*)b[1].getString());
+	printf("%s\n\n", (const char*)b[2].getString());
+
+	c[1] += c[0];
+	c[2] =  4;
+
+	printf("%s\n", (const char*)c[0].getString());
+	printf("%s\n", (const char*)c[1].getString());
+	printf("%s\n\n", (const char*)c[2].getString());
+	c += a;
+	printf("%s\n", (const char*)c[0].getString());
+	printf("%s\n", (const char*)c[1].getString());
+	printf("%s\n\n", (const char*)c[2].getString());
+	
+	c[2] /= a;			printf("%s\n", (const char*)c[2].getString());
+	c[2] &= a;			printf("%s\n", (const char*)c[2].getString());
+	c[2] |= a;			printf("%s\n", (const char*)c[2].getString());
+	c[2] ^= a;			printf("%s\n", (const char*)c[2].getString());
+	c[2] = a && c[2];	printf("%s\n", (const char*)c[2].getString());
+	c[2] = a || c[2];	printf("%s\n\n", (const char*)c[2].getString());
+
+	printf("%s\n", (const char*)c[0].getString());
+	printf("%s\n", (const char*)c[1].getString());
+	printf("%s\n\n", (const char*)c[2].getString());
+
+
+}

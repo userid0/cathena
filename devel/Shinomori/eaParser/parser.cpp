@@ -95,6 +95,18 @@ printf ("print stack\n");
 		printf("\n");
 	}
 }
+void CParser::print_expects()
+{
+	printf("expecting: ");
+	size_t i;
+	for(i=0; i<this->pconfig->lalr_state[this->lalr_state].cAction.size(); i++)
+	{
+		CAction* action = &this->pconfig->lalr_state[this->lalr_state].cAction[i];
+		printf("'%s' ", (const char*) pconfig->sym[action->SymbolIndex].Name );
+	}
+	printf("\n");
+
+}
 
 
 
