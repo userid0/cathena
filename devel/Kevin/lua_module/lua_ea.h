@@ -11,11 +11,13 @@ class lua_ea
 		lua_ea(); /*constructor*/
 		~lua_ea(); /*destructor*/
 		
-		void init(void); /*Initialize the module*/
-		void init(lua_ea_commands *); /*Initialize the module with user defined default buildin functions*/
-		void buildin_funcs(lua_ea_commands *); /*Register buildin functions*/
+		void init(void); /*Initializes the module*/
+		void init(lua_ea_commands *); /*Initializes the module with user defined default buildin functions*/
+		void buildin_funcs(lua_ea_commands *); /*Registers buildin functions*/
 		
-		void lua_ea_resume
+		/*Thread functions*/
+		void new_thread(lua_State *L, lua_State *NL);
+		void resume(struct map_session_data *, const char *, ...);
 };
 
 class lua_ea_commands
@@ -24,7 +26,7 @@ class lua_ea_commands
 		lua_CFunction f;
 		const char *command;
 	public:
-		lua_ea_commands(const char *str_cmd, lua_CFunction func): /*set default values for f and *command*/
+		lua_ea_commands(const char *str_cmd, lua_CFunction func): /*sets default values for f and *command*/
 			command(str_cmd), f(func)
 			{ };
 };
