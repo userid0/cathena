@@ -1,0 +1,33 @@
+/* LUA_EA module ***Kevin*** lua_ea.h v1.0 */
+
+#ifndef _LUA_EA_H_
+#define _LUA_EA_H_
+
+class lua_ea
+{
+	private:
+		lua_State *L; /*Lua global thread*/
+	public:
+		lua_ea(); /*constructor*/
+		~lua_ea(); /*destructor*/
+		
+		void init(void); /*Initialize the module*/
+		void init(lua_ea_commands *); /*Initialize the module with user defined default buildin functions*/
+		void buildin_funcs(lua_ea_commands *); /*Register buildin functions*/
+		
+		void lua_ea_resume
+};
+
+class lua_ea_commands
+{
+	private:
+		lua_CFunction f;
+		const char *command;
+	public:
+		lua_ea_commands(const char *str_cmd, lua_CFunction func): /*set default values for f and *command*/
+			command(str_cmd), f(func)
+			{ };
+};
+		
+
+#endif
