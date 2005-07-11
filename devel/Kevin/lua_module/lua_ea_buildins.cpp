@@ -1,3 +1,5 @@
+/* LUA_EA module ***Kevin*** lua_ea_buildins.cpp v1.0 */
+
 #ifndef _LUA_BUILDINS_
 #define _LUA_BUILDINS_
 
@@ -13,7 +15,7 @@ static int buildin_scriptend(lua_State *NL)
 static int buildin_addnpc(lua_State *NL)
 {
 	char *name,*exname,*map,*function;
-	short m,x,y,dir,class_;
+	unsigned short m,x,y,dir,class_;
 	
 	name=(char *)aCallocA(strlen((char *)lua_tostring(NL, 1)), sizeof(char));
 	name[0]=0;
@@ -21,13 +23,8 @@ static int buildin_addnpc(lua_State *NL)
 	exname[0]=0;
 	map=(char *)aCallocA(strlen((char *)lua_tostring(NL, 3)), sizeof(char));
 	map[0]=0;
-	if(lua_isstring(NL, 8)) {
-		function=(char *)aCallocA(strlen((char *)lua_tostring(NL, 8)), sizeof(char));
-		function[0]=0;
-		strcpy(function,(char *)lua_tostring(NL,8));
-	} else {
-		function=NULL;
-	}
+	function=(char *)aCallocA(strlen((char *)lua_tostring(NL, 8)), sizeof(char));
+	function[0]=0;
 	
 	strcpy(name,(char *)lua_tostring(NL,1));
 	strcpy(exname,(char *)lua_tostring(NL,2));
@@ -37,8 +34,9 @@ static int buildin_addnpc(lua_State *NL)
 	y=lua_tonumber(NL,5);
 	dir=lua_tonumber(NL,6);
 	class_=lua_tonumber(NL,7);
+	strcpy(function,(char *)lua_tostring(NL,8));
 	
-	npc_add(name,exname,m,x,y,dir,class_,function);
+	lua_ea_npc_add(name,exname,m,x,y,dir,class_,function);
 	
 	aFree(name);
 	aFree(exname);
@@ -53,7 +51,7 @@ static int buildin_addnpc(lua_State *NL)
 static int buildin_addareascript(lua_State *NL)
 {
 	char name[24],map[16],function[50];
-	short m,x1,y1,x2,y2;
+	unsigned short m,x1,y1,x2,y2;
 
 	sprintf(name,"%s",lua_tostring(NL,1));
 	sprintf(map,"%s",lua_tostring(NL,2));
@@ -64,14 +62,15 @@ static int buildin_addareascript(lua_State *NL)
 	y2=(lua_tonumber(NL,6)>lua_tonumber(NL,4))?lua_tonumber(NL,6):lua_tonumber(NL,4);
 	sprintf(function,"%s",lua_tostring(NL,7));
 
-	areascript_add(name,m,x1,y1,x2,y2,function);
+	lua_ea_areascript_add(name,m,x1,y1,x2,y2,function);
 
 	return 0;
 }
 
 // addwarp("Warp name","map.gat",x,y,"destmap.gat",destx,desty,xradius,yradius)
 // Add a warp that moves players to somewhere else when entered
-static int buildin_addwarp(lua_State *NL)
+
+/*static int buildin_addwarp(lua_State *NL) // not sure about warps yet with eapp, will look into it
 {
 	char name[24],map[16],destmap[16];
 	short m,x,y;
@@ -88,14 +87,14 @@ static int buildin_addwarp(lua_State *NL)
 	xs=lua_tonumber(NL,8);
 	ys=lua_tonumber(NL,9);
 
-	warp_add(name,m,x,y,destmap,destx,desty,xs,ys);
+	lua_ea_warp_add(name,m,x,y,destmap,destx,desty,xs,ys);
 
 	return 0;
 }
 
 // addspawn("Monster name","map.gat",x,y,xradius,yradius,id,amount,delay1,delay2,"function")
 // Add a monster spawn etc
-static int buildin_addspawn(lua_State *NL)
+static int buildin_addspawn(lua_State *NL) //or mob spawns
 {
 	char name[24],map[16],function[50];
 	short m,x,y,xs,ys,class_,num,d1,d2;
@@ -113,10 +112,10 @@ static int buildin_addspawn(lua_State *NL)
 	d2=lua_tonumber(NL,10);
 	sprintf(function,"%s",lua_tostring(NL,11));
 
-	spawn_add(name,m,x,y,xs,ys,class_,num,d1,d2,function);
+	lua_ea_spawn_add(name,m,x,y,xs,ys,class_,num,d1,d2,function);
 
 	return 0;
-}
+}*/
 
 // npcmes("Text",[id])
 // Print the text into the NPC dialog window of the player
@@ -126,9 +125,9 @@ static int buildin_npcmes(lua_State *NL)
 	char mes[512];
 
 	sprintf(mes,"%s",lua_tostring(NL, 1)); 
-	sd = script_get_target(NL, 2);
+	sd = lua_ea_get_target(NL, 2);
 
-	clif_scriptmes(sd, sd->npc_id, mes);
+	clif_scriptmes(sd, sd->lua_ea_player_data.script_id, mes);
 
 	return 0;
 }
@@ -139,11 +138,11 @@ static int buildin_npcclose(lua_State *NL)
 {
 	struct map_session_data *sd;
 
-	sd = script_get_target(NL, 1);
+	sd = lua_ea_get_target(NL, 1);
 
-	clif_scriptclose(sd,sd->npc_id);
+	clif_scriptclose(sd,sd->lua_ea_player_data.script_id);
 
-	sd->script_state = CLOSE;
+	sd->lua_ea_player_data.lua_ea_state = CLOSE;
 	return lua_yield(NL, 0);
 }
 
@@ -153,11 +152,11 @@ static int buildin_npcnext(lua_State *NL)
 {
 	struct map_session_data *sd;
 
-	sd = script_get_target(NL, 1);
+	sd = lua_ea_get_target(NL, 1);
 
-	clif_scriptnext(sd,sd->npc_id);
+	clif_scriptnext(sd,sd->lua_ea_player_data.script_id);
 
-	sd->script_state = NEXT;
+	sd->lua_ea_player_data.lua_ea_state = NEXT;
 	return lua_yield(NL, 0);
 }
 
@@ -169,18 +168,18 @@ static int buildin_npcinput(lua_State *NL)
 	int type;
 
 	type = lua_tonumber(NL, 1);
-	sd = script_get_target(NL, 2);
+	sd = lua_ea_get_target(NL, 2);
 
 	switch(type){
 		case 0:
-			clif_scriptinput(sd,sd->npc_id);
+			clif_scriptinput(sd,sd->lua_ea_player_data.script_id);
 			break;
 		case 1:
-			clif_scriptinputstr(sd,sd->npc_id);
+			clif_scriptinputstr(sd,sd->lua_ea_player_data.script_id);
 			break;
 	}
 	
-	sd->script_state = INPUT;
+	sd->lua_ea_player_data.lua_ea_state = INPUT;
 	return lua_yield(NL, 1);
 }
 
@@ -194,7 +193,7 @@ static int buildin_npcmenu(lua_State *NL)
 	int len=0, n, i;
 	int value, index;
 
-	sd = script_get_target(NL, 2);
+	sd = lua_ea_get_target(NL, 2);
 	
 	//setup table to store values
 	lua_pushliteral(NL, "menu");
@@ -212,8 +211,8 @@ static int buildin_npcmenu(lua_State *NL)
 		return -1;
 	}
 
-	if(!sd->npc_menu_data.current) {
-		sd->npc_menu_data.current=0;
+	if(!sd->lua_ea_player_data.npc_menu_data.current) {
+		sd->lua_ea_player_data.npc_menu_data.current=0;
 	}
 
 	for(i=0; i<n; i+=2) {
@@ -249,10 +248,10 @@ static int buildin_npcmenu(lua_State *NL)
 		strcat(buf,":");
 	}
 
-	clif_scriptmenu(sd,sd->npc_id,buf);
+	clif_scriptmenu(sd,sd->lua_ea_player_data.script_id,buf);
 	aFree(buf);
 
-	sd->script_state = MENU;
+	sd->lua_ea_player_data.lua_ea_state = MENU;
 	return lua_yield(NL, 1);
 }
 
@@ -263,7 +262,7 @@ static int buildin_npcshop(lua_State *NL)
 	struct map_session_data *sd;
 	int n, i, j;
 
-	sd = script_get_target(NL, 2);
+	sd = lua_ea_get_target(NL, 2);
 
 	lua_pushliteral(NL, "n");
 	lua_rawget(NL, 1);
@@ -276,23 +275,23 @@ static int buildin_npcshop(lua_State *NL)
 		return -1;
 	}
 
-	sd->shop_data.n = n/2;
+	sd->lua_ea_player_data.shop_data.n = n/2;
 
 	for(i=1, j=0; i<=n; i+=2, j++) {
 		lua_pushnumber(NL, i);
 		lua_rawget(NL, 1);
-		sd->shop_data.nameid[j] = lua_tonumber(NL, -1);
+		sd->lua_ea_player_data.shop_data.nameid[j] = lua_tonumber(NL, -1);
 		lua_pop(NL, 1);
 
 		lua_pushnumber(NL, i+1);
 		lua_rawget(NL, 1);
-		sd->shop_data.value[j] = lua_tonumber(NL, -1);
+		sd->lua_ea_player_data.shop_data.value[j] = lua_tonumber(NL, -1);
 		lua_pop(NL, 1);
 	}
 
-	clif_npcbuysell(sd, sd->npc_id);
+	clif_npcbuysell(sd, sd->lua_ea_player_data.script_id);
 
-	sd->script_state = SHOP;
+	sd->lua_ea_player_data.lua_ea_state = SHOP;
 	return lua_yield(NL, 1);
 }
 
@@ -306,7 +305,7 @@ static int buildin_npccutin(lua_State *NL)
 
 	sprintf(name, "%s", lua_tostring(NL,1));
 	type = lua_tonumber(NL, 2);
-	sd = script_get_target(NL, 3);
+	sd = lua_ea_get_target(NL, 3);
 
 	clif_cutin(sd,name,type);
 
@@ -322,7 +321,7 @@ static int buildin_heal(lua_State *NL)
 
 	hp = lua_tonumber(NL, 1);
 	sp = lua_tonumber(NL, 2);
-	sd = script_get_target(NL, 3);
+	sd = lua_ea_get_target(NL, 3);
 
 	pc_heal(sd, hp, sp);
 
@@ -338,7 +337,7 @@ static int buildin_percentheal(lua_State *NL)
 
 	hp = lua_tonumber(NL, 1);
 	sp = lua_tonumber(NL, 2);
-	sd = script_get_target(NL, 3);
+	sd = lua_ea_get_target(NL, 3);
 
 	pc_percentheal(sd, hp, sp);
 
@@ -354,7 +353,7 @@ static int buildin_itemheal(lua_State *NL)
 
 	hp = lua_tonumber(NL, 1);
 	sp = lua_tonumber(NL, 2);
-	sd = script_get_target(NL, 3);
+	sd = lua_ea_get_target(NL, 3);
 
 	pc_itemheal(sd, hp, sp);
 
@@ -372,12 +371,12 @@ static int buildin_warp(lua_State *NL)
 	sprintf(str, "%s", lua_tostring(NL,1));
 	x = lua_tonumber(NL, 2);
 	y = lua_tonumber(NL, 3);
-	sd = script_get_target(NL, 4);
+	sd = lua_ea_get_target(NL, 4);
 
 	if(strcmp(str,"Random")==0) // Warp to random location
 		pc_randomwarp(sd,3);
 	else if(strcmp(str,"SavePoint")==0 || strcmp(str,"Save")==0) { // Warp to save point
-		if(map[sd->bl.m].flag.noreturn)
+		if(map[sd->.bl.m.flag.noreturn)
 			return 0;
 		pc_setpos(sd,sd->status.save_point.map,sd->status.save_point.x,sd->status.save_point.y,3);
 	} else // Warp to given location
@@ -394,7 +393,7 @@ static int buildin_jobchange(lua_State *NL)
 	int job;
 
 	job = lua_tonumber(NL, 1);
-	sd = script_get_target(NL, 2);
+	sd = lua_ea_get_target(NL, 2);
 
 	pc_jobchange(sd,job,0);
 
@@ -410,43 +409,49 @@ static int buildin_setlook(lua_State *NL)
 
 	type = lua_tonumber(NL, 1);
 	val = lua_tonumber(NL, 2);
-	sd = script_get_target(NL, 3);
+	sd = lua_ea_get_target(NL, 3);
 
 	pc_changelook(sd,type,val);
 
 	return 0;
 }
 
-// List of commands to build into Lua, format : lua_ea_commands("function_name_in_lua", C_function_name)
-lua_ea_commands default_buildins[] = {
+// List of commands to build into Lua, format : {"function_name_in_lua", C_function_name}
+static struct LuaCommandInfo commands[] = {
+	
 	// Basic functions
-	lua_ea_commands("scriptend", buildin_scriptend),
+	{"scriptend", buildin_scriptend},
+	
 	// Object creation functions
-	lua_ea_commands("addnpc", buildin_addnpc),
-	lua_ea_commands("addareascript", buildin_addareascript),
-	lua_ea_commands("addwarp", buildin_addwarp),
-	lua_ea_commands("addspawn", buildin_addspawn),
-//	lua_ea_commands("addgmcommand", buildin_addgmcommand),
-//	lua_ea_commands("addtimer", buildin_addtimer),
-//  lua_ea_commands("addclock", buildin_addclock),
-//	lua_ea_commands("addevent", buildin_addevent),
+	{"addnpc", buildin_addnpc},
+	{"addareascript", buildin_addareascript},
+	{"addwarp", buildin_addwarp},
+	{"addspawn", buildin_addspawn},
+//	{"addgmcommand", buildin_addgmcommand},
+//	{"addtimer", buildin_addtimer},
+//  {"addclock", buildin_addclock},
+//	{"addevent", buildin_addevent},
+
 	// NPC dialog functions
-	lua_ea_commands("npcmes", buildin_npcmes),
-	lua_ea_commands("npcclose", buildin_npcclose),
-	lua_ea_commands("npcnext", buildin_npcnext),
-	lua_ea_commands("npcinput", buildin_npcinput),
-	lua_ea_commands("npcmenu_", buildin_npcmenu),
-	lua_ea_commands("npcshop_", buildin_npcshop),
-	lua_ea_commands("npccutin", buildin_npccutin),
+	{"npcmes", buildin_npcmes},
+	{"npcclose", buildin_npcclose},
+	{"npcnext", buildin_npcnext},
+	{"npcinput", buildin_npcinput},
+	{"npcmenu_", buildin_npcmenu},
+	{"npcshop_", buildin_npcshop},
+	{"npccutin", buildin_npccutin},
+	
 	// Player related functions
-	lua_ea_commands("heal", buildin_heal),
-	lua_ea_commands("percentheal", buildin_percentheal),
-	lua_ea_commands("itemheal", buildin_itemheal),
-	lua_ea_commands("warp", buildin_warp),
-	lua_ea_commands("jobchange", buildin_jobchange),
-	lua_ea_commands("setlook", buildin_setlook),
+	{"heal", buildin_heal},
+	{"percentheal", buildin_percentheal},
+	{"itemheal", buildin_itemheal},
+	{"warp", buildin_warp},
+	{"jobchange", buildin_jobchange},
+	{"setlook", buildin_setlook},
+	
 	// End of build-in functions list
-	lua_ea_commands("-End of list-", NULL),
+	{"-End of list-", NULL},
+	
 };
 
 #endif
