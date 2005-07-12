@@ -1,4 +1,4 @@
-/* LUA_EA module ***Kevin*** lua_ea.cpp v1.0 */
+/* LUA_EA module ***Kevin*** lua_ea.c v1.0 */
 
 #include "base.h"
 #include "socket.h"
@@ -222,13 +222,14 @@ static int buildin_npcinput(lua_State *NL)
 	switch(type){
 		case 0:
 			clif_scriptinput(*sd,sd->lua_player_data.script_id);
+			sd->lua_player_data.state = INPUT;
 			break;
 		case 1:
 			clif_scriptinputstr(*sd,sd->lua_player_data.script_id);
+			sd->lua_player_data.state = INPUT_STR;
 			break;
 	}
-	
-	sd->lua_player_data.state = INPUT;
+
 	return lua_yield(NL, 1);
 }
 
@@ -546,7 +547,28 @@ void lua_ea_buildin_commands()
 	ShowStatus("Done registering '"CL_BLUE"%d"CL_RESET"' script build-in commands.\n",i);
 }
 
-/*void lua_ea_load_script_files(char **script_files) {*/ //under construction
+void lua_ea_load_script_files(struct lua_ea_script_files_list *file_list)
+{
+	char *name;
+	struct lua_ea_script_files_list *file;
+	
+	for(file=file_list;file->next;file=file->next) {
+		name = file->file;
+		
+		FILE *fp = fopen (name,"r");
+		if (fp == NULL) {
+			ShowError("File not found : %s\n",name);
+			exit(1);
+		}
+	
+		if (luaL_loadfile(L,name))
+			ShowError("Cannot load script file %s : %s",name,lua_tostring(L,-1));
+		if (lua_pcall(L,0,0,0))
+			ShowError("Cannot run script file %s : %s",name,lua_tostring(L,-1));
+
+		fclose(fp);
+	}
+}
 	
 
 // Run a Lua function that was previously loaded, specifying the type of arguments with a "format" string
@@ -832,8 +854,8 @@ void init_lua_ea(void)
 
 	lua_ea_buildin_commands(); // Build in the Lua commands
 	
-	//lua_ea_load_config(); //under construction
-	//lua_ea_load_script_files(lua_ea_Config.script_files);
+	lua_ea_load_config();
+	lua_ea_load_script_files(lua_ea_Config.script_files);
 	
 }
 
@@ -879,11 +901,11 @@ int lua_ea_continue(struct map_session_data *sd, char *format, ...)
             d++;
             break;
           case 'i': // i = Integer
-            int_args[d] = va_arg(args,int);
+            int_args[i] = va_arg(args,int);
             i++;
             break;
           case 's': // s = String
-            char_args[d] = va_arg(args,char*);
+            char_args[c] = va_arg(args,char*);
             c++;
             break;
           default: // Unknown code
@@ -957,4 +979,46 @@ void lua_ea_close_script(struct map_session_data *sd)
 	sd->lua_player_data.NL = NULL;
 	sd->lua_player_data.state = NRUN;
 	sd->lua_player_data.script_id = 0;
+}
+
+/************************************************************\
+|                      CONFIG READING                        |
+\************************************************************/
+
+int lua_ea_load_config(const char *cfgName)
+{
+	int i;
+	char line[1024],w1[1024],w2[1024];
+	FILE *fp;
+
+	fp=savefopen(cfgName,"r");
+	if (fp == NULL) {
+		ShowMessage("file not found: %s\n",cfgName);
+		return 1;
+	}
+	while (fgets(line, sizeof(line) - 1, fp)) {
+		if( !skip_empty_line(line) )
+			continue;
+		i = sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
+		if (i != 2)
+			continue;
+		if(strcasecmp(w1,"lua")==0) {
+			lua_ea_script_file_add(w2);
+		}
+		else if(strcasecmp(w1,"import")==0){
+			lua_ea_load_config(w2);
+		}
+	}
+	fclose(fp);
+
+	return 0;
+}
+
+int lua_ea_script_file_add(const char* file)
+{
+	lua_ea_current_file->file = file;
+	lua_ea_current_file->next = struct lua_ea_script_files_list;
+	lua_ea_current_file = lua_ea_current_file->next;
+	
+	return 0;
 }

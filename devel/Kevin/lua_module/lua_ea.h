@@ -4,8 +4,15 @@
 #define _LUA_EA_H_
 
 extern struct lua_ea_Config {
-	char** script_files;
+	struct lua_ea_script_files_list script_files;
 } lua_ea_config;
+
+struct lua_ea_script_files_list {
+	char *file;
+	struct script_files_list *next;
+}
+
+struct lua_ea_script_files_list lua_ea_current_file = lua_ea_Config.script_files;
 
 typedef enum {
 	NRUN, // Script is ready
