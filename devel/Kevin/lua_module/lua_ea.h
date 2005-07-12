@@ -4,13 +4,7 @@
 #define _LUA_EA_H_
 
 extern struct lua_ea_Config {
-	unsigned event_lua_ea_type : 1;
-	char* die_event_name;
-	char* kill_event_name;
-	char* login_event_name;
-	char* logout_event_name;
-	char* mapload_event_name;
-	unsigned event_requires_trigger : 1;
+	char** script_files;
 } lua_ea_config;
 
 typedef enum {
@@ -19,12 +13,14 @@ typedef enum {
 	CLOSE, // Waiting for the player to click [Close]
 	MENU, // Waiting for the player to choose a menu option
 	INPUT, // Waiting for the player to input a value
-	SHOP, // Waiting for the player to choose [Buy] or [Sell]
+	INPUT_STR, // Waiting for the player to input a string
+	LUA_SHOP, // Waiting for the player to choose [Buy] or [Sell]
 	BUY, // Waiting for the player to choose items to buy
 	SELL // Waiting for the player to choose items to sell
 } lua_script_state;
 
 typedef enum {
+	NONE,
 	NPC,
 	AREASCRIPT
 } lua_npc_type;
@@ -45,7 +41,7 @@ struct lua_ea_npc_data {
 		int y1;
 		int x2;
 		int y2;
-	};
+	} ad;
 };
 
 struct LuaCommandInfo {
@@ -55,12 +51,23 @@ struct LuaCommandInfo {
 
 lua_State *L;
 
+/*lua system functions*/
+void init_lua_ea(void);
+void close_lua_ea(void);
 void lua_ea_buildin_commands();
+int lua_ea_npc_add(char *name,char *exname,int m,int x,int y,int dir,int class_,char *function);
+int lua_ea_areascript_add(char *name,int m,int x1,int y1,int x2,int y2,char *function);
+
+/*script control*/
+int lua_ea_continue(struct map_session_data *sd, char *format, ...);
 void lua_ea_run_function(const char *name,int char_id,const char *format,...);
 void lua_ea_run_chunk(const char *chunk,int char_id);
+void lua_ea_close_script(struct map_session_data *sd);
 
 /*script related functions*/
-struct map_session_data* lua_ea_get_target(lua_State *NL,int idx);
+struct map_session_data * lua_ea_get_target(lua_State *NL,int idx);
 void lua_ea_resume(struct map_session_data *sd,const char *format,...);
+int lua_ea_sendbuylist(struct map_session_data *sd);
+int lua_ea_run(struct map_session_data *sd, struct npc_data *nd);
 
 #endif
