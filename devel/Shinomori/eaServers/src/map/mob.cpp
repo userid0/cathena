@@ -526,8 +526,6 @@ int mob_walk(struct mob_data &md,unsigned long tick,int data)
 		i = i>>1;
 		if(i < 1 && md.walkpath.path_half == 0)
 			i = 1;
-
-
 		if(md.timer != -1)
 		{
 			delete_timer(md.timer,mob_timer);
@@ -2646,13 +2644,13 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 		if(sd) {
 			int rate;
 			if ((rate = sd->expaddrace[race]) > 0) {
-				base_exp += base_exp* rate/100;
-				job_exp  += job_exp * rate/100;
+				base_exp += (unsigned long)((uint64)base_exp* rate/100);
+				job_exp  += (unsigned long)((uint64)job_exp * rate/100);
 			}
 			if (battle_config.pk_mode && (mob_db[md.class_].lv - sd->status.base_level >= 20)) {
 				// pk_mode additional exp if monster >20 levels [Valaris]
-				base_exp += base_exp* 15/100;
-				job_exp  += job_exp * 15/100;
+				base_exp += (unsigned long)((uint64)base_exp* 15/100);
+				job_exp  += (unsigned long)((uint64)job_exp * 15/100);
 			}			
 		}
 		if(md.state.size==1) { // change experience for different sized monsters [Valaris]
@@ -2773,6 +2771,19 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 			ditem->second_sd = second_sd;
 			ditem->third_sd = third_sd;
 			add_timer(tick+500+i,mob_delay_item_drop,(int)ditem,0); //!!todo!!
+
+			//Rare Drop Global Announce by Lupus
+			if(drop_rate<=(int)battle_config.drop_rare_announce)
+			{
+				char buf[1024];
+				struct item_data *i_data;
+				i_data = itemdb_exists(ditem->nameid);
+				if (sd!=NULL && sd->status.name != NULL)
+					sprintf(buf, "'%s' won %s's %s (chance: %%%0.02f)", sd->status.name, mob_db[md.class_].jname, i_data->jname, (float)drop_rate/1000);
+				else
+					sprintf(buf, "GM won %s's %s (chance: %%%0.02f)", mob_db[md.class_].jname, i_data->jname, (float)drop_rate/1000);
+				intif_GMmessage(buf,0);
+			}
 		}
 
 		// Ore Discovery [Celest]

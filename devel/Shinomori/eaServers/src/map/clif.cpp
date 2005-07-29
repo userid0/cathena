@@ -2467,15 +2467,21 @@ int clif_updatestatus(struct map_session_data &sd,unsigned short type)
 	if( !session_isActive(fd) )
 		return 0;
  
+
+	// send stuff with other functions
 	if(type==SP_MANNER)
 		clif_changestatus(sd.bl,SP_MANNER,sd.status.manner);
+	else if(type==SP_WEIGHT)
+		pc_checkweighticon(sd);
+	else if(type==SP_HP && battle_config.disp_hpmeter)
+		clif_hpmeter(sd);
 
+	// send update things
 	WFIFOW(fd,0)=0xb0;
 	WFIFOW(fd,2)=type;
 	switch(type){
 		// 00b0
 	case SP_WEIGHT:
-		pc_checkweighticon(sd);
 		WFIFOL(fd,4)=sd.weight;
 		break;
 	case SP_MAXWEIGHT:
@@ -2516,8 +2522,6 @@ int clif_updatestatus(struct map_session_data &sd,unsigned short type)
 		break;
 	case SP_HP:
 		WFIFOL(fd,4)=sd.status.hp;
-		if(battle_config.disp_hpmeter)
-			clif_hpmeter(sd);
 		break;
 	case SP_SP:
 		WFIFOL(fd,4)=sd.status.sp;
@@ -2556,8 +2560,6 @@ int clif_updatestatus(struct map_session_data &sd,unsigned short type)
 
 	case SP_ZENY:
 		WFIFOW(fd,0)=0xb1;
-		if(sd.status.zeny < 0)
-			sd.status.zeny = 0;
 		WFIFOL(fd,4)=sd.status.zeny;
 		break;
 	case SP_BASEEXP:
@@ -2655,8 +2657,6 @@ int clif_updatestatus(struct map_session_data &sd,unsigned short type)
 		return 1;
 	}
 	WFIFOSET(fd,len);
-
-
 
 	return 0;
 }
@@ -8724,6 +8724,7 @@ int clif_parse_Restart(int fd, struct map_session_data &sd)
 	return 0;
 }
 
+
 /*==========================================
  * Transmission of a wisp (S 0096 <len>.w <nick>.24B <message>.?B)
  *------------------------------------------
@@ -8754,9 +8755,41 @@ int clif_parse_Wis(int fd, struct map_session_data &sd)
 
 	if(gm_command) aFree(gm_command);
 
-
 	//Chat Logging type 'W' / Whisper
 	log_chat("W", 0, sd.status.char_id, sd.status.account_id, (char*)sd.mapname, sd.bl.x, sd.bl.y, (char*)RFIFOP(fd, 4), (char*)RFIFOP(fd, 28));
+
+	//-------------------------------------------------------//
+	//   Lordalfa - Paperboy - To whisper NPC commands       //
+	//-------------------------------------------------------//
+	struct npc_data *npc;
+	if ((npc = npc_name2id((const char*)RFIFOP(fd,4))))
+	{
+		char tempmes[128];
+		char *buffer = (char*)RFIFOP(fd,28);
+		size_t i;
+		char *ip=buffer, *kp=NULL;
+		for(i=0; i<10; i++)
+		{
+			if(ip)
+			{
+				kp = ip;
+				ip = strchr(ip,',');
+				if(ip) *ip++=0;
+			}
+			else
+				kp = "";
+			sprintf(tempmes, "@whispervar%d$", i);
+			set_var(sd,tempmes,kp);
+		}//Sets Variables to use in the NPC
+		
+		sprintf(tempmes, "%s::OnWhisperGlobal", npc->name);
+		if (npc_event(sd,tempmes,0))
+			return 0;	// Calls the NPC label
+	}
+	//-------------------------------------------------------//
+	//  Lordalfa - Paperboy - END - NPC Whisper Commands     //
+	//-------------------------------------------------------//
+
 
 	// searching destination character
 	dstsd = map_nick2sd((char*)RFIFOP(fd,4));

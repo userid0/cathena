@@ -1,4 +1,4 @@
-CC = g++ -pipe
+CCC = g++ -pipe
 PACKETDEF = -DPACKETVER=6 -DNEW_006b
 OPT = -g -O6 -ffast-math
 
@@ -53,9 +53,9 @@ MYSQL_INCLUDE = $(shell $(MYSQLFLAG_CONFIG) $(MYSQLFLAG_CONFIG_ARGUMENT))
 MYSQL_LIB     = $(shell $(MYSQLFLAG_CONFIG) --libs)
 endif
 
-MKDEF = CC="$(CC)" CPPFLAGS="$(CPPFLAGS) $(MYSQL_INCLUDE)" LIB_S="$(MYSQL_LIB) $(LIBS) $(GCLIB)"
+MKDEF = CCC="$(CCC)" CPPFLAGS="$(CPPFLAGS) $(MYSQL_INCLUDE)" LIB_S="$(MYSQL_LIB) $(LIBS) $(GCLIB)"
 else
-MKDEF = CC="$(CC)" CPPFLAGS="$(CPPFLAGS) -DTXT_ONLY" LIB_S="$(LIBS) $(GCLIB)"
+MKDEF = CCC="$(CCC)" CPPFLAGS="$(CPPFLAGS) -DTXT_ONLY" LIB_S="$(LIBS) $(GCLIB)"
 endif
 
 
@@ -82,7 +82,7 @@ sql: src/common/GNUmakefile src/login_sql/GNUmakefile src/char_sql/GNUmakefile s
 	cd src ; cd ladmin ; $(MAKE) $(MKDEF) $@ ; cd .. ; cd ..
 else
 sql:
-	$(MAKE) CC="$(CC)" OPT="$(OPT)" SQLFLAG=1 $@
+	$(MAKE) CCC="$(CCC)" OPT="$(OPT)" SQLFLAG=1 $@
 endif
 
 clean: src/common/GNUmakefile src/login/GNUmakefile src/char/GNUmakefile src/map/GNUmakefile src/ladmin/GNUmakefile

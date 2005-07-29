@@ -4511,7 +4511,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case WE_MALE:				/* åNÇæÇØÇÕåÏÇÈÇÊ */
 		if(sd && dstsd){
 			int hp_rate=(skilllv <= 0)? 0:skill_db[skillid].hp_rate[skilllv-1];
-			int gain_hp=sd->status.max_hp*abs(hp_rate)/100;// 15%
+			int gain_hp=dstsd->status.max_hp*abs(hp_rate)/100;// 15%
 			clif_skill_nodamage(*src,*bl,skillid,gain_hp,1);
 			battle_heal(NULL,bl,gain_hp,0,0);
 		}
@@ -4519,7 +4519,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case WE_FEMALE:				/* Ç†Ç»ÇΩÇÃ?Ç…?êµÇ…Ç»ÇËÇ‹Ç∑ */
 		if(sd && dstsd){
 			int sp_rate=(skilllv <= 0)? 0:skill_db[skillid].sp_rate[skilllv-1];
-			int gain_sp=sd->status.max_sp*abs(sp_rate)/100;// 15%
+			int gain_sp=dstsd->status.max_sp*abs(sp_rate)/100;// 15%
 			clif_skill_nodamage(*src,*bl,skillid,gain_sp,1);
 			battle_heal(NULL,bl,0,gain_sp,0);
 		}
@@ -6237,8 +6237,8 @@ int skill_unit_onplace_timer(struct skill_unit *src,struct block_list *bl,unsign
 			int sec = skill_get_time2(sg->skill_id,sg->skill_lv) - status_get_agi(bl)*100;
 			if(status_get_mode(bl)&0x20)
 				sec = sec/5;
-			if (sec < 3000)	// minimum time of 3 seconds [celest]
-				sec = 3000;
+			if (sec < 3000+30*sg->skill_lv)	// minimum time of 3 seconds [celest]
+				sec = 3000+30*sg->skill_lv;
 			battle_stopwalking(bl,1);
 			status_change_start(bl,SC_ANKLE,sg->skill_lv,0,0,0,sec,0);
 
@@ -7180,14 +7180,6 @@ int skill_check_condition(struct map_session_data *sd,int type)
 		}
 		break;
 	case ST_EXPLOSIONSPIRITS:
-	/* Sources say that MO_EXTREMITYFIST requires FURY no matter what the situation. [Skotlex]
-		if (skill == MO_EXTREMITYFIST && ((sd->sc_data[SC_COMBO].timer != -1 &&
-				(sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH ||
-				sd->sc_data[SC_COMBO].val1 == CH_TIGERFIST ||
-				sd->sc_data[SC_COMBO].val1 == CH_CHAINCRUSH)) ||
-				sd->sc_data[SC_BLADESTOP].timer!=-1))
-			break;
-	*/
 		if(sd->sc_data[SC_EXPLOSIONSPIRITS].timer == -1) {
 			clif_skill_fail(*sd,skill,0,0);
 			return 0;
@@ -10270,7 +10262,7 @@ int skill_read_skillspamount(void)
 	struct skill_db *skill = NULL;
 	int s, idx, new_flag=1, level=1, sp=0;
 
-	buf=(char *) grfio_reads("data\\leveluseskillspamount.txt",&s);
+	buf=(char *)grfio_reads("data\\leveluseskillspamount.txt",&s);
 
 	if(buf==NULL)
 		return -1;

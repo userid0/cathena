@@ -1344,38 +1344,40 @@ int map_searchrandfreecell(int m,int x,int y,int range)
 {
 	int free_cell,i,j;
 
-	for(free_cell=0,i=-range;i<=range;i++){
-		if(i+y<0 || i+y>=map[m].ys)
-			continue;
-		for(j=-range;j<=range;j++){
-			if(j+x<0 || j+x>=map[m].xs)
+	if(m<map_num)
+	{
+		for(free_cell=0,i=-range;i<=range;i++){
+			if(i+y<0 || i+y>=map[m].ys)
 				continue;
-			if(map_getcell(m,j+x,i+y,CELL_CHKNOPASS))
-				continue;
-			free_cell++;
-		}
-	}
-	if(free_cell==0)
-		return -1;
-	free_cell=rand()%free_cell;
-	for(i=-range;i<=range;i++){
-		if(i+y<0 || i+y>=map[m].ys)
-			continue;
-		for(j=-range;j<=range;j++){
-			if(j+x<0 || j+x>=map[m].xs)
-				continue;
-			if(map_getcell(m,j+x,i+y,CELL_CHKNOPASS))
-				continue;
-			if(free_cell==0){
-				x+=j;
-				y+=i;
-				i=range+1;
-				break;
+			for(j=-range;j<=range;j++){
+				if(j+x<0 || j+x>=map[m].xs)
+					continue;
+				if(map_getcell(m,j+x,i+y,CELL_CHKNOPASS))
+					continue;
+				free_cell++;
 			}
-			free_cell--;
+		}
+		if(free_cell==0)
+			return -1;
+		free_cell=rand()%free_cell;
+		for(i=-range;i<=range;i++){
+			if(i+y<0 || i+y>=map[m].ys)
+				continue;
+			for(j=-range;j<=range;j++){
+				if(j+x<0 || j+x>=map[m].xs)
+					continue;
+				if(map_getcell(m,j+x,i+y,CELL_CHKNOPASS))
+					continue;
+				if(free_cell==0){
+					x+=j;
+					y+=i;
+					i=range+1;
+					break;
+				}
+				free_cell--;
+			}
 		}
 	}
-
 	return x+(y<<16);
 }
 
@@ -2800,14 +2802,14 @@ int map_readmap(int m,char *fn, char *alias, int *map_cache, int maxmap)
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*2);
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*3);
 				SwapFourBytes(((char*)(&pp)) + sizeof(long)*4);
-		}
+			}
 
 			if(wh!=NO_WATER && pp.type==0)
 			{	// ÉàÅŠö©Æ
 				// no direct access
 				//map[m].gat[x+y*map[m].xs].type=(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0;
 				map_setcell(m,x,y,(pp.high[0]>wh || pp.high[1]>wh || pp.high[2]>wh || pp.high[3]>wh) ? 3 : 0);
-				}
+			}
 			else
 			{	// no direct access
 				//map[m].gat[x+y*map[m].xs].type=() & CELL_MASK;

@@ -1,7 +1,5 @@
 all: txt sql
-
 txt: txtobj map-server
-
 sql: sqlobj map-server_sql
 
 txtobj:
@@ -10,22 +8,28 @@ txtobj:
 sqlobj:
 	mkdir sqlobj
 
-COMMON_OBJ = ../common/baseio.o ../common/core.o ../common/db.o ../common/plugins.o ../common/grfio.o ../common/lock.o ../common/malloc.o ../common/md5calc.o ../common/mmo.o ../common/nullpo.o ../common/showmsg.o ../common/socket.o ../common/strlib.o ../common/timer.o ../common/utils.o
+##########################################################
+# stupid make does not know .cpp suffix by default
+.SUFFIXES: .cpp
+.cpp.o:
+	$(CCC) $(CPPFLAGS) -c $<
+##########################################################
 
+
+COMMON_OBJ = ../common/baseio.o ../common/core.o ../common/db.o ../common/plugins.o ../common/grfio.o ../common/lock.o ../common/malloc.o ../common/md5calc.o ../common/mmo.o ../common/nullpo.o ../common/showmsg.o ../common/socket.o ../common/strlib.o ../common/timer.o ../common/utils.o
 COMMON_H = ../common/base.h ../common/baseio.h ../common/core.h ../common/db.h ../common/plugins.h ../common/grfio.h ../common/lock.h ../common/malloc.h ../common/md5calc.h ../common/mmo.h ../common/nullpo.h ../common/showmsg.h ../common/socket.h ../common/strlib.h ../common/timer.h ../common/utils.h ../common/version.h
 LIBS = -lz -lm
 
 map-server: txtobj/map.o txtobj/chrif.o txtobj/clif.o txtobj/pc.o txtobj/npc.o txtobj/chat.o txtobj/path.o txtobj/itemdb.o txtobj/mob.o txtobj/script.o txtobj/storage.o txtobj/skill.o txtobj/atcommand.o txtobj/charcommand.o txtobj/battle.o txtobj/intif.o txtobj/trade.o txtobj/party.o txtobj/vending.o txtobj/guild.o txtobj/pet.o txtobj/log.o txtobj/status.o txtobj/mail.o txtobj/npc_chat.o txtobj/mercenary.o $(COMMON_OBJ)
-	$(CC) $> $(LIB_S) $(LIBS) -o ../../$@
+	$(CCC) $> $(LIB_S) $(LIBS) -o ../../$@
 
 map-server_sql: sqlobj/map.o sqlobj/chrif.o sqlobj/clif.o sqlobj/pc.o sqlobj/npc.o sqlobj/chat.o sqlobj/path.o sqlobj/itemdb.o sqlobj/mob.o sqlobj/script.o sqlobj/storage.o sqlobj/skill.o sqlobj/atcommand.o sqlobj/charcommand.o sqlobj/battle.o sqlobj/intif.o sqlobj/trade.o sqlobj/party.o sqlobj/vending.o sqlobj/guild.o sqlobj/pet.o sqlobj/log.o sqlobj/status.o sqlobj/mail.o sqlobj/npc_chat.o sqlobj/mercenary.o $(COMMON_OBJ)
-	$(CC) $> $(LIB_S) $(LIBS) -o ../../$@
+	$(CCC) $> $(LIB_S) $(LIBS) -o ../../$@
 
 txtobj/%.o: %.cpp
-	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
-
+	$(CCC) $(CPPFLAGS) $(OUTPUT_OPTION) -c $<
 sqlobj/%.o: %.cpp
-	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
+	$(CCC) $(CPPFLAGS) $(OUTPUT_OPTION) -c $<
 
 txtobj/map.o: map.cpp map.h chrif.h clif.h npc.h pc.h mob.h chat.h skill.h itemdb.h storage.h party.h pet.h atcommand.h $(COMMON_H)
 txtobj/chrif.o: chrif.cpp map.h battle.h chrif.h clif.h intif.h pc.h npc.h $(COMMON_H)

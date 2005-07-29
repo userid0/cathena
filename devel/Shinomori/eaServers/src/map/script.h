@@ -54,6 +54,7 @@ char *parse_script(unsigned char *src,int line);
 int run_script(const char *script,int pos,int rid,int oid);
 
 int set_var(const char *name, void *v);
+int set_var(struct map_session_data &sd, const char *name, void *v);
 int conv_num(struct script_state *st,struct script_data *data);
 const char* conv_str(struct script_state &st,struct script_data &data);
 

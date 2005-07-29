@@ -1827,5 +1827,284 @@ public:
 
 
 
+//////////////////////////////////////////////////////////////////////////
+// atomic access functions
+// single thread version with removed fastcall
+//!! replace with basesync.h
+//////////////////////////////////////////////////////////////////////////
+
+inline int atomicincrement(int* target)
+{
+    return ++(*target);
+}
+
+inline int atomicdecrement(int* target)
+{
+    return --(*target);
+}
+
+inline int atomicexchange(int* target, int value)
+{
+    int r = *target;
+    *target = value;
+    return r;
+}
+inline void* _atomicexchange(void** target, void* value)
+{
+    void* r = *target;
+    *target = value;
+    return r;
+}
+
+inline unsigned int atomicincrement(unsigned int* target)	{return (unsigned int)atomicincrement((int*)target);}
+inline unsigned int atomicdecrement(unsigned int* target)	{return (unsigned int)atomicdecrement((int*)target);}
+
+template <class T> inline T* atomicexchange(T** target, T* value)
+{	return (T*)_atomicexchange((void**)target, (void*)value); 
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// basic pointer interface
+//!! replace with basesafeprt.h
+/////////////////////////////////////////////////////////////////////////////////////////
+template <class X> class TPtr : public noncopyable
+{
+protected:
+	TPtr()	{}
+public:
+	virtual ~TPtr()	{}
+	virtual const X* get() const = 0;
+
+	virtual const X& readaccess() const = 0;
+	virtual X& writeaccess() = 0;
+
+	virtual bool operator ==(const TPtr& p)	const	{return false;}
+	virtual bool operator !=(const TPtr& p)	const	{return true;}
+	virtual bool operator ==(void *p) const = 0;
+	virtual bool operator !=(void *p) const = 0;
+};
+/////////////////////////////////////////////////////////////////////////////////////////
+// Simple Auto/Copy-Pointer
+// it creates a default object on first access if not initializes
+// automatic free on object delete
+// does not use a counting object
+/////////////////////////////////////////////////////////////////////////////////////////
+template <class X> class TPtrAuto : public TPtr<X>
+{
+private:
+	X* itsPtr;
+	void create()					{ if(!itsPtr) itsPtr = new X; }
+	void copy(const TPtr<X>& p)
+	{
+		if(this->itsPtr)
+		{
+			delete this->itsPtr;
+			this->itsPtr = NULL;
+		}
+		X* pp=p.get();
+		if( pp )
+			this->itsPtr = new X(*pp);
+	}
+public:
+	explicit TPtrAuto(X* p = NULL) throw() : itsPtr(p)	{}
+	virtual ~TPtrAuto()				{if(this->itsPtr) delete this->itsPtr;}
+
+	TPtrAuto(const TPtr<X>& p) throw() : itsPtr(NULL)		{ this->copy(p); }
+	const TPtr<X>& operator=(const TPtr<X>& p)				{ this->copy(p); return *this; }
+	TPtrAuto(const TPtrAuto<X>& p) throw() : itsPtr(NULL)	{ this->copy(p); }
+	const TPtr<X>& operator=(const TPtrAuto<X>& p)			{ this->copy(p); return *this; }
+
+	virtual const X& readaccess() const			{const_cast<TPtrAuto<X>*>(this)->create(); return *this->itsPtr;}
+	virtual X& writeaccess()					{const_cast<TPtrAuto<X>*>(this)->create(); return *this->itsPtr;}
+	virtual const X* get() const				{const_cast<TPtrAuto<X>*>(this)->create(); return this->itsPtr;}
+	virtual const X& operator*() const throw()	{const_cast<TPtrAuto<X>*>(this)->create(); return *this->itsPtr;}
+	virtual const X* operator->() const throw() {const_cast<TPtrAuto<X>*>(this)->create(); return this->itsPtr;}
+	X& operator*()	throw()						{const_cast<TPtrAuto<X>*>(this)->create(); return *this->itsPtr;}
+	X* operator->()	throw()						{const_cast<TPtrAuto<X>*>(this)->create(); return this->itsPtr;}
+	operator const X&() const throw()			{const_cast<TPtrAuto<X>*>(this)->create(); return *this->itsPtr;}
+
+
+	virtual bool operator ==(void *p) const { return this->itsPtr==p; }
+	virtual bool operator !=(void *p) const { return this->itsPtr!=p; }
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Count-Pointer
+// pointer copies are counted
+// when reference counter becomes zero the object is automatically deleted
+// if there is no pointer, it will return NULL
+/////////////////////////////////////////////////////////////////////////////////////////
+template <class X> class TPtrCount : public TPtr<X>
+{
+protected:
+	class CCounter
+	{
+	public:
+		unsigned int	count;
+		X*				ptr;
+
+		CCounter(X* p, unsigned c = 1) : ptr(p), count(c) {}
+		~CCounter()	{ if(ptr) delete ptr; }
+
+		const CCounter& operator=(X* p)
+		{	// take ownership of the given pointer
+			if(ptr) delete ptr;
+			ptr = p;
+			return *this;
+		}
+		CCounter* aquire()
+		{
+			atomicincrement( &count );
+			return this;
+		}
+		CCounter* release()
+		{
+			if( atomicdecrement( &count ) == 0 )
+			{
+				delete this;
+				return NULL;
+			}
+			return this;
+		}
+	}* itsCounter;
+
+	void acquire(const TPtrCount& r) throw()
+	{	// check if not already pointing to the same object
+		if( this->itsCounter != r.itsCounter ||  NULL==this->itsCounter )
+		{	// save the current pointer
+			CCounter *old = this->itsCounter;
+			// aquite and increment the given pointer
+			if( r.itsCounter )
+			{
+				this->itsCounter = r.itsCounter;
+				this->itsCounter->aquire();
+			}
+			else
+			{	// new empty counter to link the pointers
+				this->itsCounter = new CCounter(NULL);
+				const_cast<TPtrCount&>(r).itsCounter = this->itsCounter;
+				this->itsCounter->aquire();
+			}
+			// release the old thing
+			if(old) old->release();
+		}
+	}
+	void release()
+	{	// decrement the count,
+		if(this->itsCounter) itsCounter = itsCounter->release();
+	}
+
+
+public:
+	TPtrCount() : itsCounter(NULL)
+	{}
+	explicit TPtrCount(X* p) : itsCounter(NULL)
+	{	// allocate a new counter
+		if(p)
+			this->itsCounter = new CCounter(p);
+	}
+	TPtrCount(const TPtrCount& r) : itsCounter(NULL)
+	{
+		this->acquire(r);
+	}
+	virtual ~TPtrCount()	
+	{
+		this->release();
+	}
+	const TPtrCount& operator=(const TPtrCount& r)
+	{
+		this->acquire(r);
+		return *this;
+	}
+	TPtrCount& operator=(X* p)
+	{	// take ownership of the given pointer
+		if( this->itsCounter )
+		{	
+			make_unique();
+			*this->itsCounter = p;
+		}
+		else
+		{
+			this->itsCounter = new CCounter(p);
+		}
+		return *this;
+	}
+
+	const size_t getRefCount() const { return (this->itsCounter) ? this->itsCounter->count : 1;}
+	bool clear()					{ this->release(); return this->itsCounter==NULL; }
+	bool exists() const				{ return NULL!=this->itsCounter; }
+	bool isunique()	const throw()	{ return (this->itsCounter ? (itsCounter->count == 1):true);}
+	bool make_unique()	  throw()
+	{
+		if( !isunique() )
+		{
+			CCounter *cnt = new CCounter(NULL);
+			// copy the object if exist
+			if(this->itsCounter->ptr)
+			{
+				cnt->ptr = new X(*(this->itsCounter->ptr));
+			}
+			release();
+			itsCounter = cnt;
+		}
+		return true;
+	}
+	virtual bool operator ==(const TPtrCount& p) const { return this->itsCounter == p.itsCounter; }
+	virtual bool operator !=(const TPtrCount& p) const { return this->itsCounter != p.itsCounter; }
+	virtual bool operator ==(void *p) const { return (this->itsCounter) ? (this->itsCounter->ptr==p) : (this->itsCounter==p); }
+	virtual bool operator !=(void *p) const { return (this->itsCounter) ? (this->itsCounter->ptr!=p) : (this->itsCounter!=p); }
+
+//	operator bool() const	{ return  itsCounter ?  NULL!=itsCounter->ptr : false; }
+
+	virtual const X& readaccess() const			{ return *this->itsCounter->ptr; }
+	virtual X& writeaccess()					{ return *this->itsCounter->ptr; }
+
+	virtual const X* get() const				{ return  this->itsCounter ?  this->itsCounter->ptr : 0; }
+	virtual const X& operator*() const throw()	{ return *this->itsCounter->ptr; }
+	virtual const X* operator->() const throw()	{ return  this->itsCounter ?  this->itsCounter->ptr : 0; }
+	virtual X& operator*() throw()				{ return *this->itsCounter->ptr; }
+	virtual X* operator->() throw()				{ return  this->itsCounter ?  this->itsCounter->ptr : 0; }
+	virtual operator const X&() const throw()	{ return *this->itsCounter->ptr; }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Count-Pointer
+// pointer copies are counted
+// when reference counter becomes zero the object is automatically deleted
+// creates a default object if not exist
+/////////////////////////////////////////////////////////////////////////////////////////
+template <class X> class TPtrAutoCount : public TPtrCount<X>
+{
+	void create()
+	{	// check if we have an object to access, create one if not
+		if(!this->itsCounter)		this->itsCounter		= new (typename TPtrCount<X>::CCounter)(NULL);
+		// usable objects need a default constructor
+		if(!this->itsCounter->ptr)	this->itsCounter->ptr	= new X; 
+	}
+
+public:
+	explicit TPtrAutoCount(X* p = NULL) : TPtrCount<X>(p)		{}
+	virtual ~TPtrAutoCount()									{}
+	TPtrAutoCount(const TPtrCount<X>& r) : TPtrCount<X>(r)		{}
+	const TPtrAutoCount<X>& operator=(const TPtrCount<X>& r)	{ this->acquire(r); return *this; }
+	TPtrAutoCount(const TPtrAutoCount<X>& r) : TPtrCount<X>(r)	{}
+	const TPtrAutoCount<X>& operator=(const TPtrAutoCount<X>& r){ this->acquire(r); return *this; }
+
+	virtual const X& readaccess() const			{ const_cast<TPtrAutoCount<X>*>(this)->create(); return *this->itsCounter->ptr; }
+	virtual X& writeaccess()					{ const_cast<TPtrAutoCount<X>*>(this)->create(); return *this->itsCounter->ptr; }
+	virtual const X* get() const				{ const_cast<TPtrAutoCount<X>*>(this)->create(); return this->itsCounter ? this->itsCounter->ptr : NULL; }
+	virtual const X& operator*() const throw()	{ const_cast<TPtrAutoCount<X>*>(this)->create(); return *this->itsCounter->ptr; }
+	virtual const X* operator->() const throw()	{ const_cast<TPtrAutoCount<X>*>(this)->create(); return this->itsCounter ? this->itsCounter->ptr : NULL; }
+	virtual X& operator*() throw()				{ const_cast<TPtrAutoCount<X>*>(this)->create(); return *this->itsCounter->ptr; }
+	virtual X* operator->() throw()				{ const_cast<TPtrAutoCount<X>*>(this)->create(); return this->itsCounter ? this->itsCounter->ptr : NULL; }
+	virtual operator const X&() const throw()	{ const_cast<TPtrAutoCount<X>*>(this)->create(); return *this->itsCounter->ptr; }
+};
+
+
+
+
 #endif//_BASE_H_
 

@@ -1330,7 +1330,7 @@ int pet_randomwalk(struct pet_data &pd,unsigned long tick)
 	return 0;
 }
 
-int pet_ai_sub_hard(struct pet_data &pd,unsigned long tick)
+int pet_ai_sub_hard(struct pet_data &pd, unsigned long tick)
 {
 	struct map_session_data *sd = pd.msd;
 	struct mob_data *md = NULL;
@@ -1484,7 +1484,7 @@ int pet_ai_sub_hard(struct pet_data &pd,unsigned long tick)
 				return 0;
 			if(dist<=3)
 			{
-				if(battle_config.pet_random_move)
+				if(battle_config.pet_random_move && !pc_issit(*sd) )
 					pet_randomwalk(pd,tick);
 				return 0;
 			}

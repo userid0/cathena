@@ -642,6 +642,7 @@ int npc_event(struct map_session_data &sd,const char *eventname,int mob_kill)
 
 	xs=nd->u.scr.xs;
 	ys=nd->u.scr.ys;
+
 	if (xs>=0 && ys>=0 ) {
 		if (nd->bl.m != sd.bl.m )
 			return 1;
@@ -2527,7 +2528,7 @@ int npc_read_indoors (void)
 	buf = (char *)grfio_reads("data\\indoorrswtable.txt",&s);
 	if(buf)
 	{
-	buf[s] = 0;
+		buf[s] = 0;
 		p = buf;
 		while( p && *p && (p<buf+s) )
 		{
@@ -2541,8 +2542,8 @@ int npc_read_indoors (void)
 			p=strchr(p, '\n');
 		if (!p) break;
 		p++;
+		aFree(buf);
 	}
-	aFree(buf);
 	ShowStatus("Done reading '"CL_WHITE"%s"CL_RESET"'.\n","data\\indoorrswtable.txt");
 	return 0;
 }

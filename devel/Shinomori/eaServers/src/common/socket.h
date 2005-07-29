@@ -1371,19 +1371,19 @@ public:
 #define WBUFL(p,pos) (objL((p),(pos)))
 #define WBUFLIP(p,pos) (objLIP((p),(pos)))
 
-#if defined(__INTERIX) || defined(CYGWIN) || defined(_WIN32)
-	#undef FD_SETSIZE
+//#if defined(__INTERIX) || defined(CYGWIN) || defined(_WIN32)
+#undef FD_SETSIZE
 #define FD_SETSIZE 4096
-#endif	// __INTERIX
+//#endif	// __INTERIX
 
 
 // Struct declaration
 struct socket_data
 {
 	struct {
-		bool connected : 1;			// true when connected
-		bool remove : 1;			// true when to be removed
-		bool marked : 1;			// true when deleayed removal is initiated (optional)
+		bool connected : 1;		// true when connected
+		bool remove : 1;		// true when to be removed
+		bool marked : 1;		// true when deleayed removal is initiated (optional)
 	}flag;
 
 	unsigned char *rdata;		// buffer
@@ -1404,6 +1404,7 @@ struct socket_data
 	int (*func_parse)(int);
 	int (*func_term)(int);
 	int (*func_console)(char*);
+
 	void* session_data;
 };
 

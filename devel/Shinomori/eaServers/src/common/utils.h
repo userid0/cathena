@@ -53,7 +53,7 @@ static inline const char *safestrcpy(char *tar, const char *src, size_t cnt)
 		if(src)
 		{
 			::strncpy(tar,src,cnt);
-			// systems strncpy doesnt append the trailing NULL if the string is too long.
+			// systems strncpy doesnt append the trailing 0 if the string is too long.
 			tar[cnt-1]=0;
 		}
 		else

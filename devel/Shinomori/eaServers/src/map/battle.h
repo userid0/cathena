@@ -132,6 +132,7 @@ struct Battle_Config
 	ulong display_snatcher_skill_fail;
 	ulong display_version;
 	ulong drop_rate0item;
+	ulong drop_rare_announce;
 	ulong drops_by_luk;
 	ulong dynamic_mobs;
 	ulong enemy_critical;

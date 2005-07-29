@@ -3117,15 +3117,10 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 	}
 
 	//Initialize variables that will be used afterwards
-	if (sd)
-	{
-		t_race = status_get_race(target);
-		t_ele = status_get_elem_type(target);
-	}
-	if (tsd)
-	{
-		s_race = status_get_race(src);
-	}
+
+	t_race = status_get_race(target);
+	t_ele = status_get_elem_type(target);
+	s_race = status_get_race(src);
 	s_ele=status_get_attack_element(src);
 	s_ele_=status_get_attack_element2(src);
 
@@ -3337,7 +3332,9 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 					{
 						baseatk = status_get_matk1(src);
 						if (flag.lh) baseatk_ = baseatk;
-					} else { 
+					}
+					else
+					{ 
 						baseatk = status_get_baseatk(src);
 						if (flag.lh) baseatk_ = baseatk;
 					}
@@ -3407,7 +3404,7 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 				
 					//SizeFix only for players
 					if (!(
-						/*!tsd || //rodatazone claims that target human players don't have a size! -- I really don't believe it... removed until we find some evidence*/
+						//!tsd || //rodatazone claims that target human players don't have a size! -- I really don't believe it... removed until we find some evidence
 						sd->state.no_sizefix ||
 						(sc_data && sc_data[SC_WEAPONPERFECTION].timer!=-1) ||
 						(pc_isriding(*sd) && (sd->status.weapon==4 || sd->status.weapon==5) && t_size==1) ||
@@ -3440,7 +3437,7 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 				skill_num != ASC_METEORASSAULT)
 			{	
 				skillratio += 150 + sc_data[SC_EDP].val1 * 50;
-				flag.cardfix = 0;
+//				flag.cardfix = 0; <- Officially cards DO count [Skotlex]
 			}
 		}
 		if (!skill_num)
@@ -3858,11 +3855,11 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 	if(skill_num==TF_POISON)
 		ATK_ADD(15*skill_lv);
 
-	if (sd ||
-		(md && !skill_num && !battle_config.mob_attack_attr_none) ||
-		(pd && !skill_num && !battle_config.pet_attack_attr_none))
+	if( (sd && (skill_num || !battle_config.pc_attack_attr_none)) ||
+		(md && (skill_num || !battle_config.mob_attack_attr_none)) ||
+		(pd && (skill_num || !battle_config.pet_attack_attr_none)) )
 	{	//Elemental attribute fix
-		if	(!(!sd && tsd && !battle_config.mob_ghostring_fix && t_ele==8))
+		if( sd || !tsd || !battle_config.mob_ghostring_fix || t_ele!=8 )
 		{
 			short t_element = status_get_element(target);
 			if (wd.damage > 0)
@@ -3871,9 +3868,11 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 				if(skill_num==MC_CARTREVOLUTION) //Cart Revolution applies the element fix once more with neutral element
 					wd.damage=battle_attr_fix(wd.damage,0,t_element);
 			}
-			if (flag.lh && wd.damage2 > 0) wd.damage2=battle_attr_fix(wd.damage2,s_ele_,t_element);
+			if (flag.lh && wd.damage2 > 0)
+				wd.damage2=battle_attr_fix(wd.damage2,s_ele_,t_element);
 		}
 	}
+
 
 	if ((!flag.rh || wd.damage == 0) && (!flag.lh || wd.damage2 == 0))
 		flag.cardfix = 0;	//When the attack does no damage, avoid doing %bonuses
@@ -3975,29 +3974,26 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 		if (cardfix != 1000)
 			ATK_RATE(cardfix/10);
 	}
-
+	
 	//SC_data fixes
 	if (t_sc_data)
 	{
 		short scfix=1000;
-
 		if(t_sc_data[SC_DEFENDER].timer != -1 && wd.flag&BF_LONG)
 			scfix=scfix*(100-t_sc_data[SC_DEFENDER].val2)/100;
-		
 		if(t_sc_data[SC_FOGWALL].timer != -1 && wd.flag&BF_LONG)
 			scfix=scfix/2;
-		
-		if(t_sc_data[SC_ASSUMPTIO].timer != -1){
+		if(t_sc_data[SC_ASSUMPTIO].timer != -1)
+		{
 			if(!map[target->m].flag.pvp)
 				scfix=scfix*2/3;
 			else
 				scfix=scfix/2;
 		}
-	
 		if(scfix != 1000)
 			ATK_RATE(scfix/10);
-   }
-
+	}
+	
 	if(t_mode&0x40)
 	{ //Plants receive 1 damage when hit
 		if (flag.rh && (flag.hit || wd.damage>0))
@@ -4016,7 +4012,7 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 	//Double is basicly a normal attack x2, so... [Skotlex]
 	if (skill_num == TF_DOUBLE)
 		wd.damage *=2;
-	
+
 	if (sd)
 	{
 		if (!flag.rh && flag.lh) 
@@ -5401,7 +5397,8 @@ static struct {
 	{ "display_hallucination",				&battle_config.display_hallucination	}, // [Skotlex]
 	{ "display_snatcher_skill_fail",       &battle_config.display_snatcher_skill_fail	},
 	{ "display_version",					&battle_config.display_version			}, // [Ancyker], for a feature by...?
-	{ "drop_rate0item",                    &battle_config.drop_rate0item			},
+	{ "drop_rate0item",						&battle_config.drop_rate0item			},
+	{ "drop_rare_announce",					&battle_config.drop_rare_announce		},
 	{ "drops_by_luk",                      &battle_config.drops_by_luk				},	// [Valaris]
 	{ "dynamic_mobs",						&battle_config.dynamic_mobs				},
 	{ "enemy_critical",                    &battle_config.enemy_critical			},
@@ -5695,6 +5692,7 @@ void battle_set_defaults()
 	battle_config.display_snatcher_skill_fail = 1;
 	battle_config.display_version = 1;
 	battle_config.drop_rate0item=0;
+	battle_config.drop_rare_announce=10;//show global announces for rare items drops (<= 0.1% chance) [Lupus]
 	battle_config.drops_by_luk = 0;
 	battle_config.dynamic_mobs = 1;
 	battle_config.enemy_critical_rate=100;

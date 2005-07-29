@@ -61,9 +61,11 @@ int inter_recv_packet_length[] = {
 };
 
 struct WisData {
-	int id, fd, count, len;
+	int id,fd,count,len;
 	unsigned long tick;
-	unsigned char src[24], dst[24], msg[1024];
+	char src[24];
+	char dst[24];
+	char msg[512];
 };
 static struct dbt * wis_db = NULL;
 static int wis_dellist[WISDELLIST_MAX], wis_delnum;
@@ -420,7 +422,8 @@ int mapif_parse_GMmessage(int fd)
 }
 
 // Wisp/page request to send
-int mapif_parse_WisRequest(int fd) {
+int mapif_parse_WisRequest(int fd)
+{
 	struct WisData* wd;
 	static int wisid = 0;
 	int index;
@@ -500,16 +503,14 @@ int mapif_parse_WisReply(int fd)
 // Received wisp message from map-server for ALL gm (just copy the message and resends it to ALL map-servers)
 int mapif_parse_WisToGM(int fd)
 {
+	unsigned char buf[65536];
 	if( !session_isActive(fd) )
 		return 0;
-
-	CREATE_BUFFER(buf,unsigned char,(unsigned short)RFIFOW(fd,2));
 
 	memcpy(WBUFP(buf,0), RFIFOP(fd,0), RFIFOW(fd,2));
 	WBUFW(buf, 0) = 0x3803;
 	mapif_sendall(buf, RFIFOW(fd,2));
 
-	DELETE_BUFFER(buf);
 	return 0;
 }
 

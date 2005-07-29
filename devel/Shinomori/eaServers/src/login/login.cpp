@@ -450,7 +450,8 @@ int check_ladminip(unsigned long ip) {
 //   and returns index if only 1 account is found
 //   and similar to the searched name.
 //-----------------------------------------------
-int search_account_index(char* account_name) {
+int search_account_index(char* account_name)
+{
 	int i, quantity, index;
 
 	quantity = 0;
@@ -478,7 +479,8 @@ int search_account_index(char* account_name) {
 //--------------------------------------------------------
 // Create a string to save the account in the account file
 //--------------------------------------------------------
-int mmo_auth_tostr(char *str, struct auth_dat *p) {
+int mmo_auth_tostr(char *str, struct auth_dat *p)
+{
 	int i;
 	char *str_p = str;
 
@@ -500,7 +502,8 @@ int mmo_auth_tostr(char *str, struct auth_dat *p) {
 //---------------------------------
 // Reading of the accounts database
 //---------------------------------
-int mmo_auth_init(void) {
+int mmo_auth_init(void)
+{
 	FILE *fp;
 	unsigned long account_id;
 	int logincount, state, n, i, j, v;
@@ -830,7 +833,8 @@ int mmo_auth_init(void) {
 // Writing of the accounts database file
 //   (accounts are sorted by id before save)
 //------------------------------------------
-void mmo_auth_sync(void) {
+void mmo_auth_sync(void)
+{
 	FILE *fp;
 	int i, j, k, lock;
 	unsigned long account_id;
@@ -982,7 +986,8 @@ int check_GM_file(int tid, unsigned long tick, int id, int data)
 //-------------------------------------
 // Account creation (with e-mail check)
 //-------------------------------------
-int mmo_auth_new(struct mmo_account* account, char sex, char* email) {
+int mmo_auth_new(struct mmo_account* account, char sex, char* email)
+{
 	time_t timestamp, timestamp_temp;
 	struct tm *tmtime;
 	int i = auth_num;
@@ -1262,7 +1267,8 @@ int mmo_auth(struct mmo_account* account, int fd)
 //--------------------------------
 // Packet parsing for char-servers
 //--------------------------------
-int parse_fromchar(int fd) {
+int parse_fromchar(int fd)
+{
 	int i, j, id;
 	unsigned long acc;
 	char ip_str[16];

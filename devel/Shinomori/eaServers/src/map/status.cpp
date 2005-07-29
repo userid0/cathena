@@ -1057,7 +1057,7 @@ int status_calc_pc(struct map_session_data& sd, int first)
 	}
 	if((skill=pc_checkskill(sd,BS_SKINTEMPER))>0) {
 		sd.subele[0] += skill;
-		sd.subele[3] += skill*5;
+		sd.subele[3] += skill*4;
 	}
 	if((skill=pc_checkskill(sd,SA_ADVANCEDBOOK))>0 )
 		aspd_rate -= skill/2;
@@ -4013,7 +4013,6 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 					sd->canact_tick += tick;
 				} else calc_flag = 1;
 			}
-			//val2 = val1*5;
 			break;
 
 		case SC_HERMODE:
@@ -4022,7 +4021,6 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 
 		case SC_BLEEDING:
 			{
-				//val4 = 10000;
 				val4 = tick;
 				tick = 10000;
 			}

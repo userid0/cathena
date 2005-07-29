@@ -2,6 +2,16 @@ all sql txt: prepare baseio.o core.o db.o plugins.o grfio.o lock.o malloc.o md5c
 
 prepare:
 	rm -f baseio.o
+
+##########################################################
+# stupid make does not know .cpp suffix by default
+.SUFFIXES: .cpp
+
+.cpp.o:
+	$(CCC) $(CPPFLAGS) -c $<
+##########################################################
+
+
 core.o: core.cpp base.h core.h mmo.h showmsg.h socket.h timer.h utils.h version.h
 db.o: db.cpp base.h db.h mmo.h showmsg.h utils.h
 grfio.o: grfio.cpp base.h grfio.h mmo.h showmsg.h malloc.h utils.h

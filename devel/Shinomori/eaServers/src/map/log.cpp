@@ -31,8 +31,8 @@ struct LogConfig log_config;
 int should_log_item(int filter, unsigned short nameid)
 {
 	struct item_data *item_data;
-	if (nameid<512 || (item_data= itemdb_exists(nameid)) == NULL) return 0;
-	if ( (filter&1) || // Filter = 1, we log any item
+	if(nameid<512 || (item_data= itemdb_exists(nameid)) == NULL) return 0;
+	if( (filter&1) || // Filter = 1, we log any item
 		(filter&2 && item_data->type == 0 ) ||	//healing items
 		(filter&4 && (item_data->type == 3 || item_data->type == 10) ) ||	//etc+arrows
 		(filter&8 && (item_data->type == 2 || item_data->type == 11) ) ||	//usable

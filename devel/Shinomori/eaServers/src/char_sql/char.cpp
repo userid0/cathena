@@ -2067,14 +2067,13 @@ int parse_frommap(int fd)
 					WFIFOL(fd,12) = (unsigned long)auth_fifo[i].connect_until_time;
 					mmo_char_fromsql(auth_fifo[i].char_id, char_dat, 1);
 					char_dat[0].sex = auth_fifo[i].sex;
-					//memcpy(WFIFOP(fd,16), &char_dat[0], sizeof(struct mmo_charstatus));
 					if(char_dat) mmo_charstatus_tobuffer(*char_dat,WFIFOP(fd,16));
-					WFIFOSET(fd, WFIFOW(fd,2));
+					WFIFOSET(fd, 16 + sizeof(struct mmo_charstatus));
 					//ShowMessage("auth_fifo search success (auth #%d, account %ld, character: %ld).\n", i, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6));
 					break;
 				}
 			}
-			if (i == AUTH_FIFO_SIZE) {
+			if (i >= AUTH_FIFO_SIZE) {
 				WFIFOW(fd,0) = 0x2afe;
 				WFIFOL(fd,2) = RFIFOL(fd,2);
 				WFIFOSET(fd,6);

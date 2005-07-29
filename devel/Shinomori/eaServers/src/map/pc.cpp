@@ -2638,7 +2638,7 @@ int pc_useitem(struct map_session_data &sd, unsigned short inx)
 			clif_useitemack(sd,inx,amount-1,1);
 			pc_delitem(sd,inx,1,1);
 		}
-		if( sd.status.inventory[inx].card[0]==0x00ff && 
+		if( sd.status.inventory[inx].card[0]==0x00fe && 
 			pc_istop10fame(MakeDWord(sd.status.inventory[inx].card[2],sd.status.inventory[inx].card[3]),1) )
 		{
 		    sd.state.potion_flag = 1;

@@ -1099,6 +1099,20 @@ void socket_setopts(SOCKET sock)
 // FIFO Reading/Sending Functions
 //
 ///////////////////////////////////////////////////////////////////////////////
+#ifdef SOCKET_DEBUG_PRINT
+void dumpx(unsigned char *buf, int len)
+{	int i;
+	if(len>0)
+	{
+		for(i=0; i<len; i++)
+			printf("%02X ", buf[i]);
+	}
+	printf("\n");
+	fflush(stdout);
+}
+#endif
+
+
 int recv_to_fifo(int fd)
 {
 	int len;
@@ -1120,6 +1134,11 @@ int recv_to_fifo(int fd)
 
 		len=read(SessionGetSocket(fd),(char*)(session[fd]->rdata+session[fd]->rdata_size),arg);
 
+		if(len > (int)RFIFOSPACE(fd))
+		{
+			ShowError("Read Socket out of bound\n");
+			exit(1);
+		}
 #ifdef SOCKET_DEBUG_PRINT
 		printf("<-");
 		dumpx(session[fd]->rdata, len);
@@ -1156,22 +1175,24 @@ int send_from_fifo(int fd)
 	}
 
 	len=write(SessionGetSocket(fd),(char*)(session[fd]->wdata),session[fd]->wdata_size);
-//	ShowMessage (":::SEND:::\n");
-//	dump(session[fd]->wdata, len); ShowMessage ("\n");
 #ifdef SOCKET_DEBUG_PRINT
 	printf("->");
 	dumpx(session[fd]->wdata, len);
 #endif
-
-	//{ int i; ShowMessage("send %d : ",fd);  for(i=0;i<len;i++){ ShowMessage("%02x ",session[fd]->wdata[i]); } ShowMessage("\n");}
-	if(len>0){
-		if((size_t)len<session[fd]->wdata_size){
+	if(len>0)
+	{
+		if((size_t)len<session[fd]->wdata_size)
+		{
 			memmove(session[fd]->wdata,session[fd]->wdata+len,session[fd]->wdata_size-len);
 			session[fd]->wdata_size -= len;
-		} else {
+		}
+		else
+		{
 			session[fd]->wdata_size=0;
 		}
-	} else if (errno != EAGAIN) {
+	}
+	else if (errno != EAGAIN)
+	{
 //		ShowMessage("set eof :%d\n",fd);
 		session[fd]->flag.connected = false;
 		session[fd]->wdata_size=0;
@@ -1184,21 +1205,6 @@ int send_from_fifo(int fd)
 // Fifo Control
 //
 ///////////////////////////////////////////////////////////////////////////////
-
-
-#ifdef SOCKET_DEBUG_PRINT
-void dumpx(unsigned char *buf, int len)
-{	int i;
-	if(len>0)
-	{
-		for(i=0; i<len; i++)
-			printf("%02X ", buf[i]);
-	}
-	printf("\n");
-	fflush(stdout);
-}
-#endif
-
 void flush_fifos() 
 {
 	// write fifos and be sure the data in on the run
@@ -1285,15 +1291,25 @@ int realloc_readfifo(int fd, size_t addition)
 		newsize = RFIFO_SIZE;
 		while( session[fd]->rdata_size + addition > newsize ) newsize += newsize;
 	}
-	else if( session[fd]->rdata_max>RFIFO_SIZE && (session[fd]->rdata_size+addition)*4 < session[fd]->rdata_max )
-	{	// shrink rule
-		newsize = session[fd]->rdata_max/2;
-	}
+//	else if( session[fd]->rdata_max>RFIFO_SIZE && (session[fd]->rdata_size+addition)*4 < session[fd]->rdata_max )
+//	{	// shrink rule
+//		newsize = session[fd]->rdata_max/2;
+//	}
 	else // no change
 		return 0;
 
-	RECREATE(session[fd]->rdata, unsigned char, newsize);
+//	RECREATE(session[fd]->rdata, unsigned char, newsize);
+//	session[fd]->rdata_max  = newsize;
+	unsigned char *temp = new unsigned char[newsize];
+	if(session[fd]->rdata)
+	{
+		if(session[fd]->rdata_size)
+			memcpy(temp, session[fd]->rdata, session[fd]->rdata_size);
+		delete[] session[fd]->rdata;
+	}
+	session[fd]->rdata = temp;
 	session[fd]->rdata_max  = newsize;
+
 
 	return 0;
 }
@@ -1310,18 +1326,26 @@ int realloc_writefifo(int fd, size_t addition)
 		newsize = WFIFO_SIZE;
 		while( session[fd]->wdata_size + addition > newsize ) newsize += newsize;
 	}
-	else if( session[fd]->wdata_max>WFIFO_SIZE && (session[fd]->wdata_size+addition)*4 < session[fd]->wdata_max )
-	{	// shrink rule
-		newsize = session[fd]->wdata_max/2;
-	}
+//	else if( session[fd]->wdata_max>WFIFO_SIZE && (session[fd]->wdata_size+addition)*4 < session[fd]->wdata_max )
+//	{	// shrink rule
+//		newsize = session[fd]->wdata_max/2;
+//	}
 	else // no change
 		return 0;
 
 	//printf("realloc %d->%d (+%d)\n", session[fd]->wdata_max, newsize,addition);fflush(stdout);
 
-	RECREATE(session[fd]->wdata, unsigned char, newsize);
+//	RECREATE(session[fd]->wdata, unsigned char, newsize);
+//	session[fd]->wdata_max  = newsize;
+	unsigned char *temp = new unsigned char[newsize];
+	if(session[fd]->wdata)
+	{
+		if(session[fd]->wdata_size)
+			memcpy(temp, session[fd]->wdata, session[fd]->wdata_size);
+		delete[] session[fd]->wdata;
+	}
+	session[fd]->wdata = temp;
 	session[fd]->wdata_max  = newsize;
-
 	return 0;
 }
 
@@ -1333,13 +1357,34 @@ int realloc_fifo(int fd, size_t rfifo_size, size_t wfifo_size)
 		return 0;
 	
 	//printf("realloc all %d,%d\n", rfifo_size, wfifo_size);fflush(stdout);
-	if( s->rdata_max != rfifo_size && s->rdata_size < rfifo_size){
-		RECREATE(s->rdata, unsigned char, rfifo_size);
-		s->rdata_max  = rfifo_size;
+	if( s->rdata_max != rfifo_size && s->rdata_size < rfifo_size)
+	{
+//		RECREATE(s->rdata, unsigned char, rfifo_size);
+//		s->rdata_max  = rfifo_size;
+		unsigned char *temp = new unsigned char[rfifo_size];
+		if(session[fd]->rdata)
+		{
+			if(session[fd]->rdata_size)
+				memcpy(temp, session[fd]->rdata, session[fd]->rdata_size);
+			delete[] session[fd]->rdata;
+		}
+		session[fd]->rdata = temp;
+		session[fd]->rdata_max  = rfifo_size;
+
 	}
 	if( s->wdata_max != wfifo_size && s->wdata_size < wfifo_size){
-		RECREATE(s->wdata, unsigned char, wfifo_size);
-		s->wdata_max  = wfifo_size;
+//		RECREATE(s->wdata, unsigned char, wfifo_size);
+//		s->wdata_max  = wfifo_size;
+		unsigned char *temp = new unsigned char[wfifo_size];
+		if(session[fd]->wdata)
+		{
+			if(session[fd]->wdata_size)
+				memcpy(temp, session[fd]->wdata, session[fd]->wdata_size);
+			delete[] session[fd]->wdata;
+		}
+		session[fd]->wdata = temp;
+		session[fd]->wdata_max  = wfifo_size;
+
 	}
 	return 0;
 }
@@ -1347,29 +1392,27 @@ int realloc_fifo(int fd, size_t rfifo_size, size_t wfifo_size)
 int WFIFOSET(int fd,size_t len)
 {
 	size_t newreserve;
-	struct socket_data *s = session[fd];
 
-	if( !session_isValid(fd) || s->wdata == NULL )
-		return 0;
+	if( session_isValid(fd) && session[fd]->wdata )
+	{
+		// we have written len bytes to the buffer already
+		session[fd]->wdata_size += len;
 
-	// we have written len bytes to the buffer already
-	s->wdata_size += len;
+		if( session[fd]->wdata_size > session[fd]->wdata_max )
+		{	// we had a buffer overflow already
+			unsigned long ip = session[fd]->client_ip;
+			ShowError("socket: Buffer Overflow. Connection %d (%d.%d.%d.%d). has written %d bytes (%d allowed).\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, session[fd]->wdata_size+len, session[fd]->wdata_max);
+			exit(1);
+		}
 
-	if( s->wdata_size > s->wdata_max )
-	{	// we had a buffer overflow already
-		unsigned long ip = s->client_ip;
-		ShowError("socket: Buffer Overflow. Connection %d (%d.%d.%d.%d). has written %d bytes (%d allowed).\n",fd, (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, (ip)&0xFF, s->wdata_size+len, s->wdata_max);
-		exit(1);
+		// always keep a WFIFO_SIZE reserve in the buffer
+		newreserve = session[fd]->wdata_size + WFIFO_SIZE; 
+
+		send_from_fifo(fd);
+
+		// realloc after sending
+		realloc_writefifo(fd, newreserve); 
 	}
-
-	// always keep a WFIFO_SIZE reserve in the buffer
-	newreserve = s->wdata_size + WFIFO_SIZE; 
-
-	send_from_fifo(fd);
-
-	// realloc after sending
-	realloc_writefifo(fd, newreserve); 
-
 	return 0;
 }
 
@@ -1455,9 +1498,14 @@ int connect_client(int listen_fd)
 		return -1;
 	}
 
-	CREATE(session[fd], struct socket_data, 1);
-	CREATE(session[fd]->rdata, unsigned char, RFIFO_SIZE);
-	CREATE(session[fd]->wdata, unsigned char, WFIFO_SIZE);
+//	CREATE(session[fd], struct socket_data, 1);
+	session[fd] = new struct socket_data;
+	memset(session[fd],0,sizeof(struct socket_data));
+//	CREATE(session[fd]->rdata, unsigned char, RFIFO_SIZE);
+	session[fd]->rdata = new unsigned char[RFIFO_SIZE];
+
+//	CREATE(session[fd]->wdata, unsigned char, WFIFO_SIZE);
+	session[fd]->wdata = new unsigned char[WFIFO_SIZE];
 
 	session[fd]->flag.connected   = true;
 	session[fd]->flag.remove      = false;
@@ -1525,8 +1573,9 @@ int make_listen(unsigned long ip, unsigned short port)
 		return -1;
 	}
 
-	CREATE(session[fd], struct socket_data, 1);
-	memset(session[fd],0,sizeof(*session[fd]));
+//	CREATE(session[fd], struct socket_data, 1);
+	session[fd] = new struct socket_data;
+	memset(session[fd],0,sizeof(struct socket_data));
 
 	session[fd]->flag.connected   = true;
 	session[fd]->flag.remove      = false;
@@ -1596,9 +1645,14 @@ int make_connection(unsigned long ip, unsigned short port)
 		return -1;
 	}
 
-	CREATE(session[fd], struct socket_data, 1);
-	CREATE(session[fd]->rdata, unsigned char, RFIFO_SIZE);
-	CREATE(session[fd]->wdata, unsigned char, WFIFO_SIZE);
+//	CREATE(session[fd], struct socket_data, 1);
+	session[fd] = new struct socket_data;
+	memset(session[fd],0,sizeof(struct socket_data));
+
+//	CREATE(session[fd]->rdata, unsigned char, RFIFO_SIZE);
+	session[fd]->rdata = new unsigned char[RFIFO_SIZE];
+//	CREATE(session[fd]->wdata, unsigned char, WFIFO_SIZE);
+	session[fd]->wdata = new unsigned char[WFIFO_SIZE];
 
 	session[fd]->flag.connected   = true;
 	session[fd]->flag.remove      = false;
@@ -1694,9 +1748,17 @@ void process_read(size_t fd)
 		// session could be deleted in func_parse so better check again
 		if(session[fd] && session[fd]->rdata) 
 		{	//RFIFOFLUSH(fd);
-			memmove(session[fd]->rdata, RFIFOP(fd,0), RFIFOREST(fd));
-			session[fd]->rdata_size = RFIFOREST(fd);
-			session[fd]->rdata_pos  = 0;
+			if( session[fd]->rdata_size>session[fd]->rdata_pos )
+			{
+				memmove(session[fd]->rdata, session[fd]->rdata+session[fd]->rdata_pos, session[fd]->rdata_size-session[fd]->rdata_pos);
+				session[fd]->rdata_size = RFIFOREST(fd);
+				session[fd]->rdata_pos  = 0;
+			}
+			else
+			{
+				session[fd]->rdata_size = 0;
+				session[fd]->rdata_pos  = 0;
+			}
 		}
 
 	}
@@ -1886,18 +1948,11 @@ int do_sendrecv(int next)
 #endif
 			if( (session[fd]->rdata_tick > 0) && (last_tick > session[fd]->rdata_tick + stall_time_) ) 
 			{	
-//				if( session[fd]->flag.marked )
-//				{	// is already marked; just remove it
-//					session[fd]->flag.marked=false;
-//					session[fd]->flag.remove=true;
-//				}
-//				else
-				{	// emulate a disconnection
-					session[fd]->flag.connected = false;
-					// and call the read function
-					process_read(fd);
-					// it should come out with a set remove or marked flag		
-				}
+				// emulate a disconnection
+				session[fd]->flag.connected = false;
+				// and call the read function
+				process_read(fd);
+				// it should come out with a set remove or marked flag		
 			}
 
 			if( session[fd]->flag.remove )
@@ -1945,39 +2000,6 @@ int do_sendrecv(int next)
 		// process readings and parse them immediately
 		process_fdset(&rfd,process_read);
 	}
-	
-
-/*
-	// this is the do_parsepackets placed directly here
-	// and removed the call from core.c
-	
-	// this structure was necessary because the map func_parse 
-	// did not loop until all incoming data has been processed
-	// but just processed the first packet and returned
-
-	// this could leed to serious lag when clients send many packets 
-	// at once but only get the first packet processed
-	// in a time between each call to select and timer
-
-	for(fd=0;fd<(size_t)fd_max;fd++)
-	{
-		if(!session[fd])
-			continue;
-
-		if(session[fd]->rdata_size==0 && session[fd]->flag.connected)
-			continue;
-
-		if(session[fd]->func_parse && !(session[fd]->flag.marked || session[fd]->flag.remove))
-			session[fd]->func_parse(fd);
-
-		if(session[fd]) 
-		{	//RFIFOFLUSH(fd);
-			memmove(session[fd]->rdata, RFIFOP(fd,0), RFIFOREST(fd));
-			session[fd]->rdata_size = RFIFOREST(fd);
-			session[fd]->rdata_pos  = 0;
-		}
-	}
-*/
 	return 0;
 }
 
@@ -2039,13 +2061,13 @@ bool session_Delete(int fd)
 			session[fd]->func_term(fd);
 
 		// and clean up
-		if(session[fd]->rdata)
-			aFree(session[fd]->rdata);
-		if(session[fd]->wdata)
-			aFree(session[fd]->wdata);
-		if(session[fd]->session_data)
-			aFree(session[fd]->session_data);
-		aFree(session[fd]);
+//		if(session[fd]->rdata)			aFree(session[fd]->rdata);
+		if(session[fd]->rdata)			delete[] session[fd]->rdata;
+//		if(session[fd]->wdata)			aFree(session[fd]->wdata);
+		if(session[fd]->wdata)			delete[] session[fd]->wdata;
+		if(session[fd]->session_data)	aFree(session[fd]->session_data);
+//		aFree(session[fd]);
+		delete session[fd];
 		session[fd]=NULL;
 
 		SessionRemoveIndex( fd );
@@ -2154,10 +2176,13 @@ void socket_final(void)
 		// just force deletion of the sessions
 		if( session_isValid(fd) )
 		{
-			if(session[fd]->rdata)			aFree(session[fd]->rdata);
-			if(session[fd]->wdata)			aFree(session[fd]->wdata);
+//			if(session[fd]->rdata)			aFree(session[fd]->rdata);
+			if(session[fd]->rdata)			delete[] session[fd]->rdata;
+//			if(session[fd]->wdata)			aFree(session[fd]->wdata);
+			if(session[fd]->wdata)			delete[] session[fd]->wdata;
 			if(session[fd]->session_data)	aFree(session[fd]->session_data);
-			aFree(session[fd]);
+//			aFree(session[fd]);
+			delete session[fd];
 			session[fd]=NULL;
 			SessionRemoveIndex( fd );
 		}

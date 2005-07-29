@@ -88,7 +88,9 @@ int inter_recv_packet_length[]={
 struct WisData {
 	int id,fd,count,len;
 	unsigned long tick;
-	unsigned char src[24],dst[24],msg[512];
+	char src[24];
+	char dst[24];
+	char msg[512];
 };
 static struct dbt * wis_db = NULL;
 static int wis_dellist[WISDELLIST_MAX], wis_delnum;
@@ -606,6 +608,19 @@ int mapif_parse_WisReply(int fd)
 	return 0;
 }
 
+// Received wisp message from map-server for ALL gm (just copy the message and resends it to ALL map-servers)
+int mapif_parse_WisToGM(int fd)
+{
+	unsigned char buf[65536];
+	if( !session_isActive(fd) )
+		return 0;
+
+	memcpy(WBUFP(buf,0), RFIFOP(fd,0), RFIFOW(fd,2));
+	WBUFW(buf, 0) = 0x3803;
+	mapif_sendall(buf, RFIFOW(fd,2));
+
+	return 0;
+}
 
 // Save account_reg into sql (type=2)
 int mapif_parse_AccReg(int fd)
@@ -659,6 +674,7 @@ int inter_parse_frommap(int fd)
 	case 0x3000: mapif_parse_GMmessage(fd); break;
 	case 0x3001: mapif_parse_WisRequest(fd); break;
 	case 0x3002: mapif_parse_WisReply(fd); break;
+	case 0x3003: mapif_parse_WisToGM(fd); break;
 	case 0x3004: mapif_parse_AccReg(fd); break;
 	case 0x3005: mapif_parse_AccRegRequest(fd); break;
 	default:

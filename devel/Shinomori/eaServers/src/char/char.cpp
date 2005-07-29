@@ -2953,6 +2953,7 @@ int parse_char(int fd)
 				ShowMessage("Account Logged On; Account ID: %ld (GM level %d).\n", (unsigned long)RFIFOL(fd,2), GM_value);
 			else
 				ShowMessage("Account Logged On; Account ID: %ld.\n", (unsigned long)RFIFOL(fd,2));
+
 			if (sd == NULL) {
 				sd = (struct char_session_data*)(session[fd]->session_data = aCalloc(1, sizeof(struct char_session_data)));
 				safestrcpy(sd->email, "no mail", 40); // put here a mail without '@' to refuse deletion if we don't receive the e-mail
@@ -3018,111 +3019,113 @@ int parse_char(int fd)
 			size_t ch;
 			if (RFIFOREST(fd) < 3)
 				return 0;
-
-			// if we activated email creation and email is default email
-			if(email_creation != 0 && strcmp(sd->email, "a@a.com") == 0
-				&& session_isActive(login_fd) )
-			{	// to modify an e-mail, login-server must be online
-				WFIFOW(fd, 0) = 0x70;
-				WFIFOB(fd, 2) = 0; // 00 = Incorrect Email address
-				WFIFOSET(fd, 3);
-				// otherwise, load the character
-			}
-			else
+			if(sd)
 			{
-				for (ch = 0; ch < 9; ch++)
-					if (sd->found_char[ch] >= 0 && char_dat[sd->found_char[ch]].char_num == RFIFOB(fd,2))
-						break;
-				if (ch != 9)
+				// if we activated email creation and email is default email
+				if(email_creation != 0 && strcmp(sd->email, "a@a.com") == 0
+					&& session_isActive(login_fd) )
+				{	// to modify an e-mail, login-server must be online
+					WFIFOW(fd, 0) = 0x70;
+					WFIFOB(fd, 2) = 0; // 00 = Incorrect Email address
+					WFIFOSET(fd, 3);
+					// otherwise, load the character
+				}
+				else
 				{
-					int j;
-					set_char_online(char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].account_id);
-					char_log("Character Selected, Account ID: %d, Character Slot: %d, Character ID: %ld, Name: %s." RETCODE,
-					         sd->account_id, (unsigned char)RFIFOB(fd,2), char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].name);
-					// searching map server
-					j = search_mapserver(char_dat[sd->found_char[ch]].last_point.map);
-					// if map is not found, we check major cities
-					if(j < 0) {
-						if((j = search_mapserver("prontera.gat")) >= 0) { // check is done without 'gat'.
-							memcpy(char_dat[sd->found_char[ch]].last_point.map, "prontera.gat", 16);
-							char_dat[sd->found_char[ch]].last_point.x = 273; // savepoint coordonates
-							char_dat[sd->found_char[ch]].last_point.y = 354;
-						} else if((j = search_mapserver("geffen.gat")) >= 0) { // check is done without 'gat'.
-							memcpy(char_dat[sd->found_char[ch]].last_point.map, "geffen.gat", 16);
-							char_dat[sd->found_char[ch]].last_point.x = 120; // savepoint coordonates
-							char_dat[sd->found_char[ch]].last_point.y = 100;
-						} else if((j = search_mapserver("morocc.gat")) >= 0) { // check is done without 'gat'.
-							memcpy(char_dat[sd->found_char[ch]].last_point.map, "morocc.gat", 16);
-							char_dat[sd->found_char[ch]].last_point.x = 160; // savepoint coordonates
-							char_dat[sd->found_char[ch]].last_point.y = 94;
-						} else if((j = search_mapserver("alberta.gat")) >= 0) { // check is done without 'gat'.
-							memcpy(char_dat[sd->found_char[ch]].last_point.map, "alberta.gat", 16);
-							char_dat[sd->found_char[ch]].last_point.x = 116; // savepoint coordonates
-							char_dat[sd->found_char[ch]].last_point.y = 57;
-						} else if((j = search_mapserver("payon.gat")) >= 0) { // check is done without 'gat'.
-							memcpy(char_dat[sd->found_char[ch]].last_point.map, "payon.gat", 16);
-							char_dat[sd->found_char[ch]].last_point.x = 87; // savepoint coordonates
-							char_dat[sd->found_char[ch]].last_point.y = 117;
-						} else if((j = search_mapserver("izlude.gat")) >= 0) { // check is done without 'gat'.
-							memcpy(char_dat[sd->found_char[ch]].last_point.map, "izlude.gat", 16);
-							char_dat[sd->found_char[ch]].last_point.x = 94; // savepoint coordonates
-							char_dat[sd->found_char[ch]].last_point.y = 103;
-						} else {
-							// get first online server (with a map)
-							for(j = 0; j < MAX_MAP_SERVERS; j++)
-							{
-								if( session_isActive(server[j].fd) && server[j].map[0][0])
-								{	// change save point to one of map found on the server (the first)
-									memcpy(char_dat[sd->found_char[ch]].last_point.map, server[j].map[0], 16);
-									ShowMessage("Map-server #%d found with a map: '%s'.\n", j, server[j].map[0]);
-									// coordonates are unknown
+					for (ch = 0; ch < 9; ch++)
+						if (sd->found_char[ch] >= 0 && char_dat[sd->found_char[ch]].char_num == RFIFOB(fd,2))
+							break;
+					if (ch != 9)
+					{
+						int j;
+						set_char_online(char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].account_id);
+						char_log("Character Selected, Account ID: %d, Character Slot: %d, Character ID: %ld, Name: %s." RETCODE,
+								 sd->account_id, (unsigned char)RFIFOB(fd,2), char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].name);
+						// searching map server
+						j = search_mapserver(char_dat[sd->found_char[ch]].last_point.map);
+						// if map is not found, we check major cities
+						if(j < 0) {
+							if((j = search_mapserver("prontera.gat")) >= 0) { // check is done without 'gat'.
+								memcpy(char_dat[sd->found_char[ch]].last_point.map, "prontera.gat", 16);
+								char_dat[sd->found_char[ch]].last_point.x = 273; // savepoint coordonates
+								char_dat[sd->found_char[ch]].last_point.y = 354;
+							} else if((j = search_mapserver("geffen.gat")) >= 0) { // check is done without 'gat'.
+								memcpy(char_dat[sd->found_char[ch]].last_point.map, "geffen.gat", 16);
+								char_dat[sd->found_char[ch]].last_point.x = 120; // savepoint coordonates
+								char_dat[sd->found_char[ch]].last_point.y = 100;
+							} else if((j = search_mapserver("morocc.gat")) >= 0) { // check is done without 'gat'.
+								memcpy(char_dat[sd->found_char[ch]].last_point.map, "morocc.gat", 16);
+								char_dat[sd->found_char[ch]].last_point.x = 160; // savepoint coordonates
+								char_dat[sd->found_char[ch]].last_point.y = 94;
+							} else if((j = search_mapserver("alberta.gat")) >= 0) { // check is done without 'gat'.
+								memcpy(char_dat[sd->found_char[ch]].last_point.map, "alberta.gat", 16);
+								char_dat[sd->found_char[ch]].last_point.x = 116; // savepoint coordonates
+								char_dat[sd->found_char[ch]].last_point.y = 57;
+							} else if((j = search_mapserver("payon.gat")) >= 0) { // check is done without 'gat'.
+								memcpy(char_dat[sd->found_char[ch]].last_point.map, "payon.gat", 16);
+								char_dat[sd->found_char[ch]].last_point.x = 87; // savepoint coordonates
+								char_dat[sd->found_char[ch]].last_point.y = 117;
+							} else if((j = search_mapserver("izlude.gat")) >= 0) { // check is done without 'gat'.
+								memcpy(char_dat[sd->found_char[ch]].last_point.map, "izlude.gat", 16);
+								char_dat[sd->found_char[ch]].last_point.x = 94; // savepoint coordonates
+								char_dat[sd->found_char[ch]].last_point.y = 103;
+							} else {
+								// get first online server (with a map)
+								for(j = 0; j < MAX_MAP_SERVERS; j++)
+								{
+									if( session_isActive(server[j].fd) && server[j].map[0][0])
+									{	// change save point to one of map found on the server (the first)
+										memcpy(char_dat[sd->found_char[ch]].last_point.map, server[j].map[0], 16);
+										ShowMessage("Map-server #%d found with a map: '%s'.\n", j, server[j].map[0]);
+										// coordonates are unknown
+										break;
+									}
+								}
+								// if no map-server is connected, we send: server closed
+								if(j >= MAX_MAP_SERVERS)
+								{
+									WFIFOW(fd,0) = 0x81;
+									WFIFOL(fd,2) = 1; // 01 = Server closed
+									WFIFOSET(fd,3);
+									RFIFOSKIP(fd,3);
 									break;
 								}
 							}
-							// if no map-server is connected, we send: server closed
-							if(j >= MAX_MAP_SERVERS)
-							{
-								WFIFOW(fd,0) = 0x81;
-								WFIFOL(fd,2) = 1; // 01 = Server closed
-								WFIFOSET(fd,3);
-								RFIFOSKIP(fd,3);
-								break;
-							}
 						}
+						WFIFOW(fd,0) = 0x71;
+						WFIFOL(fd,2) = char_dat[sd->found_char[ch]].char_id;
+						memcpy(WFIFOP(fd,6), char_dat[sd->found_char[ch]].last_point.map, 16);
+						ShowMessage("Character selection '%s' (account: %ld, charid: %ld, slot: %d).\n", 
+							char_dat[sd->found_char[ch]].name, sd->account_id, char_dat[sd->found_char[ch]].char_id, ch);
+						
+						if( server[j].address.isLAN(client_ip) )
+						{
+							ShowMessage("Send IP of map-server: %s:%d (%s)\n", server[j].address.LANIP().getstring(), server[j].address.LANPort(), CL_LT_GREEN"LAN"CL_NORM);
+							WFIFOLIP(fd, 22) = server[j].address.LANIP();
+							WFIFOW(fd,26)    = server[j].address.LANPort();
+						}
+						else
+						{
+							ShowMessage("Send IP of map-server: %s:%d (%s)\n", server[j].address.WANIP().getstring(), server[j].address.WANPort(), CL_LT_CYAN"WAN"CL_NORM);
+							WFIFOLIP(fd, 22) = server[j].address.WANIP();
+							WFIFOW(fd,26)    = server[j].address.WANPort();
+						}
+						
+						WFIFOSET(fd,28);
+						if (auth_fifo_pos >= AUTH_FIFO_SIZE)
+							auth_fifo_pos = 0;
+						//ShowMessage("auth_fifo set #%d - account %d, char: %d, secure: %08x-%08x\n", auth_fifo_pos, sd->account_id, char_dat[sd->found_char[ch]].char_id, sd->login_id1, sd->login_id2);
+						auth_fifo[auth_fifo_pos].account_id = sd->account_id;
+						auth_fifo[auth_fifo_pos].char_id = char_dat[sd->found_char[ch]].char_id;
+						auth_fifo[auth_fifo_pos].login_id1 = sd->login_id1;
+						auth_fifo[auth_fifo_pos].login_id2 = sd->login_id2;
+						auth_fifo[auth_fifo_pos].delflag = 0;
+						auth_fifo[auth_fifo_pos].char_pos = sd->found_char[ch];
+						auth_fifo[auth_fifo_pos].sex = sd->sex;
+						auth_fifo[auth_fifo_pos].connect_until_time = sd->connect_until_time;
+						auth_fifo[auth_fifo_pos].client_ip = session[fd]->client_ip;
+						auth_fifo_pos++;
 					}
-					WFIFOW(fd,0) = 0x71;
-					WFIFOL(fd,2) = char_dat[sd->found_char[ch]].char_id;
-					memcpy(WFIFOP(fd,6), char_dat[sd->found_char[ch]].last_point.map, 16);
-					ShowMessage("Character selection '%s' (account: %ld, charid: %ld, slot: %d).\n", 
-						char_dat[sd->found_char[ch]].name, sd->account_id, char_dat[sd->found_char[ch]].char_id, ch);
-					
-					if( server[j].address.isLAN(client_ip) )
-					{
-						ShowMessage("Send IP of map-server: %s:%d (%s)\n", server[j].address.LANIP().getstring(), server[j].address.LANPort(), CL_LT_GREEN"LAN"CL_NORM);
-						WFIFOLIP(fd, 22) = server[j].address.LANIP();
-						WFIFOW(fd,26)    = server[j].address.LANPort();
-					}
-					else
-					{
-						ShowMessage("Send IP of map-server: %s:%d (%s)\n", server[j].address.WANIP().getstring(), server[j].address.WANPort(), CL_LT_CYAN"WAN"CL_NORM);
-						WFIFOLIP(fd, 22) = server[j].address.WANIP();
-						WFIFOW(fd,26)    = server[j].address.WANPort();
-					}
-					
-					WFIFOSET(fd,28);
-					if (auth_fifo_pos >= AUTH_FIFO_SIZE)
-						auth_fifo_pos = 0;
-					//ShowMessage("auth_fifo set #%d - account %d, char: %d, secure: %08x-%08x\n", auth_fifo_pos, sd->account_id, char_dat[sd->found_char[ch]].char_id, sd->login_id1, sd->login_id2);
-					auth_fifo[auth_fifo_pos].account_id = sd->account_id;
-					auth_fifo[auth_fifo_pos].char_id = char_dat[sd->found_char[ch]].char_id;
-					auth_fifo[auth_fifo_pos].login_id1 = sd->login_id1;
-					auth_fifo[auth_fifo_pos].login_id2 = sd->login_id2;
-					auth_fifo[auth_fifo_pos].delflag = 0;
-					auth_fifo[auth_fifo_pos].char_pos = sd->found_char[ch];
-					auth_fifo[auth_fifo_pos].sex = sd->sex;
-					auth_fifo[auth_fifo_pos].connect_until_time = sd->connect_until_time;
-					auth_fifo[auth_fifo_pos].client_ip = session[fd]->client_ip;
-					auth_fifo_pos++;
 				}
 			}
 			RFIFOSKIP(fd,3);
@@ -3135,88 +3138,91 @@ int parse_char(int fd)
 			if (RFIFOREST(fd) < 37)
 				return 0;
 				
-			if(char_new == 0)
-				ret = -2;
-			else
-				ret = make_new_char(fd, (char*)RFIFOP(fd,2));
-				
-			if(ret == -1)
-			{	//already exists
-                            WFIFOW(fd, 0) = 0x6e;
-                            WFIFOB(fd, 2) = 0x00;
-                            WFIFOSET(fd, 3);
-                            RFIFOSKIP(fd, 37);
-                            break;
-			}
-			else if(ret == -2)
-			{	//denied
-                            WFIFOW(fd, 0) = 0x6e;
-                            WFIFOB(fd, 2) = 0x02;
-                            WFIFOSET(fd, 3); 
-                            RFIFOSKIP(fd, 37);                           
-                            break;
-			}
-			else if(ret == -3)
-			{	//underaged XD
-                            WFIFOW(fd, 0) = 0x6e;
-                            WFIFOB(fd, 2) = 0x01;
-                            WFIFOSET(fd, 3);
-                            RFIFOSKIP(fd, 37);
-                            break;
-                        }
-			else
+			if(sd)
 			{
-				for(ch = 0; ch < 9; ch++) {
-					if(sd->found_char[ch] == 0xFFFFFFFF) {
-						sd->found_char[ch] = ret;
-						break;
-					}
+				if(char_new == 0)
+					ret = -2;
+				else
+					ret = make_new_char(fd, (char*)RFIFOP(fd,2));
+					
+				if(ret == -1)
+				{	//already exists
+								WFIFOW(fd, 0) = 0x6e;
+								WFIFOB(fd, 2) = 0x00;
+								WFIFOSET(fd, 3);
+								RFIFOSKIP(fd, 37);
+								break;
 				}
+				else if(ret == -2)
+				{	//denied
+								WFIFOW(fd, 0) = 0x6e;
+								WFIFOB(fd, 2) = 0x02;
+								WFIFOSET(fd, 3); 
+								RFIFOSKIP(fd, 37);                           
+								break;
+				}
+				else if(ret == -3)
+				{	//underaged XD
+								WFIFOW(fd, 0) = 0x6e;
+								WFIFOB(fd, 2) = 0x01;
+								WFIFOSET(fd, 3);
+								RFIFOSKIP(fd, 37);
+								break;
+							}
+				else
+				{
+					for(ch = 0; ch < 9; ch++) {
+						if(sd->found_char[ch] == 0xFFFFFFFF) {
+							sd->found_char[ch] = ret;
+							break;
+						}
+					}
 
-			WFIFOW(fd,0) = 0x6d;
-			memset(WFIFOP(fd,2), 0, 106);
+				WFIFOW(fd,0) = 0x6d;
+				memset(WFIFOP(fd,2), 0, 106);
 
-				WFIFOL(fd,2) = char_dat[ret].char_id;
-				WFIFOL(fd,2+4) = char_dat[ret].base_exp;
-				WFIFOL(fd,2+8) = char_dat[ret].zeny;
-				WFIFOL(fd,2+12) = char_dat[ret].job_exp;
-				WFIFOL(fd,2+16) = char_dat[ret].job_level;
+					WFIFOL(fd,2) = char_dat[ret].char_id;
+					WFIFOL(fd,2+4) = char_dat[ret].base_exp;
+					WFIFOL(fd,2+8) = char_dat[ret].zeny;
+					WFIFOL(fd,2+12) = char_dat[ret].job_exp;
+					WFIFOL(fd,2+16) = char_dat[ret].job_level;
 
-				WFIFOL(fd,2+28) = char_dat[ret].karma;
-				WFIFOL(fd,2+32) = char_dat[ret].manner;
+					WFIFOL(fd,2+28) = char_dat[ret].karma;
+					WFIFOL(fd,2+32) = char_dat[ret].manner;
 
-			WFIFOW(fd,2+40) = 0x30;
-				WFIFOW(fd,2+42) = (unsigned short)((char_dat[ret].hp > 0x7fff) ? 0x7fff : char_dat[ret].hp);
-				WFIFOW(fd,2+44) = (unsigned short)((char_dat[ret].max_hp > 0x7fff) ? 0x7fff : char_dat[ret].max_hp);
-				WFIFOW(fd,2+46) = (unsigned short)((char_dat[ret].sp > 0x7fff) ? 0x7fff : char_dat[ret].sp);
-				WFIFOW(fd,2+48) = (unsigned short)((char_dat[ret].max_sp > 0x7fff) ? 0x7fff : char_dat[ret].max_sp);
-			WFIFOW(fd,2+50) = DEFAULT_WALK_SPEED; // char_dat[i].speed;
-				WFIFOW(fd,2+52) = char_dat[ret].class_;
-				WFIFOW(fd,2+54) = char_dat[ret].hair;
+				WFIFOW(fd,2+40) = 0x30;
+					WFIFOW(fd,2+42) = (unsigned short)((char_dat[ret].hp > 0x7fff) ? 0x7fff : char_dat[ret].hp);
+					WFIFOW(fd,2+44) = (unsigned short)((char_dat[ret].max_hp > 0x7fff) ? 0x7fff : char_dat[ret].max_hp);
+					WFIFOW(fd,2+46) = (unsigned short)((char_dat[ret].sp > 0x7fff) ? 0x7fff : char_dat[ret].sp);
+					WFIFOW(fd,2+48) = (unsigned short)((char_dat[ret].max_sp > 0x7fff) ? 0x7fff : char_dat[ret].max_sp);
+				WFIFOW(fd,2+50) = DEFAULT_WALK_SPEED; // char_dat[i].speed;
+					WFIFOW(fd,2+52) = char_dat[ret].class_;
+					WFIFOW(fd,2+54) = char_dat[ret].hair;
 
-				WFIFOW(fd,2+58) = char_dat[ret].base_level;
-				WFIFOW(fd,2+60) = char_dat[ret].skill_point;
+					WFIFOW(fd,2+58) = char_dat[ret].base_level;
+					WFIFOW(fd,2+60) = char_dat[ret].skill_point;
 
-				WFIFOW(fd,2+64) = char_dat[ret].shield;
-				WFIFOW(fd,2+66) = char_dat[ret].head_top;
-				WFIFOW(fd,2+68) = char_dat[ret].head_mid;
-				WFIFOW(fd,2+70) = char_dat[ret].hair_color;
+					WFIFOW(fd,2+64) = char_dat[ret].shield;
+					WFIFOW(fd,2+66) = char_dat[ret].head_top;
+					WFIFOW(fd,2+68) = char_dat[ret].head_mid;
+					WFIFOW(fd,2+70) = char_dat[ret].hair_color;
 
-				memcpy(WFIFOP(fd,2+74), char_dat[ret].name, 24);
+					memcpy(WFIFOP(fd,2+74), char_dat[ret].name, 24);
 
-				WFIFOB(fd,2+98) = (char_dat[ret].str > 255) ? 255 : char_dat[ret].str;
-				WFIFOB(fd,2+99) = (char_dat[ret].agi > 255) ? 255 : char_dat[ret].agi;
-				WFIFOB(fd,2+100) = (char_dat[ret].vit > 255) ? 255 : char_dat[ret].vit;
-				WFIFOB(fd,2+101) = (char_dat[ret].int_ > 255) ? 255 : char_dat[ret].int_;
-				WFIFOB(fd,2+102) = (char_dat[ret].dex > 255) ? 255 : char_dat[ret].dex;
-				WFIFOB(fd,2+103) = (char_dat[ret].luk > 255) ? 255 : char_dat[ret].luk;
-				WFIFOB(fd,2+104) = char_dat[ret].char_num;
+					WFIFOB(fd,2+98) = (char_dat[ret].str > 255) ? 255 : char_dat[ret].str;
+					WFIFOB(fd,2+99) = (char_dat[ret].agi > 255) ? 255 : char_dat[ret].agi;
+					WFIFOB(fd,2+100) = (char_dat[ret].vit > 255) ? 255 : char_dat[ret].vit;
+					WFIFOB(fd,2+101) = (char_dat[ret].int_ > 255) ? 255 : char_dat[ret].int_;
+					WFIFOB(fd,2+102) = (char_dat[ret].dex > 255) ? 255 : char_dat[ret].dex;
+					WFIFOB(fd,2+103) = (char_dat[ret].luk > 255) ? 255 : char_dat[ret].luk;
+					WFIFOB(fd,2+104) = char_dat[ret].char_num;
 
-			WFIFOSET(fd,108);
+					WFIFOSET(fd,108);
+				}
 			}
 			RFIFOSKIP(fd,37);
-					break;
-				}
+			break;
+		}
 		case 0x68:	// delete char //Yor's Fix
 		{
 			size_t i, ch;

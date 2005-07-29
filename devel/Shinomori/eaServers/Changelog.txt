@@ -1,4 +1,12 @@
 Date	Added
+07/29
+	new makefiles (look for suitable compile options on your system)
+	fix for guild creation crash
+	some changes on freeing script allocated strings 
+	(possible source of some observed memory overwrites)
+	and added some block checking on memory manager [Shinomori]
+	changed sockets to use c++ allocation/deallocation
+	will use managed memory again when switched completely [Hinoko]
 07/23
 	Moving back to devel dir, since I've been efficiently thrown out 
 	of my own sources after beeing away for just some days and 

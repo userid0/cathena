@@ -1154,17 +1154,20 @@ int mapif_guild_castle_alldataload(int fd)
 // ƒMƒ‹ƒhì¬—v‹
 int mapif_parse_CreateGuild(int fd,unsigned long account_id,char *name,unsigned char *buf)
 {
+	struct guild tempguild;
 	struct guild *g;
 	size_t i;
 
 	ShowMessage("CreateGuild\n");
 	g=search_guildname(name);
-	if(g!=NULL&&g->guild_id>0){
+	if(g!=NULL && g->guild_id>0)
+	{
 		ShowMessage("int_guild: same name guild exists [%s]\n",name);
 		mapif_guild_created(fd,account_id,NULL);
 		return 0;
 	}
-
+	
+	g = &tempguild;
 	memset(g,0,sizeof(struct guild));
 	g->guild_id=guild_newid++;
 	memcpy(g->name,name,24);
@@ -1201,10 +1204,9 @@ int mapif_parse_CreateGuild(int fd,unsigned long account_id,char *name,unsigned 
 	if(log_inter)
 		inter_log("guild %s (id=%d) created by master %s (id=%d)" RETCODE,
 			name, g->guild_id, g->member[0].name, g->member[0].account_id );
-
-
 	return 0;
 }
+
 // Return guild info to client
 int mapif_parse_GuildInfo(int fd,int guild_id)
 {
