@@ -320,7 +320,7 @@ size_t aquire_timer(void)
 		ret = timer_data_pos;
 		timer_data_pos++;
 	}
-	// a valid and aFree index for timer_data
+	// a valid and free index for timer_data
 	return ret;
 }
 
@@ -467,14 +467,14 @@ fflush(stdout);
 		tid = top_timer_heap();	
 
 		// check if tick of timer is near
-		if (DIFF_TICK(timer_data[tid].tick , tick) > 0) {
-			nextmin = DIFF_TICK(timer_data[tid].tick , tick);
+		nextmin = DIFF_TICK(timer_data[tid].tick , tick);
+		if( nextmin > 0) {
+			// need to wait
 			break;
 		}
 
-		// we are processing the timer
+		// wait time is over, we are processing the timer
 		// so pop it from the stack
-
 		pop_timer_heap();
 
 		// call the timer function
@@ -491,7 +491,7 @@ fflush(stdout);
 		}
 
 		if( timer_data[tid].interval>0 )
-		{	// formaly TIMER_INTERVAL
+		{	// interval timer is reinserted
 			if (DIFF_TICK(timer_data[tid].tick , tick) < -1000) {
 				timer_data[tid].tick = tick + timer_data[tid].interval;
 			} else {
@@ -500,10 +500,9 @@ fflush(stdout);
 			push_timer_heap(tid);
 		}
 		else
-		{	// formaly TIMER_ONCE_AUTODEL
+		{	// timer_once is freed
 			release_timer(tid);
 		}
-
 	}// end while
 
 	if(nextmin < TIMER_MIN_INTERVAL)
@@ -526,7 +525,19 @@ void timer_final(void)
 		tfl_root = tfl_next;
 	}
 
-	if(timer_heap)	aFree(timer_heap);
-	if(timer_free)	aFree(timer_free);
-	if(timer_data)	aFree(timer_data);
+	if(timer_heap)
+	{
+		aFree(timer_heap);
+		timer_heap=NULL;
+	}
+	if(timer_free)
+	{
+		aFree(timer_free);
+		timer_free=NULL;
+	}
+	if(timer_data)
+	{
+		aFree(timer_data);
+		timer_data=NULL;
+	}
 }

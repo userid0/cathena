@@ -3445,7 +3445,7 @@ void sql_config_read(const char *cfgName){ /* Kalaspuff, to get login_db */
 		return;
 	}
 
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		if( !skip_empty_line(line) )
 			continue;
 
@@ -3526,7 +3526,7 @@ int char_config_read(const char *cfgName) {
 		return 0;
 	}
 
-	while(fgets(line, sizeof(line)-1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 

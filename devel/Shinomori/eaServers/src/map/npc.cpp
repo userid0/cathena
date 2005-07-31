@@ -1676,7 +1676,7 @@ int npc_parse_script(const char *w1,const char *w2,const char *w3,const char *w4
 			
 			if (i >= 0 && srcbuf[i] == '}')
 				break;
-			fgets ((char *)line, 1020, fp);
+			fgets ((char *)line, sizeof(line), fp);
 			(*lines)++;
 			if (feof(fp))
 				break;
@@ -1952,7 +1952,7 @@ int npc_parse_function(const char *w1,const char *w2,const char *w3,const char *
 		for(i=strlen(srcbuf)-1;i>=0 && isspace((int)((unsigned char)srcbuf[i]));i--);
 		if (i >= 0 && srcbuf[i] == '}')
 			break;
-		fgets(line, sizeof(line) - 1, fp);
+		fgets(line, sizeof(line), fp);
 		(*lines)++;
 		if (feof(fp))
 			break;
@@ -2355,7 +2355,7 @@ void npc_parsesinglefile(const char *filename, struct npc_mark*& npcmarkerbase)
 	else
 	{
 		ShowMessage("\rLoading NPCs [%d]: %s"CL_CLL,npc_id-START_NPC_NUM,filename);
-		while( fgets(line, sizeof(line) - 4, fp) )
+		while( fgets(line, sizeof(line), fp) )
 		{
 			lines++;
 			if( !skip_empty_line(line) )

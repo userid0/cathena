@@ -750,7 +750,7 @@ int parse_friend_txt(struct mmo_charstatus *p)
 	fp = safefopen(friends_txt, "r");
 	if(fp)
 	{
-		while(fgets(line, sizeof(line)-1, fp))
+		while(fgets(line, sizeof(line), fp))
 		{
 			if( !skip_empty_line(line) )
 				continue;
@@ -820,7 +820,7 @@ int mmo_char_init(void)
 	}
 
 	line_count = 0;
-	while(fgets(line, sizeof(line)-1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		unsigned long i;
 		int j;
 		line_count++;
@@ -3553,7 +3553,7 @@ int char_config_read(const char *cfgName)
 		return 0;
 	}
 
-	while(fgets(line, sizeof(line)-1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 

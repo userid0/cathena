@@ -176,7 +176,7 @@ int inter_config_read(const char *cfgName) {
 		ShowError("inter config file not found: %s\n", cfgName);
 		return 1;
 	}
-	while(fgets(line, 1020, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
 		if(i!=2)
 			continue;
@@ -369,7 +369,8 @@ int inter_mapif_init(int fd) {
 //--------------------------------------------------------
 
 // GM message sending
-int mapif_GMmessage(unsigned char *mes, int len, int sfd) {
+int mapif_GMmessage(unsigned char *mes, int len, int sfd)
+{
 	CREATE_BUFFER(buf,unsigned char,len);
 
 	WBUFW(buf, 0) = 0x3800;
@@ -383,7 +384,8 @@ int mapif_GMmessage(unsigned char *mes, int len, int sfd) {
 }
 
 // Wis sending
-int mapif_wis_message(struct WisData *wd) {
+int mapif_wis_message(struct WisData *wd)
+{
 	CREATE_BUFFER(buf,unsigned char,56 + wd->len);
 
 	WBUFW(buf, 0) = 0x3801;
@@ -695,7 +697,7 @@ int inter_parse_frommap(int fd)
 // RFIFO check
 int inter_check_length(int fd, int length)
 {
-	if(length==-1){	// v-len packet
+	if(length<0){	// v-len packet
 		if(RFIFOREST(fd)<4)	// packet not yet
 			return 0;
 		length = RFIFOW(fd, 2);

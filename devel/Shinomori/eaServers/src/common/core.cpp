@@ -201,7 +201,7 @@ const char* get_svn_revision()	{ return "Shinomori's Modified Version"; }
 		{
 			char line[1024];
 			int rev;
-			while (fgets(line,1023,fp))
+			while (fgets(line,sizeof(line),fp))
 				if (strstr(line,"revision=")) break;
 			fclose(fp);
 			if (sscanf(line," %*[^\"]\"%d%*[^\n]", &rev) == 1)

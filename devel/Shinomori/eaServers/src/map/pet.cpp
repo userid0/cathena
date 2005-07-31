@@ -1791,7 +1791,7 @@ int read_petdb()
 			return -1;
 		}
 		lines = 0;
-		while(fgets(line,1020,fp)){
+		while(fgets(line,sizeof(line),fp)){
 			
 			lines++;
 

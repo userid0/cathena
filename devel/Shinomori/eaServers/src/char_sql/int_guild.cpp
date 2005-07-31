@@ -646,7 +646,7 @@ int inter_guild_readdb()
 		return 1;
 	}
 	i=0;
-	while(fgets(line,256,fp) && i<100){
+	while(fgets(line,sizeof(line),fp) && i<100){
 		if( !skip_empty_line(line) )
 			continue;
 		guild_exp[i]=atoi(line);

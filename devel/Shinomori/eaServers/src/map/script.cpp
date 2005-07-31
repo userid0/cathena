@@ -1211,7 +1211,7 @@ void read_constdb(void)
 		ShowMessage("can't read %s\n","db/const.txt");
 		return ;
 	}
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		type=0;
@@ -6253,7 +6253,7 @@ int buildin_getskilllist(struct script_state &st)
 	if(!sd) return 0;
 	for(i=0;i<MAX_SKILL;i++){
 		if(sd->status.skill[i].id > 0 && sd->status.skill[i].lv > 0){
-			pc_setreg(*sd,add_str( "@skilllist_id")+(j<<24),sd->status.skill[i].id);
+			pc_setreg(*sd,add_str("@skilllist_id")+(j<<24),sd->status.skill[i].id);
 			pc_setreg(*sd,add_str("@skilllist_lv")+(j<<24),sd->status.skill[i].lv);
 			pc_setreg(*sd,add_str("@skilllist_flag")+(j<<24),sd->status.skill[i].flag);
 			j++;
@@ -6399,13 +6399,15 @@ int buildin_petheal(struct script_state &st)
 
 	pd=sd->pd;
 	if (pd->s_skill)
-	{ //Clear previous skill
+	{	//Clear previous skill
 		if (pd->s_skill->timer != -1)
 			delete_timer(pd->s_skill->timer, pet_skill_support_timer);
-	} else //init memory
+	}
+	else //init memory
 		pd->s_skill = (struct pet_data::pet_skill_support *) aCalloc(1, sizeof(struct pet_data::pet_skill_support)); 
 	
-	pd->s_skill->id=0; //This id identifies that it IS petheal rather than pet_skillsupport
+	//This id identifies that it IS petheal rather than pet_skillsupport
+	pd->s_skill->id=0;
 	//Use the lv as the amount to heal
 	pd->s_skill->lv=conv_num(st, (st.stack.stack_data[st.start+2]));
 	pd->s_skill->delay=conv_num(st, (st.stack.stack_data[st.start+3]));
@@ -6421,34 +6423,6 @@ int buildin_petheal(struct script_state &st)
 	return 0;
 }
 
-/*==========================================
- * pet magnificat [Valaris]
- *------------------------------------------
- */
-/*
-int buildin_petmag(struct script_state &st)
-{
-	struct pet_data *pd;
-	struct map_session_data *sd=script_rid2sd(st);
-
-	if(sd==NULL || sd->pd==NULL)
-		return 0;
-
-	pd=sd->pd;
-
-	if(pd==NULL)
-		return 0;
-
-	pd->skilltype=conv_num(st, (st.stack.stack_data[st.start+2]));
-	pd->skillduration=conv_num(st, (st.stack.stack_data[st.start+3]));
-	pd->skillval=conv_num(st, (st.stack.stack_data[st.start+4]));
-	pd->skilltimer=conv_num(st, (st.stack.stack_data[st.start+5]));
-
-	pd->skillbonustimer=add_timer(gettick()+pd->skilltimer*1000,pet_mag_timer,sd->bl.id,0);
-
-	return 0;
-}
-*/
 /*==========================================
  * pet attack skills [Valaris] //Rewritten by [Skotlex]
  *------------------------------------------
@@ -7051,7 +7025,6 @@ int buildin_getlook(struct script_state &st){
         case LOOK_SHOES: //9
                 break;
         }
-
         push_val(st.stack,C_INT,val);
         return 0;
 }
@@ -7223,7 +7196,7 @@ int buildin_getmapxy(struct script_state &st)
      //Return Success value
 		push_val(st.stack,C_INT,0);
         return 0;
-}
+	}
 	push_val(st.stack,C_INT,-1);
 	return 0;
 }
@@ -8190,7 +8163,6 @@ debug_script(st.script,((st.pos>32)?st.pos-32:0),((st.pos>32)?32:st.pos));
 			run_func(st);
 			if(st.state==GOTO){
 				rerun_pos=st.pos;
-//				script=st.script;
 				st.state=0;
 				if( gotocount>0 && (--gotocount)<=0 ){
 					ShowMessage("run_script: infinity loop !\n");
@@ -8512,7 +8484,7 @@ int script_config_read(const char *cfgName)
 		ShowError("file not found: %s\n",cfgName);
 		return 1;
 	}
-	while (fgets(line, sizeof(line) - 1, fp)) {
+	while (fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 		i = sscanf(line,"%[^:]: %[^\r\n]",w1,w2);

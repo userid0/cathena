@@ -4818,10 +4818,17 @@ int status_change_timer(int tid,unsigned long tick,int id,int data)
 						sp = s;						
 					}
 					if (sp > sd->status.sp)
-						sd->status.sp  = 0;
+					{
+						///We HAVE to stop dancing, otherwise the status wears off and the skill remains in the ground! :X [Skotlex]
+						sc_data[type].timer = temp_timerid; //Timer needs to be restored or stop_dancing won't work!
+						skill_stop_dancing(bl,0);
+						return 0; //No need to continue as skill_stop_dancing will invoke the status_change_end call.
+					}
 					else
-					sd->status.sp -= sp;
-					clif_updatestatus(*sd,SP_SP);
+					{
+						sd->status.sp -= sp;
+						clif_updatestatus(*sd,SP_SP);
+					}
 				}
 				/* ƒ^ƒCƒ}?ÄÝ’è */
 				sc_data[type].timer=add_timer(1000+tick, status_change_timer,bl->id, data);
@@ -5192,7 +5199,7 @@ int status_readdb(void) {
 		return 1;
 	}
 	i=0;
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		char *split[50];
 		if( !skip_empty_line(line) )
 			continue;
@@ -5227,7 +5234,7 @@ int status_readdb(void) {
 		return 1;
 	}
 	i=0;
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		for(j=0,p=line;j<MAX_LEVEL && p;j++){
@@ -5255,7 +5262,7 @@ int status_readdb(void) {
 		return 1;
 	}
 	i=0;
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		for(j=0,p=line;j<MAX_LEVEL && p;j++){
@@ -5282,7 +5289,7 @@ int status_readdb(void) {
 		return 1;
 	}
 	i=0;
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		char *split[20];
 		if( !skip_empty_line(line) )
 			continue;
@@ -5316,7 +5323,7 @@ int status_readdb(void) {
 		return 1;
 	}
 	i=0;
-	while(fgets(line, sizeof(line)-1, fp) && i<MAX_REFINE_BONUS){
+	while(fgets(line, sizeof(line), fp) && i<MAX_REFINE_BONUS){
 		char *split[16];
 		if( !skip_empty_line(line) )
 			continue;

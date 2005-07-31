@@ -315,7 +315,7 @@ int itemdb_read_randomitem()
 			continue;
 		}
 
-		while(fgets(line,1020,fp)){
+		while(fgets(line,sizeof(line),fp)){
 			if( !skip_empty_line(line) )
 				continue;
 			memset(str,0,sizeof(str));
@@ -374,7 +374,7 @@ int itemdb_read_itemavail(void)
 		return -1;
 	}
 
-	while (fgets(line, sizeof(line) - 1, fp)) {
+	while (fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
@@ -420,7 +420,7 @@ int itemdb_read_itemgroup(void)
 		return -1;
 	}
 
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
@@ -606,7 +606,7 @@ int itemdb_read_noequip(void)
 		ShowMessage("can't read %s\n", "db/item_noequip.txt");
 		return -1;
 	}
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
@@ -649,7 +649,7 @@ int itemdb_read_itemtrade(void)
 		return -1;
 	}
 
-	while (fgets(line, sizeof(line) - 1, fp)) {
+	while (fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 		memset(str, 0, sizeof(str));
@@ -858,7 +858,7 @@ int itemdb_readdb(void)
 		}
 
 		lines=0;
-		while(fgets(line,1020,fp)){
+		while(fgets(line,sizeof(line),fp)){
 			lines++;
 			if( !skip_empty_line(line) )
 				continue;

@@ -173,7 +173,7 @@ bool charcommand_config_read(const char *cfgName)
 		return false;
 	}
 
-	while (fgets(line, sizeof(line)-1, fp))
+	while (fgets(line, sizeof(line), fp))
 	{
 		if( !skip_empty_line(line) )
 			continue;
@@ -1298,7 +1298,8 @@ bool charcommand_fakename(int fd, struct map_session_data &sd,const char *comman
 		return 0;
 	}
 	
-	if(strlen(char_name) < 1 ) {
+	if( strlen(char_name) < 1 )
+	{
 		if(!(pl_sd = map_nick2sd(name))) {
 			clif_displaymessage(sd.fd,"Character not found.");
 			return false;

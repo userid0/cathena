@@ -108,7 +108,7 @@ int guild_read_castledb(void)
 		return -1;
 	}
 
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));

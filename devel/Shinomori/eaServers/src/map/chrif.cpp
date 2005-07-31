@@ -569,7 +569,8 @@ int chrif_char_ask_name_answer(int fd)
 	player_name[sizeof(player_name)-1] = '\0';
 
 	sd = map_id2sd(acc);
-	if (acc >= 0 && sd != NULL) {
+	if (acc >= 0 && sd != NULL)
+	{
 		if (RFIFOW(fd, 32) == 1) // player not found
 			sprintf(output, "The player '%s' doesn't exist.", player_name);
 		else {
@@ -681,7 +682,6 @@ int chrif_changedgm(int fd)
 		else
 			clif_displaymessage(sd->fd, "Failure of GM modification.");
 	}
-
 	return 0;
 }
 
@@ -703,7 +703,8 @@ int chrif_changedsex(int fd)
 	if (battle_config.etc_log)
 		ShowMessage("chrif_changedsex %d.\n", acc);
 	sd = map_id2sd(acc);
-	if (acc > 0) {
+	if (acc > 0)
+	{
 		if (sd != NULL && sd->status.sex != sex) {
 			s_class = pc_calc_base_job(sd->status.class_);
 			if (sd->status.sex == 0) {
@@ -754,7 +755,6 @@ int chrif_changedsex(int fd)
 			ShowMessage("chrif_changedsex failed.\n");
 		}
 	}
-
 	return 0;
 }
 
@@ -806,7 +806,6 @@ int chrif_accountreg2(int fd)
 		sd->status.account_reg2[j].value = RFIFOL(fd, p + 32);
 	}
 	sd->status.account_reg2_num = j;
-//	ShowMessage("chrif: accountreg2\n");
 
 	return 0;
 }
@@ -954,31 +953,26 @@ int chrif_disconnectplayer(int fd){
 	//change sessid1 
 	sd->login_id1++;
 
-	switch(RFIFOB(fd, 6)){
-		//clif_authfail_fd
-		case 1: //server closed 
-			clif_authfail_fd(fd, 1);	
+	switch(RFIFOB(fd, 6))
+	{
+	//clif_authfail_fd
+	case 1: //server closed 
+		clif_authfail_fd(fd, 1);	
 		break;
-		
-		case 2: //someone else logged in
-			clif_authfail_fd(fd, 2);		
+	case 2: //someone else logged in
+		clif_authfail_fd(fd, 2);		
 		break;
-		
-		case 3: //server overpopulated
-			clif_authfail_fd(fd, 4);
-		
+	case 3: //server overpopulated
+		clif_authfail_fd(fd, 4);
 		break;
-		
-		case 4: //out of time payd for .. (avail)
-			clif_authfail_fd(fd, 10);
+	case 4: //out of time payd for .. (avail)
+		clif_authfail_fd(fd, 10);
 		break;
-		
-		case 5: //forced to dc by gm
-			clif_authfail_fd(fd, 15);
+	case 5: //forced to dc by gm
+		clif_authfail_fd(fd, 15);
 		break;
 	}
-	
-return 0;
+	return 0;
 }
 
 
@@ -1094,7 +1088,7 @@ int chrif_recvfamelist(int fd)
 	WFIFOW(char_fd,6) = drop_rate;
 
 	if( (fp = safefopen(motd_txt, "r")) != NULL) {
-		if (fgets(buf, 250, fp) != NULL) {
+		if (fgets(buf, sizeof(buf), fp) != NULL) {
 			for(i = 0; buf[i]; i++) {
 				if (buf[i] == '\r' || buf[i] == '\n') {
 					buf[i] = 0;

@@ -111,7 +111,6 @@ public:
 	{
 		copy(cfd);
 	}
-
 	const CFDSET& operator =(const CFDSET& cfd)
 	{
 		copy(cfd);
@@ -133,7 +132,6 @@ public:
 			size_t bit = fd%32;
 
 			checksize(pos);
-
 			cArray[pos] |= (1<<bit);
 		}
 	}
@@ -147,28 +145,24 @@ public:
 			size_t bit = fd%32;
 
 			checksize(pos);
-
 			cArray[pos] &= ~(1<<bit);
 		}
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Clear a bit
-	bool isSet(int fd)
+	bool isSet(int fd) const
 	{
 		if(fd>0)
 		{
 			size_t pos = fd/32;
 			size_t bit = fd%32;
-
-			checksize(pos);
-
-			return 0!=(cArray[pos] & (1<<bit));
+			return (pos<cSZ) && (0!=(cArray[pos] & (1<<bit)));
 		}
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Call a function with each set bit
 	// version 1 (using log2)
-	size_t foreach1( void(*func)(size_t), size_t max)
+	size_t foreach1( void(*func)(size_t), size_t max) const
 	{
 		size_t c = 0;
 		if(func)
@@ -179,8 +173,9 @@ public:
 			unsigned long	bits;
 			unsigned long	nfd=0;
 			max = howmany(max, NFDBITS);
-			
-			while( nfd <  max )
+			if(max>cSZ) max=cSZ;
+
+			while( nfd < max )
 			{	// while something is set in the ulong at position nfd
 				bits = cArray[nfd];
 				while( bits )
@@ -208,7 +203,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////
 	// Call a function with each set bit
 	// version 2 (using shifts)
-	size_t foreach2( void(*func)(size_t), size_t max )
+	size_t foreach2( void(*func)(size_t), size_t max ) const
 	{
 		size_t c=0;
 		if(func)
@@ -219,6 +214,7 @@ public:
 			unsigned long	bits;
 			unsigned long	nfd=0;
 			max = howmany(fd_max, NFDBITS);
+			if(max>cSZ) max=cSZ;
 
 			while( nfd <  max )
 			{	// while something is set in the ulong at position nfd
@@ -256,13 +252,13 @@ public:
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// pretending to be an unix fd_set structure
-	operator fd_set*()	
+	operator fd_set*() const
 	{
 		return (fd_set*)cArray; 
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// size
-	int Count()	
+	int size() const
 	{ 
 		return cSZ * NFDBITS; 
 	}
@@ -295,7 +291,7 @@ class CFDSET
 			size_t sz = (cSZ)?cSZ:2;
 			while(sz >= cSet->fd_count) sz *= 2;
 
-			struct winfdset *temp= (struct winfdset *) new char[sizeof(struct winfdset)+sz*sizeof(SOCKET)];
+			struct winfdset *temp= (struct winfdset *)new char[sizeof(struct winfdset)+sz*sizeof(SOCKET)];
 
 			// copy over the old array
 			if(cSet)
@@ -381,7 +377,7 @@ public:
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Clear a bit
-	bool isSet(int fd)
+	bool isSet(int fd) const
 	{
 		if(fd>0)
 		{	// only have a unsorted list for the moment, maybe sort it later
@@ -394,7 +390,7 @@ public:
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Call a function with each set bit
-	size_t foreach1( void(*func)(size_t), size_t max)
+	size_t foreach1( void(*func)(size_t), size_t max) const
 	{
 		if(func)
 		{	
@@ -406,19 +402,19 @@ public:
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// Call a function with each set bit
-	size_t foreach2( void(*func)(size_t), size_t max )
+	size_t foreach2( void(*func)(size_t), size_t max ) const
 	{	// no different approaches on windows
 		return foreach1( func, max );
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// pretending to be an fd_set structure
-	operator fd_set*()	
+	operator fd_set*() const	
 	{
 		return (fd_set*)cSet; 
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// size
-	int Count()	
+	int size() const
 	{ 
 		return cSZ;
 	}
@@ -440,7 +436,7 @@ time_t stall_time_ = 60;
 
 size_t RFIFO_SIZE = (2*1024);	// a player that send more than 2k is probably a hacker without be parsed
 								// biggest known packet: S 0153 <len>.w <emblem data>.?B -> 24x24 256 color .bmp (0153 + len.w + 1618/1654/1756 bytes)
-size_t WFIFO_SIZE = (64*1024);
+size_t WFIFO_SIZE = (32*1024);
 
 ///////////////////////////////////////////////////////////////////////////////
 #ifndef TCP_FRAME_LEN
@@ -965,7 +961,7 @@ public:
 			ShowError("socket config file not found: %s\n", cfgName);
 			return 1;
 		}
-		while(fgets(line,1020,fp)){
+		while(fgets(line,sizeof(line),fp)){
 			if( !skip_empty_line(line) )
 				continue;
 			i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
@@ -1066,7 +1062,8 @@ int null_parse(int fd)
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-void socket_nonblocking(SOCKET sock, unsigned long yes) {
+void socket_nonblocking(SOCKET sock, unsigned long yes)
+{
 	// I don't think we need this
 	// TCP_NODELAY BOOL Disables the Nagle algorithm for send coalescing. 
 	//setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&yes,sizeof yes);
@@ -1622,10 +1619,6 @@ int make_connection(unsigned long ip, unsigned short port)
 	ShowStatus("Connecting to %d.%d.%d.%d:%i\n",(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF,port);
 
 	result = connect(sock, (struct sockaddr *)(&server_address),sizeof(struct sockaddr_in));
-
-	// set nonblocking after connecting so we can use the blocking timeout
-	// connecting nonblocking sockets would need to wait until connection is established
-	socket_nonblocking(sock,1);
 	if( result < 0 )
 	{
 		closesocket(sock);
@@ -1634,6 +1627,10 @@ int make_connection(unsigned long ip, unsigned short port)
 	}
 	else
 		ShowStatus("Connect ok\n");
+
+	// set nonblocking after connecting so we can use the blocking timeout
+	// connecting nonblocking sockets would need to wait until connection is established
+	socket_nonblocking(sock,1);
 
 	// insert the socket to the fields and get the position
 	fd = SessionInsertSocket(sock);
@@ -2082,90 +2079,13 @@ bool session_Delete(int fd)
 // Initialisation and Cleanup
 //
 ///////////////////////////////////////////////////////////////////////////////
-
-unsigned long addr_[16];   // ip addresses of local host (host byte order)
-unsigned int naddr_ = 0;   // # of ip addresses
-
 void socket_init(void)
 {
-
-#ifdef WIN32
-	char** a;
-	unsigned int i;
-	char fullhost[255];
-	struct hostent* hent;
-	
-	// Start up the windows networking 
-	WSADATA wsaData;
-	if ( WSAStartup(WINSOCK_VERSION, &wsaData) != 0 ) {
-		ShowError("SYSERR: WinSock not available!\n");
-		exit(1);
-	}
-	
-	if(gethostname(fullhost, sizeof(fullhost)) == SOCKET_ERROR) {
-		ShowWarning("Ugg.. no hostname defined!\n");
-		return;
-	} 
-	
-	// XXX This should look up the local IP addresses in the registry
-	// instead of calling gethostbyname. However, the way IP addresses
-	// are stored in the registry is annoyingly complex, so I'll leave
-	// this as T.B.D.
-	hent = gethostbyname(fullhost);
-	if (hent == NULL) {
-		ShowWarning("Cannot resolve our own hostname to a IP address");
-		return;
-	}
-	a = hent->h_addr_list;
-	for(i = 0; a[i] != NULL && i < 16; ++i) {
-		unsigned long addr1 = ntohl(RBUFL(a[i],0));
-		addr_[i] = addr1;
-	}
-	naddr_ = i;
-#else//not W32
-	int pos;
-	int fdes = socket(AF_INET, SOCK_STREAM, 0);
-	char buf[16 * sizeof(struct ifreq)];
-	struct ifconf ic;
-	
-	// The ioctl call will fail with Invalid Argument if there are more
-	// interfaces than will fit in the buffer
-	ic.ifc_len = sizeof(buf);
-	ic.ifc_buf = buf;
-	if(ioctl(fdes, SIOCGIFCONF, &ic) == -1) {
-		ShowWarning("SIOCGIFCONF failed!\n");
-		return;
-	}
-	for(pos = 0; pos < ic.ifc_len;   )
-	{
-		struct ifreq * ir = (struct ifreq *) (ic.ifc_buf + pos);
-		struct sockaddr_in * a = (struct sockaddr_in *) &(ir->ifr_addr);
-		
-		if(a->sin_family == AF_INET) {
-			u_long ad = ntohl(a->sin_addr.s_addr);
-			if(ad != INADDR_LOOPBACK) {
-				addr_[naddr_ ++] = ad;
-				if(naddr_ == 16)
-					break;
-			}
-		}
-#if defined(_AIX) || defined(__APPLE__)
-		pos += ir->ifr_addr.sa_len;  // For when we port athena to run on Mac's :)
-		pos += sizeof(ir->ifr_name);
-#else// not AIX or APPLE
-		pos += sizeof(struct ifreq);
-#endif//not AIX or APPLE
-	}
-#endif//not W32
-
 	ddos.socket_config_read("conf/packet_athena.conf");
 
 	// とりあえず５分ごとに不要なデータを削除する
 	add_timer_interval(gettick()+1000,300*1000,connect_check_clear,0,0);
-
-
 	add_timer_func_list(session_WaitClose, "session_WaitClose");
-
 }
 
 void socket_final(void)

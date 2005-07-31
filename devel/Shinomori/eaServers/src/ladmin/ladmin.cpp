@@ -2967,7 +2967,7 @@ int prompt() {
 		// get command and parameter
 		memset(buf, '\0', sizeof(buf));
 		fflush(stdin);
-		fgets(buf, 1023, stdin);
+		fgets(buf, sizeof(buf), stdin);
 		buf[1023] = '\0';
 
 		ShowMessage(CL_NORM);
@@ -4171,7 +4171,7 @@ int ladmin_config_read(const char *cfgName) {
 	} else {
 		ShowMessage(CL_NORM"---Start reading of Ladmin configuration file (%s)\n", cfgName);
 	}
-	while(fgets(line, sizeof(line)-1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 

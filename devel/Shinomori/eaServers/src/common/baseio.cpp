@@ -18,12 +18,29 @@
 // mysql access function
 ///////////////////////////////////////////////////////////////////////////////
 
-int mysql_SendQuery(MYSQL *mysql, const char* q, size_t sz=0)
+int mysql_SendQuery(MYSQL &mysql, MYSQL_RES*& sql_res, const char* q, size_t sz=0)
 {
 #ifdef DEBUG_SQL
-	ShowSQL("%s:%d# %s\n", __FILE__, __LINE__, q);
+	ShowSQL("%s\n", q);
 #endif
-	return mysql_real_query(mysql, q, (sz)?sz:strlen(q));
+	if( 0==mysql_real_query(&mysql, q, (sz)?sz:strlen(q)) )
+	{
+		if(sql_res) mysql_free_result(sql_res);
+		sql_res = mysql_store_result(&mysql);
+		if(sql_res)
+		{
+			return true;
+		}
+		else
+		{
+			ShowError("DB result error\nQuery:    %s\n", q);
+		}
+	}
+	else
+	{
+		ShowError("Database Error %s\nQuery:    %s\n", mysql_error(&mysql_handle), q);
+	}
+	return false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -56,18 +73,14 @@ bool CAccountDB::existAccount(const char* userid)
 	}
 	return false;
 }
-struct account_data* CAccountDB::searchAccount(const char* userid, const char* pass)
+struct account_data* CAccountDB::searchAccount(const char* userid)
 {	// get account by user/pass
 	size_t i;
 	for(i=0; i<cList.size(); i++)
 	{
 		if( 0==strcmp(userid, cList[i].userid) )
 		{	
-			if( 0==strcmp(pass, cList[i].pass) )
-				return &(cList[i]);
-			// this does not allow different users with same userid but different passes
-			// error message will be "user/pass" wrong, lowering password spoofing chance
-			return NULL;
+			return &(cList[i]);
 		}
 	}
 	return NULL;
@@ -125,30 +138,62 @@ static char *login_db_account_id;
 static char *login_db_user_pass;
 static char *login_db_level;
 static bool case_sensitive;
-static char *t_uid;
 
 bool CAccountDB::existAccount(const char* userid)
 {	// check if account with userid already exist
 	bool ret = false;
+	char uid[64];
 	char query[1024];
-	size_t sz=sprintf(query, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", login_db_userid, login_db, userid);
-	if( 0==mysql_SendQuery(&mysql_handle, query, sz) )
+	MYSQL_RES* sql_res=NULL;
+	jstrescapecpy(uid, userid);
+	size_t sz=sprintf(query, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", login_db_userid, login_db, uid);
+	if( mysql_SendQuery(mysql_handle, sql_res, query, sz) )
 	{
-		MYSQL_RES* sql_res = mysql_store_result(&mysql_handle);
 		ret = (mysql_num_rows(sql_res) == 1);
 		mysql_free_result(sql_res);
 	}
 	return ret;
 }
-struct account_data* CAccountDB::searchAccount(const char* userid, const char* pass)
+struct account_data* CAccountDB::searchAccount(const char* userid)
 {	// get account by user/pass
 	char query[4096];
-	size_t sz=sprintf(query, "SELECT `%s`,`%s`,`%s`,`lastlogin`,`logincount`,`sex`,`connect_until`,`last_ip`,`ban_until`,`state`,`%s`"
-	                " FROM `%s` WHERE %s `%s`='%s'", login_db_account_id, login_db_userid, login_db_user_pass, login_db_level, login_db, case_sensitive ? "BINARY" : "", login_db_userid, t_uid);
-	//login {0-account_id/1-userid/2-user_pass/3-lastlogin/4-logincount/5-sex/6-connect_untl/7-last_ip/8-ban_until/9-state}
-	if( 0==mysql_SendQuery(&mysql_handle, query, sz) )
+	char uid[64];
+	char pss[64];
+	jstrescapecpy(uid, userid);
+	size_t sz=sprintf(query, "SELECT `%s`,`%s`,`%s`,`lastlogin`,`logincount`,`sex`,`connect_until`,`last_ip`,`ban_until`,`state`,`%s`,`email`"
+	                " FROM `%s` WHERE %s `%s`='%s'", login_db_account_id, login_db_userid, login_db_user_pass, login_db_level, login_db, case_sensitive ? "BINARY" : "", login_db_userid, uid);
+	//login {0-account_id/1-userid/2-user_pass/3-lastlogin/4-logincount/5-sex/6-connect_untl/7-last_ip/8-ban_until/9-state/10-gmlevel/11-email}
+	if( mysql_SendQuery(mysql_handle, sql_res, query, sz) )
 	{
+		sql_row = mysql_fetch_row(sql_res);	//row fetching
+		if(sql_row)
+		{	// use cList[0] as general storage, the list contains only this element
 
+			cList[0].account_id = sql_row[0]?atoul(sql_row[0]):0;
+			safestrcpy(cList[0].userid, userid, 24);
+			safestrcpy(cList[0].pass, sql_row[2]?sql_row[2]:"", 32);
+			safestrcpy(cList[0].lastlogin, sql_row[3]?sql_row[3]:"" , 24);
+			cList[0].logincount = sql_row[4]?atoul( sql_row[4]):0;
+			cList[0].sex = sql_row[5][0] == 'S' ? 2 : sql_row[5][0]=='M';
+			cList[0].connect_until_time = (time_t)(sql_row[6]?atoul(sql_row[6]):0);
+			safestrcpy(cList[0].last_ip, sql_row[7], 16);
+			cList[0].ban_until_time = (time_t)(sql_row[8]?atoul(sql_row[8]):0);;
+			cList[0].state = sql_row[9]?atoul(sql_row[9]):0;;
+			cList[0].gm_level = sql_row[10]?atoi( sql_row[10]):0;
+			safestrcpy(cList[0].email, sql_row[11]?sql_row[11]:"" , 40);
+/*
+	char error_message[20];		// Message of error code #6 = Your are Prohibited to log in until %s (packet 0x006a)
+	char memo[256];				// a memo field
+	unsigned short account_reg2_num;
+	struct global_reg account_reg2[ACCOUNT_REG2_NUM];
+*/
+		}
+		else
+		{	//there's no id.
+			ShowError("auth failed no account '%s'' ('%s')\n", userid, uid);
+		}
+
+		mysql_free_result(sql_res);
 	}
 	return NULL;
 }
@@ -159,14 +204,15 @@ struct account_data* CAccountDB::searchAccount(unsigned long account_id)
 struct account_data* CAccountDB::insertAccount(const char* userid, const char* pass, unsigned char sex, char* email, int& error)
 {	// insert a new account to db
 
-
-	// read the completed account back from db
+	// read the complete account back from db
 	return searchAccount(userid,pass);
 }
 
 
 bool CAccountDB::init(const char* configfile)
 {	// init db
+	// create a default element for the access
+	cList.resize(1);
 
 	return false;
 }
@@ -950,7 +996,7 @@ public:
 		line_counter = 0;
 		// limited to 4000, because we send information to char-servers (more than 4000 GM accounts???)
 		// int (id) + int (level) = 8 bytes * 4000 = 32k (limit of packets in windows)
-		while(fgets(line, sizeof(line)-1, fp) && line_counter < 4000) {
+		while(fgets(line, sizeof(line), fp) && line_counter < 4000) {
 			line_counter++;
 			if( !skip_empty_line(line) )
 				continue;

@@ -39,7 +39,7 @@ public:
 			return false;
 		}
 		ShowInfo("Reading configuration file '%s'\n", cfgName);
-		while(fgets(line, sizeof(line)-1, fp)) 
+		while(fgets(line, sizeof(line), fp)) 
 		{
 			// terminate buffer
 			line[sizeof(line)-1] = '\0';
@@ -325,7 +325,7 @@ private:
 	// private fnctions for db implementation dependend access
 	bool existAccount(const char* userid);
 	struct account_data* searchAccount(unsigned long account_id);
-	struct account_data* searchAccount(const char* userid, const char* pass);
+	struct account_data* searchAccount(const char* userid);
 	struct account_data* insertAccount(const char* userid, const char* pass, unsigned char sex, char* email, int& error);
 public:
 
@@ -392,8 +392,8 @@ public:
 			}
 			else
 			{	// look for an existing account
-				ret = searchAccount(userid, pass);
-				if( !ret )
+				ret = searchAccount(userid);
+				if( !ret || 0!=strcmp(ret->pass, pass) )
 				{
 					error = 0;
 					errmsg= "Userid/Password not recognized.";

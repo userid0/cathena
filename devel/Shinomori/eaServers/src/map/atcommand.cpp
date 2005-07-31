@@ -687,7 +687,7 @@ bool msg_config_read(const char *cfgName)
 		memset(&msg_table[0], 0, sizeof(msg_table[0]) * MAX_MSG);
 		initialized=true;
 		}
-	while(fgets(line, sizeof(line)-1, fp))
+	while(fgets(line, sizeof(line), fp))
 	{
 		if( !skip_empty_line(line) )
 			continue;
@@ -704,8 +704,8 @@ bool msg_config_read(const char *cfgName)
 				{
 					if (msg_table[msg_number] != NULL)
 						aFree(msg_table[msg_number]);
-					msg_table[msg_number] = (char *)aMalloc( (strlen(w2) + 1) * sizeof (char));
-					memcpy(msg_table[msg_number],w2,strlen(w2) + 1);
+					msg_table[msg_number] = (char *)aMalloc( (1+strlen(w2)) * sizeof (char));
+					memcpy(msg_table[msg_number],w2,1+strlen(w2));
 				//	ShowMessage("message #%d: '%s'.\n", msg_number, msg_table[msg_number]);
 				}
 			}
@@ -728,7 +728,7 @@ void do_final_msg ()
 		{
 			aFree(msg_table[i]);
 			msg_table[i] = NULL;
-}
+		}
 	}
 	return;
 }
@@ -774,7 +774,7 @@ bool atcommand_config_read(const char *cfgName)
 		return false;
 	}
 
-	while (fgets(line, sizeof(line)-1, fp)) {
+	while (fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 
@@ -903,7 +903,7 @@ AtCommandType is_atcommand(const int fd, struct map_session_data &sd, const char
 		{
 			sprintf(output, msg_table[153], command); // %s is Unknown Command.
 			clif_displaymessage(fd, output);
-			}
+		}
 		else
 		{
 			if( !info.proc(fd, sd, command, p) )
@@ -2473,7 +2473,7 @@ bool atcommand_help(int fd, struct map_session_data &sd, const char* command, co
 	if((fp = safefopen(help_txt, "r")) != NULL) {
 		clif_displaymessage(fd, msg_table[26]); // Help commands:
 		gm_level = pc_isGM(sd);
-		while(fgets(buf, sizeof(buf) - 1, fp) != NULL) {
+		while(fgets(buf, sizeof(buf), fp) != NULL) {
 			if (buf[0] == '/' && buf[1] == '/')
 				continue;
 			for (i = 0; buf[i] != '\0'; i++) {
@@ -8081,23 +8081,27 @@ bool atcommand_identify(int fd, struct map_session_data &sd, const char* command
  */
 bool atcommand_gmotd(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
-		char buf[256];
-		FILE *fp;
+	char buf[256];
+	FILE *fp;
 	
-	if(	(fp = safefopen(motd_txt, "r"))!=NULL){
-			while (fgets(buf, 250, fp) != NULL){
-				int i;
-				for( i=0; buf[i]; i++){
-					if( buf[i]=='\r' || buf[i]=='\n'){
-						buf[i]=0;
-						break;
-					}
+	if(	(fp = safefopen(motd_txt, "r"))!=NULL)
+	{
+		while (fgets(buf, sizeof(buf), fp) != NULL)
+		{
+			int i;
+			for( i=0; buf[i]; i++)
+			{
+				if( buf[i]=='\r' || buf[i]=='\n')
+				{
+					buf[i]=0;
+					break;
 				}
-			intif_GMmessage(buf,8);
 			}
-			fclose(fp);
+			intif_GMmessage(buf,8);
 		}
-		return true;
+		fclose(fp);
+	}
+	return true;
 }
 
 bool atcommand_misceffect(int fd, struct map_session_data &sd, const char* command, const char* message)

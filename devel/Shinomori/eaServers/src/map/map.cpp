@@ -2322,7 +2322,7 @@ void map_readwater(const char *watertxt) {
 	}
 	if(waterlist==NULL)
 		waterlist=(struct s_waterlist*)aCalloc(MAX_MAP_PER_SERVER,sizeof(struct s_waterlist));
-	while(fgets(line,1020,fp) && n < MAX_MAP_PER_SERVER){
+	while( n < MAX_MAP_PER_SERVER && fgets(line,sizeof(line),fp) ){
 		int wh,count;
 		if( !skip_empty_line(line) )
 			continue;
@@ -2680,9 +2680,9 @@ int map_readafm(int m,const char *fn)
 		ShowMessage("\rLoading Maps [%d/%d]: %-50s  ",m,map_num,fn);
 		fflush(stdout);
 
-		str=fgets(afm_line, sizeof(afm_line)-1, afm_file);
-		str=fgets(afm_line, sizeof(afm_line)-1, afm_file);
-		str=fgets(afm_line, sizeof(afm_line)-1, afm_file);
+		str=fgets(afm_line, sizeof(afm_line), afm_file);
+		str=fgets(afm_line, sizeof(afm_line), afm_file);
+		str=fgets(afm_line, sizeof(afm_line), afm_file);
 		sscanf(str , "%d%d", &afm_size[0], &afm_size[1]);
 
 		map[m].m = m;
@@ -2697,7 +2697,7 @@ int map_readafm(int m,const char *fn)
 
 		map[m].gat = (struct mapgat *)aCalloc( (map[m].xs*map[m].ys), sizeof(struct mapgat));
 		for (y = 0; y < ys; y++) {
-			str=fgets(afm_line, sizeof(afm_line)-1, afm_file);
+			str=fgets(afm_line, sizeof(afm_line), afm_file);
 			for (x = 0; x < xs; x++) {
 				// no direct access
 				map_setcell(m,x,y, str[x] & CELL_MASK );
@@ -3084,7 +3084,7 @@ int map_config_read(const char *cfgName)
 		return 0;
 	}
 	
-	while(fgets(line, sizeof(line) -1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 		if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) == 2) {
@@ -3168,7 +3168,7 @@ int inter_config_read(const char *cfgName)
 		ShowError("File not found: '%s'.\n",cfgName);
 		return 1;
 	}
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);
@@ -3600,32 +3600,9 @@ int do_init(int argc, char *argv[]) {
 	}
 
 	map_config_read(MAP_CONF_NAME);
-/*
-	if ( naddr_ == 0 ) {
-		ShowMessage("\nUnable to automatically determine the IP address.\n");
-		ShowMessage("please edit the map_athena.conf file and set it to correct values.\n");
-		ShowMessage("(127.0.0.1 is valid if you have no network interface)\n");
-	}
-	else if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK || chrif_getip() == INADDR_LOOPBACK) {
-		// The map server should know what IP address it is running on
-		//   - MouseJstr
-		unsigned long localaddr = addr_[0]; // host order network address
-		if (naddr_ != 1)
-			ShowMessage("Multiple interfaces detected...  using %d.%d.%d.%d as primary IP address\n",
-							(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
-		else
-			ShowMessage("Defaulting to %d.%d.%d.%d as our IP address\n",
-							(localaddr>>24)&0xFF, (localaddr>>16)&0xFF, (localaddr>>8)&0xFF, (localaddr)&0xFF);
 
-		if (clif_getip() == INADDR_ANY || clif_getip() == INADDR_LOOPBACK)
-			clif_setip(localaddr);
-		if (chrif_getip() == INADDR_LOOPBACK)
-			chrif_setip(localaddr);
-		if ((localaddr&0xFFFF0000) == 0xC0A80000)//192.168.x.x
-			ShowMessage("\nPrivate Network detected.. \nedit lan_support.conf and map_athena.conf\n\n");
-	}
-*/
-	if (SHOW_DEBUG_MSG) ShowNotice("Server running in '"CL_WHITE"Debug Mode"CL_RESET"'.\n");
+	if (SHOW_DEBUG_MSG)
+		ShowNotice("Server running in '"CL_WHITE"Debug Mode"CL_RESET"'.\n");
 	battle_config_read(BATTLE_CONF_FILENAME);
 	msg_config_read(MSG_CONF_NAME);
 	atcommand_config_read(ATCOMMAND_CONF_FILENAME);

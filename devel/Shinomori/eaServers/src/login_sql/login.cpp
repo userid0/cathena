@@ -162,9 +162,9 @@ void remove_online_user(unsigned long account_id)
 //-----------------------------------------------------
 // check user level
 //-----------------------------------------------------
-int isGM(unsigned long account_id) {
+int isGM(unsigned long account_id)
+{
 	int level;
-
 	MYSQL_RES* 	sql_res;
 	MYSQL_ROW	sql_row;
 	level = 0;
@@ -1488,7 +1488,7 @@ int login_config_read(const char *cfgName){
 		return 1;
 	}
 	ShowStatus("Reading Login Configuration %s\n", cfgName);
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		if( !skip_empty_line(line) )
 			continue;
 
@@ -1591,7 +1591,7 @@ void sql_config_read(const char *cfgName){ /* Kalaspuff, to get login_db */
 		return;
 	}
 	ShowMessage("reading configure: %s\n", cfgName);
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		i=sscanf(line,"%[^:]: %[^\r\n]",w1,w2);

@@ -519,7 +519,7 @@ const char* grfio_resnametable(const char* fname, char *lfname)
 		//return NULL;	// 1:not found error, 
 	}
 
-	while(fgets(line,508,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( (sscanf(line,"%[^#]#%[^#]#",w1,w2)==2) && 
 			(sscanf(fname,"%*5s%s",lfname)==1) &&  
 			(!strcasecmp(w1,lfname))){
@@ -1010,7 +1010,7 @@ void grfio_init(const char *fname)
 	// It will read, if there is grf-files.txt.
 	if (data_conf)
 	{
-		while(fgets(line, 1020, data_conf))
+		while(fgets(line, sizeof(line), data_conf))
 		{
 			if (sscanf(line, "%[^:]: %[^\r\n]", w1, w2) == 2)
 			{

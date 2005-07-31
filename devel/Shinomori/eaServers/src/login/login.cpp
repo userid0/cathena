@@ -300,7 +300,7 @@ int read_gm_account(void) {
 	line_counter = 0;
 	// limited to 4000, because we send information to char-servers (more than 4000 GM accounts???)
 	// int (id) + int (level) = 8 bytes * 4000 = 32k (limit of packets in windows)
-	while(fgets(line, sizeof(line)-1, fp) && GM_num < 4000) {
+	while(fgets(line, sizeof(line), fp) && GM_num < 4000) {
 		line_counter++;
 		if( !skip_empty_line(line) )
 			continue;
@@ -523,7 +523,7 @@ int mmo_auth_init(void)
 		return 0;
 	}
 
-	while(fgets(line, sizeof(line)-1, fp) != NULL) {
+	while(fgets(line, sizeof(line), fp) != NULL) {
 		if( !skip_empty_line(line) )
 			continue;
 		line[sizeof(line)-1] = '\0';
@@ -2263,7 +2263,7 @@ int parse_admin(int fd) {
 									strftime(tmpstr, 23, date_format, localtime(&unixtime));
 									modify_flag = 0;
 									// read/write GM file
-									while(fgets(line, sizeof(line)-1, fp)) {
+									while(fgets(line, sizeof(line), fp)) {
 										while(line[0] != '\0' && (line[strlen(line)-1] == '\n' || line[strlen(line)-1] == '\r'))
 											line[strlen(line)-1] = '\0';
 										if( !skip_empty_line(line) )
@@ -3260,7 +3260,7 @@ int login_config_read(const char *cfgName) {
 		return 1;
 	}
 	ShowStatus("Reading Login Configuration %s\n", cfgName);
-	while(fgets(line, sizeof(line)-1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 

@@ -151,11 +151,10 @@ int battle_delay_damage_sub(int tid,unsigned long tick,int id,int data)
 	struct delay_damage *dat = (struct delay_damage *)data;
 	if(dat)
 	{
-	struct block_list *target = map_id2bl(dat->target);
+		struct block_list *target = map_id2bl(dat->target);
 		if (target && map_id2bl(id) == dat->src && target->prev != NULL)
 		battle_damage(dat->src, target, dat->damage, dat->flag);
-
-	aFree(dat);
+		aFree(dat);
 	}
 	return 0;
 }
@@ -2186,7 +2185,7 @@ static struct Damage battle_calc_pc_weapon_attack(
 				damage_rate += 200+ 50*skill_lv;
 				break;
 			case TF_SPRINKLESAND:	// 砂まき
-				damage_rate += 25;
+				damage_rate += 30;
 				break;
 			case MC_CARTREVOLUTION:	// カートレボリューション
 				if(sd->cart_max_weight > 0 && sd->cart_weight > 0) {
@@ -6082,7 +6081,7 @@ int battle_config_read(const char *cfgName)
 		ShowError("file not found: %s\n", cfgName);
 		return 1;
 	}
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		if (sscanf(line, "%[^:]:%s", w1, w2) != 2)

@@ -561,11 +561,17 @@ bool pc_break_equip(struct map_session_data &sd, unsigned short where)
 
 	if (sd.unbreakable_equip & where)
 		return 0;
+	if( where == EQP_WEAPON && 
+		(sd.status.weapon ==  0 || // Added bare fists to the list [Skotlex]
+		 sd.status.weapon ==  6 || sd.status.weapon ==  7 || sd.status.weapon == 8 || // Axes and Maces can't be broken [DracoRPG] 
+		 sd.status.weapon == 10 || sd.status.weapon == 15) )	//Rods and Books can't be broken [Skotlex]
+		return 0;
+
 	if (sd.unbreakable >= rand()%100)
 		return 0;
-	if (where == EQP_WEAPON && (sd.status.weapon == 0 || sd.status.weapon == 6 || sd.status.weapon == 7 || sd.status.weapon == 8)) // Axes and Maces can't be broken [DracoRPG] Added bare fists to the list [Skotlex]
-		return 0;
-	switch (where) {
+
+	switch (where)
+	{
 		case EQP_WEAPON:
 			i = SC_CP_WEAPON;
 			break;
@@ -847,7 +853,7 @@ int pc_authok(unsigned long id, unsigned long login_id2, time_t connect_until_ti
 		char buf[256];
 		FILE *fp;
 		if((fp = safefopen(motd_txt, "r")) != NULL) {
-			while (fgets(buf, sizeof(buf)-1, fp) != NULL) {
+			while (fgets(buf, sizeof(buf), fp) != NULL) {
 				int i;
 				for(i=0; buf[i]; i++) {
 					if (buf[i] == '\r' || buf[i]== '\n') {
@@ -982,7 +988,7 @@ int pc_calc_skilltree(struct map_session_data &sd)
 		do
 		{
                 flag=0;
-			for(i=0;(id=skill_tree[s][c][i].id)>0;i++)
+			for(i=0; i<MAX_SKILL && (id=skill_tree[s][c][i].id)>0; i++)
 			{
                     int j,f=1;
 				if(!battle_config.skillfree)
@@ -4617,7 +4623,7 @@ int pc_allskillup(struct map_session_data &sd)
 	else
 	{
 		int inf2;
-		for(i=0;(id=skill_tree[s][c][i].id)>0;i++)
+		for(i=0;i<MAX_SKILL&&(id=skill_tree[s][c][i].id)>0;i++)
 		{
 			inf2 = skill_get_inf2(id);
 			if(sd.status.skill[id].id==0 && (!(inf2&INF2_QUEST_SKILL) || battle_config.quest_skill_learn) && !(inf2&INF2_WEDDING_SKILL))
@@ -7400,7 +7406,7 @@ int pc_readdb(void)
 		return 1;
 	}
 	i=0;
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		int bn,b1,b2,b3,b4,b5,b6,jn,j1,j2,j3,j4,j5,j6;
 		if( !skip_empty_line(line) )
 			continue;
@@ -7436,38 +7442,43 @@ int pc_readdb(void)
 		return 1;
 	}
 
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp))
+	{
 		char *split[50];
 		int f=0, m=3;
 		if( !skip_empty_line(line) )
 			continue;
-		for(j=0,p=line;j<14 && p;j++){
+		for(j=0,p=line;j<14 && p;j++)
+		{
 			split[j]=p;
 			p=strchr(p,',');
 			if(p) *p++=0;
 		}
 		if(j<13)
 			continue;
-		if (j == 14) {
-			f=1;	// MinJobLvl has been added
+		if (j == 14)
+		{	// MinJobLvl has been added
+			f=1;
 			m++;
 		}
 		s_class = pc_calc_base_job(atoi(split[0]));
 		i = s_class.job;
 		u = s_class.upper;
-		// check for bounds [celest]
-		if (i > 25 || u > 3)
-			continue;
-		for(j=0; j<MAX_SKILL_TREE && skill_tree[u][i][j].id; j++);
-		if( j==MAX_SKILL_TREE )
-			continue;
-		skill_tree[u][i][j].id=atoi(split[1]);
-		skill_tree[u][i][j].max=atoi(split[2]);
-		if (f) skill_tree[u][i][j].joblv=atoi(split[3]);
-
-		for(k=0;k<5;k++){
-			skill_tree[u][i][j].need[k].id=atoi(split[k*2+m]);
-			skill_tree[u][i][j].need[k].lv=atoi(split[k*2+m+1]);
+		if (i < 25 || u < 3)
+		{	// check for bounds [celest]
+			for(j=0; j<MAX_SKILL_TREE && skill_tree[u][i][j].id; j++);
+			if( j<MAX_SKILL_TREE )
+			{
+				skill_tree[u][i][j].id=atoi(split[1]);
+				skill_tree[u][i][j].max=atoi(split[2]);
+				if(f)
+					skill_tree[u][i][j].joblv=atoi(split[3]);
+				for(k=0;k<5;k++)
+				{
+					skill_tree[u][i][j].need[k].id=atoi(split[k*2+m]);
+					skill_tree[u][i][j].need[k].lv=atoi(split[k*2+m+1]);
+				}
+			}
 		}
 	}
 	fclose(fp);
@@ -7483,7 +7494,7 @@ int pc_readdb(void)
 		ShowMessage("can't read %s\n","db/attr_fix.txt");
 		return 1;
 	}
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		char *split[10];
 		size_t lv,n;
 		if( !skip_empty_line(line) )
@@ -7498,7 +7509,7 @@ int pc_readdb(void)
 //		ShowMessage("%d %d\n",lv,n);
 
 		for(i=0;i<n;){
-			if( !fgets(line, sizeof(line)-1, fp) )
+			if( !fgets(line, sizeof(line), fp) )
 				break;
 			if( !skip_empty_line(line) )
 				continue;
@@ -7528,7 +7539,7 @@ int pc_readdb(void)
 		ShowError("Can't read '"CL_WHITE"%s"CL_RESET"'... Generating DB.\n","db/statpoint.txt");
 		//return 1;
 	} else {
-		while(fgets(line, sizeof(line)-1, fp)){
+		while(fgets(line, sizeof(line), fp)){
 			if( !skip_empty_line(line) )
 				continue;
 			if ((j=atoi(line))<0)

@@ -117,7 +117,7 @@ int inter_accreg_init(void) {
 
 	if( (fp = safefopen(accreg_txt, "r")) == NULL)
 		return 1;
-	while(fgets(line, sizeof(line)-1, fp)){
+	while(fgets(line, sizeof(line), fp)){
 		line[sizeof(line)-1] = '\0';
 
 		reg = (struct accreg*)aCalloc(1,sizeof(struct accreg));
@@ -181,7 +181,7 @@ int inter_config_read(const char *cfgName) {
 		ShowError("file not found: %s\n", line);
 		return 1;
 	}
-	while(fgets(line, sizeof(line) - 1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		if( !skip_empty_line(line) )
 			continue;
 		line[sizeof(line)-1] = '\0';

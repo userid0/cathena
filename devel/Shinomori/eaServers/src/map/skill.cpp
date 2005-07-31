@@ -4146,7 +4146,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					i==SC_POEMBRAGI || i==SC_APPLEIDUN || i==SC_UGLYDANCE || i==SC_HUMMING || 
 					i==SC_DONTFORGETME || i==SC_FORTUNE || i==SC_SERVICE4U || 
 					i==SC_MOONLIT || i==SC_LONGING || i==SC_HERMODE || i== SC_DANCING || 
-					i==SC_GUILDAURA )
+					i==SC_GUILDAURA || i==SC_STEELBODY )
 						continue;
 				status_change_end(bl,i,-1);
 			}
@@ -9889,7 +9889,7 @@ int skill_readdb(void)
 		ShowMessage("can't read %s\n","db/skill_db.txt");
 		return 1;
 	}
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		char *split[50];
 		if( !skip_empty_line(line) )
 			continue;
@@ -9947,7 +9947,7 @@ int skill_readdb(void)
 		ShowMessage("can't read %s\n","db/skill_require_db.txt");
 		return 1;
 	}
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		char *split[50];
 		if( !skip_empty_line(line) )
 			continue;
@@ -10028,7 +10028,7 @@ int skill_readdb(void)
 		ShowMessage("can't read %s\n","db/skill_cast_db.txt");
 		return 1;
 	}
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		char *split[50];
 		memset(split,0,sizeof(split));	// [Valaris] thanks to fov
 		if( !skip_empty_line(line) )
@@ -10059,7 +10059,7 @@ int skill_readdb(void)
 		return 1;
 	}
         k = 0;
-	while (fgets(line,1020,fp)) {
+	while (fgets(line,sizeof(line),fp)) {
 		char *split[50];
 		if( !skip_empty_line(line) )
 			continue;
@@ -10106,7 +10106,7 @@ int skill_readdb(void)
 			return 1;
 		}
 		k=0;
-		while(fgets(line,1020,fp)){
+		while(fgets(line,sizeof(line),fp)){
 			char *split[6 + MAX_PRODUCE_RESOURCE * 2];
 			int x,y;
 			if( !skip_empty_line(line) )
@@ -10142,7 +10142,7 @@ int skill_readdb(void)
 		return 1;
 	}
 	k=0;
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		char *split[16];
 		int x,y;
 		if( !skip_empty_line(line) )
@@ -10175,7 +10175,7 @@ int skill_readdb(void)
 		return 1;
 	}
 	k=0;
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		char *split[16];
 		if( !skip_empty_line(line) )
 			continue;
@@ -10202,7 +10202,7 @@ int skill_readdb(void)
 		ShowMessage("can't read %s\n","db/skill_castnodex_db.txt");
 		return 1;
 	}
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		char *split[50];
 		if( !skip_empty_line(line) )
 			continue;
@@ -10230,7 +10230,7 @@ int skill_readdb(void)
 		return 1;
 	}
 	k=0;
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		char *split[16];
 		if( !skip_empty_line(line) )
 			continue;

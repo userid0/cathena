@@ -1596,11 +1596,10 @@ int clif_movechar(struct map_session_data &sd)
 		return 0;
 	}
 
-//Stupid client that needs this resent every time someone walks :X
+	//Stupid client that needs this resent every time someone walks :X
 	if(battle_config.save_clothcolor &&
 		sd.status.clothes_color > 0 &&
-		(sd.view_class != 22 || !battle_config.wedding_ignorepalette)
-		)
+		(sd.view_class != 22 || !battle_config.wedding_ignorepalette) )
 		clif_changelook(sd.bl, LOOK_CLOTHES_COLOR, sd.status.clothes_color);
 
 	if(sd.state.viewsize==2) // tiny/big players [Valaris]
@@ -6563,32 +6562,32 @@ int clif_guild_basicinfo(struct map_session_data &sd)
 			if(g->guild_id == gc->guild_id)	t++;
 	}
 
-	if     (t==1)  memcpy(WFIFOP(fd,94),"One Castle",20);
-	else if(t==2)  memcpy(WFIFOP(fd,94),"Two Castles",20);
-	else if(t==3)  memcpy(WFIFOP(fd,94),"Three Castles",20);
-	else if(t==4)  memcpy(WFIFOP(fd,94),"Four Castles",20);
-	else if(t==5)  memcpy(WFIFOP(fd,94),"Five Castles",20);
-	else if(t==6)  memcpy(WFIFOP(fd,94),"Six Castles",20);
-	else if(t==7)  memcpy(WFIFOP(fd,94),"Seven Castles",20);
-	else if(t==8)  memcpy(WFIFOP(fd,94),"Eight Castles",20);
-	else if(t==9)  memcpy(WFIFOP(fd,94),"Nine Castles",20);
-	else if(t==10) memcpy(WFIFOP(fd,94),"Ten Castles",20);
-	else if(t==11) memcpy(WFIFOP(fd,94),"Eleven Castles",20);
-	else if(t==12) memcpy(WFIFOP(fd,94),"Twelve Castles",20);
-	else if(t==13) memcpy(WFIFOP(fd,94),"Thirteen Castles",20);
-	else if(t==14) memcpy(WFIFOP(fd,94),"Fourteen Castles",20);
-	else if(t==15) memcpy(WFIFOP(fd,94),"Fifteen Castles",20);
-	else if(t==16) memcpy(WFIFOP(fd,94),"Sixteen Castles",20);
-	else if(t==17) memcpy(WFIFOP(fd,94),"Seventeen Castles",20);
-	else if(t==18) memcpy(WFIFOP(fd,94),"Eighteen Castles",20);
-	else if(t==19) memcpy(WFIFOP(fd,94),"Nineteen Castles",20);
-	else if(t==20) memcpy(WFIFOP(fd,94),"Twenty Castles",20);
-	else if(t==21) memcpy(WFIFOP(fd,94),"Twenty One Castles",20);
-	else if(t==22) memcpy(WFIFOP(fd,94),"Twenty Two Castles",20);
-	else if(t==23) memcpy(WFIFOP(fd,94),"Twenty Three Castles",20);
-	else if(t==24) memcpy(WFIFOP(fd,94),"Twenty Four Castles",20);
-	else if(t==MAX_GUILDCASTLE) memcpy(WFIFOP(fd,94),"Total Domination",20);
-	else memcpy(WFIFOP(fd,94),"None Taken",20);
+	if     (t==1)  safestrcpy((char*)WFIFOP(fd,94),"One Castle",20);
+	else if(t==2)  safestrcpy((char*)WFIFOP(fd,94),"Two Castles",20);
+	else if(t==3)  safestrcpy((char*)WFIFOP(fd,94),"Three Castles",20);
+	else if(t==4)  safestrcpy((char*)WFIFOP(fd,94),"Four Castles",20);
+	else if(t==5)  safestrcpy((char*)WFIFOP(fd,94),"Five Castles",20);
+	else if(t==6)  safestrcpy((char*)WFIFOP(fd,94),"Six Castles",20);
+	else if(t==7)  safestrcpy((char*)WFIFOP(fd,94),"Seven Castles",20);
+	else if(t==8)  safestrcpy((char*)WFIFOP(fd,94),"Eight Castles",20);
+	else if(t==9)  safestrcpy((char*)WFIFOP(fd,94),"Nine Castles",20);
+	else if(t==10) safestrcpy((char*)WFIFOP(fd,94),"Ten Castles",20);
+	else if(t==11) safestrcpy((char*)WFIFOP(fd,94),"Eleven Castles",20);
+	else if(t==12) safestrcpy((char*)WFIFOP(fd,94),"Twelve Castles",20);
+	else if(t==13) safestrcpy((char*)WFIFOP(fd,94),"Thirteen Castles",20);
+	else if(t==14) safestrcpy((char*)WFIFOP(fd,94),"Fourteen Castles",20);
+	else if(t==15) safestrcpy((char*)WFIFOP(fd,94),"Fifteen Castles",20);
+	else if(t==16) safestrcpy((char*)WFIFOP(fd,94),"Sixteen Castles",20);
+	else if(t==17) safestrcpy((char*)WFIFOP(fd,94),"Seventeen Castles",20);
+	else if(t==18) safestrcpy((char*)WFIFOP(fd,94),"Eighteen Castles",20);
+	else if(t==19) safestrcpy((char*)WFIFOP(fd,94),"Nineteen Castles",20);
+	else if(t==20) safestrcpy((char*)WFIFOP(fd,94),"Twenty Castles",20);
+	else if(t==21) safestrcpy((char*)WFIFOP(fd,94),"Twenty One Castles",20);
+	else if(t==22) safestrcpy((char*)WFIFOP(fd,94),"Twenty Two Castles",20);
+	else if(t==23) safestrcpy((char*)WFIFOP(fd,94),"Twenty Three Castles",20);
+	else if(t==24) safestrcpy((char*)WFIFOP(fd,94),"Twenty Four Castles",20);
+	else if(t==MAX_GUILDCASTLE) safestrcpy((char*)WFIFOP(fd,94),"Total Domination",20);
+	else safestrcpy((char*)WFIFOP(fd,94),"None Taken",20);
 
 	WFIFOSET(fd,packet_len_table[WFIFOW(fd,0)]);
 	clif_guild_emblem(sd,*g);	// Guild emblem vanish fix [Valaris]
@@ -8264,8 +8263,8 @@ int clif_parse_GetCharNameRequest(int fd, struct map_session_data &sd)
  */
 int clif_parse_GlobalMessage(int fd, struct map_session_data &sd)
 {	// S 008c <len>.w <str>.?B
-	char *message;
-	unsigned char *buf;
+	char message[1024];
+	unsigned char buf[65536];
 	size_t size;
 
 	if( !session_isActive(fd) )
@@ -8276,59 +8275,54 @@ int clif_parse_GlobalMessage(int fd, struct map_session_data &sd)
 	{	// some serious error
 		ShowError("clif_parse_GlobalMessage: size marker outside buffer %i > %i, (connection %i=%i,%p=%p)", 
 			size, RFIFOREST(fd), fd,sd.fd, session[fd]->session_data, &sd);
+		return 0;
 	}
 	RFIFOB(fd,size-1)=0; // add an eof marker in the buffer
 
 	if( (is_atcommand(fd, sd, (char*)RFIFOP(fd,4), 0) != AtCommand_None) ||
         (is_charcommand(fd, sd, (char*)RFIFOP(fd,4),0)!= CharCommand_None) ||
-	    (sd.sc_data &&
-	    (sd.sc_data[SC_BERSERK].timer != -1 || //バーサーク時は会話も不可
-	     sd.sc_data[SC_NOCHAT].timer != -1 ))) //チャット禁止
+	    sd.sc_data[SC_BERSERK].timer != -1 || //バーサーク時は会話も不可
+		sd.sc_data[SC_NOCHAT].timer != -1 ) //チャット禁止
 		return 0;
-
-	message = (char*)aMalloc( (size + 16) * sizeof(char));
-	buf = (unsigned char*)aMalloc( (size + 16) * sizeof(unsigned char));
 
 	//ShowMessage("clif_parse_GlobalMessage: message: '%s'.\n", RFIFOP(fd,4));
 	if( strncmp((char*)RFIFOP(fd,4), sd.status.name, strlen(sd.status.name)) != 0 )
 	{
-		ShowMessage("Hack on global message: character '%s' (account: %d), use an other name to send a (normal) message.\n", sd.status.name, sd.status.account_id);
+		snprintf(message,size+16, "Hack on global message (normal message): character '%s' (account: %ld) uses another name.", sd.status.name, sd.status.account_id);
+		// information is send to all online GM
+		ShowMessage(message);
+		intif_wis_message_to_gm(wisp_server_name, battle_config.hack_info_GM_level, message);
 
-		// information is sended to all online GM
-		sprintf(message, "Hack on global message (normal message): character '%s' (account: %ld) uses another name.", sd.status.name, sd.status.account_id);
-		intif_wis_message_to_gm(wisp_server_name, battle_config.hack_info_GM_level, message);
-		if (strlen((char*)RFIFOP(fd,4)) == 0)
-			strcpy(message, " This player sends a void name and a void message.");
+		if( strlen((char*)RFIFOP(fd,4)) == 0 )
+			snprintf(message,sizeof(message), " Player sends a void name and a void message.");
 		else
-			sprintf(message, " This player sends (name:message): '%s'.", RFIFOP(fd,4));
+			snprintf(message,sizeof(message), " Player sends (name:message): '%s'.", RFIFOP(fd,4));
 		intif_wis_message_to_gm(wisp_server_name, battle_config.hack_info_GM_level, message);
+
 		// message about the ban
 		if (battle_config.ban_spoof_namer > 0)
-			sprintf(message, " This player has been banned for %ld minute(s).", battle_config.ban_spoof_namer);
+			snprintf(message,sizeof(message), " Player has been banned for %ld minute(s).", battle_config.ban_spoof_namer);
 		else
-			sprintf(message, " This player hasn't been banned (Ban option is disabled).");
+			snprintf(message,sizeof(message), " Player hasn't been banned (Ban option is disabled).");
 		intif_wis_message_to_gm(wisp_server_name, battle_config.hack_info_GM_level, message);
 
 		// if we ban people
 		if (battle_config.ban_spoof_namer > 0) {
 			chrif_char_ask_name(-1, sd.status.name, 2, 0, 0, 0, 0, battle_config.ban_spoof_namer, 0); // type: 2 - ban (year, month, day, hour, minute, second)
 			session_SetWaitClose(fd, 1000); // forced to disconnect because of the hack
-			if(message) aFree(message);
-			if(buf) aFree(buf);
-			return 0;
 		}
 		// but for the hacker, we display on his screen (he see/look no difference).
-	}
-	else
-	{
-		// send message to others
-		WBUFW(buf,0) = 0x8d;
-		WBUFW(buf,2) = size + 4; // len of message - 4 + 8
-		WBUFL(buf,4) = sd.bl.id;
-		memcpy(WBUFP(buf,8), RFIFOP(fd,4), size - 4);
-		clif_send(buf, size + 4, &sd.bl, sd.chatID ? CHAT_WOS : AREA_CHAT_WOC);
+		return 0;
 	}
 
+	
+	// send message to others
+	WBUFW(buf,0) = 0x8d;
+	WBUFW(buf,2) = size + 4; // len of message - 4 + 8
+	WBUFL(buf,4) = sd.bl.id;
+	memcpy(WBUFP(buf,8), RFIFOP(fd,4), size - 4);
+	clif_send(buf, size + 4, &sd.bl, sd.chatID ? CHAT_WOS : AREA_CHAT_WOC);
+	
 	// send back message to the speaker
 	memcpy(WFIFOP(fd,0), RFIFOP(fd,0), size);
 	WFIFOW(fd,0) = 0x8e;
@@ -8358,10 +8352,6 @@ int clif_parse_GlobalMessage(int fd, struct map_session_data &sd)
 			}
 		}
 	}
-
-	if(message) aFree(message);
-	if(buf) aFree(buf);
-
 	return 0;
 }
 
@@ -12078,7 +12068,7 @@ int packetdb_readdb(void)
 	clif_config.packet_db_ver = MAX_PACKET_VER;
 	packet_ver = MAX_PACKET_VER;	// read into packet_db's version by default
 
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		if (sscanf(line,"%[^:]: %[^\r\n]",w1,w2) == 2) {

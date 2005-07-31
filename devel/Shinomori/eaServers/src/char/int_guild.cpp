@@ -370,7 +370,7 @@ int inter_guild_readdb()
 		return 1;
 	}
 	i = 0;
-	while(fgets(line, sizeof(line)-1, fp) && i < 100){
+	while(fgets(line, sizeof(line), fp) && i < 100){
 		if( !skip_empty_line(line) )
 			continue;
 		guild_exp[i] = atoi(line);
@@ -397,7 +397,7 @@ int inter_guild_init()
 
 	if ((fp = safefopen(guild_txt,"r")) == NULL)
 		return 1;
-	while(fgets(line, sizeof(line)-1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		j = 0;
 		if (sscanf(line, "%d\t%%newid%%\n%n", &i, &j) == 1 && j > 0 && guild_newid <= (unsigned long)i) {
 			guild_newid = i;
@@ -425,7 +425,7 @@ int inter_guild_init()
 		return 1;
 	}
 
-	while(fgets(line, sizeof(line)-1, fp)) {
+	while(fgets(line, sizeof(line), fp)) {
 		gc = (struct guild_castle*)aCalloc(1, sizeof(struct guild_castle));
 		if (inter_guildcastle_fromstr(line, gc) == 0) {
 			numdb_insert(castle_db, gc->castle_id, gc);

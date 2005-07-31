@@ -232,7 +232,7 @@ int inter_storage_init()
 		ShowMessage("cant't read : %s\n",storage_txt);
 		return 1;
 	}
-	while(fgets(line,65535,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		sscanf(line,"%d",&tmp_int);
 		s=(struct pc_storage*)aCalloc(1, sizeof(struct pc_storage));
 		s->account_id=tmp_int;
@@ -255,7 +255,7 @@ int inter_storage_init()
 		ShowMessage("cant't read : %s\n",guild_storage_txt);
 		return 1;
 	}
-	while(fgets(line,65535,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		sscanf(line,"%d",&tmp_int);
 		gs=(struct guild_storage*)aCalloc(1,sizeof(struct guild_storage));
 		gs->guild_id=tmp_int;

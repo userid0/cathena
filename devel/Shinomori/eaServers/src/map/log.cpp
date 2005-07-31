@@ -597,7 +597,7 @@ int log_config_read(const char *cfgName)
 		return 1;
 	}	
 
-	while(fgets(line, sizeof(line) -1, fp))
+	while(fgets(line, sizeof(line), fp))
 	{
 		if( !skip_empty_line(line) )
 			continue;

@@ -1069,10 +1069,10 @@ int mob_stop_walking(struct mob_data &md,int type)
 	}
 	if(type&0x01)
 		clif_fixmobpos(md);
-	if(type&0x02) {
+	if(battle_config.monster_damage_delay && type&0x02) {
 		int delay=status_get_dmotion(&md.bl);
 		unsigned long tick = gettick();
-		if(battle_config.monster_damage_delay && DIFF_TICK(md.canmove_tick,tick)<0 )
+		if( DIFF_TICK(md.canmove_tick,tick)<0 )
 			md.canmove_tick = tick + delay;
 	}
 
@@ -2321,7 +2321,7 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 		return 0;
 	}
 
-	if(battle_config.monster_damage_delay && md.sc_data[SC_ENDURE].timer == -1)
+	if(md.sc_data[SC_ENDURE].timer == -1)
 		mob_stop_walking(md,3);
 	if(damage > max_hp>>2)
 		skill_stop_dancing(&md.bl,0);
@@ -2333,7 +2333,7 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 	if(damage>md.hp)
 		damage=md.hp;
 
-	if(!(type&2))
+	if( !(type&2) )
 	{
 		if(sd!=NULL)
 		{
@@ -2353,7 +2353,6 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 			if(i<DAMAGELOG_SIZE)
 				md.dmglog[i].dmg+=damage;
 			else {
-				//md.dmglog[minpos].id=sd->bl.id;
 				md.dmglog[minpos].fromid=sd->status.char_id;
 				md.dmglog[minpos].dmg=damage;
 			}
@@ -2366,7 +2365,6 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 			struct pet_data *pd = (struct pet_data *)src;
 			nullpo_retr(0, pd);
 			for(i=0,minpos=0,mindmg=0x7fffffff;i<DAMAGELOG_SIZE;i++){
-				//if(md->dmglog[i].id==pd->msd->bl.id)
 				if(md.dmglog[i].fromid==pd->msd->status.char_id)
 					break;
 				if(md.dmglog[i].fromid==0){
@@ -2381,7 +2379,6 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 			if(i<DAMAGELOG_SIZE)
 				md.dmglog[i].dmg+=(damage*battle_config.pet_attack_exp_rate)/100;
 			else {
-				//md.dmglog[minpos].id=pd->msd->bl.id;
 				md.dmglog[minpos].fromid=pd->msd->status.char_id;
 				md.dmglog[minpos].dmg=(damage*battle_config.pet_attack_exp_rate)/100;
 			}
@@ -2420,7 +2417,8 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 	else
 		md.hp = 0;
 
-	if(md.class_ >= 1285 && md.class_ <=1287) {	// guardian hp update [Valaris]
+	if(md.class_ >= 1285 && md.class_ <=1287)
+	{	// guardian hp update [Valaris]
 		struct guild_castle *gc=guild_mapname2gc(map[md.bl.m].mapname);
 		if(gc) {
 
@@ -4119,7 +4117,7 @@ int mob_readdb(void)
 				continue;
 			return -1;
 		}
-		while(fgets(line,1020,fp)){
+		while(fgets(line,sizeof(line),fp)){
 			int class_, i;
 			long exp, maxhp;
 			char *str[60], *p, *np; // 55->60 Lupus
@@ -4276,7 +4274,7 @@ int mob_readdb_mobavail(void)
 		return -1;
 	}
 
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
@@ -4348,7 +4346,7 @@ int mob_read_randommonster(void)
 			ShowMessage("can't read %s\n",mobfile[i]);
 			return -1;
 		}
-		while(fgets(line,1020,fp)){
+		while(fgets(line,sizeof(line),fp)){
 			int class_,per;
 			if( !skip_empty_line(line) )
 				continue;
@@ -4452,7 +4450,7 @@ int mob_readskilldb(void)
 				ShowMessage("can't read %s\n",filename[x]);
 			continue;
 		}
-		while(fgets(line,1020,fp)){
+		while(fgets(line,sizeof(line),fp)){
 			char *sp[20],*p;
 			int mob_id;
 			struct mob_skill *ms=NULL;
@@ -4553,7 +4551,7 @@ int mob_readdb_race(void)
 		return -1;
 	}
 	
-	while(fgets(line,1020,fp)){
+	while(fgets(line,sizeof(line),fp)){
 		if( !skip_empty_line(line) )
 			continue;
 		memset(str,0,sizeof(str));
