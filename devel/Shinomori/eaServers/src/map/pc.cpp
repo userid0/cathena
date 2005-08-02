@@ -2646,9 +2646,10 @@ int pc_useitem(struct map_session_data &sd, unsigned short inx)
 		}
 		if( sd.status.inventory[inx].card[0]==0x00fe && 
 			pc_istop10fame(MakeDWord(sd.status.inventory[inx].card[2],sd.status.inventory[inx].card[3]),1) )
-		{
-		    sd.state.potion_flag = 1;
-		}
+		    sd.state.potion_flag = 2;
+		else
+			sd.state.potion_flag = 1;
+		sd.canuseitem_tick= gettick() + battle_config.item_use_interval; //Update item use time.
 		run_script(script,0,sd.bl.id,0);
 		sd.state.potion_flag = 0;
 	}

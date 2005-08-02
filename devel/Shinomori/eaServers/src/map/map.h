@@ -1263,7 +1263,7 @@ int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data);
 int map_removemobs_timer(int tid,unsigned long tick,int id,int data);
 #define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
 int map_addflooritem(struct item &item_data,unsigned short amount,unsigned short m,unsigned short x,unsigned short y,struct map_session_data *first_sd,struct map_session_data *second_sd,struct map_session_data *third_sd,int type);
-int map_searchrandfreecell(int,int,int,int);
+int map_searchrandfreecell(unsigned short m,int x,int y,int range);
 
 // ƒLƒƒƒ‰id„ƒLƒƒƒ‰–¼ •ÏŠ·ŠÖ˜A
 void map_addchariddb(unsigned long charid,const char *name);

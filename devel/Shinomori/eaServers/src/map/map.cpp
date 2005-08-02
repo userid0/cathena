@@ -1340,7 +1340,7 @@ int map_clearflooritem_timer(int tid,unsigned long tick,int id,int data)
  * 現?range=1でアイテムドロップ用途のみ
  *------------------------------------------
  */
-int map_searchrandfreecell(int m,int x,int y,int range)
+int map_searchrandfreecell(unsigned short m,int x,int y,int range)
 {
 	int free_cell,i,j;
 

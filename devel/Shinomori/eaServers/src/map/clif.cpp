@@ -1303,7 +1303,6 @@ int clif_clearweather(unsigned short m)
 				clif_weather1(sd->fd, EFFECT_RAIN);
 		}
 	}
-
 	return 0;
 }
 

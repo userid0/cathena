@@ -7407,12 +7407,16 @@ bool atcommand_autoloot(int fd, struct map_session_data &sd, const char* command
  */
 bool atcommand_rain(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
-	if (map[sd.bl.m].flag.rain) {
+	if (map[sd.bl.m].flag.rain)
+	{
 		map[sd.bl.m].flag.rain=0;
+		clif_clearweather(sd.bl.m);
 		clif_displaymessage(fd, "The rain has stopped.");
-	} else {
+	}
+	else
+	{
 		map[sd.bl.m].flag.rain=1;
-		clif_specialeffect(sd.bl,EFFECT_RAIN,2);
+		clif_weather2(sd.bl.m,EFFECT_RAIN);
 		clif_displaymessage(fd, "It is made to rain.");
 	}
 	return true;
@@ -7424,12 +7428,16 @@ bool atcommand_rain(int fd, struct map_session_data &sd, const char* command, co
 bool atcommand_snow(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
 
-	if (map[sd.bl.m].flag.snow) {
+	if (map[sd.bl.m].flag.snow)
+	{
 		map[sd.bl.m].flag.snow=0;
+		clif_clearweather(sd.bl.m);
 		clif_displaymessage(fd, "Snow has stopped falling.");
-	} else {
+	}
+	else
+	{
 		map[sd.bl.m].flag.snow=1;
-		clif_specialeffect(sd.bl,EFFECT_SNOW,2);
+		clif_weather2(sd.bl.m,EFFECT_SNOW);
 		clif_displaymessage(fd, "It is made to snow.");
 	}
 
@@ -7442,12 +7450,16 @@ bool atcommand_snow(int fd, struct map_session_data &sd, const char* command, co
  */
 bool atcommand_sakura(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
-	if (map[sd.bl.m].flag.sakura) {
+	if (map[sd.bl.m].flag.sakura)
+	{
 		map[sd.bl.m].flag.sakura=0;
-		clif_displaymessage(fd, "Cherry tree leaves is made to fall.");
-	} else {
+		clif_clearweather(sd.bl.m);
+		clif_displaymessage(fd, "Cherry tree leaves are gone.");
+	}
+	else
+	{
 		map[sd.bl.m].flag.sakura=1;
-		clif_specialeffect(sd.bl,EFFECT_SAKURA,2);
+		clif_weather2(sd.bl.m,EFFECT_SAKURA);
 		clif_displaymessage(fd, "Cherry tree leaves is made to fall.");
 	}
 	return true;
@@ -7459,15 +7471,18 @@ bool atcommand_sakura(int fd, struct map_session_data &sd, const char* command, 
  */
 bool atcommand_clouds(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
-	if (map[sd.bl.m].flag.clouds) {
+	if (map[sd.bl.m].flag.clouds)
+	{
 		map[sd.bl.m].flag.clouds=0;
+		clif_clearweather(sd.bl.m);
 		clif_displaymessage(fd, "The clouds has gone.");
-	} else {
+	}
+	else
+	{
 		map[sd.bl.m].flag.clouds=1;
-		clif_specialeffect(sd.bl,EFFECT_CLOUDS,2);
+		clif_weather2(sd.bl.m,EFFECT_CLOUDS);
 		clif_displaymessage(fd, "Clouds appear.");
 	}
-
 	return true;
 }
 
@@ -7477,11 +7492,14 @@ bool atcommand_clouds(int fd, struct map_session_data &sd, const char* command, 
  */
 bool atcommand_fog(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
-	if (map[sd.bl.m].flag.fog) {
+	if (map[sd.bl.m].flag.fog)
+	{
 		map[sd.bl.m].flag.fog=0;
 		clif_clearweather(sd.bl.m);
 		clif_displaymessage(fd, "The fog has gone.");
-	} else {
+	}
+	else
+	{
 		map[sd.bl.m].flag.fog=1;
 		clif_weather2(sd.bl.m, EFFECT_FOG);
 		clif_displaymessage(fd, "Fog hangs over.");
@@ -7496,11 +7514,14 @@ bool atcommand_fog(int fd, struct map_session_data &sd, const char* command, con
 bool atcommand_leaves(int fd, struct map_session_data &sd, const char* command, const char* message)
 {
 
-	if (map[sd.bl.m].flag.leaves) {
+	if (map[sd.bl.m].flag.leaves)
+	{
 		map[sd.bl.m].flag.leaves=0;
 		clif_clearweather(sd.bl.m);
 		clif_displaymessage(fd, "Leaves no longer fall.");
-	} else {
+	}
+	else
+	{
 		map[sd.bl.m].flag.leaves=1;
 		clif_weather2(sd.bl.m, EFFECT_LEAVES);
 		clif_displaymessage(fd, "Fallen leaves fall.");

@@ -43,9 +43,24 @@ static inline const char *strcpytolower(char *tar, const char *str)
 		*p = tolower( (int)((unsigned char)*str) );
 		p++, str++;
 	}
-	*p=0;
+	if(p) *p=0;
 	return tar;
 }
+static inline const char *strcpytolower(char *tar, size_t sz, const char *str)
+{
+	char *p=tar;
+	if(str && p)
+	while(*str) 
+	{
+		*p = tolower( (int)((unsigned char)*str) );
+		p++, str++;
+		if(tar+sz-1<=p)
+			break;
+	}
+	if(p) *p=0;
+	return tar;
+}
+
 static inline const char *safestrcpy(char *tar, const char *src, size_t cnt)
 {
 	if(tar)

@@ -73,7 +73,7 @@ private:
 #else//not W32
 			int pos;
 			int fdes = socket(AF_INET, SOCK_STREAM, 0);
-			char buf[16 * sizeof(struct ifreq)];
+			char buf[2*C * sizeof(struct ifreq)];
 			struct ifconf ic;
 			
 			// The ioctl call will fail with Invalid Argument if there are more
@@ -86,9 +86,8 @@ private:
 			}
 			for(pos = 0; pos < ic.ifc_len;   )
 			{
-				struct ifreq * ir = (struct ifreq *) (ic.ifc_buf + pos);
+				struct ifreq* ir = (struct ifreq *)(buf+pos);
 				struct sockaddr_in * a = (struct sockaddr_in *) &(ir->ifr_addr);
-				
 				if(a->sin_family == AF_INET) {
 					u_long ad = ntohl(a->sin_addr.s_addr);
 					if(ad != INADDR_LOOPBACK) {
@@ -97,13 +96,13 @@ private:
 							break;
 					}
 				}
-#if defined(_AIX) || defined(__APPLE__)
-				pos += ir->ifr_addr.sa_len;
-				pos += sizeof(ir->ifr_name);
+#if (defined(BSD) && BSD >= 199103) || defined(_AIX) || defined(__APPLE__)
+				pos += ir->ifr_addr.sa_len + sizeof(ir->ifr_name);
 #else// not AIX or APPLE
 				pos += sizeof(struct ifreq);
 #endif//not AIX or APPLE
 			}
+			closesocket(fdes);
 #endif//not W32	
 		}
 		///////////////////////////////////////////////////////////////////////
@@ -132,15 +131,22 @@ private:
 		return iphelp;
 	}
 public:
-	static ipaddress GetSystemIP(uint i=0) { return gethelper().GetSystemIP(i); }
-	static uint GetSystemIPCount()	{ return gethelper().GetSystemIPCount(); }
+	static ipaddress GetSystemIP(uint i=0)	{ return gethelper().GetSystemIP(i); }
+	static uint GetSystemIPCount()			{ return gethelper().GetSystemIPCount(); }
 
 	static bool isBindable(ipaddress ip)
 	{	// check if an given IP is part of the system IP that can be bound to
-		for(uint i=0; i<GetSystemIPCount(); i++)
-			if( ip==GetSystemIP(i) )
-				return true;
-		return false;
+		if( gethelper().GetSystemIPCount() > 0 )
+		{
+			for(uint i=0; i<GetSystemIPCount(); i++)
+				if( ip==GetSystemIP(i) )
+					return true;
+			return false;
+		}
+		else
+		{	// cannot determine system ip's, just accept all
+			return true;
+		}
 	}
 	bool isBindable()	{ return ipaddress::isBindable(*this); }
 

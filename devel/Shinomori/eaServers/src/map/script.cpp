@@ -331,6 +331,9 @@ int buildin_unequip(struct script_state &st); // unequip [Spectre]
 
 int buildin_pcstrcharinfo(struct script_state &st);
 int buildin_getnameditem(struct script_state &st);
+int buildin_compare(struct script_state &st);
+int buildin_warpparty(struct script_state &st);
+int buildin_warpguild(struct script_state &st);
 
 
 
@@ -591,6 +594,9 @@ struct {
 	{buildin_getstrlen,"getstrlen","s"}, //strlen [Valaris]
 	{buildin_charisalpha,"charisalpha","si"}, //isalpha [Valaris]
 	{buildin_fakenpcname,"fakenpcname","ssi"}, // [Lance]
+	{buildin_compare,"compare","ss"},
+	{buildin_warpparty,"warpparty","siii"},
+	{buildin_warpguild,"warpguild","siii"},
 
 	{NULL,NULL,NULL},
 };
@@ -7728,11 +7734,187 @@ int buildin_fakenpcname(struct script_state &st)
 	return 0;
 }
 
+int buildin_compare(struct script_state &st)                                 
+{
+	char buf1[1024],buf2[1024];
+	const char *message;
+	const char *cmpstring;
+
+	message = conv_str(st,st.stack.stack_data[st.start+2]);
+	cmpstring = conv_str(st,st.stack.stack_data[st.start+3]);
+	
+	strcpytolower(buf1, 1024, message);
+	strcpytolower(buf2, 1024, cmpstring);
+	
+	push_val(st.stack,C_INT,(strstr(buf1,buf2) != NULL));
+	return 0;
+}
 
 
 
+/*==========================================
+ * Warpparty - [Fredzilla]
+ * Syntax: warpparty "mapname.gat",x,y,Party_ID;
+ *------------------------------------------
+ */
+int buildin_warpparty(struct script_state &st)
+{
 
+	const char *str =conv_str(st,st.stack.stack_data[st.start+2]);
+	int x			=conv_num(st,st.stack.stack_data[st.start+3]);
+	int y			=conv_num(st,st.stack.stack_data[st.start+4]);
+	unsigned long p	=conv_num(st,st.stack.stack_data[st.start+5]);
+	struct map_session_data *sd=script_rid2sd(st);
 
+	if(!sd || map[sd->bl.m].flag.noreturn || map[sd->bl.m].flag.noteleport || NULL==party_search(p))
+		return 0;
+	
+	if(p!=0)
+	{
+		size_t i;
+		struct map_session_data *pl_sd;
+
+		if( 0==strcasecmp(str,"Random") )
+		{
+			if(map[sd->bl.m].flag.noteleport)
+				return 0;
+			for(i=0; i<fd_max; i++)
+			{
+				if(session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data) && pl_sd->state.auth &&
+					pl_sd->status.party_id == p)
+				{
+					if(!map[pl_sd->bl.m].flag.noteleport)
+						pc_randomwarp(*pl_sd,3);
+				}
+			}
+		}
+		else if( 0==strcasecmp(str,"SavePointAll") )
+		{
+			if(map[sd->bl.m].flag.noreturn)
+				return 0;
+			for(i=0; i<fd_max; i++)
+			{
+				if(session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
+					pl_sd->status.party_id == p)
+				{
+					if(!map[pl_sd->bl.m].flag.noreturn)
+						pc_setpos(*pl_sd,pl_sd->status.save_point.map,pl_sd->status.save_point.x,pl_sd->status.save_point.y,3);
+				}
+			}
+		}
+		else if( 0==strcasecmp(str,"SavePoint") )
+		{
+			if(map[sd->bl.m].flag.noreturn)
+				return 0;
+			str=sd->status.save_point.map;
+			x=sd->status.save_point.x;
+			y=sd->status.save_point.y;
+			for (i = 0; i < fd_max; i++)
+			{
+				if(session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
+					pl_sd->status.party_id == p)
+				{
+					if(!map[pl_sd->bl.m].flag.noreturn)
+						pc_setpos(*pl_sd,str,x,y,3);
+				}
+			}
+		}
+		else
+		{
+			for (i = 0; i < fd_max; i++)
+			{
+				if(session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
+					pl_sd->status.party_id == p)
+				{
+					if(!map[pl_sd->bl.m].flag.noreturn)
+						pc_setpos(*pl_sd,str,x,y,3);
+				}
+			}
+		}
+	}
+	return 0;
+}
+/*==========================================
+ * Warpguild - [Fredzilla]
+ * Syntax: warpguild "mapname.gat",x,y,Guild_ID;
+ *------------------------------------------
+ */
+int buildin_warpguild(struct script_state &st)
+{
+	const char *str =conv_str(st,st.stack.stack_data[st.start+2]);
+	int x			=conv_num(st,st.stack.stack_data[st.start+3]);
+	int y			=conv_num(st,st.stack.stack_data[st.start+4]);
+	unsigned long g	=conv_num(st,st.stack.stack_data[st.start+5]);
+	struct map_session_data *sd=script_rid2sd(st);
+
+	if(!sd || map[sd->bl.m].flag.noreturn || map[sd->bl.m].flag.noteleport || NULL==guild_search(g) )
+		return 0;
+	
+	if(g!=0)
+	{
+		size_t i;
+		struct map_session_data *pl_sd;
+
+		if( 0==strcasecmp(str,"Random") )
+		{
+			if(map[sd->bl.m].flag.noteleport)
+				return 0;
+			for(i=0; i<fd_max; i++)
+			{
+				if (session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
+					pl_sd->status.guild_id == g)
+				{
+					if(!map[pl_sd->bl.m].flag.noteleport)
+						pc_randomwarp(*pl_sd,3);
+				}
+			}
+		}
+		else if( 0==strcasecmp(str,"SavePointAll") )
+		{
+			if(map[sd->bl.m].flag.noreturn)
+				return 0;
+			for(i=0; i < fd_max; i++)
+			{
+				if (session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
+					pl_sd->status.guild_id == g)
+				{
+					if(!map[pl_sd->bl.m].flag.noreturn)
+						pc_setpos(*pl_sd,pl_sd->status.save_point.map,pl_sd->status.save_point.x,pl_sd->status.save_point.y,3);
+				}
+			}
+		}
+		else if( 0==strcasecmp(str,"SavePoint")==0 )
+		{
+			if(map[sd->bl.m].flag.noreturn)
+				return 0;
+			str=sd->status.save_point.map;
+			x=sd->status.save_point.x;
+			y=sd->status.save_point.y;
+			for(i=0; i<fd_max; i++)
+			{
+				if(session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
+					pl_sd->status.guild_id == g)
+				{
+					if(map[pl_sd->bl.m].flag.noreturn)
+						pc_setpos(*pl_sd,str,x,y,3);
+				}
+			}
+		}
+		else
+		{
+			for(i=0; i<fd_max; i++)
+			{
+				if(session[i] && (pl_sd = (struct map_session_data *) session[i]->session_data) && pl_sd->state.auth &&
+					pl_sd->status.guild_id == g)
+				{
+					if(map[pl_sd->bl.m].flag.noreturn)
+						pc_setpos(*pl_sd,str,x,y,3);
+				}
+			}
+		}
+	}
+	return 0;
+}
 
 //
 // é¿çsïîmain

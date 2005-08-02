@@ -38,10 +38,26 @@ int mysql_SendQuery(MYSQL &mysql, MYSQL_RES*& sql_res, const char* q, size_t sz=
 	}
 	else
 	{
-		ShowError("Database Error %s\nQuery:    %s\n", mysql_error(&mysql_handle), q);
+		ShowError("Database Error %s\nQuery:    %s\n", mysql_error(&mysql), q);
 	}
 	return false;
 }
+int mysql_SendQuery(MYSQL &mysql, const char* q, size_t sz=0)
+{
+#ifdef DEBUG_SQL
+	ShowSQL("%s\n", q);
+#endif
+	if( 0==mysql_real_query(&mysql, q, (sz)?sz:strlen(q)) )
+	{
+		return true;
+	}
+	else
+	{
+		ShowError("Database Error %s\nQuery:    %s\n", mysql_error(&mysql), q);
+	}
+	return false;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 #endif// SQL
@@ -145,6 +161,7 @@ bool CAccountDB::existAccount(const char* userid)
 	char uid[64];
 	char query[1024];
 	MYSQL_RES* sql_res=NULL;
+
 	jstrescapecpy(uid, userid);
 	size_t sz=sprintf(query, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", login_db_userid, login_db, uid);
 	if( mysql_SendQuery(mysql_handle, sql_res, query, sz) )
@@ -159,26 +176,28 @@ struct account_data* CAccountDB::searchAccount(const char* userid)
 	char query[4096];
 	char uid[64];
 	char pss[64];
+	MYSQL_RES* sql_res=NULL;
+
 	jstrescapecpy(uid, userid);
 	size_t sz=sprintf(query, "SELECT `%s`,`%s`,`%s`,`lastlogin`,`logincount`,`sex`,`connect_until`,`last_ip`,`ban_until`,`state`,`%s`,`email`"
 	                " FROM `%s` WHERE %s `%s`='%s'", login_db_account_id, login_db_userid, login_db_user_pass, login_db_level, login_db, case_sensitive ? "BINARY" : "", login_db_userid, uid);
 	//login {0-account_id/1-userid/2-user_pass/3-lastlogin/4-logincount/5-sex/6-connect_untl/7-last_ip/8-ban_until/9-state/10-gmlevel/11-email}
 	if( mysql_SendQuery(mysql_handle, sql_res, query, sz) )
 	{
-		sql_row = mysql_fetch_row(sql_res);	//row fetching
+		MYSQL_ROW sql_row = mysql_fetch_row(sql_res);	//row fetching
 		if(sql_row)
 		{	// use cList[0] as general storage, the list contains only this element
 
-			cList[0].account_id = sql_row[0]?atoul(sql_row[0]):0;
+			cList[0].account_id = sql_row[0]?atol(sql_row[0]):0;
 			safestrcpy(cList[0].userid, userid, 24);
 			safestrcpy(cList[0].pass, sql_row[2]?sql_row[2]:"", 32);
 			safestrcpy(cList[0].lastlogin, sql_row[3]?sql_row[3]:"" , 24);
-			cList[0].logincount = sql_row[4]?atoul( sql_row[4]):0;
+			cList[0].logincount = sql_row[4]?atol( sql_row[4]):0;
 			cList[0].sex = sql_row[5][0] == 'S' ? 2 : sql_row[5][0]=='M';
-			cList[0].connect_until_time = (time_t)(sql_row[6]?atoul(sql_row[6]):0);
+			cList[0].connect_until_time = (time_t)(sql_row[6]?atol(sql_row[6]):0);
 			safestrcpy(cList[0].last_ip, sql_row[7], 16);
-			cList[0].ban_until_time = (time_t)(sql_row[8]?atoul(sql_row[8]):0);;
-			cList[0].state = sql_row[9]?atoul(sql_row[9]):0;;
+			cList[0].ban_until_time = (time_t)(sql_row[8]?atol(sql_row[8]):0);;
+			cList[0].state = sql_row[9]?atol(sql_row[9]):0;;
 			cList[0].gm_level = sql_row[10]?atoi( sql_row[10]):0;
 			safestrcpy(cList[0].email, sql_row[11]?sql_row[11]:"" , 40);
 /*
@@ -205,7 +224,7 @@ struct account_data* CAccountDB::insertAccount(const char* userid, const char* p
 {	// insert a new account to db
 
 	// read the complete account back from db
-	return searchAccount(userid,pass);
+	return searchAccount(userid);
 }
 
 
@@ -756,7 +775,7 @@ protected:
 
 		sprintf(tmpsql, "INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '', 'lserver', '100','login server started')", def.table_loginlog);
 		//query
-		if (mysql_SendQuery(&handle, tmpsql)) {
+		if (mysql_SendQuery(handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&handle));
 			ret = false;
 		}
@@ -770,7 +789,7 @@ protected:
 		sprintf(tmpsql,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '', 'lserver','100', 'login server shutdown')", def.table_loginlog);
 
 		//query
-		if (mysql_SendQuery(&handle, tmpsql)) {
+		if (mysql_SendQuery(handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&handle));
 			ret = false;
 		}
@@ -779,7 +798,7 @@ protected:
 		sprintf(tmpsql,"DELETE FROM `sstatus`");
 
 		//query
-		if (mysql_SendQuery(&handle, tmpsql)) {
+		if (mysql_SendQuery(handle, tmpsql)) {
 			ShowMessage("DB server Error - %s\n", mysql_error(&handle));
 			ret = false;
 		}
@@ -834,31 +853,27 @@ public:
 	int isGM(unsigned long account_id) {
 		int level;
 
-		MYSQL_RES* 	sql_res;
+		MYSQL_RES* 	sql_res=NULL;
 		MYSQL_ROW	sql_row;
 		level = 0;
 		sprintf(tmpsql,"SELECT `%s` FROM `%s` WHERE `%s`='%d'", 
 			def.column_level, def.table_login, def.column_account_id, account_id);
 
-		if (mysql_SendQuery(&handle, tmpsql)) {
-			ShowMessage("DB server Error (select GM Level to Memory)- %s\n", mysql_error(&handle));
-		}
-		sql_res = mysql_store_result(&handle);
-		if (sql_res) 
+		if (mysql_SendQuery(handle, sql_res, tmpsql))
 		{
 			sql_row = mysql_fetch_row(sql_res);
 			level = atoi(sql_row[0]);
 			if (level > 99)
 				level = 99;
+			mysql_free_result(sql_res);
 		}
-		mysql_free_result(sql_res);
 		return level;
 	}
 
 
 	bool NewAccount(const char*userid, const char* passwd, const char *sex)
 	{
-		MYSQL_RES* 	sql_res;
+		MYSQL_RES* 	sql_res=NULL;
 		bool ret = false;
 		char t_uid[256], t_pass[256];
 
@@ -868,13 +883,8 @@ public:
 		sprintf(tmpsql, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", 
 			def.column_userid, def.table_login, t_uid);
 
-		if(mysql_SendQuery(&handle, tmpsql))
+		if(mysql_SendQuery(handle, sql_res, tmpsql))
 		{
-			ShowError("SQL error (NewAccount): %s", mysql_error(&handle));
-		}
-		else
-		{
-			sql_res = mysql_store_result(&handle);
 			if(mysql_num_rows(sql_res) == 0)
 			{	// ok no existing acc,
 
@@ -885,7 +895,7 @@ public:
 					def.table_login, def.column_userid, def.column_user_pass, 
 					t_uid, t_pass, sex, "a@a.com");
 
-				if(mysql_SendQuery(&handle, tmpsql))
+				if(mysql_SendQuery(handle, tmpsql))
 				{
 					//Failed to insert new acc :/
 					ShowMessage("SQL error (NewAccount): %s", mysql_error(&handle));

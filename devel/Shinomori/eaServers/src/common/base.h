@@ -127,6 +127,10 @@
 #include <sys/sockio.h> // SIOCGIFCONF on Solaris, maybe others?
 #endif
 
+#if (defined(__unix__) || defined(unix)) && !defined(USG)
+#include <sys/param.h>
+#endif
+
 //////////////////////////////
 #endif
 //////////////////////////////
