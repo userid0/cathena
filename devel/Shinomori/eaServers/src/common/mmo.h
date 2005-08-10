@@ -6,8 +6,9 @@
 
 #include "base.h"
 #include "socket.h"
+#include "utils.h"
 
-
+	
 #define FIFOSIZE_SERVERLINK	128*1024
 
 // set to 0 to not check IP of player between each server.
@@ -132,8 +133,8 @@ struct mmo_char_server
 	ipset			address;
 	char name[20];
 	size_t users;
-	int maintenance;
-	int new_;
+	unsigned short maintenance;
+	unsigned short new_display;
 };
 
 
@@ -265,6 +266,103 @@ extern inline void X_frombuffer(unsigned char *valin, const unsigned char *buf, 
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
+
+class CLoginAuth
+{
+public:
+	unsigned long account_id;
+	unsigned long login_id1;
+	unsigned long login_id2;
+	unsigned long client_ip;
+	unsigned char sex;
+
+	CLoginAuth(unsigned long aid, unsigned long l1, unsigned long l2, unsigned long ip, unsigned char s)
+		: account_id(aid), login_id1(l1), login_id2(l2), client_ip(ip), sex(s)
+	{}
+
+	CLoginAuth(unsigned long aid=0) : account_id(aid)	{}
+	bool operator==(const CLoginAuth& c) const { return account_id==c.account_id; }
+	bool operator!=(const CLoginAuth& c) const { return account_id!=c.account_id; }
+	bool operator> (const CLoginAuth& c) const { return account_id> c.account_id; }
+	bool operator>=(const CLoginAuth& c) const { return account_id>=c.account_id; }
+	bool operator< (const CLoginAuth& c) const { return account_id< c.account_id; }
+	bool operator<=(const CLoginAuth& c) const { return account_id<=c.account_id; }
+
+	void tobuffer(unsigned char *buf)
+	{
+		if(NULL==buf )	return;
+		_L_tobuffer( account_id,	buf);
+		_L_tobuffer( login_id1,		buf);
+		_L_tobuffer( login_id2,		buf);
+		_L_tobuffer( client_ip,		buf);
+		_B_tobuffer( sex,			buf);
+	}
+	void frombuffer(const unsigned char *buf)
+	{
+		if(NULL==buf )	return;
+		_L_frombuffer( account_id,	buf);
+		_L_frombuffer( login_id1,	buf);
+		_L_frombuffer( login_id2,	buf);
+		_L_frombuffer( client_ip,	buf);
+		_B_frombuffer( sex,			buf);
+	}
+};
+
+class CCharAuth
+{
+public:
+	unsigned long account_id;
+	unsigned long char_id;
+	unsigned long login_id1;
+	unsigned long login_id2;
+	unsigned long client_ip;
+	unsigned char char_pos;
+	unsigned char sex;
+
+	CCharAuth(unsigned long aid, unsigned long cid, unsigned long l1, unsigned long l2, unsigned long ip, unsigned char cp, unsigned char s)
+		: account_id(aid), char_id(cid), login_id1(l1), login_id2(l2), client_ip(ip), char_pos(cp), sex(s)
+	{}
+
+
+	CCharAuth(unsigned long cid=0) : char_id(cid)	{}
+	bool operator==(const CCharAuth& c) const { return char_id==c.char_id; }
+	bool operator!=(const CCharAuth& c) const { return char_id!=c.char_id; }
+	bool operator> (const CCharAuth& c) const { return char_id> c.char_id; }
+	bool operator>=(const CCharAuth& c) const { return char_id>=c.char_id; }
+	bool operator< (const CCharAuth& c) const { return char_id< c.char_id; }
+	bool operator<=(const CCharAuth& c) const { return char_id<=c.char_id; }
+
+
+	void tobuffer(unsigned char *buf)
+	{
+		if(NULL==buf )	return;
+		_L_tobuffer( account_id,	buf);
+		_L_tobuffer( char_id,		buf);
+		_L_tobuffer( login_id1,		buf);
+		_L_tobuffer( login_id2,		buf);
+		_L_tobuffer( client_ip,		buf);
+		_B_tobuffer( char_pos,		buf);
+		_B_tobuffer( sex,			buf);
+	}
+	void frombuffer(const unsigned char *buf)
+	{
+		if(NULL==buf )	return;
+		_L_frombuffer( account_id,	buf);
+		_L_frombuffer( char_id,		buf);
+		_L_frombuffer( login_id1,	buf);
+		_L_frombuffer( login_id2,	buf);
+		_L_frombuffer( client_ip,	buf);
+		_B_frombuffer( char_pos,	buf);
+		_B_frombuffer( sex,			buf);
+	}
+};
+
+
+
+
+
+
+
 
 
 
@@ -466,8 +564,10 @@ extern inline void global_reg_frombuffer(struct global_reg &p, const unsigned ch
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-struct account_data
+class CAccount
 {
+public:
+
 	unsigned long account_id;
 	char userid[24];
 	char pass[34];				// 33 for 32 + NULL terminated, 34 for even byte count
@@ -475,81 +575,102 @@ struct account_data
 	unsigned char gm_level;
 	char lastlogin[24];
 	unsigned long logincount;
+	unsigned long login_id1;
+	unsigned long login_id2;
 	unsigned long state;		// packet 0x006a value + 1 (0: compte OK)
 	char email[40];				// e-mail (by default: a@a.com)
 	char error_message[20];		// Message of error code #6 = Your are Prohibited to log in until %s (packet 0x006a)
 	time_t ban_until_time;		// # of seconds 1/1/1970 (timestamp): ban time limit of the account (0 = no ban)
 	time_t connect_until_time;	// # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
-	char last_ip[16];			// save of last IP of connection
+	char last_ip[16];				// last IP of connection
 	char memo[256];				// a memo field
 	unsigned short account_reg2_num;
 	struct global_reg account_reg2[ACCOUNT_REG2_NUM];
+
+
+	CAccount()
+	{
+		memset(this,0,sizeof(CAccount)); //!! 
+	}
+	~CAccount()
+	{}
+
+	CAccount(const char* uid)
+	{
+		safestrcpy(userid, uid, sizeof(userid));
+	}
+	bool operator==(const CAccount& c) const { return 0==strcmp(userid, c.userid); }
+	bool operator!=(const CAccount& c) const { return 0!=strcmp(userid, c.userid); }
+	bool operator> (const CAccount& c) const { return 0> strcmp(userid, c.userid); }
+	bool operator>=(const CAccount& c) const { return 0>=strcmp(userid, c.userid); }
+	bool operator< (const CAccount& c) const { return 0< strcmp(userid, c.userid); }
+	bool operator<=(const CAccount& c) const { return 0<=strcmp(userid, c.userid); }
+
+	void tobuffer(unsigned char *buf)
+	{
+		size_t i;
+		unsigned long time;
+		if( NULL==buf )	return;
+		_L_tobuffer( (account_id),			buf);
+		_S_tobuffer( (userid),				buf, 24);
+		_S_tobuffer( (pass),				buf, 34);
+		_B_tobuffer( (sex),					buf);
+		_B_tobuffer( (gm_level),			buf);
+		_S_tobuffer( (lastlogin),			buf, 24);
+		_L_tobuffer( (logincount),			buf);
+		_L_tobuffer( (login_id1),			buf);
+		_L_tobuffer( (login_id2),			buf);
+		_L_tobuffer( (state),				buf);
+		_S_tobuffer( (email),				buf, 40);
+		_S_tobuffer( (error_message),		buf, 20);
+
+		// assume time_t to be unsigned long, which is not true on 64bit windows
+		time = ban_until_time;
+		_L_tobuffer( (time),				buf);
+		time = connect_until_time;
+		_L_tobuffer( (time),				buf);
+		_S_tobuffer( (last_ip),				buf, 16);
+		_S_tobuffer( (memo),				buf, 256);
+
+		_W_tobuffer( (account_reg2_num),	buf);
+		for(i=0; i<account_reg2_num; i++)
+			_global_reg_tobuffer(account_reg2[i],buf);
+
+	}
+	void frombuffer(const unsigned char *buf)
+	{
+		size_t i;
+		unsigned long time;
+		if( NULL==buf )	return;
+		_L_frombuffer( (account_id),			buf);
+		_S_frombuffer( (userid),				buf, 24);
+		_S_frombuffer( (pass),					buf, 34);
+		_B_frombuffer( (sex),					buf);
+		_B_frombuffer( (gm_level),				buf);
+		_S_frombuffer( (lastlogin),				buf, 24);
+		_L_frombuffer( (logincount),			buf);
+		_L_frombuffer( (login_id1),				buf);
+		_L_frombuffer( (login_id2),				buf);
+		_L_frombuffer( (state),					buf);
+		_S_frombuffer( (email),					buf, 40);
+		_S_frombuffer( (error_message),			buf, 20);
+
+		// assume time_t to be unsigned long, which is not true on 64bit windows
+		time = ban_until_time;
+		_L_frombuffer( (time),					buf);
+		time = connect_until_time;
+		_L_frombuffer( (time),					buf);
+		_S_frombuffer( (last_ip),				buf, 16);
+		_S_frombuffer( (memo),					buf, 256);
+
+		_W_frombuffer( (account_reg2_num),		buf);
+		for(i=0; i<account_reg2_num; i++)
+			_global_reg_frombuffer(account_reg2[i],buf);
+	}
 };
-extern inline void _account_tobuffer(const struct account_data &p, unsigned char *&buf)
-{
-	size_t i;
-	unsigned long time;
-	if( NULL==buf )	return;
-	_L_tobuffer( (p.account_id),		buf);
-	_S_tobuffer( (p.userid),			buf, 24);
-	_S_tobuffer( (p.pass),				buf, 34);
-	_B_tobuffer( (p.sex),				buf);
-	_B_tobuffer( (p.gm_level),			buf);
-	_S_tobuffer( (p.lastlogin),			buf, 24);
-	_L_tobuffer( (p.logincount),		buf);
-	_L_tobuffer( (p.state),				buf);
-	_S_tobuffer( (p.email),				buf, 40);
-	_S_tobuffer( (p.error_message),		buf, 20);
 
-	// assume time_t to be unsigned long, which is not true on 64bit windows
-	time = p.ban_until_time;
-	_L_tobuffer( (time),				buf);
-	time = p.connect_until_time;
-	_L_tobuffer( (time),				buf);
-	_S_tobuffer( (p.last_ip),			buf, 16);
-	_S_tobuffer( (p.memo),				buf, 256);
 
-	_W_tobuffer( (p.account_reg2_num),	buf);
-	for(i=0; i<p.account_reg2_num; i++)
-		_global_reg_tobuffer(p.account_reg2[i],buf);
 
-}
-extern inline void account_tobuffer(const struct account_data &p, unsigned char *buf)
-{
-	_account_tobuffer(p,buf);
-}
-extern inline void _account_frombuffer(struct account_data &p, const unsigned char *&buf)
-{
-	size_t i;
-	unsigned long time;
-	if( NULL==buf )	return;
-	_L_frombuffer( (p.account_id),			buf);
-	_S_frombuffer( (p.userid),				buf, 24);
-	_S_frombuffer( (p.pass),				buf, 34);
-	_B_frombuffer( (p.sex),					buf);
-	_B_frombuffer( (p.gm_level),			buf);
-	_S_frombuffer( (p.lastlogin),			buf, 24);
-	_L_frombuffer( (p.logincount),			buf);
-	_L_frombuffer( (p.state),				buf);
-	_S_frombuffer( (p.email),				buf, 40);
-	_S_frombuffer( (p.error_message),		buf, 20);
-
-	// assume time_t to be unsigned long, which is not true on 64bit windows
-	time = p.ban_until_time;
-	_L_frombuffer( (time),					buf);
-	time = p.connect_until_time;
-	_L_frombuffer( (time),					buf);
-	_S_frombuffer( (p.last_ip),				buf, 16);
-	_S_frombuffer( (p.memo),				buf, 256);
-
-	_W_frombuffer( (p.account_reg2_num),	buf);
-	for(i=0; i<p.account_reg2_num; i++)
-		_global_reg_frombuffer(p.account_reg2[i],buf);
-}
-extern inline void account_frombuffer(struct account_data &p, const unsigned char *buf)
-{
-	_account_frombuffer(p,buf);
-}
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////

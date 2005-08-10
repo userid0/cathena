@@ -72,6 +72,7 @@ public:
 		}
 		fclose(fp);
 		ShowInfo("Reading configuration file '%s' finished\n", cfgName);
+		return true;
 	}
 	//////////////////////////////////////////////////////////////////////
 	// virtual function for processing/storing tokens
@@ -150,123 +151,252 @@ public:
 
 
 
-//////////////////////////////////////////////////////////////////////////
-// Basic Interface for logging
-//////////////////////////////////////////////////////////////////////////
-class CLogger : private Mutex
-{
-	bool	cToScreen;
-	FILE*	cToFile;
 
-	bool log_screen(const char* msg, va_list va)
-	{
-		if(cToScreen)
-		{
-			ScopeLock sl(*this);
-			vprintf(msg,va);
-			return true;
-		}
-		return false;
-	}
-		
-	bool log_file(const char* msg, va_list va)
-	{
-		if(cToFile)
-		{	ScopeLock sl(*this);
-			vfprintf(cToFile,msg,va);
-			fflush(cToFile);
-			return true;
-		}
-		return false;
-	}
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// common structures
+///////////////////////////////////////////////////////////////////////////////
+class CAuth
+{
 public:
+	unsigned long login_id1;
+	unsigned long login_id2;
+	unsigned long client_ip;
 
-	CLogger(bool s=true) : cToScreen(s), cToFile(NULL)
-	{
-	}
-	CLogger(bool s, const char* n) : cToScreen(s), cToFile(NULL)
-	{	
-		open(n);
-	}
-	CLogger(const char* n) : cToScreen(true), cToFile(NULL)
-	{	
-		open(n);
-	}
-	~CLogger()
-	{
-		close();
-	}
+	CAuth()		{}
+	~CAuth()	{}
 
-	bool open(const char* name)
-	{
-		close();
-		cToFile = fopen(name, "a");
-		return (NULL != cToFile);
-	}
+	///////////////////////////////////////////////////////////////////////////
+	// comparing
+	bool operator==(const CAuth& a) const	{ return client_ip==a.client_ip && login_id1==a.login_id1 && login_id2==a.login_id2; }
+	bool operator!=(const CAuth& a) const	{ return client_ip!=a.client_ip || login_id1!=a.login_id1 || login_id2!=a.login_id2; }
 
-	bool close()
+	///////////////////////////////////////////////////////////////////////////
+	// buffer transfer
+	size_t size()	{ return 3*sizeof(unsigned long); }
+	void tobuffer(unsigned char* buf)
 	{
-		if(cToFile)
-		{
-			fclose(cToFile);
-			cToFile = NULL;
-		}
-		return true;
+		if(!buf) return;
+		_L_tobuffer( login_id1, buf);
+		_L_tobuffer( login_id2, buf);
+		_L_tobuffer( client_ip, buf);
 	}
-
-	bool SetLog(bool s)
+	void frombuffer(const unsigned char* buf)
 	{
-		bool x=cToScreen;
-		cToScreen = s;
-		return x;
-	}
-	bool isLog()
-	{
-		return cToScreen;
-	}
-
-	bool log(const char* msg, ...)
-	{
-		bool ret;
-		va_list va;
-		va_start( va, msg );
-		ret  = log_screen(msg, va);
-		ret &= log_file(msg, va);
-		va_end( va );
-		return ret;
-	}
-	bool log_screen(const char* msg,...)
-	{
-		bool ret;
-		va_list va;
-		va_start( va, msg );
-		ret = log_screen(msg, va);
-		va_end( va );
-		return ret;
-	}
-	bool log_file(const char* msg,...)
-	{
-		bool ret;
-		va_list va;
-		va_start( va, msg );
-		ret = log_file(msg, va);
-		va_end( va );
-		return ret;
+		if(!buf) return;
+		_L_frombuffer( login_id1, buf);
+		_L_frombuffer( login_id2, buf);
+		_L_frombuffer( client_ip, buf);
 	}
 };
 
-
-
-
-//////////////////////////////////////////////////////////////////////////
-// Basic Database Interfaces
-//////////////////////////////////////////////////////////////////////////
-
-class Database : public global, public noncopyable
+class CAccoutReg
 {
-protected:
-	Database()					{  }
-	virtual ~Database()			{  }
+public:
+	unsigned short account_reg2_num;
+	struct global_reg account_reg2[ACCOUNT_REG2_NUM];
+
+	CAccoutReg()	{}
+	~CAccoutReg()	{}
+
+	///////////////////////////////////////////////////////////////////////////
+	// buffer transfer
+	size_t size()	{ return sizeof(unsigned short)+ACCOUNT_REG2_NUM*sizeof(struct global_reg); }
+	void tobuffer(unsigned char* buf)
+	{
+		size_t i;
+		if(!buf) return;
+		_W_tobuffer( (account_reg2_num),	buf);
+		for(i=0; i<account_reg2_num; i++)
+			_global_reg_tobuffer(account_reg2[i],buf);
+	}
+	void frombuffer(const unsigned char* buf)
+	{
+		size_t i;
+		if(!buf) return;
+		_W_frombuffer( (account_reg2_num),	buf);
+		for(i=0; i<account_reg2_num; i++)
+			_global_reg_frombuffer(account_reg2[i],buf);
+	}
+};
+class CAccoutID : public CAccoutReg
+{
+public:
+	unsigned long account_id;
+	char userid[24];
+	char passwd[34];
+	unsigned char gm_level;
+	unsigned char sex;
+
+	char email[40];
+	unsigned long login_count;
+	char last_ip[16];
+	char last_login[24];
+	time_t ban_until;
+	time_t valid_until;
+
+	CAccoutID()		{}
+	~CAccoutID()	{}
+
+	///////////////////////////////////////////////////////////////////////////
+	// buffer transfer
+	size_t size()	
+	{
+		return 
+		sizeof(account_id) +
+		sizeof(userid) +
+		sizeof(passwd) +
+		sizeof(gm_level) +
+		sizeof(sex) +
+		sizeof(email) +
+		sizeof(login_count) +
+		sizeof(last_login) +
+		2*sizeof(time_t) +
+		CAccoutReg::size();
+	}
+	void tobuffer(unsigned char* buf)
+	{
+		unsigned long time;
+		if(!buf) return;
+		_L_tobuffer( account_id,	buf);
+		_S_tobuffer( userid,		buf, sizeof(userid));
+		_S_tobuffer( passwd,		buf, sizeof(passwd));
+		_B_tobuffer( gm_level,		buf);
+		_B_tobuffer( sex,			buf);
+		_S_tobuffer( email,			buf, sizeof(email));
+		_L_tobuffer( login_count,	buf);
+		_S_tobuffer( last_login,	buf, sizeof(last_login));
+		time = ban_until;	_L_tobuffer( time, buf);
+		time = valid_until;	_L_tobuffer( time, buf);
+
+		CAccoutReg::tobuffer(buf);
+	}
+	void frombuffer(const unsigned char* buf)
+	{
+		unsigned long time;
+		if(!buf) return;
+		_L_frombuffer( account_id,	buf);
+		_S_frombuffer( userid,		buf, sizeof(userid));
+		_S_frombuffer( passwd,		buf, sizeof(passwd));
+		_B_frombuffer( gm_level,	buf);
+		_B_frombuffer( sex,			buf);
+		_S_frombuffer( email,		buf, sizeof(email));
+		_L_frombuffer( login_count,	buf);
+		_S_frombuffer( last_login,	buf, sizeof(last_login));
+		_L_frombuffer( time, buf);	ban_until=time;
+		_L_frombuffer( time, buf);	valid_until=time;
+
+		CAccoutReg::frombuffer(buf);
+	}
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// login structure
+///////////////////////////////////////////////////////////////////////////////
+class CLoginAccount : public CAccoutID, public CAuth
+{
+public:
+	CLoginAccount()		{}
+	~CLoginAccount()	{}
+
+	///////////////////////////////////////////////////////////////////////////
+	// creation of a new account
+	CLoginAccount(unsigned long accid, const char* uid, const char* pwd, unsigned char s, const char* em)
+	{	// init account data
+		this->account_id = accid;
+		safestrcpy(this->userid, uid, 24);
+		safestrcpy(this->passwd, pwd, 34);
+		this->sex = sex;
+		if( !email_check(em) )
+			safestrcpy(this->email, "a@a.com", 40);
+		else
+			safestrcpy(this->email, em, 40);
+		this->gm_level=0;
+		this->login_count=0;
+		*this->last_login= 0;
+		this->ban_until = 0;
+		this->valid_until = 0;
+		this->account_reg2_num=0;
+	}
+	CLoginAccount(const char* uid)		{ safestrcpy(this->userid, uid, sizeof(this->userid));  }
+	CLoginAccount(unsigned long accid)	{ this->account_id=accid; }
+
+
+	///////////////////////////////////////////////////////////////////////////
+	// for sorting by userid
+	bool operator==(const CLoginAccount& c) const { return 0==strcmp(this->userid, c.userid); }
+	bool operator!=(const CLoginAccount& c) const { return 0!=strcmp(this->userid, c.userid); }
+	bool operator> (const CLoginAccount& c) const { return 0> strcmp(this->userid, c.userid); }
+	bool operator>=(const CLoginAccount& c) const { return 0>=strcmp(this->userid, c.userid); }
+	bool operator< (const CLoginAccount& c) const { return 0< strcmp(this->userid, c.userid); }
+	bool operator<=(const CLoginAccount& c) const { return 0<=strcmp(this->userid, c.userid); }
+
+	///////////////////////////////////////////////////////////////////////////
+	// compare for Multilist
+	int compare(const CLoginAccount& c, size_t i=0) const	
+	{
+		if(i==0)
+			return (account_id - c.account_id);
+		else
+			return strcmp(this->userid, c.userid); 
+	}
+
+
+};
+///////////////////////////////////////////////////////////////////////////////
+// char structures
+///////////////////////////////////////////////////////////////////////////////
+class CCharAccount : public CAccoutID, public CAuth
+{
+public:
+	unsigned long charid[9];
+
+	CCharAccount()		{}
+	~CCharAccount()		{}
+
+	///////////////////////////////////////////////////////////////////////////
+	// creation and sorting by accountid
+	CCharAccount(unsigned long aid)				{ this->account_id=aid; }
+	bool operator==(const CCharAccount& c) const { return this->account_id==c.account_id; }
+	bool operator!=(const CCharAccount& c) const { return this->account_id!=c.account_id; }
+	bool operator> (const CCharAccount& c) const { return this->account_id> c.account_id; }
+	bool operator>=(const CCharAccount& c) const { return this->account_id>=c.account_id; }
+	bool operator< (const CCharAccount& c) const { return this->account_id< c.account_id; }
+	bool operator<=(const CCharAccount& c) const { return this->account_id<=c.account_id; }
+};
+
+class CCharCharacter : public mmo_charstatus
+{
+public:
+	CCharCharacter()		{}
+	~CCharCharacter()		{}
+
+	///////////////////////////////////////////////////////////////////////////
+	// creation and sorting by charid
+	CCharCharacter(unsigned long aid)			{ this->account_id=aid; }
+	bool operator==(const CCharCharacter& c) const { return this->char_id==c.char_id; }
+	bool operator!=(const CCharCharacter& c) const { return this->char_id!=c.char_id; }
+	bool operator> (const CCharCharacter& c) const { return this->char_id> c.char_id; }
+	bool operator>=(const CCharCharacter& c) const { return this->char_id>=c.char_id; }
+	bool operator< (const CCharCharacter& c) const { return this->char_id< c.char_id; }
+	bool operator<=(const CCharCharacter& c) const { return this->char_id<=c.char_id; }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// map structure
+///////////////////////////////////////////////////////////////////////////////
+class CMapCharacter : public CCharCharacter, public CAuth
+{
+public:
+	CMapCharacter()			{}
+	~CMapCharacter()		{}
 
 };
 
@@ -275,157 +405,75 @@ protected:
 
 
 
-//////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
 // Account Database
 // for storing accounts stuff in login
-//////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
-class CAccountDB : public Database, public CConfig
+class CAccountDB : private CConfig, public global, public noncopyable
 {
 	///////////////////////////////////////////////////////////////////////////
 	// config stuff
-	bool	newaccount_allow;
-	ulong	newaccount_interval;
-	ulong	newaccount_tick;
+
 
 	///////////////////////////////////////////////////////////////////////////
 	// data
-	//!! safe the indexed caching list for later
-	class CAccountData : public account_data
-	{
-	public:
-		bool operator==(const CAccountData& a) const	{ return this->account_id==a.account_id; }
-	};
-	TArrayDST<CAccountData> cList;
+	TMultiListP<CLoginAccount, 2> cList; //!! Multilist is pod type
+
 
 public:
 	///////////////////////////////////////////////////////////////////////////
 	// construct/destruct
-	CAccountDB() : newaccount_allow(false), newaccount_interval(0), newaccount_tick(gettick())
+	CAccountDB()
 	{}
 	virtual ~CAccountDB()
-	{}
+	{
+		close();
+	}
 
 	///////////////////////////////////////////////////////////////////////////
 	// Config processor
-	virtual bool ProcessConfig(const char*w1, const char*w2)
-	{
-		if(w1 && w2)
-		{
-			if( 0==strcasecmp(w1, "newaccount_allow") )
-				newaccount_allow = Switch(w2);
-			else if( 0==strcasecmp(w1, "newaccount_interval") )
-				newaccount_interval = SwitchValue(w2, 10, 600);
-		}
-		return true;
-	}
+	virtual bool ProcessConfig(const char*w1, const char*w2);
 
-private:
-	///////////////////////////////////////////////////////////////////////////
-	// private fnctions for db implementation dependend access
-	bool existAccount(const char* userid);
-	struct account_data* searchAccount(unsigned long account_id);
-	struct account_data* searchAccount(const char* userid);
-	struct account_data* insertAccount(const char* userid, const char* pass, unsigned char sex, char* email, int& error);
+
+	bool insert(const CLoginAccount& la){ return cList.insert(la); }
 public:
 
+	size_t size()						{ return cList.size(); }
+	CLoginAccount& operator[](size_t i)	{ return cList[i]; };
+
+
 	///////////////////////////////////////////////////////////////////////////
-	// public functions for db implementation dependend access
+	// functions for db implementation dependend access
 	bool init(const char* configfile);
-	bool saveAccount(account_data* account);
+	bool close();
+
+	bool existAccount(const char* userid);
+	CLoginAccount* searchAccount(const char* userid);
+	CLoginAccount* searchAccount(unsigned long accid);
+	CLoginAccount* insertAccount(const char* userid, const char* passwd, unsigned char sex, const char* email);
+
+	bool deleteAccount(CLoginAccount* account);
+	bool saveAccount(CLoginAccount* account);
 	bool saveAccount();
 
-
-	///////////////////////////////////////////////////////////////////////////
-	// db implementation independend access
-	struct account_data* getAccount(unsigned long account_id)
-	{
-		return searchAccount(account_id);
-	}
-	struct account_data* getAccount(const char* userid, const char* pass, int& error, const char*& errmsg)
-	{	// used error codes
-		// 0 = Unregistered ID/Incorrect Password
-		// 1 = Account already exists
-		// 2 = This ID is expired
-		// 3 = Login registration not allowed/temorarily disabled
-		// 6 = Your are Prohibited to log in (aka ban)
-		account_data* ret=NULL;
-		// default error message
-		error = 0;
-		errmsg= "";
-		if( userid && pass )
-		{
-			size_t pos = strlen(userid);
-			if( pos<24 && userid[pos-2] == '_' && (userid[pos-1] == 'M' || userid[pos-1] == 'F') )
-			{	// _M/_F registration
-				// always cut the _M/_F suffix
-				char tempid[32];
-				memcpy(tempid,userid,pos-2);
-				tempid[pos-2] = 0;
-
-				if( !newaccount_allow )
-				{
-					error = 3;
-					errmsg= "Login Registration not allowed.";
-				}
-				else if( newaccount_interval && DIFF_TICK(newaccount_tick, gettick())>0 )
-				{
-					error = 3;
-					errmsg= "Login Registration temorarily disabled.";
-				}
-				if( strlen(pass)<4 )
-				{
-					error = 1;
-					errmsg= "Password with at least 4 chars required.";
-				}
-				else if( existAccount(tempid) )
-				{
-					error = 1;
-					errmsg= "Userid is already registered.";
-				}
-				else
-				{	// looks ok so far; insert the new account
-					ret = insertAccount(tempid, pass, (userid[pos-1]=='M'), "a@a.com", error);
-					if(ret && newaccount_interval)
-						newaccount_tick = gettick() + 1000*newaccount_interval;
-				}
-			}
-			else
-			{	// look for an existing account
-				ret = searchAccount(userid);
-				if( !ret || 0!=strcmp(ret->pass, pass) )
-				{
-					error = 0;
-					errmsg= "Userid/Password not recognized.";
-				}
-				else
-				{
-					if( ret->ban_until_time  )
-					{
-						if( ret->ban_until_time > time(NULL) )
-						{
-							error = 6;
-							errmsg= "Your are prohibited to log in";
-							ret = NULL;
-						}
-						else
-						{	// end of ban
-							ret->ban_until_time = 0; // reset the ban time
-							// account will be saved when login process is finished
-						}
-					}
-					if( ret->connect_until_time && ret->connect_until_time < time(NULL) )
-					{
-						error = 2;
-						errmsg= "Your ID has expired.";
-						ret = NULL;
-					}
-				}
-			}
-		}
-		return ret;
-	}
 };
+
+
+
+
+
+
+
 
 
 

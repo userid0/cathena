@@ -2994,12 +2994,12 @@ int status_get_dmotion(struct block_list *bl)
 	else
 		return 2000;
 
-	if((sc_data && (sc_data[SC_ENDURE].timer!=-1 || sc_data[SC_BERSERK].timer!=-1)) || sc_data[SC_CONCENTRATION].timer!=-1 ||
-		(bl->type == BL_PC && ((struct map_session_data *)bl)->state.infinite_endure))
+	if( !map[bl->m].flag.gvg && sc_data && 
+		(sc_data[SC_ENDURE].timer!=-1 || sc_data[SC_BERSERK].timer!=-1 || sc_data[SC_CONCENTRATION].timer!=-1 ||
+		(bl->type == BL_PC && ((struct map_session_data *)bl)->state.infinite_endure)) )
 		ret=0;
-
-	//Let's apply a random damage modifier to prevent 'stun-lock' abusers. [Skotlex]
-	ret = ret*(95+rand()%10)/100;	//Currently: +/- 5%
+	else	//Let's apply a random damage modifier to prevent 'stun-lock' abusers. [Skotlex]
+		ret = ret*(95+rand()%10)/100;	//Currently: +/- 5%
 	return ret;
 }
 
@@ -3896,12 +3896,6 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 			tick = 10;
 			break;
 
-		/* セ?フティウォ?ル、ニュ?マ */
-		case SC_SAFETYWALL:
-		case SC_PNEUMA:
-			tick=((struct skill_unit *)val2)->group->limit;
-			break;
-
 		/* スキルじゃない/時間に?係しない */
 		case SC_RIDING:
 			calc_flag = 1;
@@ -4039,6 +4033,7 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 			tick = 1000;
 			break;
 
+
 		case SC_CONCENTRATE:		/* 集中力向上 */
 		case SC_BLESSING:			/* ブレッシング */
 		case SC_ANGELUS:			/* アンゼルス */
@@ -4067,6 +4062,12 @@ int status_change_start(struct block_list *bl,int type,int val1,int val2,int val
 		case SC_INCSTR:
 		case SC_INCAGI:
 			calc_flag = 1;
+			break;
+
+		// セ?フティウォ?ル、ニュ?マ 
+		case SC_SAFETYWALL:
+		case SC_PNEUMA:
+			tick=((struct skill_unit *)val2)->group->limit;
 			break;
 
 		case SC_SUFFRAGIUM:			/* サフラギム */

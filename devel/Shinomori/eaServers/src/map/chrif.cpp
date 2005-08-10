@@ -334,10 +334,9 @@ int chrif_connectack(int fd)
 	if(!char_init_done) {
 		char_init_done = 1;
 		ShowStatus("Event '"CL_WHITE"OnInterIfInitOnce"CL_RESET"' executed with '"CL_WHITE"%d"CL_RESET"' NPCs.\n", npc_event_doall("OnInterIfInitOnce"));
+		ShowStatus("Event '"CL_WHITE"OnAgitInit"CL_RESET"' executed with '"CL_WHITE"%d"CL_RESET"' NPCs.\n", npc_event_doall("OnAgitInit"));
 	}
 
-	// <Agit> Run Event [AgitInit]
-//	ShowMessage("NPC_Event:[OnAgitInit] do (%d) events (Agit Initialize).\n", npc_event_doall("OnAgitInit"));
 
 	return 0;
 }
@@ -1178,6 +1177,7 @@ int chrif_char_online(struct map_session_data &sd)
  *
  *------------------------------------------
  */
+/*
 int chrif_disconnect_sub(struct map_session_data& sd, va_list va)
 {
 	clif_authfail_fd(sd.fd,1);
@@ -1203,7 +1203,7 @@ int chrif_disconnect(int fd)
 	}
 	return 0;
 }
-
+*/
 /*==========================================
  *
  *------------------------------------------
@@ -1229,6 +1229,13 @@ int chrif_parse(int fd)
 		}
 		char_fd = -1;
 		session_Remove(fd);// have it removed by do_sendrecv
+
+		// 他のmap 鯖のデータを消す
+		map_eraseallipport();
+		// 倉庫キャッシュを消す
+		do_final_storage();
+		do_init_storage();
+
 		return 0;
 	}
 
@@ -1333,7 +1340,7 @@ int check_connect_char_server(int tid, unsigned long tick, int id, int data)
 {
 	if( !session_isActive(char_fd) )
 	{
-		clif_foreachclient(chrif_disconnect_sub);
+		//clif_foreachclient(chrif_disconnect_sub);
 		chrif_state = 0;
 
 		ShowStatus("Attempting to connect to Char Server. Please wait.\n");

@@ -164,7 +164,7 @@ bool remove_control_chars(char *str)
 //------------------------------------------------------------
 // E-mail check: return 0 (not correct) or 1 (valid). by [Yor]
 //------------------------------------------------------------
-bool e_mail_check(const char *email) {
+bool email_check(const char *email) {
 	char ch;
 	const char* last_arobas;
 

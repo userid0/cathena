@@ -357,7 +357,6 @@ struct map_session_data
 	unsigned short cart_max_num;
 	char mapname[24];
 	int fd;
-	int new_fd;
 	unsigned short to_x;
 	unsigned short to_y;
 	unsigned short speed;

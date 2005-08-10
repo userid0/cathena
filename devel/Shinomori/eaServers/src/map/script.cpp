@@ -8175,7 +8175,7 @@ void op_2(struct script_state &st,int op)
 		op_2num(st,op,i1,i2);
 	}else{
 		// si,is => error
-		ShowMessage("script: op_2: int&str, str&int not allow.");
+		ShowMessage("script: op_2: int&str, str&int not allowed (op=%i).", op);
 		push_val(st.stack,C_INT,0);
 	}
 }

@@ -627,13 +627,6 @@ int pc_authok(unsigned long id, unsigned long login_id2, time_t connect_until_ti
 
 	sd = map_id2sd(id);
 	nullpo_retr(1, sd);
-	// check if double login occured
-	if(sd->new_fd){
-		// 2重login状態だったので、両方落す
-		clif_authfail_fd(sd->fd,2);	// same id
-		clif_authfail_fd(sd->new_fd,8);	// same id
-		return 1;
-	}
 	sd->login_id2 = login_id2;
 	mmo_charstatus_frombuffer(sd->status, buf);
 
@@ -899,13 +892,6 @@ int pc_authfail(int id) {
 	sd = map_id2sd(id);
 	if (sd == NULL)
 		return 1;
-
-	if(sd->new_fd){
-		// 2重login状態だったので、新しい接続のみ落す
-		clif_authfail_fd(sd->new_fd,0);
-		sd->new_fd=0;
-		return 0;
-	}
 
 	clif_authfail_fd(sd->fd, 0);
 
@@ -5098,14 +5084,18 @@ int pc_damage(struct map_session_data &sd, long damage, struct block_list *src)
 			clif_updatestatus(sd,SP_JOBEXP);
 		}
 	}
-	// monster level up [Valaris]
-	if(battle_config.mobs_level_up && src && src->type==BL_MOB) {
+	if(src && src->type==BL_MOB)
+	{
 		struct mob_data *md=(struct mob_data *)src;
-		if(md && md->target_id != 0 && md->target_id==sd.bl.id) { // reset target id when player dies
+		if(md && md->target_id != 0 && md->target_id==sd.bl.id)
+		{	// reset target id when player dies
 			md->target_id=0;
 			mob_changestate(*md,MS_WALK,0);
 		}
-		if(md && md->state.state!=MS_DEAD && md->level < 99) {
+		if( battle_config.mobs_level_up && md && md->state.state!=MS_DEAD && 
+			md->level < battle_config.max_base_level &&
+			(md->class_ < 1285 || md->class_ > 1288) )
+		{	// monster level up [Valaris]
 			clif_misceffect(md->bl,0);
 			md->level++;
 			md->hp += (int)(sd.status.max_hp*0.1);
@@ -5799,15 +5789,27 @@ int pc_setoption(struct map_session_data &sd,int type)
  * カ?ト設定
  *------------------------------------------
  */
-int pc_setcart(struct map_session_data &sd,int type)
+int pc_setcart(struct map_session_data &sd, int type)
 {
 	static int cart[6]={0x0000,0x0008,0x0080,0x0100,0x0200,0x0400};
+	size_t option, i;
+	if (type < 0 || type > 5)
+		return 0; //Never trust the values sent by the client! [Skotlex]
+
+	option = sd.status.option;
+	for (i = 0; i < 6; i++)
+	{	//This should preserve the current option, only modifying the cart bit.
+		if(i == (size_t)type)
+			option |= cart[i];
+		else
+			option &= ~cart[i];
+	}
 
 	if(pc_checkskill(sd,MC_PUSHCART)>0)
 	{	// プッシュカ?トスキル所持
 		if( !pc_iscarton(sd) )
 		{	// カ?トを付けていない
-			pc_setoption(sd,cart[type]);
+			pc_setoption(sd,option);
 			clif_cart_itemlist(sd);
 			clif_cart_equiplist(sd);
 			clif_updatestatus(sd,SP_CARTINFO);
@@ -5815,7 +5817,7 @@ int pc_setcart(struct map_session_data &sd,int type)
 		}
 		else
 		{
-			pc_setoption(sd,cart[type]);
+			pc_setoption(sd,option);
 		}
 	}
 	return 0;

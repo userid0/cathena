@@ -822,7 +822,7 @@ int intif_parse_SaveGuildStorage(int fd)
 int intif_parse_PartyCreated(int fd)
 {
 	if(battle_config.etc_log)
-		ShowMessage("intif: party created\n");
+		ShowInfo("intif: party created by account %d\n\n", (unsigned long)RFIFOL(fd,2));
 	party_created(RFIFOL(fd,2),RFIFOB(fd,6),RFIFOL(fd,7),(char*)RFIFOP(fd,11));
 	return 0;
 }

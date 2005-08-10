@@ -731,6 +731,7 @@ int pet_remove_map(struct map_session_data &sd)
 	{
 		struct pet_data *pd=sd.pd; // [Valaris]
 		//[Skotlex] clear bonus data
+		skill_cleartimerskill(&pd->bl);
 		if (pd->status)
 		{
 			aFree(pd->status);
@@ -885,6 +886,9 @@ int pet_data_init(struct map_session_data &sd)
 	pd->next_walktime = pd->attackabletime = pd->last_thinktime = gettick();
 	pd->msd = &sd;
 	
+	for(i=0;i<MAX_MOBSKILLTIMERSKILL;i++)
+		pd->skilltimerskill[i].timer = -1;
+
 	map_addiddb(pd->bl);
 
 	// initialise
@@ -1217,9 +1221,13 @@ int pet_unequipitem(struct map_session_data &sd)
 				delete_timer(sd.pd->s_skill->timer, pet_heal_timer);
 			else
 				delete_timer(sd.pd->s_skill->timer, pet_skill_support_timer);
+			sd.pd->s_skill->timer=-1;
 		}
-		if (sd.pd->bonus && sd.pd->bonus->timer != -1)
+		if(sd.pd->bonus && sd.pd->bonus->timer != -1)
+		{
 			delete_timer(sd.pd->bonus->timer, pet_skill_bonus_timer);
+			sd.pd->bonus->timer = -1;
+		}
 	}
 
 	return 0;
@@ -1613,15 +1621,9 @@ int pet_skill_bonus_timer(int tid,unsigned long tick,int id,int data)
 		return 1;
 	
 	pd=sd->pd;
-
-	if(pd->bonus == NULL || pd->bonus->timer != tid) {
+	if(pd->bonus->timer != tid) {
 		if(battle_config.error_log)
-		{
-			if (pd->bonus)
-				ShowMessage("pet_skill_bonus_timer %d != %d\n",pd->bonus->timer,tid);
-			else
-				ShowMessage("pet_skill_bonus_timer called with no bonus defined (tid=%d)\n",tid);
-		}
+			ShowMessage("pet_skill_bonus_timer %d != %d\n",pd->bonus->timer,tid);
 		return 0;
 	}
 	
@@ -1669,9 +1671,8 @@ int pet_recovery_timer(int tid,unsigned long tick,int id,int data)
 	}
 
 	if(sd->sc_data && sd->sc_data[pd->recovery->type].timer != -1)
-	{	//Display a heal animation? 
-		//Adrenaline Rush?? Well, it DOES looks like a nice recovery spell.... [Skotlex]
-		clif_skill_nodamage(pd->bl,sd->bl,BS_ADRENALINE,1,1);
+	{	//Display a heal
+		clif_skill_nodamage(pd->bl,sd->bl,TF_DETOXIFY,1,1);
 		status_change_end(&sd->bl,pd->recovery->type,-1);
 		clif_emotion(pd->bl, 33);
 	}

@@ -244,7 +244,7 @@ int skill_castend_damage_id  ( struct block_list* src, struct block_list *bl,uns
 int skill_castend_pos2       ( struct block_list *src, int x,int y,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag);
 
 // ƒXƒLƒ‹U?ˆêŠ‡?—
-int skill_attack( int attack_type, struct block_list* src, struct block_list *dsrc,struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag );
+int skill_attack(int attack_type, struct block_list* src, struct block_list *dsrc,struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag );
 
 void skill_reload(void);
 

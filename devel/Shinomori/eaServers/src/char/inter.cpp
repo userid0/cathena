@@ -340,7 +340,8 @@ int mapif_wis_end(struct WisData *wd, int flag) {
 }
 
 // アカウント変数送信
-int mapif_account_reg(int fd, unsigned char *src) {
+int mapif_account_reg(int fd, unsigned char *src)
+{
 	CREATE_BUFFER(buf,unsigned char, (unsigned short)WBUFW(src,2));
 
 	memcpy(WBUFP(buf,0),src,WBUFW(src,2));
@@ -567,8 +568,11 @@ int inter_parse_frommap(int fd)
 	if (cmd < 0x3000 || cmd >= 0x3000 + (sizeof(inter_recv_packet_length) / sizeof(inter_recv_packet_length[0])))
 		return 0;
 
-	// パケット長を調べる
+	// パケット長を調べる #1
 	if ((len = inter_check_length(fd, inter_recv_packet_length[cmd - 0x3000])) == 0)
+		return 0;
+	// パケット長を調べる #2
+	if(len>0 && RFIFOREST(fd) < len)
 		return 2;
 
 	switch(cmd) {

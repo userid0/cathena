@@ -17,8 +17,8 @@
 #include "atcommand.h"
 
 
-static struct dbt *storage_db;
-static struct dbt *guild_storage_db;
+static struct dbt *storage_db=NULL;
+static struct dbt *guild_storage_db=NULL;
 
 /*==========================================
  * 倉庫内アイテムソート
@@ -55,12 +55,6 @@ void sortage_gsortitem(struct guild_storage& gstor)
  * 初期化とか
  *------------------------------------------
  */
-int do_init_storage(void) // map.c::do_init()から呼ばれる
-{
-	storage_db=numdb_init();
-	guild_storage_db=numdb_init();
-	return 1;
-}
 int guild_storage_db_final(void *key,void *data,va_list ap)
 {
 	struct guild_storage *gstor = (struct guild_storage *)data;
@@ -76,9 +70,23 @@ int storage_db_final(void *key,void *data,va_list ap)
 void do_final_storage(void) // by [MC Cameri]
 {
 	if (storage_db)
+	{
 		numdb_final(storage_db,storage_db_final);
+		storage_db=NULL;
+	}
 	if (guild_storage_db)
+	{
 		numdb_final(guild_storage_db,guild_storage_db_final);
+		guild_storage_db=NULL;
+	}
+}
+int do_init_storage(void) // map.c::do_init()から呼ばれる
+{
+	if (storage_db) numdb_final(storage_db,storage_db_final);
+	storage_db=numdb_init();
+	if (guild_storage_db) numdb_final(guild_storage_db,guild_storage_db_final);
+	guild_storage_db=numdb_init();
+	return 1;
 }
 
 struct pc_storage *account2storage(unsigned long account_id)

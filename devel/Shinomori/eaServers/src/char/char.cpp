@@ -21,6 +21,9 @@
 #include "int_party.h"
 #include "int_storage.h"
 
+
+TslistDCT<CLoginAuth> loginauth;
+
 struct mmo_map_server server[MAX_MAP_SERVERS];
 
 
@@ -357,17 +360,15 @@ int mmo_char_tostr(char *str, struct mmo_charstatus *p) {
 //-------------------------------------------------------------------------
 // Function to set the character from the line (at read of characters file)
 //-------------------------------------------------------------------------
-int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
+int mmo_char_fromstr(const char *str, struct mmo_charstatus &p)
+{
 	int tmp_int[256];
 	int next, len;
 	size_t i;
 
 	// initilialise character
-	memset(p, 0, sizeof(struct mmo_charstatus));
+	memset(&p, 0, sizeof(struct mmo_charstatus));
 	memset(tmp_int, 0, sizeof(tmp_int));
-/////////////////	
-// temporaray, will be remved on the next versions
-// just in here to get the chars converted to the new format
 	if( sscanf(str, 
 		"%d\t%d,%d\t%[^\t]"
 		"\t%d,%d,%d"
@@ -375,43 +376,6 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		"\t%d,%d,%d,%d"
 		"\t%d,%d,%d,%d,%d,%d"
 		"\t%d,%d"
-		"\t%d,%d,%d,%d"
-		"\t%d,%d,%d"
-		"\t%d,%d,%d"
-		"\t%d,%d,%d,%d,%d"
-		"\t%[^,],%d,%d"
-		"\t%[^,],%d,%d"
-		"\t%d,%d,%d,%d"
-		"\t%d"
-		"%n",
-		&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-		&tmp_int[3], &tmp_int[4], &tmp_int[5],
-		&tmp_int[6], &tmp_int[7], &tmp_int[8],
-		&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-		&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-		&tmp_int[19], &tmp_int[20],
-		&tmp_int[21], &tmp_int[22], &tmp_int[44], &tmp_int[23], //!! chaos here
-		&tmp_int[24], &tmp_int[25], &tmp_int[26],
-		&tmp_int[27], &tmp_int[28], &tmp_int[29],
-		&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-		p->last_point.map, &tmp_int[35], &tmp_int[36], //
-		p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
-		&tmp_int[40], &tmp_int[41], &tmp_int[42], &tmp_int[43], &next) == 48 )
-	{
-		// my personal reordering 2005/07/06
-		//ShowMessage("char: new char data ver.5b\n");
-
-		// chaos and karma are stored together
-		tmp_int[22] |= (tmp_int[44])<<8;
-	}
-///////////////////////
-	else if( sscanf(str, 
-		"%d\t%d,%d\t%[^\t]"
-		"\t%d,%d,%d"
-		"\t%d,%d,%d"
-		"\t%d,%d,%d,%d"
-		"\t%d,%d,%d,%d,%d,%d"
-		"\t%d,%d"
 		"\t%d,%d,%d"
 		"\t%d,%d,%d"
 		"\t%d,%d,%d"
@@ -421,7 +385,7 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		"\t%d,%d,%d,%d"
 		"\t%d"
 		"%n",
-		&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
+		&tmp_int[0], &tmp_int[1], &tmp_int[2], p.name, //
 		&tmp_int[3], &tmp_int[4], &tmp_int[5],
 		&tmp_int[6], &tmp_int[7], &tmp_int[8],
 		&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
@@ -431,8 +395,8 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		&tmp_int[24], &tmp_int[25], &tmp_int[26],
 		&tmp_int[27], &tmp_int[28], &tmp_int[29],
 		&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-		p->last_point.map, &tmp_int[35], &tmp_int[36], //
-		p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
+		p.last_point.map, &tmp_int[35], &tmp_int[36], //
+		p.save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
 		&tmp_int[40], &tmp_int[41], &tmp_int[42], &tmp_int[43], &next) == 47 )
 	{
 		// my personal reordering
@@ -441,7 +405,7 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	else if( sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
 		"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
 		"\t%[^,],%d,%d\t%[^,],%d,%d,%d,%d,%d,%d,%d%n",
-		&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
+		&tmp_int[0], &tmp_int[1], &tmp_int[2], p.name, //
 		&tmp_int[3], &tmp_int[4], &tmp_int[5],
 		&tmp_int[6], &tmp_int[7], &tmp_int[8],
 		&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
@@ -451,50 +415,50 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		&tmp_int[24], &tmp_int[25], &tmp_int[26],
 		&tmp_int[27], &tmp_int[28], &tmp_int[29],
 		&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-		p->last_point.map, &tmp_int[35], &tmp_int[36], //
-		p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
+		p.last_point.map, &tmp_int[35], &tmp_int[36], //
+		p.save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
 		&tmp_int[40], &tmp_int[41], &tmp_int[42], &tmp_int[43], &next) == 47 )
 	{
 		// Char structture of version 1488+
 		//ShowMessage("char: new char data ver.5\n");
 	}
 	else if( sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-			"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-			"\t%[^,],%d,%d\t%[^,],%d,%d,%d,%d,%d,%d%n",
-			&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-			&tmp_int[3], &tmp_int[4], &tmp_int[5],
-			&tmp_int[6], &tmp_int[7], &tmp_int[8],
-			&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-			&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-			&tmp_int[19], &tmp_int[20],
-			&tmp_int[21], &tmp_int[22], &tmp_int[23], //
-			&tmp_int[24], &tmp_int[25], &tmp_int[26],
-			&tmp_int[27], &tmp_int[28], &tmp_int[29],
-			&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-			p->last_point.map, &tmp_int[35], &tmp_int[36], //
-			p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], 
+		"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+		"\t%[^,],%d,%d\t%[^,],%d,%d,%d,%d,%d,%d%n",
+		&tmp_int[0], &tmp_int[1], &tmp_int[2], p.name, //
+		&tmp_int[3], &tmp_int[4], &tmp_int[5],
+		&tmp_int[6], &tmp_int[7], &tmp_int[8],
+		&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+		&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+		&tmp_int[19], &tmp_int[20],
+		&tmp_int[21], &tmp_int[22], &tmp_int[23], //
+		&tmp_int[24], &tmp_int[25], &tmp_int[26],
+		&tmp_int[27], &tmp_int[28], &tmp_int[29],
+		&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+		p.last_point.map, &tmp_int[35], &tmp_int[36], //
+		p.save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39],
 		&tmp_int[40], &tmp_int[41], &tmp_int[42], &next) == 46 )
-		{
+	{
 		// Char structture of version 1363+
 		tmp_int[43] = 0; // fame
 		//ShowMessage("char: new char data ver.4\n");
 	}
 	else if( sscanf(str,"%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-				"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-				"\t%[^,],%d,%d\t%[^,],%d,%d,%d%n",
-				&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-				&tmp_int[3], &tmp_int[4], &tmp_int[5],
-				&tmp_int[6], &tmp_int[7], &tmp_int[8],
-				&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-				&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-				&tmp_int[19], &tmp_int[20],
-				&tmp_int[21], &tmp_int[22], &tmp_int[23], //
-				&tmp_int[24], &tmp_int[25], &tmp_int[26],
-				&tmp_int[27], &tmp_int[28], &tmp_int[29],
-				&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-				p->last_point.map, &tmp_int[35], &tmp_int[36], //
-		p->save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], &next) == 43 )
-			{
+		"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+		"\t%[^,],%d,%d\t%[^,],%d,%d,%d%n",
+		&tmp_int[0], &tmp_int[1], &tmp_int[2], p.name,
+		&tmp_int[3], &tmp_int[4], &tmp_int[5],
+		&tmp_int[6], &tmp_int[7], &tmp_int[8],
+		&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+		&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+		&tmp_int[19], &tmp_int[20],
+		&tmp_int[21], &tmp_int[22], &tmp_int[23],
+		&tmp_int[24], &tmp_int[25], &tmp_int[26],
+		&tmp_int[27], &tmp_int[28], &tmp_int[29],
+		&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+		p.last_point.map, &tmp_int[35], &tmp_int[36],
+		p.save_point.map, &tmp_int[37], &tmp_int[38], &tmp_int[39], &next) == 43 )
+	{
 		// Char structture of version 1008 and before 1363
 		tmp_int[40] = 0; // father
 		tmp_int[41] = 0; // mother
@@ -503,23 +467,22 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		//ShowMessage("char: new char data ver.3\n");
 	}
 	else if( sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-					"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-					"\t%[^,],%d,%d\t%[^,],%d,%d%n",
-					&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-					&tmp_int[3], &tmp_int[4], &tmp_int[5],
-					&tmp_int[6], &tmp_int[7], &tmp_int[8],
-					&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-					&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-					&tmp_int[19], &tmp_int[20],
-					&tmp_int[21], &tmp_int[22], &tmp_int[23], //
-					&tmp_int[24], &tmp_int[25], &tmp_int[26],
-					&tmp_int[27], &tmp_int[28], &tmp_int[29],
-					&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-					p->last_point.map, &tmp_int[35], &tmp_int[36], //
-		p->save_point.map, &tmp_int[37], &tmp_int[38], &next) == 42 )
-				{
+		"\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+		"\t%[^,],%d,%d\t%[^,],%d,%d%n",
+		&tmp_int[0], &tmp_int[1], &tmp_int[2], p.name,
+		&tmp_int[3], &tmp_int[4], &tmp_int[5],
+		&tmp_int[6], &tmp_int[7], &tmp_int[8],
+		&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+		&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+		&tmp_int[19], &tmp_int[20],
+		&tmp_int[21], &tmp_int[22], &tmp_int[23],
+		&tmp_int[24], &tmp_int[25], &tmp_int[26],
+		&tmp_int[27], &tmp_int[28], &tmp_int[29],
+		&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+		p.last_point.map, &tmp_int[35], &tmp_int[36], //
+		p.save_point.map, &tmp_int[37], &tmp_int[38], &next) == 42 )
+	{
 		// Char structture from version 384 to 1007
-
 		tmp_int[39] = 0; // partner id
 		tmp_int[40] = 0; // father
 		tmp_int[41] = 0; // mother
@@ -528,20 +491,20 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		//ShowMessage("char: old char data ver.2\n");
 	}
 	else if( sscanf(str, "%d\t%d,%d\t%[^\t]\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d"
-					"\t%d,%d,%d\t%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
-					"\t%[^,],%d,%d\t%[^,],%d,%d%n",
-					&tmp_int[0], &tmp_int[1], &tmp_int[2], p->name, //
-					&tmp_int[3], &tmp_int[4], &tmp_int[5],
-					&tmp_int[6], &tmp_int[7], &tmp_int[8],
-					&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
-					&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
-					&tmp_int[19], &tmp_int[20],
-					&tmp_int[21], &tmp_int[22], &tmp_int[23], //
-					&tmp_int[24], &tmp_int[25], //
-					&tmp_int[27], &tmp_int[28], &tmp_int[29],
-					&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
-					p->last_point.map, &tmp_int[35], &tmp_int[36], //
-		p->save_point.map, &tmp_int[37], &tmp_int[38], &next) == 41 )
+		"\t%d,%d,%d\t%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d"
+		"\t%[^,],%d,%d\t%[^,],%d,%d%n",
+		&tmp_int[0], &tmp_int[1], &tmp_int[2], p.name,
+		&tmp_int[3], &tmp_int[4], &tmp_int[5],
+		&tmp_int[6], &tmp_int[7], &tmp_int[8],
+		&tmp_int[9], &tmp_int[10], &tmp_int[11], &tmp_int[12],
+		&tmp_int[13], &tmp_int[14], &tmp_int[15], &tmp_int[16], &tmp_int[17], &tmp_int[18],
+		&tmp_int[19], &tmp_int[20],
+		&tmp_int[21], &tmp_int[22], &tmp_int[23],
+		&tmp_int[24], &tmp_int[25],
+		&tmp_int[27], &tmp_int[28], &tmp_int[29],
+		&tmp_int[30], &tmp_int[31], &tmp_int[32], &tmp_int[33], &tmp_int[34],
+		p.last_point.map, &tmp_int[35], &tmp_int[36], //
+		p.save_point.map, &tmp_int[37], &tmp_int[38], &next) == 41 )
 	{
 		// Char structure of version 384 or older
 		tmp_int[26] = 0; // pet id
@@ -555,73 +518,73 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	else 
 		return 0;
 
-	p->char_id = tmp_int[0];
-	p->account_id = tmp_int[1];
-	p->char_num = tmp_int[2];
-	p->class_ = tmp_int[3];
-	p->base_level = tmp_int[4];
-	p->job_level = tmp_int[5];
-	p->base_exp = tmp_int[6];
-	p->job_exp = tmp_int[7];
-	p->zeny = tmp_int[8];
-	p->hp = tmp_int[9];
-	p->max_hp = tmp_int[10];
-	p->sp = tmp_int[11];
-	p->max_sp = tmp_int[12];
-	p->str = tmp_int[13];
-	p->agi = tmp_int[14];
-	p->vit = tmp_int[15];
-	p->int_ = tmp_int[16];
-	p->dex = tmp_int[17];
-	p->luk = tmp_int[18];
-	p->status_point = tmp_int[19];
-	p->skill_point = tmp_int[20];
-	p->option = tmp_int[21];
-	p->karma = GetByte(tmp_int[22],0);
-	p->chaos = GetByte(tmp_int[22],1);
-	p->manner = tmp_int[23];
-	p->party_id = tmp_int[24];
-	p->guild_id = tmp_int[25];
-	p->pet_id = tmp_int[26];
-	p->hair = tmp_int[27];
-	p->hair_color = tmp_int[28];
-	p->clothes_color = tmp_int[29];
-	p->weapon = tmp_int[30];
-	p->shield = tmp_int[31];
-	p->head_top = tmp_int[32];
-	p->head_mid = tmp_int[33];
-	p->head_bottom = tmp_int[34];
-	p->last_point.x = tmp_int[35];
-	p->last_point.y = tmp_int[36];
-	p->save_point.x = tmp_int[37];
-	p->save_point.y = tmp_int[38];
-	p->partner_id = tmp_int[39];
-	p->father_id = tmp_int[40];
-	p->mother_id = tmp_int[41];
-	p->child_id = tmp_int[42];
-	p->fame_points = tmp_int[43];
+	p.char_id = tmp_int[0];
+	p.account_id = tmp_int[1];
+	p.char_num = tmp_int[2];
+	p.class_ = tmp_int[3];
+	p.base_level = tmp_int[4];
+	p.job_level = tmp_int[5];
+	p.base_exp = tmp_int[6];
+	p.job_exp = tmp_int[7];
+	p.zeny = tmp_int[8];
+	p.hp = tmp_int[9];
+	p.max_hp = tmp_int[10];
+	p.sp = tmp_int[11];
+	p.max_sp = tmp_int[12];
+	p.str = tmp_int[13];
+	p.agi = tmp_int[14];
+	p.vit = tmp_int[15];
+	p.int_ = tmp_int[16];
+	p.dex = tmp_int[17];
+	p.luk = tmp_int[18];
+	p.status_point = tmp_int[19];
+	p.skill_point = tmp_int[20];
+	p.option = tmp_int[21];
+	p.karma = GetByte(tmp_int[22],0);
+	p.chaos = GetByte(tmp_int[22],1);
+	p.manner = tmp_int[23];
+	p.party_id = tmp_int[24];
+	p.guild_id = tmp_int[25];
+	p.pet_id = tmp_int[26];
+	p.hair = tmp_int[27];
+	p.hair_color = tmp_int[28];
+	p.clothes_color = tmp_int[29];
+	p.weapon = tmp_int[30];
+	p.shield = tmp_int[31];
+	p.head_top = tmp_int[32];
+	p.head_mid = tmp_int[33];
+	p.head_bottom = tmp_int[34];
+	p.last_point.x = tmp_int[35];
+	p.last_point.y = tmp_int[36];
+	p.save_point.x = tmp_int[37];
+	p.save_point.y = tmp_int[38];
+	p.partner_id = tmp_int[39];
+	p.father_id = tmp_int[40];
+	p.mother_id = tmp_int[41];
+	p.child_id = tmp_int[42];
+	p.fame_points = tmp_int[43];
 
 	// Some checks
 	for(i = 0; i < char_num; i++) {
-		if (char_dat[i].char_id == p->char_id) {
+		if (char_dat[i].char_id == p.char_id) {
 			ShowMessage(CL_BT_RED"mmo_auth_init: ******Error: a character has an identical id to another.\n");
-			ShowMessage("               character id #%ld -> new character not readed.\n", p->char_id);
+			ShowMessage("               character id #%ld -> new character not readed.\n", p.char_id);
 			ShowMessage("               Character saved in log file."CL_NORM"\n");
 			return -1;
-		} else if (strcmp(char_dat[i].name, p->name) == 0) {
+		} else if (strcmp(char_dat[i].name, p.name) == 0) {
 			ShowMessage(CL_BT_RED"mmo_auth_init: ******Error: character name already exists.\n");
-			ShowMessage("               character name '%s' -> new character not readed.\n", p->name);
+			ShowMessage("               character name '%s' -> new character not readed.\n", p.name);
 			ShowMessage("               Character saved in log file."CL_NORM"\n");
 			return -2;
 		}
 	}
 
-	if(strcasecmp(wisp_server_name, p->name) == 0) {
+	if(strcasecmp(wisp_server_name, p.name) == 0) {
 		ShowMessage("mmo_auth_init: ******WARNING: character name has wisp server name.\n");
-		ShowMessage("               Character name '%s' = wisp server name '%s'.\n", p->name, wisp_server_name);
+		ShowMessage("               Character name '%s' = wisp server name '%s'.\n", p.name, wisp_server_name);
 		ShowMessage("               Character readed. Suggestion: change the wisp server name.\n");
 		char_log("mmo_auth_init: ******WARNING: character name has wisp server name: Character name '%s' = wisp server name '%s'." RETCODE,
-		          p->name, wisp_server_name);
+		          p.name, wisp_server_name);
 	}
 
 	if (str[next] == '\n' || str[next] == '\r')
@@ -630,10 +593,10 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	next++;
 
 	for(i = 0; str[next] && str[next] != '\t'; i++) {
-		if (sscanf(str+next, "%[^,],%d,%d%n", p->memo_point[i].map, &tmp_int[0], &tmp_int[1], &len) != 3)
+		if (sscanf(str+next, "%[^,],%d,%d%n", p.memo_point[i].map, &tmp_int[0], &tmp_int[1], &len) != 3)
 			return -3;
-		p->memo_point[i].x = tmp_int[0];
-		p->memo_point[i].y = tmp_int[1];
+		p.memo_point[i].x = tmp_int[0];
+		p.memo_point[i].y = tmp_int[1];
 		next += len;
 		if (str[next] == ' ')
 			next++;
@@ -653,17 +616,17 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		          &tmp_int[7], &tmp_int[8], &tmp_int[9], &tmp_int[10], &len) == 11) {
 		} else // invalid structure
 			return -4;
-		p->inventory[i].id = tmp_int[0];
-		p->inventory[i].nameid = tmp_int[1];
-		p->inventory[i].amount = tmp_int[2];
-		p->inventory[i].equip = tmp_int[3];
-		p->inventory[i].identify = tmp_int[4];
-		p->inventory[i].refine = tmp_int[5];
-		p->inventory[i].attribute = tmp_int[6];
-		p->inventory[i].card[0] = tmp_int[7];
-		p->inventory[i].card[1] = tmp_int[8];
-		p->inventory[i].card[2] = tmp_int[9];
-		p->inventory[i].card[3] = tmp_int[10];
+		p.inventory[i].id = tmp_int[0];
+		p.inventory[i].nameid = tmp_int[1];
+		p.inventory[i].amount = tmp_int[2];
+		p.inventory[i].equip = tmp_int[3];
+		p.inventory[i].identify = tmp_int[4];
+		p.inventory[i].refine = tmp_int[5];
+		p.inventory[i].attribute = tmp_int[6];
+		p.inventory[i].card[0] = tmp_int[7];
+		p.inventory[i].card[1] = tmp_int[8];
+		p.inventory[i].card[2] = tmp_int[9];
+		p.inventory[i].card[3] = tmp_int[10];
 		next += len;
 		if (str[next] == ' ')
 			next++;
@@ -683,17 +646,17 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		           &tmp_int[7], &tmp_int[8], &tmp_int[9], &tmp_int[10], &len) == 11) {
 		} else // invalid structure
 			return -5;
-		p->cart[i].id = tmp_int[0];
-		p->cart[i].nameid = tmp_int[1];
-		p->cart[i].amount = tmp_int[2];
-		p->cart[i].equip = tmp_int[3];
-		p->cart[i].identify = tmp_int[4];
-		p->cart[i].refine = tmp_int[5];
-		p->cart[i].attribute = tmp_int[6];
-		p->cart[i].card[0] = tmp_int[7];
-		p->cart[i].card[1] = tmp_int[8];
-		p->cart[i].card[2] = tmp_int[9];
-		p->cart[i].card[3] = tmp_int[10];
+		p.cart[i].id = tmp_int[0];
+		p.cart[i].nameid = tmp_int[1];
+		p.cart[i].amount = tmp_int[2];
+		p.cart[i].equip = tmp_int[3];
+		p.cart[i].identify = tmp_int[4];
+		p.cart[i].refine = tmp_int[5];
+		p.cart[i].attribute = tmp_int[6];
+		p.cart[i].card[0] = tmp_int[7];
+		p.cart[i].card[1] = tmp_int[8];
+		p.cart[i].card[2] = tmp_int[9];
+		p.cart[i].card[3] = tmp_int[10];
 		next += len;
 		if (str[next] == ' ')
 			next++;
@@ -704,8 +667,8 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	for(i = 0; str[next] && str[next] != '\t'; i++) {
 		if (sscanf(str + next, "%d,%d%n", &tmp_int[0], &tmp_int[1], &len) != 2)
 			return -6;
-		p->skill[tmp_int[0]].id = tmp_int[0];
-		p->skill[tmp_int[0]].lv = tmp_int[1];
+		p.skill[tmp_int[0]].id = tmp_int[0];
+		p.skill[tmp_int[0]].lv = tmp_int[1];
 		next += len;
 		if (str[next] == ' ')
 			next++;
@@ -714,11 +677,11 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 	next++;
 
 	for(i = 0; str[next] && str[next] != '\t' && str[next] != '\n' && str[next] != '\r'; i++) { // global_regé¿ëïà»ëOÇÃathena.txtå›ä∑ÇÃÇΩÇﬂàÍâû'\n'É`ÉFÉbÉN
-		if(sscanf(str + next, "%[^,],%ld%n", p->global_reg[i].str, &p->global_reg[i].value, &len) != 2) {
+		if(sscanf(str + next, "%[^,],%ld%n", p.global_reg[i].str, &p.global_reg[i].value, &len) != 2) {
 			// because some scripts are not correct, the str can be "". So, we must check that.
 			// If it's, we must not refuse the character, but just this REG value.
 			// Character line will have something like: nov_2nd_cos,9 ,9 nov_1_2_cos_c,1 (here, ,9 is not good)
-			if(str[next] == ',' && sscanf(str + next, ",%ld%n", &p->global_reg[i].value, &len) == 1)
+			if(str[next] == ',' && sscanf(str + next, ",%ld%n", &p.global_reg[i].value, &len) == 1)
 				i--;
 			else
 				return -7;
@@ -727,7 +690,7 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 		if (str[next] == ' ')
 			next++;
 	}
-	p->global_reg_num = i;
+	p.global_reg_num = i;
 
 	return 1;
 }
@@ -735,7 +698,7 @@ int mmo_char_fromstr(char *str, struct mmo_charstatus *p) {
 // Function to read friend list
 //---------------------------------
 
-int parse_friend_txt(struct mmo_charstatus *p)
+int parse_friend_txt(struct mmo_charstatus &p)
 {
 	char line[1024];
 	size_t i;
@@ -743,8 +706,8 @@ int parse_friend_txt(struct mmo_charstatus *p)
 	FILE *fp;
 
 	// initialize
-	memset(p->friend_id,0,sizeof(p->friend_id));
-	memset(p->friend_name,0,sizeof(p->friend_name));
+	memset(p.friend_id,0,sizeof(p.friend_id));
+	memset(p.friend_name,0,sizeof(p.friend_name));
 
 	// Open the file and look for the ID
 	fp = safefopen(friends_txt, "r");
@@ -756,33 +719,33 @@ int parse_friend_txt(struct mmo_charstatus *p)
 				continue;
 			sscanf(line, "%ld,%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%[^,],%ld,%s",
 				&cid,
-			&temp[0],p->friend_name[0],
-			&temp[1],p->friend_name[1],
-			&temp[2],p->friend_name[2],
-			&temp[3],p->friend_name[3],
-			&temp[4],p->friend_name[4],
-			&temp[5],p->friend_name[5],
-			&temp[6],p->friend_name[6],
-			&temp[7],p->friend_name[7],
-			&temp[8],p->friend_name[8],
-			&temp[9],p->friend_name[9],
-			&temp[10],p->friend_name[10],
-			&temp[11],p->friend_name[11],
-			&temp[12],p->friend_name[12],
-			&temp[13],p->friend_name[13],
-			&temp[14],p->friend_name[14],
-			&temp[15],p->friend_name[15],
-			&temp[16],p->friend_name[16],
-			&temp[17],p->friend_name[17],
-			&temp[18],p->friend_name[18],
-			&temp[19],p->friend_name[19]);
-			if (cid == p->char_id)
+			&temp[0],p.friend_name[0],
+			&temp[1],p.friend_name[1],
+			&temp[2],p.friend_name[2],
+			&temp[3],p.friend_name[3],
+			&temp[4],p.friend_name[4],
+			&temp[5],p.friend_name[5],
+			&temp[6],p.friend_name[6],
+			&temp[7],p.friend_name[7],
+			&temp[8],p.friend_name[8],
+			&temp[9],p.friend_name[9],
+			&temp[10],p.friend_name[10],
+			&temp[11],p.friend_name[11],
+			&temp[12],p.friend_name[12],
+			&temp[13],p.friend_name[13],
+			&temp[14],p.friend_name[14],
+			&temp[15],p.friend_name[15],
+			&temp[16],p.friend_name[16],
+			&temp[17],p.friend_name[17],
+			&temp[18],p.friend_name[18],
+			&temp[19],p.friend_name[19]);
+			if (cid == p.char_id)
 				break;
 		}//end while
 		if (cid != 0)
 		{	// Fill in the list
 			for (i=0; i<MAX_FRIENDLIST; i++)
-				p->friend_id[i] = temp[i];
+				p.friend_id[i] = temp[i];
 		}
 		fclose(fp);
 	}
@@ -848,16 +811,19 @@ int mmo_char_init(void)
 			}
 		}
 
-		ret = mmo_char_fromstr(line, &char_dat[char_num]);
+		ret = mmo_char_fromstr(line, char_dat[char_num]);
 
 		// Initialize friends list
-		parse_friend_txt(&char_dat[char_num]);  // Grab friends for the character
+		parse_friend_txt(char_dat[char_num]);  // Grab friends for the character
 
-		if (ret > 0) { // negative value or zero for errors
+		if (ret > 0)
+		{	// negative value or zero for errors
 			if (char_dat[char_num].char_id >= char_id_count)
 				char_id_count = char_dat[char_num].char_id + 1;
 			char_num++;
-		} else {
+		}
+		else
+		{
 			ShowError("mmo_char_init: characters file, unable to read the line #%d.\n", line_count);
 			ShowMessage("               -> Character saved in log file.\n");
 			switch (ret) {
@@ -910,7 +876,8 @@ int mmo_char_init(void)
 //---------------------------------------------------------
 // Function to save characters in files (speed up by [Yor])
 //---------------------------------------------------------
-void mmo_char_sync(void) {
+void mmo_char_sync(void)
+{
 	char line[65536],f_line[1024];
 	size_t i, j, k;
 	int lock;
@@ -1747,20 +1714,22 @@ int parse_tologin(int fd)
 	{	// login is disconnecting
 		ShowMessage("Connection to login-server dropped (connection #%d).\n", fd);
 		session_Remove(fd);// have it removed by do_sendrecv
-			login_fd = -1;
+		login_fd = -1;
 		return 0;
 	}
 
 	sd = (struct char_session_data*)session[fd]->session_data;
 
-	while(RFIFOREST(fd) >= 2) {
+	while(RFIFOREST(fd) >= 2)
+	{
 //		ShowMessage("parse_tologin: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, (unsigned short)RFIFOW(fd,0), RFIFOREST(fd));
-
-		switch(RFIFOW(fd,0)) {
+		switch( RFIFOW(fd,0) )
+		{
 		case 0x2711:
 			if (RFIFOREST(fd) < 3)
 				return 0;
-			if (RFIFOB(fd, 2)) {
+			if( RFIFOB(fd, 2) )
+			{
 				//ShowMessage("connect login server error : %d\n", (unsigned char)RFIFOB(fd,2));
 				ShowMessage("Can not connect to login-server.\n");
 				ShowMessage("The server communication passwords (default s1/p1) is probably invalid.\n");
@@ -1801,7 +1770,7 @@ int parse_tologin(int fd)
 //						else
 //							ShowMessage("count_users(): %d < max_connect_user (%d) -> accepted.\n", count_users(), max_connect_user);
 						memcpy(sd->email, RFIFOP(fd, 7), 40);
-						if (e_mail_check(sd->email) == 0)
+						if( !email_check(sd->email) )
 							safestrcpy(sd->email, "a@a.com", 40); // default e-mail
 						sd->connect_until_time = (time_t)RFIFOL(fd,47);
 						// send characters to player
@@ -1834,7 +1803,7 @@ int parse_tologin(int fd)
 				if (session[i] && (sd = (struct char_session_data*)session[i]->session_data)) {
 					if (sd->account_id == RFIFOL(fd,2)) {
 						memcpy(sd->email, RFIFOP(fd,6), 40);
-						if (e_mail_check(sd->email) == 0)
+						if( !email_check(sd->email) )
 							safestrcpy(sd->email, "a@a.com", 40); // default e-mail
 						sd->connect_until_time = (time_t)RFIFOL(fd,46);
 						break;
@@ -1856,6 +1825,7 @@ int parse_tologin(int fd)
 		case 0x2719:
 			if (RFIFOREST(fd) < 18)
 				return 0;
+
 			// to conserv a maximum of authentification, search if account is already authentified and replace it
 			// that will reduce multiple connection too
 			for(i = 0; i < AUTH_FIFO_SIZE; i++)
@@ -1878,6 +1848,7 @@ int parse_tologin(int fd)
 			auth_fifo[i].connect_until_time = 0; // unlimited/unknown time by default (not display in map-server)
 			auth_fifo[i].client_ip = RFIFOLIP(fd,14);
 			//auth_fifo[i].map_auth = 0;
+
 			RFIFOSKIP(fd,18);
 			break;
 
@@ -1896,9 +1867,10 @@ int parse_tologin(int fd)
 			break;
 
 		case 0x2723:	// changesex reply (modified by [Yor])
+		{
 			if (RFIFOREST(fd) < 7)
 				return 0;
-		  {
+
 			unsigned long acc;
 			int sex;
 			size_t i, j;
@@ -1959,16 +1931,16 @@ int parse_tologin(int fd)
 			WBUFL(buf,2) = acc;
 			WBUFB(buf,6) = sex;
 			mapif_sendall(buf, 7);
-		  }
 			break;
 
+		}
 		case 0x2726:	// Request to send a broadcast message (no answer)
 			if(RFIFOREST(fd) < 8 || (size_t)RFIFOREST(fd) < (8 + RFIFOL(fd,4)))
 				return 0;
 			if (RFIFOL(fd,4) < 1)
 				char_log("Receiving a message for broadcast, but message is void." RETCODE);
-			else {
-				// at least 1 map-server
+			else
+			{	// at least 1 map-server
 				for(i = 0; i < MAX_MAP_SERVERS; i++)
 					if(server[i].fd >= 0)
 						break;
@@ -2206,6 +2178,26 @@ int parse_tologin(int fd)
 			RFIFOSKIP(fd,7);
 			break;
 
+		case 0x2750:	// get auth information
+		{
+			if (RFIFOREST(fd) < 2+sizeof(CLoginAuth))
+				return 0;
+			size_t pos;
+			CLoginAuth temp;
+			temp.frombuffer( RFIFOP(fd,2) );
+			
+			if( loginauth.find(temp,0,pos) )
+			{	// exist -> update list entry
+				loginauth[pos] = temp;
+			}
+			else
+			{	// create new
+				loginauth.insert(temp);
+			}
+
+			RFIFOSKIP(fd,2+sizeof(CLoginAuth));
+			break;
+		}
 		default:
 			ShowMessage("parse_tologin: unknown packet %x! \n", (unsigned short)RFIFOW(fd,0));
 			session_Remove(fd);
@@ -2215,7 +2207,8 @@ int parse_tologin(int fd)
 	return 0;
 }
 
-int parse_frommap(int fd) {
+int parse_frommap(int fd)
+{
 	size_t i, j;
 	size_t id;
 
@@ -2367,10 +2360,13 @@ int parse_frommap(int fd) {
 		// îFèÿóvã
 		// Send character data to map-serverÅ
 		case 0x2afc:
+		{
 			if (RFIFOREST(fd) < 22)
 				return 0;
+
 			//ShowMessage("auth_fifo search: account: %ld, char: %ld, secure: %08lX-%08lX\n", (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6), (unsigned long)RFIFOL(fd,10), (unsigned long)RFIFOL(fd,14));
-			for(i = 0; i < AUTH_FIFO_SIZE; i++) {
+			for(i = 0; i < AUTH_FIFO_SIZE; i++)
+			{
 				if (auth_fifo[i].account_id == RFIFOL(fd,2) &&
 				    auth_fifo[i].char_id == RFIFOL(fd,6) &&
 				    auth_fifo[i].login_id1 == RFIFOL(fd,10) &&
@@ -2401,9 +2397,10 @@ int parse_frommap(int fd) {
 				WFIFOSET(fd,6);
 				ShowMessage("auth_fifo search error! account %ld not authentified.\n", (unsigned long)RFIFOL(fd,2));
 			}
+
 			RFIFOSKIP(fd,22);
 			break;
-
+		}
 		// MAPÉTÅ[ÉoÅ[è„ÇÃÉÜÅ[ÉUÅ[êîéÛêM
 		// Recieve alive message from map-server
 		case 0x2aff:
@@ -2470,6 +2467,7 @@ int parse_frommap(int fd) {
 		case 0x2b02:
 			if (RFIFOREST(fd) < 18)
 				return 0;
+
 			if (auth_fifo_pos >= AUTH_FIFO_SIZE)
 				auth_fifo_pos = 0;
 			//ShowMessage("auth_fifo set (auth #%d) - account: %d, secure: %08x-%08x\n", auth_fifo_pos, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6), (unsigned long)RFIFOL(fd,10));
@@ -2482,10 +2480,12 @@ int parse_frommap(int fd) {
 			auth_fifo[auth_fifo_pos].connect_until_time = 0; // unlimited/unknown time by default (not display in map-server)
 			auth_fifo[auth_fifo_pos].client_ip = RFIFOLIP(fd,14);
 			auth_fifo_pos++;
+
 			WFIFOW(fd,0) = 0x2b03;
 			WFIFOL(fd,2) = RFIFOL(fd,2);
 			WFIFOB(fd,6) = 0;
 			WFIFOSET(fd,7);
+
 			RFIFOSKIP(fd,18);
 			break;
 
@@ -2493,10 +2493,12 @@ int parse_frommap(int fd) {
 		case 0x2b05:
 			if (RFIFOREST(fd) < 49)
 				return 0;
-			if (auth_fifo_pos >= AUTH_FIFO_SIZE)
-				auth_fifo_pos = 0;
+
 			WFIFOW(fd,0) = 0x2b06;
 			memcpy(WFIFOP(fd,2), RFIFOP(fd,2), 42);
+
+			if (auth_fifo_pos >= AUTH_FIFO_SIZE)
+				auth_fifo_pos = 0;
 			//ShowMessage("auth_fifo set (auth#%d) - account: %d, secure: 0x%08x-0x%08x\n", auth_fifo_pos, (unsigned long)RFIFOL(fd,2), (unsigned long)RFIFOL(fd,6), (unsigned long)RFIFOL(fd,10));
 			auth_fifo[auth_fifo_pos].account_id = RFIFOL(fd,2);
 			auth_fifo[auth_fifo_pos].char_id = RFIFOL(fd,14);
@@ -2517,6 +2519,7 @@ int parse_frommap(int fd) {
 			if (i == char_num)
 				WFIFOW(fd,6) = 1;
 			WFIFOSET(fd,44);
+
 			RFIFOSKIP(fd,49);
 			break;
 
@@ -2947,7 +2950,6 @@ int parse_char(int fd)
 			if (RFIFOREST(fd) < 17)
 				return 0;
 
-			size_t i;
 			int GM_value;
 			if ((GM_value = isGM(RFIFOL(fd,2))))
 				ShowMessage("Account Logged On; Account ID: %ld (GM level %d).\n", (unsigned long)RFIFOL(fd,2), GM_value);
@@ -2966,7 +2968,66 @@ int parse_char(int fd)
 			// send back account_id
 			WFIFOL(fd,0) = RFIFOL(fd,2);
 			WFIFOSET(fd,4);
+
+/*
 			// search authentification
+			if(max_connect_user == 0 || count_users() < max_connect_user)
+			{
+				size_t pos;
+				if( loginauth.find( CLoginAuth(sd->account_id), 0, pos ) )
+				{
+printf("ax %X %i\n", loginauth[pos].client_ip, loginauth[pos].account_id);
+					if( loginauth[pos].client_ip == client_ip &&
+						loginauth[pos].account_id == sd->account_id &&
+						loginauth[pos].login_id1 == sd->login_id1 &&
+						loginauth[pos].login_id2 == sd->login_id2 && 
+						loginauth[pos].sex == sd->sex ) 
+					{	// send characters to player
+printf("found\n");
+						if( session_isActive(login_fd) )
+						{	// don't send request if no login-server
+							// request to login-server to obtain e-mail/time limit
+							WFIFOW(login_fd,0) = 0x2716;
+							WFIFOL(login_fd,2) = sd->account_id;
+							WFIFOSET(login_fd,6);
+						}
+						// send characters to player
+						mmo_char_send006b(fd, sd);
+
+					}
+					else
+					{
+						if( session_isActive(login_fd) )
+						{	// don't send request if no login-server
+							WFIFOW(login_fd,0) = 0x2712; // ask login-server to authentify an account
+							WFIFOL(login_fd,2) = sd->account_id;
+							WFIFOL(login_fd,6) = sd->login_id1;
+							WFIFOL(login_fd,10) = sd->login_id2; // relate to the versions higher than 18
+							WFIFOB(login_fd,14) = sd->sex;
+							WFIFOLIP(login_fd,15) = client_ip;
+							WFIFOSET(login_fd,19);
+						}
+						else
+						{	// if no login-server, we must refuse connection
+							WFIFOW(fd,0) = 0x6c;
+							WFIFOW(fd,2) = 0;
+							WFIFOSET(fd,3);
+						}
+					
+					}		
+				}
+			}
+			else
+			{
+				// refuse connection (over populated)
+				WFIFOW(fd,0) = 0x6c;
+				WFIFOW(fd,2) = 0;
+				WFIFOSET(fd,3);
+			}
+*/
+
+
+			size_t i;
 			for(i = 0; i < AUTH_FIFO_SIZE; i++) {
 				if (auth_fifo[i].account_id == sd->account_id &&
 				    auth_fifo[i].login_id1 == sd->login_id1 &&
@@ -3011,6 +3072,7 @@ int parse_char(int fd)
 					WFIFOSET(fd,3);
 				}
 			}
+
 			RFIFOSKIP(fd,17);
 			break;
 		}
@@ -3033,11 +3095,44 @@ int parse_char(int fd)
 				else
 				{
 					for (ch = 0; ch < 9; ch++)
-						if (sd->found_char[ch] >= 0 && char_dat[sd->found_char[ch]].char_num == RFIFOB(fd,2))
+						if(sd->found_char[ch]<char_num && char_dat[sd->found_char[ch]].char_num == RFIFOB(fd,2))
 							break;
-					if (ch != 9)
+					if (ch < 9)
 					{
 						int j;
+
+						size_t pos;
+						if( loginauth.find( CLoginAuth(sd->account_id),0, pos) )
+						{
+							loginauth[pos] = CLoginAuth(sd->account_id,sd->login_id1,sd->login_id2,session[fd]->client_ip,sd->sex);
+						}
+						else
+						{
+							loginauth.insert( CLoginAuth(sd->account_id,sd->login_id1,sd->login_id2,session[fd]->client_ip,sd->sex) );
+							if( !loginauth.find( CLoginAuth(sd->account_id),0, pos) )
+								pos = loginauth.size();
+						}
+						if( pos < loginauth.size() )
+						{	//!! send auth to map
+						
+						}
+
+
+						if (auth_fifo_pos >= AUTH_FIFO_SIZE)
+							auth_fifo_pos = 0;
+						//ShowMessage("auth_fifo set #%d - account %d, char: %d, secure: %08x-%08x\n", auth_fifo_pos, sd->account_id, char_dat[sd->found_char[ch]].char_id, sd->login_id1, sd->login_id2);
+						auth_fifo[auth_fifo_pos].account_id = sd->account_id;
+						auth_fifo[auth_fifo_pos].char_id = char_dat[sd->found_char[ch]].char_id;
+						auth_fifo[auth_fifo_pos].login_id1 = sd->login_id1;
+						auth_fifo[auth_fifo_pos].login_id2 = sd->login_id2;
+						auth_fifo[auth_fifo_pos].delflag = 0;
+						auth_fifo[auth_fifo_pos].char_pos = sd->found_char[ch];
+						auth_fifo[auth_fifo_pos].sex = sd->sex;
+						auth_fifo[auth_fifo_pos].connect_until_time = sd->connect_until_time;
+						auth_fifo[auth_fifo_pos].client_ip = session[fd]->client_ip;
+						auth_fifo_pos++;
+
+						
 						set_char_online(char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].account_id);
 						char_log("Character Selected, Account ID: %d, Character Slot: %d, Character ID: %ld, Name: %s." RETCODE,
 								 sd->account_id, (unsigned char)RFIFOB(fd,2), char_dat[sd->found_char[ch]].char_id, char_dat[sd->found_char[ch]].name);
@@ -3110,21 +3205,7 @@ int parse_char(int fd)
 							WFIFOLIP(fd, 22) = server[j].address.WANIP();
 							WFIFOW(fd,26)    = server[j].address.WANPort();
 						}
-						
 						WFIFOSET(fd,28);
-						if (auth_fifo_pos >= AUTH_FIFO_SIZE)
-							auth_fifo_pos = 0;
-						//ShowMessage("auth_fifo set #%d - account %d, char: %d, secure: %08x-%08x\n", auth_fifo_pos, sd->account_id, char_dat[sd->found_char[ch]].char_id, sd->login_id1, sd->login_id2);
-						auth_fifo[auth_fifo_pos].account_id = sd->account_id;
-						auth_fifo[auth_fifo_pos].char_id = char_dat[sd->found_char[ch]].char_id;
-						auth_fifo[auth_fifo_pos].login_id1 = sd->login_id1;
-						auth_fifo[auth_fifo_pos].login_id2 = sd->login_id2;
-						auth_fifo[auth_fifo_pos].delflag = 0;
-						auth_fifo[auth_fifo_pos].char_pos = sd->found_char[ch];
-						auth_fifo[auth_fifo_pos].sex = sd->sex;
-						auth_fifo[auth_fifo_pos].connect_until_time = sd->connect_until_time;
-						auth_fifo[auth_fifo_pos].client_ip = session[fd]->client_ip;
-						auth_fifo_pos++;
 					}
 				}
 			}
@@ -3147,77 +3228,81 @@ int parse_char(int fd)
 					
 				if(ret == -1)
 				{	//already exists
-								WFIFOW(fd, 0) = 0x6e;
-								WFIFOB(fd, 2) = 0x00;
-								WFIFOSET(fd, 3);
-								RFIFOSKIP(fd, 37);
-								break;
+					WFIFOW(fd, 0) = 0x6e;
+					WFIFOB(fd, 2) = 0x00;
+					WFIFOSET(fd, 3);
 				}
 				else if(ret == -2)
 				{	//denied
-								WFIFOW(fd, 0) = 0x6e;
-								WFIFOB(fd, 2) = 0x02;
-								WFIFOSET(fd, 3); 
-								RFIFOSKIP(fd, 37);                           
-								break;
+					WFIFOW(fd, 0) = 0x6e;
+					WFIFOB(fd, 2) = 0x02;
+					WFIFOSET(fd, 3); 
 				}
 				else if(ret == -3)
 				{	//underaged XD
-								WFIFOW(fd, 0) = 0x6e;
-								WFIFOB(fd, 2) = 0x01;
-								WFIFOSET(fd, 3);
-								RFIFOSKIP(fd, 37);
-								break;
-							}
+					WFIFOW(fd, 0) = 0x6e;
+					WFIFOB(fd, 2) = 0x01;
+					WFIFOSET(fd, 3);
+				}
 				else
 				{
-					for(ch = 0; ch < 9; ch++) {
-						if(sd->found_char[ch] == 0xFFFFFFFF) {
+					for(ch = 0; ch < 9; ch++)
+					{
+						if(sd->found_char[ch] == 0xFFFFFFFF)
+						{
 							sd->found_char[ch] = ret;
 							break;
 						}
 					}
+					if( ret>=9 )
+					{	//denied
+						WFIFOW(fd, 0) = 0x6e;
+						WFIFOB(fd, 2) = 0x02;
+						WFIFOSET(fd, 3); 
+					}
+					else
+					{
+						WFIFOW(fd,0) = 0x6d;
+						memset(WFIFOP(fd,2), 0, 106);
 
-				WFIFOW(fd,0) = 0x6d;
-				memset(WFIFOP(fd,2), 0, 106);
+						WFIFOL(fd,2) = char_dat[ret].char_id;
+						WFIFOL(fd,2+4) = char_dat[ret].base_exp;
+						WFIFOL(fd,2+8) = char_dat[ret].zeny;
+						WFIFOL(fd,2+12) = char_dat[ret].job_exp;
+						WFIFOL(fd,2+16) = char_dat[ret].job_level;
 
-					WFIFOL(fd,2) = char_dat[ret].char_id;
-					WFIFOL(fd,2+4) = char_dat[ret].base_exp;
-					WFIFOL(fd,2+8) = char_dat[ret].zeny;
-					WFIFOL(fd,2+12) = char_dat[ret].job_exp;
-					WFIFOL(fd,2+16) = char_dat[ret].job_level;
+						WFIFOL(fd,2+28) = char_dat[ret].karma;
+						WFIFOL(fd,2+32) = char_dat[ret].manner;
 
-					WFIFOL(fd,2+28) = char_dat[ret].karma;
-					WFIFOL(fd,2+32) = char_dat[ret].manner;
+						WFIFOW(fd,2+40) = 0x30;
+						WFIFOW(fd,2+42) = (unsigned short)((char_dat[ret].hp > 0x7fff) ? 0x7fff : char_dat[ret].hp);
+						WFIFOW(fd,2+44) = (unsigned short)((char_dat[ret].max_hp > 0x7fff) ? 0x7fff : char_dat[ret].max_hp);
+						WFIFOW(fd,2+46) = (unsigned short)((char_dat[ret].sp > 0x7fff) ? 0x7fff : char_dat[ret].sp);
+						WFIFOW(fd,2+48) = (unsigned short)((char_dat[ret].max_sp > 0x7fff) ? 0x7fff : char_dat[ret].max_sp);
+						WFIFOW(fd,2+50) = DEFAULT_WALK_SPEED; // char_dat[i].speed;
+						WFIFOW(fd,2+52) = char_dat[ret].class_;
+						WFIFOW(fd,2+54) = char_dat[ret].hair;
 
-				WFIFOW(fd,2+40) = 0x30;
-					WFIFOW(fd,2+42) = (unsigned short)((char_dat[ret].hp > 0x7fff) ? 0x7fff : char_dat[ret].hp);
-					WFIFOW(fd,2+44) = (unsigned short)((char_dat[ret].max_hp > 0x7fff) ? 0x7fff : char_dat[ret].max_hp);
-					WFIFOW(fd,2+46) = (unsigned short)((char_dat[ret].sp > 0x7fff) ? 0x7fff : char_dat[ret].sp);
-					WFIFOW(fd,2+48) = (unsigned short)((char_dat[ret].max_sp > 0x7fff) ? 0x7fff : char_dat[ret].max_sp);
-				WFIFOW(fd,2+50) = DEFAULT_WALK_SPEED; // char_dat[i].speed;
-					WFIFOW(fd,2+52) = char_dat[ret].class_;
-					WFIFOW(fd,2+54) = char_dat[ret].hair;
+						WFIFOW(fd,2+58) = char_dat[ret].base_level;
+						WFIFOW(fd,2+60) = char_dat[ret].skill_point;
 
-					WFIFOW(fd,2+58) = char_dat[ret].base_level;
-					WFIFOW(fd,2+60) = char_dat[ret].skill_point;
+						WFIFOW(fd,2+64) = char_dat[ret].shield;
+						WFIFOW(fd,2+66) = char_dat[ret].head_top;
+						WFIFOW(fd,2+68) = char_dat[ret].head_mid;
+						WFIFOW(fd,2+70) = char_dat[ret].hair_color;
 
-					WFIFOW(fd,2+64) = char_dat[ret].shield;
-					WFIFOW(fd,2+66) = char_dat[ret].head_top;
-					WFIFOW(fd,2+68) = char_dat[ret].head_mid;
-					WFIFOW(fd,2+70) = char_dat[ret].hair_color;
+						memcpy(WFIFOP(fd,2+74), char_dat[ret].name, 24);
 
-					memcpy(WFIFOP(fd,2+74), char_dat[ret].name, 24);
+						WFIFOB(fd,2+98) = (char_dat[ret].str > 255) ? 255 : char_dat[ret].str;
+						WFIFOB(fd,2+99) = (char_dat[ret].agi > 255) ? 255 : char_dat[ret].agi;
+						WFIFOB(fd,2+100) = (char_dat[ret].vit > 255) ? 255 : char_dat[ret].vit;
+						WFIFOB(fd,2+101) = (char_dat[ret].int_ > 255) ? 255 : char_dat[ret].int_;
+						WFIFOB(fd,2+102) = (char_dat[ret].dex > 255) ? 255 : char_dat[ret].dex;
+						WFIFOB(fd,2+103) = (char_dat[ret].luk > 255) ? 255 : char_dat[ret].luk;
+						WFIFOB(fd,2+104) = char_dat[ret].char_num;
 
-					WFIFOB(fd,2+98) = (char_dat[ret].str > 255) ? 255 : char_dat[ret].str;
-					WFIFOB(fd,2+99) = (char_dat[ret].agi > 255) ? 255 : char_dat[ret].agi;
-					WFIFOB(fd,2+100) = (char_dat[ret].vit > 255) ? 255 : char_dat[ret].vit;
-					WFIFOB(fd,2+101) = (char_dat[ret].int_ > 255) ? 255 : char_dat[ret].int_;
-					WFIFOB(fd,2+102) = (char_dat[ret].dex > 255) ? 255 : char_dat[ret].dex;
-					WFIFOB(fd,2+103) = (char_dat[ret].luk > 255) ? 255 : char_dat[ret].luk;
-					WFIFOB(fd,2+104) = char_dat[ret].char_num;
-
-					WFIFOSET(fd,108);
+						WFIFOSET(fd,108);
+					}
 				}
 			}
 			RFIFOSKIP(fd,37);
@@ -3230,7 +3315,7 @@ int parse_char(int fd)
 				return 0;
 
 			memcpy(email, RFIFOP(fd,6), 40);
-			if (e_mail_check(email) == 0)
+			if( !email_check(email) )
 				safestrcpy(email, "a@a.com", 40); // default e-mail
 
 			
@@ -3250,9 +3335,9 @@ int parse_char(int fd)
 				else
 				{	// we act like we have selected a character
 					// we change the packet to set it like selection.
-					for (i = 0; i < 9; i++)
+					for(i = 0; i < 9; i++)
 					{
-						if (char_dat[sd->found_char[i]].char_id == RFIFOL(fd,2))
+						if(char_dat[sd->found_char[i]].char_id == RFIFOL(fd,2))
 						{	// we save new e-mail
 							memcpy(sd->email, email, 40);
 							// we send new e-mail to login-server ('online' login-server is checked before)
@@ -3269,7 +3354,7 @@ int parse_char(int fd)
 							break;
 						}
 					}
-					if (i == 9)
+					if(i >= 9)
 					{
 						WFIFOW(fd, 0) = 0x70;
 						WFIFOB(fd, 2) = 0; // 00 = Incorrect Email address
@@ -3290,7 +3375,7 @@ int parse_char(int fd)
 				}
 				else
 				{	// if mail is correct
-					for (i = 0; i < 9; i++)
+					for(i = 0; i < 9; i++)
 					{
 						struct mmo_charstatus *cs = NULL;
 						if( (cs = &char_dat[sd->found_char[i]])->char_id == RFIFOL(fd,2) )
@@ -3506,8 +3591,8 @@ int send_users_tologin(int tid, unsigned long tick, int id, int data) {
 	return 0;
 }
 
-int check_connect_login_server(int tid, unsigned long tick, int id, int data) {
-
+int check_connect_login_server(int tid, unsigned long tick, int id, int data)
+{
 	if( !session_isActive(login_fd) )
 	{
 		ShowStatus("Attempt to connect to login-server...\n");

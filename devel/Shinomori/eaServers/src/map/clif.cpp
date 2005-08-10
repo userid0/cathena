@@ -493,6 +493,7 @@ int clif_authfail_fd(int fd, unsigned long type)
 	WFIFOL(fd,2) = type;
 	WFIFOSET(fd,packet_len_table[0x81]);
 
+	ShowDebug("clif_authfail_fd: Disconnecting session #%d\n", fd);
 	session_SetWaitClose(fd, 5000);
 
 	return 0;
@@ -12537,16 +12538,21 @@ int clif_disp_overhead(struct map_session_data &sd, const char* mes)
 {
 	if(mes && *mes)
 	{
+		unsigned char buf[1024];
 		size_t len = 1+strlen(mes);
-		unsigned char *buf = (unsigned char*)aMallocA( (len+4)*sizeof(unsigned char) );
+		if(len+8>sizeof(buf)) len = sizeof(buf)-8;
+
+		WBUFW(buf, 0) = 0x08d; //Speech to others
+		WBUFW(buf, 2) = len+8;
+		WBUFL(buf,4) = sd.bl.id;
+		memcpy(WBUFP(buf,8), mes, len);
+		clif_send(buf, len+8, &sd.bl, AREA_CHAT_WOC); //Sends self speech to Area
+
 		WBUFW(buf, 0) = 0x08e; //SelfSpeech
 		WBUFW(buf, 2) = len+4;
 		memcpy(WBUFP(buf,4), mes, len);
-
-		clif_send(buf, len+4, &sd.bl, AREA); //Sends self speech to Area
-
-		aFree(buf);
-}
+		clif_send(buf, len+4, &sd.bl, SELF);
+	}
 	return 0;
 }
 

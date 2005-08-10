@@ -6530,10 +6530,10 @@ bool atcommand_email(int fd, struct map_session_data &sd, const char* command, c
 		return false;
 	}
 
-	if (e_mail_check(actual_email) == 0) {
+	if( !email_check(actual_email) ) {
 		clif_displaymessage(fd, msg_table[144]); // Invalid actual email. If you have default e-mail, give a@a.com.
 		return false;
-	} else if (e_mail_check(new_email) == 0) {
+	} else if( !email_check(new_email) ) {
 		clif_displaymessage(fd, msg_table[145]); // Invalid new email. Please enter a real e-mail.
 		return false;
 	} else if(strcasecmp(new_email, "a@a.com") == 0) {
@@ -9063,7 +9063,7 @@ bool atcommand_me(int fd, struct map_session_data &sd, const char* command, cons
 		return false;
 	}
 	sscanf(message, "%199[^\n]", tempmes);
-	sprintf(output, "** %s %s **", sd.status.name, tempmes);
+	snprintf(output, 256, "** %s %s **", sd.status.name, tempmes);
     clif_disp_overhead(sd, output);
 	return true;
 }

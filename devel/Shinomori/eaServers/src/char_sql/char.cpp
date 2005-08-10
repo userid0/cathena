@@ -2501,8 +2501,10 @@ int parse_frommap(int fd)
 			// inter server - packet
 			{
 				int r = inter_parse_frommap(fd);
-				if (r == 1) break;		// processed
-				if (r == 2) return 0;	// need more packet
+				if (r == 1)
+					break;		// processed
+				if (r == 2)
+					return 0;	// wrong packet size
 			}
 
 			// no inter server packet. no char server packet -> disconnect

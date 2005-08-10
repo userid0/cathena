@@ -1159,7 +1159,7 @@ int addaccount(char* param, int emailflag)
 		}
 		return 109;
 	}
-	if (e_mail_check(email) == 0) {
+	if( !email_check(email) ) {
 		if (defaultlanguage == 'F') {
 			ShowMessage("Email incorrecte [%s]. Entrez une e-mail valide svp.\n", email);
 			ladmin_log("Email incorrecte [%s]. Entrez une e-mail valide svp." RETCODE, email);
@@ -1820,7 +1820,7 @@ int changeemail(char* param) {
 		}
 		return 109;
 	}
-	if (e_mail_check(email) == 0) {
+	if( !email_check(email) ) {
 		if (defaultlanguage == 'F') {
 			ShowMessage("Email incorrecte [%s]. Entrez une e-mail valide svp.\n", email);
 			ladmin_log("Email incorrecte [%s]. Entrez une e-mail valide svp." RETCODE, email);

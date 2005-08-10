@@ -359,7 +359,7 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 		}
 		if(sc_data[SC_PNEUMA].timer!=-1 && damage>0 &&
 			((flag&BF_WEAPON && flag&BF_LONG && skill_num != NPC_GUIDEDATTACK) ||
-			(flag&BF_MISC && (skill_num ==  HT_BLITZBEAT || skill_num == SN_FALCONASSAULT)) ||
+			(flag&BF_MISC && (skill_num ==  HT_BLITZBEAT || skill_num == SN_FALCONASSAULT || skill_num == TF_THROWSTONE)) ||
 			(flag&BF_MAGIC && skill_num == ASC_BREAKER))){ // [DracoRPG]
 			// ニューマ
 			damage=0;
@@ -423,7 +423,7 @@ int battle_calc_damage(struct block_list *src,struct block_list *bl,int damage,i
 		if(sc_data[SC_KYRIE].timer!=-1 && damage > 0){	// キリエエレイソン
 			sc=&sc_data[SC_KYRIE];
 			sc->val2-=damage;
-			if(flag&BF_WEAPON){
+			if(flag&BF_WEAPON || (flag&BF_MISC && skill_num == TF_THROWSTONE)){
 				if(sc->val2>=0)	damage=0;
 				else damage=-sc->val2;
 			}
@@ -2934,7 +2934,7 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 
 	//Initial Values
 	wd.type=0; //Normal attack
-	wd.div_=skill_get_num(skill_num,skill_lv);
+	wd.div_=skill_num?skill_get_num(skill_num,skill_lv):1;
 	wd.amotion=status_get_amotion(src);
 	if(skill_num == KN_AUTOCOUNTER)
 		wd.amotion >>= 1;
@@ -3431,12 +3431,13 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 			if(sc_data[SC_MAXOVERTHRUST].timer!=-1)
 				skillratio += 20*sc_data[SC_MAXOVERTHRUST].val1;
 			if(sc_data[SC_EDP].timer != -1 &&
-				skill_num != AS_SPLASHER &&
+//				skill_num != AS_SPLASHER &&
 				skill_num != ASC_BREAKER &&
 				skill_num != ASC_METEORASSAULT)
 			{	
-				skillratio += 150 + sc_data[SC_EDP].val1 * 50;
-//				flag.cardfix = 0; <- Officially cards DO count [Skotlex]
+				//skillratio += 150 + sc_data[SC_EDP].val1 * 50;
+				skillratio += (150 + sc_data[SC_EDP].val1 * 50)*(skill_num != TF_DOUBLE?wd.div_:1);
+
 			}
 		}
 		if (!skill_num)
@@ -3485,14 +3486,17 @@ struct Damage battle_calc_weapon_attack_sub(struct block_list *src,struct block_
 					skillratio+= 50*skill_lv;
 					break;
 				case KN_BRANDISHSPEAR:
+				{
+					int ratio = 100+20*skill_lv;
 					skillratio+=20*skill_lv;
-					if(skill_lv>3 && wflag==1) skillratio+= 50;
-					if(skill_lv>6 && wflag==1) skillratio+= 25;
-					if(skill_lv>9 && wflag==1) skillratio+= 12; //1/8th = 12.5%, rounded to 12?
-					if(skill_lv>6 && wflag==2) skillratio+= 50;
-					if(skill_lv>9 && wflag==2) skillratio+= 25;
-					if(skill_lv>9 && wflag==3) skillratio+= 50;
+					if(skill_lv>3 && wflag==1) skillratio+= ratio/2;
+					if(skill_lv>6 && wflag==1) skillratio+= ratio/4;
+					if(skill_lv>9 && wflag==1) skillratio+= ratio/8;
+					if(skill_lv>6 && wflag==2) skillratio+= ratio/2;
+					if(skill_lv>9 && wflag==2) skillratio+= ratio/4;
+					if(skill_lv>9 && wflag==3) skillratio+= ratio/2;
 					break;
+				}
 				case KN_BOWLINGBASH:
 					skillratio+= 50*skill_lv;
 					break;
@@ -4293,17 +4297,11 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,struct block_list *
 				if(flag>2)
 					matk1=matk2=0;
 				else
-					MATK_FIX( (95+skill_lv*5)*drate[flag] ,10000 );
+					MATK_FIX( (70+skill_lv*10)*drate[flag] ,10000 );
 			}
 			break;
 
 		case MG_FIREWALL:	// ファイヤーウォール
-/*
-			if( (t_ele!=3 && !battle_check_undead(t_race,t_ele)) || target->type==BL_PC ) //PCは火属性でも飛ぶ？そもそもダメージ受ける？
-				blewcount |= 0x10000;
-			else
-				blewcount = 0;
-*/
 			if((t_ele==3 || battle_check_undead(t_race,t_ele)) && target->type!=BL_PC)
 				blewcount = 0;
 			else
@@ -4943,7 +4941,8 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target, unsi
 					else {
 						switch (skill_get_nk(skillid)) {
 							case NK_NO_DAMAGE:/* 支援系 */
-								if ((skillid == AL_HEAL || (skillid == ALL_RESURRECTION && tbl->type != BL_PC)) && battle_check_undead(race,ele))
+								if ((skillid == AL_HEAL || (skillid == ALL_RESURRECTION && tbl->type != BL_PC)) && 
+									battle_check_undead(status_get_race(tbl), status_get_elem_type(tbl)))
 									skill_castend_damage_id(src, tbl, skillid, skilllv, tick, flag);
 								else
 									skill_castend_nodamage_id(src, tbl, skillid, skilllv, tick, flag);
@@ -4979,16 +4978,21 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target, unsi
 					sp += battle_calc_drain(wd.damage, sp_drain_rate, sp_drain_per, sp_drain_value);
 				}
 
+				if(hp || sp)
+				{
+					if( hp && sd->status.hp+hp>sd->status.max_hp )
+						hp = sd->status.max_hp - sd->status.hp;
+					if( sp && sd->status.sp+sp>sd->status.max_sp )
+						sp = sd->status.max_sp - sd->status.sp;
+					pc_heal(*sd, hp, sp);
+				}
+
 				if (battle_config.show_hp_sp_drain)
 				{	//Display gained values [Skotlex]
 					if (hp > 0 && pc_heal(*sd, hp, 0) > 0)
 						clif_heal(sd->fd, SP_HP, hp);
 					if (sp > 0 && pc_heal(*sd, 0, sp) > 0)
 						clif_heal(sd->fd, SP_SP, sp);
-				}
-				else	if (hp || sp)
-				{
-					pc_heal(*sd, hp, sp);
 				}
 
 				if (tsd && sd->sp_drain_type)

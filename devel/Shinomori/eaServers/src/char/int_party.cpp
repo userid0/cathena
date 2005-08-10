@@ -672,7 +672,6 @@ int inter_party_parse_frommap(int fd)
 	default:
 		return 0;
 	}
-
 	return 1;
 }
 

@@ -52,10 +52,12 @@ int mob_walktoxy_sub(struct mob_data &md);
 int mobdb_searchname(const char *str)
 {
 	size_t i;
-
+	if(str)
 	for(i=0;i<sizeof(mob_db)/sizeof(mob_db[0]);i++){
-		if( strcasecmp(mob_db[i].name,str)==0 || strcmp(mob_db[i].jname,str)==0 ||
-			memcmp(mob_db[i].name,str,24)==0 || memcmp(mob_db[i].jname,str,24)==0)
+		if( strcasecmp(mob_db[i].name,str)==0 || 
+			strcmp(mob_db[i].jname,str)==0 ||
+			memcmp(mob_db[i].name,str,strlen(str))==0 || 
+			memcmp(mob_db[i].jname,str,strlen(str))==0 )
 			return i;
 	}
 
@@ -2382,32 +2384,37 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 				md.dmglog[minpos].fromid=pd->msd->status.char_id;
 				md.dmglog[minpos].dmg=(damage*battle_config.pet_attack_exp_rate)/100;
 			}
+			//Let mobs retaliate against the pet's master [Skotlex]
+			if(md.attacked_id <= 0 && md.state.special_mob_ai==0 && pd->msd)
+				md.attacked_id = pd->msd->status.char_id;
 		}
-		if(src && src->type == BL_MOB && ((struct mob_data*)src)->state.special_mob_ai){
+		if(src && src->type == BL_MOB && ((struct mob_data*)src)->state.special_mob_ai)
+		{
 			struct mob_data *md2 = (struct mob_data *)src;
 			struct map_session_data *msd = map_id2sd(md2->master_id);
-			nullpo_retr(0, md2);
-			nullpo_retr(0, msd);
-			for(i=0,minpos=0,mindmg=0x7fffffff;i<DAMAGELOG_SIZE;i++){
-				if(md.dmglog[i].fromid==msd->status.char_id)
-					break;
-				if(md.dmglog[i].fromid==0){
-					minpos=i;
-					mindmg=0;
+			if(msd)
+			{
+				for(i=0,minpos=0,mindmg=0x7fffffff;i<DAMAGELOG_SIZE;i++){
+					if(md.dmglog[i].fromid==msd->status.char_id)
+						break;
+					if(md.dmglog[i].fromid==0){
+						minpos=i;
+						mindmg=0;
+					}
+					else if(md.dmglog[i].dmg<mindmg){
+						minpos=i;
+						mindmg=md.dmglog[i].dmg;
+					}
 				}
-				else if(md.dmglog[i].dmg<mindmg){
-					minpos=i;
-					mindmg=md.dmglog[i].dmg;
-				}
-			}
-			if(i<DAMAGELOG_SIZE)
-				md.dmglog[i].dmg+=damage;
-			else {
-				md.dmglog[minpos].fromid=msd->status.char_id;;
-				md.dmglog[minpos].dmg=damage;
+				if(i<DAMAGELOG_SIZE)
+					md.dmglog[i].dmg+=damage;
+				else {
+					md.dmglog[minpos].fromid=msd->status.char_id;;
+					md.dmglog[minpos].dmg=damage;
 
-			if(md.attacked_id <= 0 && md.state.special_mob_ai==0)
-				md.attacked_id = md2->master_id;
+				if(md.attacked_id <= 0 && md.state.special_mob_ai==0)
+					md.attacked_id = md2->master_id;
+				}
 			}
 		}
 	}
@@ -2598,7 +2605,8 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 	if((map[md.bl.m].flag.pvp == 0) || (battle_config.pvp_exp == 1)) {
 
 	// 経験値の分配
-	for(i=0;i<DAMAGELOG_SIZE;i++){
+	for(i=0;i<DAMAGELOG_SIZE;i++)
+	{
 		unsigned short pid;
 		unsigned long base_exp,job_exp;
 		int flag=1,zeny=0;
@@ -2661,15 +2669,18 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 		}
 		if(md.master_id) {
 			if(((master = map_id2bl(md.master_id)) && status_get_mode(master)&0x20) ||	// check if its master is a boss (MVP's and minibosses)
-				(md.state.special_mob_ai >= 1 && battle_config.alchemist_summon_reward != 1)) { // for summoned creatures [Valaris]
+				(md.state.special_mob_ai >= 1 && battle_config.alchemist_summon_reward != 1))
+			{	// for summoned creatures [Valaris]
 				base_exp = 0;
 				job_exp = 0;
 			}
-		} else {
+		}
+		else
+		{
 			if(battle_config.zeny_from_mobs) {
-				if(md.level > 0) zeny=(int) ((md.level+rand()%md.level)*per/256); // zeny calculation moblv + random moblv [Valaris]
+				if(md.level > 0) zeny=(int) ((md.level+rand()%md.level)*per); // zeny calculation moblv + random moblv [Valaris]
 				if(mob_db[md.class_].mexp > 0)
-					zeny*=rand()%250;
+					zeny*=rand()%256;
 				// change zeny for different sized monsters [Valaris]
 				if(md.state.size==1 && zeny >=2)
 					zeny/=2;
@@ -2682,10 +2693,13 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 			}
 		}
 		//mapflags: noexp check [Lorky]
-		if (map[md.bl.m].flag.nobaseexp == 1)	base_exp=0; 
-		if (map[md.bl.m].flag.nojobexp == 1)	job_exp=0; 
+		if( map[md.bl.m].flag.nobaseexp )
+			base_exp=0; 
+		if( map[md.bl.m].flag.nojobexp )
+			job_exp=0; 
 		//end added Lorky 
-		if((pid=tmpsd[i]->status.party_id)>0){	// パーティに入っている
+		if((pid=tmpsd[i]->status.party_id)>0)
+		{	// パーティに入っている
 			int j;
 			for(j=0;j<pnum;j++)	// 公平パーティリストにいるかどうか
 				if(pt[j].id==pid)
@@ -2701,7 +2715,9 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 					pnum++;
 					flag=0;
 				}
-			}else{	// いるときは公平
+			}
+			else
+			{	// いるときは公平
 				pt[j].base_exp+=base_exp;
 				pt[j].job_exp+=job_exp;
 				if(battle_config.zeny_from_mobs)
@@ -2709,7 +2725,8 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 				flag=0;
 			}
 		}
-		if(flag) {	// added zeny from mobs [Valaris]
+		if(flag)
+		{	// added zeny from mobs [Valaris]
 			if(base_exp > 0 || job_exp > 0)
 			pc_gainexp(*tmpsd[i],base_exp,job_exp);
 			if (battle_config.zeny_from_mobs && zeny > 0) {
@@ -2729,9 +2746,11 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 		for (i = 0; i < 10; i++) { // 8 -> 10 Lupus
 			struct delay_item_drop *ditem;
 			int drop_rate;
-
-			if ((master && status_get_mode(master) & 0x20) ||	// check if its master is a boss (MVP's and minibosses)
-				(md.state.special_mob_ai >= 1 && battle_config.alchemist_summon_reward != 1))	// Added [Valaris]
+			
+			if( map[md.bl.m].flag.nomobloot ||
+				(master && status_get_mode(master) & 0x20) ||	// check if its master is a boss (MVP's and minibosses)
+				(md.state.special_mob_ai >= 1 && battle_config.alchemist_summon_reward != 1) )	// Added [Valaris]
+				
 				break;	// End
 			if (mob_db[md.class_].dropitem[i].nameid <= 0)
 				continue;
@@ -2882,14 +2901,11 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 			drop_rate = mob_db[md.class_].mvpitem[i].p;
 			if(drop_rate <= 0 && !battle_config.drop_rate0item)
 				drop_rate = 1;
-/*			if(drop_rate < battle_config.item_drop_mvp_min)
-				drop_rate = battle_config.item_drop_mvp_min;
-			else if(drop_rate > battle_config.item_drop_mvp_max) //fixed
-				drop_rate = battle_config.item_drop_mvp_max;
-*/
-			//mapflag: noloot check [Lorky]
-			if (map[md.bl.m].flag.nomvploot == 1)	drop_rate=0; 
-			//end added Lorky 			
+			else if( map[md.bl.m].flag.nomvploot )
+			{
+				drop_rate=0; 
+				break;
+			}
 
 			if(drop_rate <= rand()%10000+1) //if ==0, then it doesn't drop
 				continue;
@@ -2966,7 +2982,6 @@ int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src)
 		}
 	}
 	//lordalfa 
-
 	if(battle_config.mob_clear_delay)
 		clif_clearchar_delay(tick+battle_config.mob_clear_delay,md.bl,1);
 	else

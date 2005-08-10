@@ -1,4 +1,10 @@
 Date	Added
+08/10
+	minor changes/additions
+	still preparing the replacements for current data access and authentification
+	notice for Hinoko: I corrected your Multilist and made an modification
+	that is using pointer storage; check the comments at the classes
+	your fix for the system ip check on bsd type unix is working fine
 07/29
 	new makefiles (look for suitable compile options on your system)
 	fix for guild creation crash

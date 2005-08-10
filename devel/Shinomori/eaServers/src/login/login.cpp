@@ -2,6 +2,7 @@
 // new version of the login-server by [Yor]
 
 #include "base.h"
+#include "baseio.h"
 #include "core.h"
 #include "socket.h"
 #include "timer.h"
@@ -91,7 +92,7 @@ struct {
 	unsigned long account_id;
 	unsigned long login_id1;
 	unsigned long login_id2;
-	unsigned long ip;
+	unsigned long client_ip;
 	int sex;
 	int delflag;
 } auth_fifo[AUTH_FIFO_SIZE];
@@ -218,7 +219,8 @@ void remove_online_user (unsigned long account_id) {
 // Determine if an account (id) is a GM account
 // and returns its level (or 0 if it isn't a GM account or if not found)
 //----------------------------------------------------------------------
-int isGM(unsigned long account_id) {
+int isGM(unsigned long account_id)
+{
 	int i;
 	for(i=0; i < GM_num; i++)
 		if(gm_account_db[i].account_id == account_id)
@@ -229,7 +231,8 @@ int isGM(unsigned long account_id) {
 //----------------------------------------------------------------------
 // Adds a new GM using acc id and level
 //----------------------------------------------------------------------
-void addGM(unsigned long account_id, unsigned long level) {
+void addGM(unsigned long account_id, unsigned long level)
+{
 	int i;
 	int do_add = 0;
 	for(i = 0; i < auth_num; i++) {
@@ -269,7 +272,8 @@ void addGM(unsigned long account_id, unsigned long level) {
 //-------------------------------------------------------
 // Reading function of GM accounts file (and their level)
 //-------------------------------------------------------
-int read_gm_account(void) {
+int read_gm_account(void)
+{
 	char line[512];
 	FILE *fp;
 	int account_id;
@@ -618,7 +622,7 @@ int mmo_auth_init(void)
 			else
 				auth_dat[auth_num].state = state;
 
-			if (e_mail_check(email) == 0) {
+			if( !email_check(email) ) {
 				ShowWarning("Account %s (%d): invalid e-mail (replaced with a@a.com).\n", auth_dat[auth_num].userid, auth_dat[auth_num].account_id);
 				safestrcpy(auth_dat[auth_num].email, "a@a.com", 40);
 			} else {
@@ -918,15 +922,15 @@ int check_auth_sync(int tid, unsigned long tick, int id, int data)
 //--------------------------------------------------------------------
 // Packet send to all char-servers, except one (wos: without our self)
 //--------------------------------------------------------------------
-int charif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
-	int i, c, fd;
-
+int charif_sendallwos(int sfd, unsigned char *buf, unsigned int len)
+{
+	int i, c;
 	for(i = 0, c = 0; i < MAX_SERVERS; i++)
 	{
-		fd = server[i].fd;
-		if( fd >= 0 && fd != sfd) {
-			memcpy(WFIFOP(fd,0), buf, len);
-			WFIFOSET(fd, len);
+		if( server[i].fd != sfd && session_isActive(server[i].fd) ) 
+		{
+			memcpy(WFIFOP(server[i].fd,0), buf, len);
+			WFIFOSET(server[i].fd, len);
 			c++;
 		}
 	}
@@ -1017,7 +1021,7 @@ int mmo_auth_new(struct mmo_account* account, char sex, char* email)
 
 	auth_dat[i].state = 0;
 
-	if (e_mail_check(email) == 0)
+	if( !email_check(email) )
 		safestrcpy(auth_dat[i].email, "a@a.com", 40);
 	else
 		safestrcpy(auth_dat[i].email, email, 40);
@@ -1321,7 +1325,7 @@ int parse_fromchar(int fd)
 				    auth_fifo[i].login_id2 == RFIFOL(fd,10) && // relate to the versions higher than 18
 #endif
 				    auth_fifo[i].sex == RFIFOB(fd,14) &&
-				    (!check_ip_flag || auth_fifo[i].ip == RFIFOLIP(fd,15)) &&
+				    (!check_ip_flag || auth_fifo[i].client_ip == RFIFOLIP(fd,15)) &&
 				    !auth_fifo[i].delflag) 
 				{
 					int p, k;
@@ -1391,12 +1395,13 @@ int parse_fromchar(int fd)
 			email[39] = '\0';
 			remove_control_chars(email);
 			//ShowMessage("parse_fromchar: an e-mail creation of an account with a default e-mail: server '%s', account: %d, e-mail: '%s'.\n", server[id].name, acc, RFIFOP(fd,6));
-			if (e_mail_check(email) == 0)
+			if( !email_check(email) )
 				login_log("Char-server '%s': Attempt to create an e-mail on an account with a default e-mail REFUSED - e-mail is invalid (account: %d, ip: %s)" RETCODE,
 				          server[id].name, acc, ip_str);
 			else {
 				for(i = 0; i < auth_num; i++) {
-					if (auth_dat[i].account_id == acc && (strcmp(auth_dat[i].email, "a@a.com") == 0 || auth_dat[i].email[0] == '\0')) {
+					if (auth_dat[i].account_id == acc && (strcmp(auth_dat[i].email, "a@a.com") == 0 || auth_dat[i].email[0] == '\0'))
+					{
 						memcpy(auth_dat[i].email, email, 40);
 						login_log("Char-server '%s': Create an e-mail on an account with a default e-mail (account: %d, new e-mail: %s, ip: %s)." RETCODE,
 						          server[id].name, acc, email, ip_str);
@@ -1513,10 +1518,10 @@ int parse_fromchar(int fd)
 			memcpy(new_email, RFIFOP(fd,46), 40);
 			new_email[39] = '\0';
 			remove_control_chars(new_email);
-			if (e_mail_check(actual_email) == 0)
+			if( !email_check(actual_email) )
 				login_log("Char-server '%s': Attempt to modify an e-mail on an account (@email GM command), but actual email is invalid (account: %d, ip: %s)" RETCODE,
 				          server[id].name, acc, ip_str);
-			else if (e_mail_check(new_email) == 0)
+			else if( !email_check(new_email) )
 				login_log("Char-server '%s': Attempt to modify an e-mail on an account (@email GM command) with a invalid new e-mail (account: %d, ip: %s)" RETCODE,
 				          server[id].name, acc, ip_str);
 			else if (strcasecmp(new_email, "a@a.com") == 0)
@@ -2135,7 +2140,7 @@ int parse_admin(int fd) {
 					memcpy(WFIFOP(fd,4+server_num*32+6), server[i].name, 20);
 					WFIFOW(fd,4+server_num*32+26) = server[i].users;
 					WFIFOW(fd,4+server_num*32+28) = server[i].maintenance;
-					WFIFOW(fd,4+server_num*32+30) = server[i].new_;
+					WFIFOW(fd,4+server_num*32+30) = server[i].new_display;
 					server_num++;
 				}
 			}
@@ -2330,7 +2335,7 @@ int parse_admin(int fd) {
 			{
 				char email[40];
 				memcpy(email, RFIFOP(fd,26), 40);
-				if (e_mail_check(email) == 0) {
+				if( !email_check(email) ) {
 					login_log("'ladmin': Attempt to give an invalid e-mail (account: %s, ip: %s)" RETCODE,
 					          account_name, ip_str);
 				} else {
@@ -2932,12 +2937,33 @@ int parse_login(int fd) {
 							memcpy(WFIFOP(fd,47+server_num*32+6), server[i].name, 20);
 							WFIFOW(fd,47+server_num*32+26) = server[i].users;
 							WFIFOW(fd,47+server_num*32+28) = server[i].maintenance;
-							WFIFOW(fd,47+server_num*32+30) = server[i].new_;
+							WFIFOW(fd,47+server_num*32+30) = server[i].new_display;
 							server_num++;
 						}
 					}
 					// if at least 1 char-server
-					if (server_num > 0) {
+					if (server_num > 0)
+					{
+						// will be obsolete later
+						if (auth_fifo_pos >= AUTH_FIFO_SIZE)
+							auth_fifo_pos = 0;
+						auth_fifo[auth_fifo_pos].account_id = account.account_id;
+						auth_fifo[auth_fifo_pos].login_id1 = account.login_id1;
+						auth_fifo[auth_fifo_pos].login_id2 = account.login_id2;
+						auth_fifo[auth_fifo_pos].sex = account.sex;
+						auth_fifo[auth_fifo_pos].delflag = 0;
+						auth_fifo[auth_fifo_pos].client_ip = client_ip;
+						auth_fifo_pos++;
+
+						// send authentification to char
+						unsigned char buf[128];
+						CLoginAuth temp(account.account_id, account.login_id1, account.login_id2, client_ip, account.sex);
+						WBUFW(buf,0) = 0x2750;
+						temp.tobuffer(WBUFP(buf, 2));
+						charif_sendallwos(-1, buf, 2+sizeof(CLoginAuth) );
+
+
+						// send server list to client
 						WFIFOW(fd,0) = 0x69;
 						WFIFOW(fd,2) = 47+32*server_num;
 						WFIFOL(fd,4) = account.login_id1;
@@ -2947,15 +2973,7 @@ int parse_login(int fd) {
 						memcpy(WFIFOP(fd,20), account.lastlogin, 24); // in old version, that was for name (not more used)
 						WFIFOB(fd,46) = account.sex;
 						WFIFOSET(fd,47+32*server_num);
-						if (auth_fifo_pos >= AUTH_FIFO_SIZE)
-							auth_fifo_pos = 0;
-						auth_fifo[auth_fifo_pos].account_id = account.account_id;
-						auth_fifo[auth_fifo_pos].login_id1 = account.login_id1;
-						auth_fifo[auth_fifo_pos].login_id2 = account.login_id2;
-						auth_fifo[auth_fifo_pos].sex = account.sex;
-						auth_fifo[auth_fifo_pos].delflag = 0;
-						auth_fifo[auth_fifo_pos].ip = client_ip;
-						auth_fifo_pos++;
+
 					// if no char-server, don't send void list of servers, just disconnect the player with proper message
 					} else {
 						login_log("Connection refused: there is no char-server online (account: %s, ip: %s)." RETCODE,
@@ -3048,7 +3066,7 @@ int parse_login(int fd) {
 
 					memcpy(server[account.account_id].name,RFIFOP(fd,50),20);
 					server[account.account_id].maintenance=RFIFOB(fd,70);
-					server[account.account_id].new_=RFIFOB(fd,71);
+					server[account.account_id].new_display=RFIFOB(fd,71);
 					// wanip,wanport,lanip,lanmask,lanport
 					server[account.account_id].address = ipset(	RFIFOLIP(fd,74), RFIFOLIP(fd,78), RFIFOW(fd,82), RFIFOLIP(fd,84), RFIFOW(fd,88) );
 
@@ -3782,9 +3800,15 @@ unsigned char getServerType()
 {
 	return ATHENA_SERVER_LOGIN | ATHENA_SERVER_CORE;
 }
-int do_init(int argc, char **argv) {
+int do_init(int argc, char **argv)
+{
 	int i, j;
-
+//ShowMessage("-----------------------\n");
+//ShowMessage("start test implementation\n");
+//	CAccountDB temp;
+//	temp.init((argc > 1) ? argv[1] : LOGIN_CONF_NAME);
+//ShowMessage("end test implementation\n");
+//ShowMessage("-----------------------\n");
 	// read login-server configuration
 	login_config_read((argc > 1) ? argv[1] : LOGIN_CONF_NAME);
 	display_conf_warnings(); // not in login_config_read, because we can use 'import' option, and display same message twice or more
@@ -3803,6 +3827,7 @@ int do_init(int argc, char **argv) {
 	GM_max = 0;
 	mmo_auth_init();
 	read_gm_account();
+	
 	set_defaultparse(parse_login);
 	// Online user database init
     online_db = numdb_init();
@@ -3811,7 +3836,6 @@ int do_init(int argc, char **argv) {
 
 	add_timer_func_list(check_auth_sync, "check_auth_sync");
 	add_timer_interval(gettick() + 60000, 60000, check_auth_sync, 0, 0); // every 60 sec we check if we must save accounts file (only if necessary to save)
-
 
 
 	// add timer to check GM accounts file modification

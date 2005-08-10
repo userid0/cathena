@@ -1234,6 +1234,7 @@ int skill_blown( struct block_list *src, struct block_list *target,int count)
 	struct mob_data *md=NULL;
 	struct pet_data *pd=NULL;
 	struct skill_unit *su=NULL;
+	struct status_change* sc_data=NULL;
 
 	nullpo_retr(0, src);
 	nullpo_retr(0, target);
@@ -1242,11 +1243,16 @@ int skill_blown( struct block_list *src, struct block_list *target,int count)
 		sd=(struct map_session_data *)target;
 	}else if(target->type==BL_MOB){
 		md=(struct mob_data *)target;
+		if(md->mode&(0x40)) //Avoid Pushing inmobile Plants [Skotlex]
+			return 0;
 	}else if(target->type==BL_PET){
 		pd=(struct pet_data *)target;
 	}else if(target->type==BL_SKILL){
 		su=(struct skill_unit *)target;
 	}else return 0;
+
+	if (target->type != BL_SKILL)
+		sc_data = status_get_sc_data(target);
 
 	if (count&0xf00000)
 		dir = (count>>20)&0xf;
@@ -1302,6 +1308,9 @@ int skill_blown( struct block_list *src, struct block_list *target,int count)
 	else if(pd)
 		map_foreachinmovearea(clif_petoutsight,target->m,x-AREA_SIZE,y-AREA_SIZE,x+AREA_SIZE,y+AREA_SIZE,dx,dy,BL_PC,pd);
 
+	if (sc_data && sc_data[SC_DANCING].timer != -1) //Move the song/dance [Skotlex]
+		skill_unit_move_unit_group((struct skill_unit_group *)sc_data[SC_DANCING].val2, target->m, dx, dy);
+
 	if(su){
 		skill_unit_move_unit_group(su->group,target->m,dx,dy);
 	}else{
@@ -1346,7 +1355,7 @@ int skill_blown( struct block_list *src, struct block_list *target,int count)
  *-------------------------------------------------------------------------
  */
 
-int skill_attack( int attack_type, struct block_list* src, struct block_list *dsrc,
+int skill_attack(int attack_type, struct block_list* src, struct block_list *dsrc,
 	 struct block_list *bl,unsigned short skillid,unsigned short skilllv,unsigned long tick,int flag )
 {
 	struct Damage dmg;
@@ -2214,7 +2223,16 @@ int skill_cleartimerskill(struct block_list *src)
 			}
 		}
 	}
-
+	else if(src->type == BL_PET) { // Ya forgot this one, Valaris. [Skotlex]
+		struct pet_data *pd = (struct pet_data *)src;
+		nullpo_retr(1, pd);
+		for(i=0;i<MAX_MOBSKILLTIMERSKILL;i++) {
+			if(pd->skilltimerskill[i].timer != -1) {
+				delete_timer(pd->skilltimerskill[i].timer, skill_timerskill);
+				pd->skilltimerskill[i].timer = -1;
+			}
+		}
+	}
 	return 0;
 }
 
@@ -2929,6 +2947,9 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 
 	nullpo_retr(1, src);
 	nullpo_retr(1, bl);
+
+	if (src->m != bl->m)
+		return 1;
 
 	if(src->type==BL_PC)
 	{
@@ -4149,7 +4170,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 					i==SC_POEMBRAGI || i==SC_APPLEIDUN || i==SC_UGLYDANCE || i==SC_HUMMING || 
 					i==SC_DONTFORGETME || i==SC_FORTUNE || i==SC_SERVICE4U || 
 					i==SC_MOONLIT || i==SC_LONGING || i==SC_HERMODE || i== SC_DANCING || 
-					i==SC_GUILDAURA || i==SC_STEELBODY )
+					i==SC_GUILDAURA || i==SC_STEELBODY || i==SC_EDP)
 						continue;
 				status_change_end(bl,i,-1);
 			}
@@ -4430,6 +4451,13 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
 	case NPC_STOP:
 		if (md && md->target_id > 0) {
 			mob_unlocktarget(*md, tick);
+		}
+		if(dstsd) {
+			battle_stopwalking(&dstsd->bl,1);
+		    dstsd->canmove_tick += skill_get_time(skillid,skilllv);
+		} else if(dstmd) {
+			battle_stopwalking(&dstmd->bl,1);
+		    dstmd->canmove_tick += skill_get_time(skillid,skilllv);
 		}
 		clif_skill_nodamage(*src,*bl,skillid,skilllv,1);
 		break;
@@ -5063,7 +5091,7 @@ int skill_castend_nodamage_id( struct block_list *src, struct block_list *bl,uns
  */
 int skill_castend_id(int tid,unsigned long tick,int id,int data)
 {
-	struct map_session_data* sd = map_id2sd(id)/*,*target_sd=NULL*/;
+	struct map_session_data* sd = map_id2sd(id);
 	struct block_list *bl;
 	int range,inf2;
 
@@ -5072,24 +5100,24 @@ int skill_castend_id(int tid,unsigned long tick,int id,int data)
 	if( sd->bl.prev == NULL ) //prevが無いのはありなの？
 		return 0;
 
-	if(sd->skillid == 0xFFFF || sd->skilllv == 0xFFFF)	// skill has failed after starting casting
-		return 0;
+	if(sd->skillid != SA_CASTCANCEL && sd->skilltimer != -1 && (range = pc_checkskill(*sd,SA_FREECAST)) > 0) //Hope ya don't mind me borrowing range :X
+		status_calc_speed(*sd, SA_FREECAST, range, 0); 
+
 	if(sd->skillid != SA_CASTCANCEL && sd->skilltimer != tid )	/* タイマIDの確認 */
 		return 0;
 
-	if(sd->skillid != SA_CASTCANCEL && sd->skilltimer != -1 && (range = pc_checkskill(*sd,SA_FREECAST)) > 0) //Hope ya don't mind me borrowing range :X
-		status_calc_speed(*sd, SA_FREECAST, range, 0); 
+	if(sd->skillid == 0xFFFF || sd->skilllv == 0xFFFF)	// skill has failed after starting casting
+	{
+		sd->skilltimer = -1;
+		return 0;
+	}
+
 
 	if(sd->skillid != SA_CASTCANCEL)
 		sd->skilltimer=-1;
 
-	if((bl=map_id2bl(sd->skilltarget))==NULL || bl->prev==NULL) {
-		sd->canact_tick = tick;
-		sd->canmove_tick = tick;
-		sd->skillitem = sd->skillitemlv = 0xFFFF;
-		return 0;
-	}
-	if(sd->bl.m != bl->m || pc_isdead(*sd)) { //マップが違うか自分が死んでいる
+	if( (bl=map_id2bl(sd->skilltarget))==NULL || bl->prev==NULL || sd->bl.m != bl->m || pc_isdead(*sd) )
+	{	//マップが違うか自分が死んでいる
 		sd->canact_tick = tick;
 		sd->canmove_tick = tick;
 		sd->skillitem = sd->skillitemlv = 0xFFFF;
@@ -5227,7 +5255,10 @@ int skill_castend_pos( int tid, unsigned long tick, int id,int data )
 	if( sd->skilltimer != tid )	/* タイマIDの確認 */
 		return 0;
 	if(sd->skillid == 0xFFFF || sd->skilllv == 0xFFFF)	// skill has failed after starting casting
+	{
+		sd->skilltimer = -1;
 		return 0;
+	}
 	if(sd->skillid != SA_CASTCANCEL && sd->skilltimer != -1 && (range = pc_checkskill(*sd,SA_FREECAST)) > 0) //Hope ya don't mind me borrowing range :X
 		status_calc_speed(*sd, SA_FREECAST, range, 0); 
 
@@ -5968,7 +5999,7 @@ int skill_unit_onplace(struct skill_unit *src,struct block_list *bl,unsigned lon
 	case 0x85:	/* ニューマ */
 	case 0x7e:	/* セイフティウォール */
 		if (sc_data && sc_data[type].timer == -1)
-			status_change_start(bl,type,sg->skill_lv,(int)src,0,0,0,0);
+			status_change_start(bl,type,sg->skill_lv,(int)src,0,0,sg->limit,0);
 		break;
 
 	case 0x80:	/* ワープポータル(発動後) */
@@ -7396,15 +7427,16 @@ int skill_use_id(struct map_session_data *sd, unsigned long target_id,unsigned s
 	unsigned long tick = gettick();
 
 	nullpo_retr(0, sd);
-
-	if( (bl=map_id2bl(target_id)) == NULL ){
+	if( (bl=map_id2bl(target_id)) == NULL || bl->prev == NULL ){
 //		if(battle_config.error_log)
 //			ShowError("skill target not found %d\n",target_id); */
 		return 0;
 	}
 	if(sd->bl.m != bl->m || pc_isdead(*sd))
 		return 0;
-
+	if(sd->skilltimer != -1 && skill_num != SA_CASTCANCEL) //Normally not needed because clif.c checks for it, but the at/char/script commands don't! [Skotlex]
+		return 0;
+	
 	if(skillnotok(skill_num, *sd)) // [MouseJstr]
 		return 0;
 
@@ -7785,6 +7817,8 @@ int skill_use_pos( struct map_session_data *sd, int skill_x, int skill_y, unsign
 
 	if (pc_isdead(*sd))
 		return 0;
+	if (sd->skilltimer != -1) //Normally not needed since clif.c checks for it, but at/char/script commands don't! [Skotlex]
+		return 0;
 	if (skillnotok(skill_num, *sd)) // [MoueJstr]
 		return 0;
 	if (skill_num == WZ_ICEWALL && map[sd->bl.m].flag.noicewall && !map[sd->bl.m].flag.pvp)  { // noicewall flag [Valaris]
@@ -7939,7 +7973,7 @@ int skill_castcancel (struct block_list *bl, int type)
 				else
 					ret = delete_timer( sd->skilltimer, skill_castend_id );
 				if (ret < 0)
-					ShowMessage("delete timer error : skillid : %d\n",sd->skillid);
+					ShowError("delete timer error : (old) skillid : %d\n", sd->skillid_old);
 			}
 			else {
 				if (skill_get_inf( sd->skillid_old ) & INF_GROUND_SKILL)
@@ -8877,6 +8911,8 @@ struct skill_unit_group *skill_initunitgroup(struct block_list *src,int count,un
 	group->limit=10000;
 	group->interval=1000;
 	group->tick=gettick();
+	if (skillid == PR_SANCTUARY) //Sanctuary starts healing +1500ms after casted. [Skotlex]
+		group->tick += 1500;
 	group->valstr=NULL;
 
 	if (skill_get_unit_flag(skillid)&UF_DANCE) {

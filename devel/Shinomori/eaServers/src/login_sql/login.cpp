@@ -582,18 +582,15 @@ int mmo_auth( struct mmo_account* account , int fd)
 }
 
 // Send to char
-int charif_sendallwos(int sfd, unsigned char *buf, unsigned int len) {
+int charif_sendallwos(int sfd, unsigned char *buf, unsigned int len)
+{
 	int i, c;
-	int fd;
-
-	c = 0;
-	for(i = 0; i < MAX_SERVERS; i++)
+	for(i = 0, c = 0; i < MAX_SERVERS; i++)
 	{
-		fd = server[i].fd;
-		if( fd > 0 && fd != sfd )
+		if( server[i].fd != sfd && session_isActive(server[i].fd) ) 
 		{
-			memcpy(WFIFOP(fd,0), buf, len);
-			WFIFOSET(fd,len);
+			memcpy(WFIFOP(server[i].fd,0), buf, len);
+			WFIFOSET(server[i].fd, len);
 			c++;
 		}
 	}
@@ -812,10 +809,10 @@ int parse_fromchar(int fd){
 			acc = RFIFOL(fd,2);
 			memcpy(actual_email, RFIFOP(fd,6), 40);
 			memcpy(new_email, RFIFOP(fd,46), 40);
-			if (e_mail_check(actual_email) == 0)
+			if( !email_check(actual_email) )
 				ShowMessage("Char-server '%s': Attempt to modify an e-mail on an account (@email GM command), but actual email is invalid (account: %d, ip: %s)" RETCODE,
 					server[id].name, acc, ip_str);
-			else if (e_mail_check(new_email) == 0)
+			else if( !email_check(new_email) )
 				ShowMessage("Char-server '%s': Attempt to modify an e-mail on an account (@email GM command) with a invalid new e-mail (account: %d, ip: %s)" RETCODE,
 					server[id].name, acc, ip_str);
 			else if (strcasecmp(new_email, "a@a.com") == 0)
@@ -1183,7 +1180,7 @@ int parse_login(int fd)
 							memcpy(WFIFOP(fd,47+server_num*32+6), server[i].name, 20);
 							WFIFOW(fd,47+server_num*32+26) = server[i].users;
 							WFIFOW(fd,47+server_num*32+28) = server[i].maintenance;
-							WFIFOW(fd,47+server_num*32+30) = server[i].new_;
+							WFIFOW(fd,47+server_num*32+30) = server[i].new_display;
 							server_num++;
 						}
 					}
@@ -1383,7 +1380,7 @@ int parse_login(int fd)
 
 				memcpy(server[account.account_id].name,RFIFOP(fd,50),20);
 				server[account.account_id].maintenance=RFIFOB(fd,70);
-				server[account.account_id].new_=RFIFOB(fd,71);
+				server[account.account_id].new_display=RFIFOB(fd,71);
 				// wanip,wanport,lanip,lanmask,lanport
 				server[account.account_id].address = ipset(	RFIFOLIP(fd,74), RFIFOLIP(fd,78), RFIFOW(fd,82), RFIFOLIP(fd,84), RFIFOW(fd,88) );
 				

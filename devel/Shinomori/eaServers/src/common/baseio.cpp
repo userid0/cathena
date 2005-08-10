@@ -1,5 +1,7 @@
 #include "base.h"
 #include "baseio.h"
+#include "lock.h"
+
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -18,7 +20,7 @@
 // mysql access function
 ///////////////////////////////////////////////////////////////////////////////
 
-int mysql_SendQuery(MYSQL &mysql, MYSQL_RES*& sql_res, const char* q, size_t sz=0)
+bool mysql_SendQuery(MYSQL &mysql, MYSQL_RES*& sql_res, const char* q, size_t sz=0)
 {
 #ifdef DEBUG_SQL
 	ShowSQL("%s\n", q);
@@ -42,7 +44,7 @@ int mysql_SendQuery(MYSQL &mysql, MYSQL_RES*& sql_res, const char* q, size_t sz=
 	}
 	return false;
 }
-int mysql_SendQuery(MYSQL &mysql, const char* q, size_t sz=0)
+bool mysql_SendQuery(MYSQL &mysql, const char* q, size_t sz=0)
 {
 #ifdef DEBUG_SQL
 	ShowSQL("%s\n", q);
@@ -79,60 +81,444 @@ int mysql_SendQuery(MYSQL &mysql, const char* q, size_t sz=0)
 //////////////////////////////////////////////////////////////////////////
 #ifdef TXT_ONLY
 //////////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////////
+// global data for txt
+unsigned long next_account_id=200000;//START_ACCOUNT_NUM;
+
+static char account_filename[1024] = "save/account.txt";
+static char GM_account_filename[1024] = "conf/GM_account.txt";
+static time_t creation_time_GM_account_file=0;
+
+//////////////////////////////////////////////////////////////////////////
+// helper class for gm_level reading
+class CMapGM
+{
+public:
+	unsigned long account_id;
+	unsigned char gm_level;
+
+	CMapGM(unsigned long accid=0) : account_id(accid), gm_level(0)	{}
+	CMapGM(unsigned long accid, unsigned char lv) : account_id(accid), gm_level(lv)	{}
+
+	bool operator==(const CMapGM& c) const { return this->account_id==c.account_id; }
+	bool operator!=(const CMapGM& c) const { return this->account_id!=c.account_id; }
+	bool operator> (const CMapGM& c) const { return this->account_id> c.account_id; }
+	bool operator>=(const CMapGM& c) const { return this->account_id>=c.account_id; }
+	bool operator< (const CMapGM& c) const { return this->account_id< c.account_id; }
+	bool operator<=(const CMapGM& c) const { return this->account_id<=c.account_id; }
+};
+//////////////////////////////////////////////////////////////////////////
+// read gm levels to a list
+bool read_gmaccount(TslistDST<CMapGM> &gmlist)
+{
+	struct stat file_stat;
+	FILE *fp;
+
+	// clear all gm_levels
+	gmlist.resize(0);
+
+	// get last modify time/date
+	creation_time_GM_account_file = (0==stat(GM_account_filename, &file_stat))? 0 : file_stat.st_mtime;
+
+	fp = safefopen(GM_account_filename, "r");
+	if( fp )
+	{
+		char line[1024];
+		int level;
+		unsigned long account_id=0;
+		size_t line_counter=0;
+		unsigned long start_range = 0, end_range = 0, is_range = 0, current_id = 0;
+
+		while( fgets(line, sizeof(line), fp) )
+		{
+			line_counter++;
+			if( !skip_empty_line(line) )
+				continue;
+			is_range = (sscanf(line, "%ld%*[-~]%ld %d",&start_range,&end_range,&level)==3); // ID Range [MC Cameri]
+			if (!is_range && sscanf(line, "%ld %d", &account_id, &level) != 2 && sscanf(line, "%ld: %d", &account_id, &level) != 2)
+				ShowError("read_gm_account: file [%s], invalid 'acount_id|range level' format (line #%d).\n", GM_account_filename, line_counter);
+			else if (level <= 0)
+				ShowError("read_gm_account: file [%s] %dth account (line #%d) (invalid level [0 or negative]: %d).\n", GM_account_filename, gmlist.size()+1, line_counter, level);
+			else
+			{
+				if (level > 99)
+				{
+					ShowWarning("read_gm_account: file [%s] %dth account (invalid level, but corrected: %d->99).\n", GM_account_filename, gmlist.size()+1, level);
+					level = 99;
+				}
+				if (is_range)
+				{
+					if (start_range==end_range)
+						ShowError("read_gm_account: file [%s] invalid range, beginning of range is equal to end of range (line #%d).\n", GM_account_filename, line_counter);
+					else if (start_range>end_range)
+						ShowError("read_gm_account: file [%s] invalid range, beginning of range must be lower than end of range (line #%d).\n", GM_account_filename, line_counter);
+					else
+						for (current_id = start_range;current_id<=end_range;current_id++)
+						{
+							gmlist.insert( CMapGM(current_id, level) );
+						}
+				}
+				else
+				{
+					gmlist.insert( CMapGM(account_id, level) );
+				}
+			}
+		}
+		fclose(fp);
+		ShowStatus("File '%s' read (%d GM accounts found).\n", GM_account_filename, gmlist.size());
+		return true;
+	}
+	else
+	{
+		ShowError("read_gm_account: GM accounts file [%s] not found.\n", GM_account_filename);
+		return false;
+	}
+
+}
+//////////////////////////////////////////////////////////////////////////
+// read accounts from file
+bool read_accounts(CAccountDB &accdb)
+{
+	FILE *fp;
+	if ((fp = safefopen(account_filename, "r")) == NULL)
+	{
+		// no account file -> no account -> no login, including char-server (ERROR)
+		ShowError(CL_BT_RED"mmo_auth_init: Accounts file [%s] not found.\n"CL_RESET, account_filename);
+		return false;
+	}
+	else
+	{
+		size_t pos;
+		TslistDST<unsigned long> acclist;
+		CLoginAccount data;
+		unsigned long account_id;
+		int logincount, state, n, i, j, v;
+		char line[2048], *p, userid[2048], pass[2048], lastlogin[2048], sex, email[2048], error_message[2048], last_ip[2048], memo[2048];
+		unsigned long ban_until_time;
+		unsigned long connect_until_time;
+		char str[2048];
+		int GM_count = 0;
+		int server_count = 0;
+
+		///////////////////////////////////
+		TslistDST<CMapGM> gmlist;
+		read_gmaccount(gmlist);
+
+
+		while( fgets(line, sizeof(line), fp) )
+		{
+			if( !skip_empty_line(line) )
+				continue;
+
+			// database version reading (v2)
+			if( 13 == (i=sscanf(line, "%ld\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t%[^\t]\t%[^\t]\t%ld\t%[^\t]\t%[^\t]\t%ld%n",
+							&account_id, userid, pass, lastlogin, &sex, &logincount, &state, email, error_message, &connect_until_time, last_ip, memo, &ban_until_time, &n)) && (line[n] == '\t') )
+			{	// with ban_time
+				;
+			}
+			else if( 12 == (i=sscanf(line, "%ld\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t%[^\t]\t%[^\t]\t%ld\t%[^\t]\t%[^\t]%n",
+							&account_id, userid, pass, lastlogin, &sex, &logincount, &state, email, error_message, &connect_until_time, last_ip, memo, &n)) && (line[n] == '\t') )
+			{	// without ban_time
+				ban_until_time=0;
+			}
+			// Old athena database version reading (v1)
+			else if( 5 <= (i=sscanf(line, "%ld\t%[^\t]\t%[^\t]\t%[^\t]\t%c\t%d\t%d\t%n",
+							&account_id, userid, pass, lastlogin, &sex, &logincount, &state, &n)) )
+			{
+				*email=0;
+				*last_ip=0;
+				ban_until_time=0;
+				connect_until_time=0;
+				if (i < 6)
+					logincount=0;
+			}
+			else if(sscanf(line, "%ld\t%%newid%%\n%n", &account_id, &i) == 1 && i > 0 && account_id > next_account_id)
+			{
+				next_account_id = account_id;
+				continue;
+			}
+			
+			/////////////////////////////////////
+			// Some checks
+			if (account_id > 10000000) //!!END_ACCOUNT_NUM
+			{
+				ShowError(CL_BT_RED"mmo_auth_init: ******Error: an account has an id higher than %d\n", 10000000);//!!
+				ShowMessage("               account id #%d -> account not read (saved in log file).\n"CL_RESET, account_id);
+				continue;
+			}
+			userid[23] = '\0';
+			remove_control_chars(userid);
+
+			if( acclist.find(account_id,0,pos) )
+			{
+				ShowWarning(CL_BT_RED"mmo_auth_init: ******Error: an account has an identical id to another.\n"CL_RESET);
+				ShowMessage("               account id #%d -> not read (saved in log file).\nCL_RESET", account_id);
+
+				//!! log account line to file as promised
+			}
+			else if( accdb.searchAccount(userid) )
+			{
+				ShowError(CL_BT_RED"mmo_auth_init: ******Error: account name already exists.\n"CL_RESET);
+				ShowMessage("               account name '%s' -> new account not read.\n", userid); // 2 lines, account name can be long.
+				ShowMessage("               Account saved in log file.\n");
+
+				//!! log account line to file as promised
+			}
+			else
+			{
+				CLoginAccount temp;
+				
+				temp.account_id = account_id;
+				safestrcpy(temp.userid, userid, sizeof(temp.userid));
+
+				pass[23] = '\0';
+				remove_control_chars(pass);
+				safestrcpy(temp.passwd, pass, sizeof(temp.passwd));
+				temp.sex = (sex == 'S' || sex == 's') ? 2 : (sex == 'M' || sex == 'm');
+				if (temp.sex == 2)
+					server_count++;
+
+				remove_control_chars(email);
+				if( !email_check(email) )
+				{
+					ShowWarning("Account %s (%d): invalid e-mail (replaced with a@a.com).\n", userid, account_id);
+					safestrcpy(temp.email, "a@a.com", sizeof(temp.email));
+				}
+				else
+					safestrcpy(temp.email, email, sizeof(temp.email));
+
+				if( gmlist.find( CMapGM(account_id),0,pos) )
+				{
+					temp.gm_level = gmlist[pos].gm_level;
+					GM_count++;
+				}
+				else
+					temp.gm_level=0;
+
+				temp.login_count = (logincount>0)?logincount:0;
+
+				lastlogin[23] = '\0';
+				remove_control_chars(lastlogin);
+				safestrcpy(temp.last_login, lastlogin, sizeof(temp.last_login));
+
+				temp.ban_until = (i==13) ? ban_until_time : 0;
+				temp.valid_until = connect_until_time;
+
+				last_ip[15] = '\0';
+				remove_control_chars(last_ip);
+				temp.client_ip = ipaddress(last_ip);
+
+
+				p = line;
+				for(j = 0; j < ACCOUNT_REG2_NUM; j++)
+				{
+					p += n;
+					if (sscanf(p, "%[^\t,],%d %n", str, &v, &n) != 2) {
+						// We must check if a str is void. If it's, we can continue to read other REG2.
+						// Account line will have something like: str2,9 ,9 str3,1 (here, ,9 is not good)
+						if (p[0] == ',' && sscanf(p, ",%d %n", &v, &n) == 1) {
+							j--;
+							continue;
+						} else
+							break;
+					}
+					str[31] = '\0';
+					remove_control_chars(str);
+					safestrcpy(temp.account_reg2[j].str, str, sizeof(temp.account_reg2[0].str));
+					temp.account_reg2[j].value = v;
+				}
+				temp.account_reg2_num = j;
+				
+				if (next_account_id <= account_id)
+					next_account_id = account_id + 1;
+			
+				accdb.insert(temp);
+			}
+		}
+		fclose(fp);
+
+		if( accdb.size() == 0 )
+		{
+			ShowError("mmo_auth_init: No account found in %s.\n", account_filename);
+			sprintf(line, "No account found in %s.", account_filename);
+		}
+		else
+		{
+			if( accdb.size() == 1)
+			{
+				ShowStatus("mmo_auth_init: 1 account read in %s,\n", account_filename);
+				sprintf(line, "1 account read in %s,", account_filename);
+			}
+			else
+			{
+				ShowStatus("mmo_auth_init: %d accounts read in %s,\n", accdb.size(), account_filename);
+				sprintf(line, "%d accounts read in %s,", accdb.size(), account_filename);
+			}
+			if (GM_count == 0)
+			{
+				ShowMessage("               of which is no GM account, and ");
+				sprintf(str, "%s of which is no GM account and", line);
+			}
+			else if (GM_count == 1)
+			{
+				ShowMessage("               of which is 1 GM account, and ");
+				sprintf(str, "%s of which is 1 GM account and", line);
+			}
+			else
+			{
+				ShowMessage("               of which is %d GM accounts, and ", GM_count);
+				sprintf(str, "%s of which is %d GM accounts and", line, GM_count);
+			}
+			if (server_count == 0)
+			{
+				ShowMessage("no server account ('S').\n");
+				sprintf(line, "%s no server account ('S').", str);
+			}
+			else if (server_count == 1)
+			{
+				ShowMessage("1 server account ('S').\n");
+				sprintf(line, "%s 1 server account ('S').", str);
+			}
+			else
+			{
+				ShowMessage("%d server accounts ('S').\n", server_count);
+				sprintf(line, "%s %d server accounts ('S').", str, server_count);
+			}
+		}
+//		login_log("%s" RETCODE, line);
+		return true;
+	}
+}
+//////////////////////////////////////////////////////////////////////////
+// write accounts
+bool write_accounts(CAccountDB &accdb)
+{
+	FILE *fp;
+	size_t i, k;
+	int lock;
+
+	// Data save
+	if ((fp = lock_fopen(account_filename, &lock)) == NULL) {
+		return false;
+	}
+	fprintf(fp, "// Accounts file: here are saved all information about the accounts.\n");
+	fprintf(fp, "// Structure: ID, account name, password, last login time, sex, # of logins, state, email, error message for state 7, validity time, last (accepted) login ip, memo field, ban timestamp, repeated(register text, register value)\n");
+	fprintf(fp, "// Some explanations:\n");
+	fprintf(fp, "//   account name    : between 4 to 23 char for a normal account (standard client can't send less than 4 char).\n");
+	fprintf(fp, "//   account password: between 4 to 23 char\n");
+	fprintf(fp, "//   sex             : M or F for normal accounts, S for server accounts\n");
+	fprintf(fp, "//   state           : 0: account is ok, 1 to 256: error code of packet 0x006a + 1\n");
+	fprintf(fp, "//   email           : between 3 to 39 char (a@a.com is like no email)\n");
+	fprintf(fp, "//   error message   : text for the state 7: 'Your are Prohibited to login until <text>'. Max 19 char\n");
+	fprintf(fp, "//   valitidy time   : 0: unlimited account, <other value>: date calculated by addition of 1/1/1970 + value (number of seconds since the 1/1/1970)\n");
+	fprintf(fp, "//   memo field      : max 254 char\n");
+	fprintf(fp, "//   ban time        : 0: no ban, <other value>: banned until the date: date calculated by addition of 1/1/1970 + value (number of seconds since the 1/1/1970)\n");
+	for(i = 0; i < accdb.size(); i++)
+	{
+		fprintf(fp, "%ld\t%s\t%s\t%s\t%c\t%ld\t%ld\t"
+					"%s\t%s\t%ld\t%s\t%s\t%ld\t",
+					accdb[i].account_id, accdb[i].userid, accdb[i].passwd, accdb[i].last_login,
+					(accdb[i].sex == 2) ? 'S' : (accdb[i].sex ? 'M' : 'F'),
+					accdb[i].login_count, 0 /*accdb[i].state*/,
+					accdb[i].email, ""/*accdb[i].error_message*/, (unsigned long)accdb[i].valid_until,
+					accdb[i].last_ip, ""/*accdb[i].memo*/, (unsigned long)accdb[i].ban_until);
+		for(k = 0; k< accdb[i].account_reg2_num; k++)
+			if(accdb[i].account_reg2[k].str[0])
+				fprintf(fp, "%s,%ld ", accdb[i].account_reg2[k].str, accdb[i].account_reg2[k].value);
+		fprintf(fp, RETCODE);
+	}
+	fprintf(fp, "%ld\t%%newid%%"RETCODE, next_account_id);
+	lock_fclose(fp, account_filename, &lock);
+	return true;
+}
+//////////////////////////////////////////////////////////////////////////
+// class implementation
+bool CAccountDB::ProcessConfig(const char*w1, const char*w2)
+{
+	if(w1 && w2)
+	{
+		if( 0==strcasecmp(w1, "account_filename") )
+			safestrcpy(account_filename, w2, sizeof(account_filename));
+		else if( 0==strcasecmp(w1, "GM_account_filename") )
+			safestrcpy(GM_account_filename, w2, sizeof(GM_account_filename));
+	}
+	return true;
+}
+
 bool CAccountDB::existAccount(const char* userid)
 {	// check if account with userid already exist
-	size_t i;
-	for(i=0; i<cList.size(); i++)
-	{
-		if( 0==strcmp(userid, cList[i].userid) )
-			return true;
-	}
-	return false;
+	size_t pos;
+	return cList.find( CLoginAccount(userid), pos, 1);
 }
-struct account_data* CAccountDB::searchAccount(const char* userid)
-{	// get account by user/pass
-	size_t i;
-	for(i=0; i<cList.size(); i++)
+CLoginAccount* CAccountDB::searchAccount(const char* userid)
+{	// get account by userid
+	size_t pos;
+	if( cList.find( CLoginAccount(userid), pos, 1) )
+		return &(cList(pos,1));
+	return NULL;
+}
+CLoginAccount* CAccountDB::searchAccount(unsigned long accid)
+{	// get account by account_id
+	size_t pos;
+	if( cList.find( CLoginAccount(accid), pos, 0) )
+		return &(cList(pos,0));
+	return NULL;
+}
+
+CLoginAccount* CAccountDB::insertAccount(const char* userid, const char* passwd, unsigned char sex, const char* email)
+{	// insert a new account
+	CLoginAccount temp;
+	size_t pos;
+	unsigned long accid = next_account_id++;
+	if( cList.find( CLoginAccount(userid), pos, 1) )
+	{	// remove an existing account
+		cList.removeindex(pos, 1);
+	}
+
+	cList.insert( CLoginAccount(accid, userid, passwd, sex, email) );
+
+	if( cList.find( CLoginAccount(userid), pos, 1) )
+		return &(cList(pos,1));
+	return NULL;
+}
+bool CAccountDB::deleteAccount(CLoginAccount* account)
+{
+	if(account)
 	{
-		if( 0==strcmp(userid, cList[i].userid) )
-		{	
-			return &(cList[i]);
+		size_t pos;
+		if( cList.find(*account,pos, 0) )
+		{
+			return cList.removeindex(pos, 0);
 		}
 	}
-	return NULL;
-}
-struct account_data* CAccountDB::searchAccount(unsigned long account_id)
-{	// get account by account_id
-	size_t i;
-	for(i=0; i<cList.size(); i++)
-	{
-		if( account_id == cList[i].account_id )
-			return &(cList[i]);
-	}
-	return NULL;
-}
-struct account_data* CAccountDB::insertAccount(const char* userid, const char* pass, unsigned char sex, char* email, int& error)
-{	// insert a new account
-	CAccountData temp;
-	memset(&temp,0,sizeof(account_data));
-	
-	temp.account_id;
-	safestrcpy(temp.userid, userid, 24);
-	safestrcpy(temp.pass, pass, 34);
-	temp.sex = sex;
-	if( !e_mail_check(email) )
-		safestrcpy(temp.email, "a@a.com", 40);
-	else
-		safestrcpy(temp.email, email, 40);
-
-	cList.append(temp);
-	return &(cList[cList.size()-1]);
-}
-bool CAccountDB::init(const char* configfile)
-{	// init db
 	return false;
 }
-bool CAccountDB::saveAccount(account_data* account)
+
+bool CAccountDB::init(const char* configfile)
+{	// init db
+	CConfig::LoadConfig(configfile);
+	//return 
+		read_accounts(*this);
+
+	size_t i;
+
+	printf("--------------\n");
+	for(i=0; i<cList.size(); i++)
+		printf("%i %s\n", cList(i,0).account_id, cList(i,0).userid);
+	printf("--------------\n");
+	for(i=0; i<cList.size(); i++)
+		printf("%i %s\n", cList(i,1).account_id, cList(i,1).userid);
+	printf("--------------\n");
+
+	return true;
+}
+bool CAccountDB::close()
+{
+	return saveAccount();
+}
+bool CAccountDB::saveAccount(CLoginAccount* account)
 {	// update the account in db
 	// nothing to be done here
 	// accounts are saved by externally called maintainance loop
@@ -140,20 +526,89 @@ bool CAccountDB::saveAccount(account_data* account)
 }
 bool CAccountDB::saveAccount()
 {	// saving all accounts
-	return true;
+	return write_accounts(*this);
 }
 
 //////////////////////////////////////////////////////////////////////////
 #else// SQL
 //////////////////////////////////////////////////////////////////////////
 
-static MYSQL mysql_handle;
-static char *login_db_userid;
-static char *login_db;
-static char *login_db_account_id;
-static char *login_db_user_pass;
-static char *login_db_level;
-static bool case_sensitive;
+//////////////////////////////////////////////////////////////////////////
+// global data for sql
+static MYSQL mysqldb_handle;
+
+// db access
+static char mysqldb_ip[32]="127.0.0.1";
+static unsigned short mysqldb_port=3306;
+static char mysqldb_id[32] = "ragnarok";
+static char mysqldb_pw[32] = "ragnarok";
+
+// table names
+static char login_db[128] = "login";
+static char log_db[128]   = "loginlog";
+
+// field names
+static char login_db_userid[128]     = "userid";
+static char login_db_account_id[128] = "account_id";
+static char login_db_user_pass[128]  = "user_pass";
+static char login_db_level[128]      = "level";
+
+// options
+static bool case_sensitive=true;
+static bool log_login=false;
+
+
+bool CAccountDB::ProcessConfig(const char*w1, const char*w2)
+{
+	if(w1 && w2)
+	{
+		if (strcasecmp(w1, "login_db") == 0) {
+			safestrcpy(login_db, w2,sizeof(login_db));
+		}
+		//add for DB connection
+		else if(strcasecmp(w1,"login_server_ip")==0){
+			safestrcpy(mysqldb_ip, w2, sizeof(mysqldb_ip));
+			ShowMessage ("set login_server_ip : %s\n",w2);
+		}
+		else if(strcasecmp(w1,"login_server_port")==0){
+			mysqldb_port=atoi(w2);
+			ShowMessage ("set login_server_port : %s\n",w2);
+		}
+		else if(strcasecmp(w1,"login_server_id")==0){
+			safestrcpy(mysqldb_id, w2,sizeof(mysqldb_id));
+			ShowMessage ("set login_server_id : %s\n",w2);
+		}
+		else if(strcasecmp(w1,"login_server_pw")==0){
+			safestrcpy(mysqldb_pw, w2,sizeof(mysqldb_pw));
+			ShowMessage ("set login_server_pw : %s\n",w2);
+		}
+		else if(strcasecmp(w1,"login_server_db")==0){
+			safestrcpy(login_db, w2,sizeof(login_db));
+			ShowMessage ("set login_server_db : %s\n",w2);
+		}
+		//added for custom column names for custom login table
+		else if(strcasecmp(w1,"login_db_account_id")==0){
+			safestrcpy(login_db_account_id, w2,sizeof(login_db_account_id));
+		}
+		else if(strcasecmp(w1,"login_db_userid")==0){
+			safestrcpy(login_db_userid, w2,sizeof(login_db_userid));
+		}
+		else if(strcasecmp(w1,"login_db_user_pass")==0){
+			safestrcpy(login_db_user_pass, w2,sizeof(login_db_user_pass));
+		}
+		else if(strcasecmp(w1,"login_db_level")==0){
+			safestrcpy(login_db_level, w2, sizeof(login_db_level));
+		}
+		//end of custom table config
+		else if (strcasecmp(w1, "loginlog_db") == 0) {
+			safestrcpy(log_db, w2,sizeof(log_db));
+		}
+		else if (strcasecmp(w1, "log_login") == 0) {
+			log_login = Switch(w2);
+		}
+	}
+	return true;
+}
 
 bool CAccountDB::existAccount(const char* userid)
 {	// check if account with userid already exist
@@ -164,81 +619,193 @@ bool CAccountDB::existAccount(const char* userid)
 
 	jstrescapecpy(uid, userid);
 	size_t sz=sprintf(query, "SELECT `%s` FROM `%s` WHERE `userid` = '%s'", login_db_userid, login_db, uid);
-	if( mysql_SendQuery(mysql_handle, sql_res, query, sz) )
+	if( mysql_SendQuery(mysqldb_handle, sql_res, query, sz) )
 	{
 		ret = (mysql_num_rows(sql_res) == 1);
 		mysql_free_result(sql_res);
 	}
 	return ret;
 }
-struct account_data* CAccountDB::searchAccount(const char* userid)
+CLoginAccount* CAccountDB::searchAccount(const char* userid)
 {	// get account by user/pass
+	size_t sz;
 	char query[4096];
 	char uid[64];
-	char pss[64];
-	MYSQL_RES* sql_res=NULL;
+	MYSQL_RES *sql_res1=NULL, *sql_res2=NULL;
 
 	jstrescapecpy(uid, userid);
-	size_t sz=sprintf(query, "SELECT `%s`,`%s`,`%s`,`lastlogin`,`logincount`,`sex`,`connect_until`,`last_ip`,`ban_until`,`state`,`%s`,`email`"
+	sz=sprintf(query, "SELECT `%s`,`%s`,`%s`,`lastlogin`,`logincount`,`sex`,`connect_until`,`last_ip`,`ban_until`,`state`,`%s`,`email`"
 	                " FROM `%s` WHERE %s `%s`='%s'", login_db_account_id, login_db_userid, login_db_user_pass, login_db_level, login_db, case_sensitive ? "BINARY" : "", login_db_userid, uid);
 	//login {0-account_id/1-userid/2-user_pass/3-lastlogin/4-logincount/5-sex/6-connect_untl/7-last_ip/8-ban_until/9-state/10-gmlevel/11-email}
-	if( mysql_SendQuery(mysql_handle, sql_res, query, sz) )
+	if( mysql_SendQuery(mysqldb_handle, sql_res1, query, sz) )
 	{
-		MYSQL_ROW sql_row = mysql_fetch_row(sql_res);	//row fetching
+		MYSQL_ROW sql_row = mysql_fetch_row(sql_res1);	//row fetching
 		if(sql_row)
 		{	// use cList[0] as general storage, the list contains only this element
 
 			cList[0].account_id = sql_row[0]?atol(sql_row[0]):0;
 			safestrcpy(cList[0].userid, userid, 24);
-			safestrcpy(cList[0].pass, sql_row[2]?sql_row[2]:"", 32);
-			safestrcpy(cList[0].lastlogin, sql_row[3]?sql_row[3]:"" , 24);
-			cList[0].logincount = sql_row[4]?atol( sql_row[4]):0;
+			safestrcpy(cList[0].passwd, sql_row[2]?sql_row[2]:"", 32);
+			safestrcpy(cList[0].last_login, sql_row[3]?sql_row[3]:"" , 24);
+			cList[0].login_count = sql_row[4]?atol( sql_row[4]):0;
 			cList[0].sex = sql_row[5][0] == 'S' ? 2 : sql_row[5][0]=='M';
-			cList[0].connect_until_time = (time_t)(sql_row[6]?atol(sql_row[6]):0);
+			cList[0].valid_until = (time_t)(sql_row[6]?atol(sql_row[6]):0);
 			safestrcpy(cList[0].last_ip, sql_row[7], 16);
-			cList[0].ban_until_time = (time_t)(sql_row[8]?atol(sql_row[8]):0);;
-			cList[0].state = sql_row[9]?atol(sql_row[9]):0;;
+			cList[0].ban_until = (time_t)(sql_row[8]?atol(sql_row[8]):0);;
+//			cList[0].state = sql_row[9]?atol(sql_row[9]):0;;
 			cList[0].gm_level = sql_row[10]?atoi( sql_row[10]):0;
 			safestrcpy(cList[0].email, sql_row[11]?sql_row[11]:"" , 40);
-/*
-	char error_message[20];		// Message of error code #6 = Your are Prohibited to log in until %s (packet 0x006a)
-	char memo[256];				// a memo field
-	unsigned short account_reg2_num;
-	struct global_reg account_reg2[ACCOUNT_REG2_NUM];
-*/
-		}
-		else
-		{	//there's no id.
-			ShowError("auth failed no account '%s'' ('%s')\n", userid, uid);
-		}
 
-		mysql_free_result(sql_res);
+
+			sz = sprintf(query, "SELECT `str`,`value` FROM `global_reg_value` WHERE `type`='1' AND `account_id`='%ld'", cList[0].account_id);
+			if( mysql_SendQuery(mysqldb_handle, sql_res2, query, sz) )
+			{
+				size_t i=0;
+				while( i<ACCOUNT_REG2_NUM && (sql_row = mysql_fetch_row(sql_res2)) )
+				{
+					safestrcpy(cList[0].account_reg2[i].str, sql_row[0], sizeof(cList[0].account_reg2[0].str));
+					cList[0].account_reg2[i].value = (sql_row[1]) ? atoi(sql_row[1]):0;
+				}
+				cList[0].account_reg2_num = i;
+
+				mysql_free_result(sql_res2);
+			}
+		}
+		mysql_free_result(sql_res1);
 	}
 	return NULL;
 }
-struct account_data* CAccountDB::searchAccount(unsigned long account_id)
+CLoginAccount* CAccountDB::searchAccount(unsigned long accid)
 {	// get account by account_id
 	return NULL;
 }
-struct account_data* CAccountDB::insertAccount(const char* userid, const char* pass, unsigned char sex, char* email, int& error)
+
+CLoginAccount* CAccountDB::insertAccount(const char* userid, const char* passwd, unsigned char sex, const char* email)
 {	// insert a new account to db
+	size_t sz;
+	char uid[64], pwd[64];
+	char query[1024];
 
-	// read the complete account back from db
-	return searchAccount(userid);
+	mysql_real_escape_string(&mysqldb_handle, uid, userid, strlen(userid));
+	mysql_real_escape_string(&mysqldb_handle, pwd, passwd, strlen(passwd));
+	sz = sprintf(query, "INSERT INTO `%s` (`%s`, `%s`, `sex`, `email`) VALUES ('%s', '%s', '%c', '%s')", login_db, login_db_userid, login_db_user_pass, uid, pwd, sex, email);
+	if( mysql_SendQuery(mysqldb_handle, query, sz) )
+	{
+		// read the complete account back from db
+		return searchAccount(userid);
+	}
+	return NULL;
 }
+bool CAccountDB::deleteAccount(CLoginAccount* account)
+{
+	if(account)
+	{
+		size_t sz;
+		char query[1024];
 
+		sz=sprintf(query,"DELETE FROM `%s` WHERE `account_id`='%d';",login_db, account->account_id);
+		mysql_SendQuery(mysqldb_handle, query, sz);
+
+		sz=sprintf(query,"DELETE FROM `global_reg_value` WHERE `account_id`='%d';",account->account_id);
+		mysql_SendQuery(mysqldb_handle, query, sz);
+	}
+	return true;
+}
 
 bool CAccountDB::init(const char* configfile)
 {	// init db
+	CConfig::LoadConfig(configfile);
 	// create a default element for the access
-	cList.resize(1);
+	//cList.resize(1);
+	cList.insert( CLoginAccount() );
+
+	mysql_init(&mysqldb_handle);
+	// DB connection start
+	ShowMessage("Connect Login Database Server....\n");
+	if( mysql_real_connect(&mysqldb_handle, mysqldb_ip, mysqldb_id, mysqldb_pw, login_db, mysqldb_port, (char *)NULL, 0) )
+	{
+		ShowMessage("connect success!\n");
+		if (log_login)
+		{	
+			char query[512];
+			size_t sz = sprintf(query, "INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '', 'lserver', '100','login server started')", log_db);
+			//query
+			mysql_SendQuery(mysqldb_handle, query, sz);
+		}
+		return true;
+	}
+	else
+	{	// pointer check
+		ShowMessage("%s\n", mysql_error(&mysqldb_handle));
+	}
+
+
 
 	return false;
 }
-bool CAccountDB::saveAccount(account_data* account)
-{	// update the account in db
+bool CAccountDB::close()
+{
+	size_t sz;
+	char query[512];
+	//set log.
+	if (log_login)
+	{
+		sz = sprintf(query,"INSERT DELAYED INTO `%s`(`time`,`ip`,`user`,`rcode`,`log`) VALUES (NOW(), '', 'lserver','100', 'login server shutdown')", log_db);
+		//query
+		mysql_SendQuery(mysqldb_handle, query, sz);
+	}
+
+	//delete all server status
+	sz = sprintf(query,"DELETE FROM `sstatus`");
+	//query
+	mysql_SendQuery(mysqldb_handle, query, sz);
+
+	mysql_close(&mysqldb_handle);
 
 	return true;
+}
+
+bool CAccountDB::saveAccount(CLoginAccount* account)
+{	//!! update the account in db
+	bool ret = false;
+	if(account)
+	{	
+		size_t sz;
+		char query[1024], tempstr[64];
+
+		sz = sprintf(query, "UPDATE `%s` SET "
+			"`%s` = '%d', "
+			"`logincount` = '%ld', "
+			"`sex` = '%c', "
+			"`last_ip` = '%s', "
+			"`connect_until` = '%ld', "
+			"`ban_until` = '%ld', "
+			"`email` = '%s', "
+			"WHERE `%s` = '%ld'", 
+			login_db, 
+			login_db_level, account->gm_level,
+			account->login_count,
+			(account->sex==1)? 'M':'F',
+			account->last_ip,
+			(unsigned long)account->valid_until,
+			(unsigned long)account->ban_until,
+			account->email,
+			login_db_account_id, account->account_id);
+		ret = mysql_SendQuery(mysqldb_handle, query, sz);
+
+		sz=sprintf(query,"DELETE FROM `global_reg_value` WHERE `type`='1' AND `account_id`='%d';",account->account_id);
+		if( mysql_SendQuery(mysqldb_handle, query, sz) )
+		{	
+			size_t i;
+			for(i=0; i<account->account_reg2_num; i++)
+			{
+				jstrescapecpy(tempstr,account->account_reg2[i].str);
+				sz=sprintf(query,"INSERT INTO `global_reg_value` (`type`, `account_id`, `str`, `value`) VALUES ( 1 , '%d' , '%s' , '%d');",  account->account_id, tempstr, account->account_reg2[i].value);
+				ret &= mysql_SendQuery(mysqldb_handle, query, sz);
+			}
+		}
+	}
+	return ret;
 }
 bool CAccountDB::saveAccount()
 {	// saving all accounts
@@ -735,7 +1302,7 @@ public:
 // basic interface to a sql database
 //////////////////////////////////////////////////////////////////////////
 
-class SQLDatabase : public Database
+class SQLDatabase
 {
 protected:
 	DBDefaults& def;
