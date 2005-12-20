@@ -1,0 +1,3 @@
+* redo variables
+* redo decision statements
+* fix grammer

@@ -1,0 +1,866 @@
+//////////////////////////////////////////////////////////
+//               Offical Wedding Script                 //
+//////////////////////////////////////////////////////////
+// 
+//=====eAthena Script====================================
+// Offical Wedding Script
+//=====By================================================
+// Kayla
+//=====Current Version===================================
+// 1.0
+//=====Compatible With:==================================
+// eAthena Version SVN
+//=====Description=======================================
+// Fully working wedding script for all kind of weddings
+//=====Additional Comments:==============================
+// Originally in Aegis by Perka
+// Translated, updated, fixed code and grammer by Kayla.
+//=======================================================
+//  
+
+
+//Registration & Status
+prt_church.gat,106,99,3	script	Sister Mary	67,{
+set baby_w = IsBaby
+  if (baby_w == 1)
+    mes "[Sister Mary]"
+    mes "Hello~"
+    mes "I am Sister Mary. If you want to fill out a wedding form, it must go through me."
+    mes "What do you wish to do? ?"
+    wait
+    choose menu "I want to marry." "Nothing."
+      case 1
+        mes "[Sister Mary]"
+        mes "Forgive me..."
+        mes "But children can not marry..."
+        mes "So you cannot register."
+        mes "Doesn't that fit you better ?"
+        mes "You were definently not happy when living with your parents."
+        close
+      break
+      case 2
+        mes "[Sister Mary]"
+        mes "Ok then."
+        mes "See you later."
+        close
+      break
+    endchoose
+  return
+  endif
+	mes "[Sister Mary]"
+	mes "Marriage refers to"
+	mes "that hope that everybody will find their desired happiness."
+	mes "So, may I ask..."
+	mes "is there someone special you wish to be with forever?"
+	wait
+	choose menu "Inquire about the Wedding ceremony." "Inquire about the procedure of a Wedding ceremony." "Apply for a Wedding ceremony." "I am the invincible single army!"
+		case 1
+			mes "[Sister Mary]"
+			mes "The ceremony will be conduncted at Rune Midgard's Church."
+			mes "His Majesty King Tristan III"
+			mes "will bless his beloved citizens"
+			mes "with his honorable presence..."
+			mes "and be the high priest who conducts the wedding ceremony."
+			wait
+			mes "[Sister Mary]"
+			mes "Although his Majesty is busy every day,"
+			mes "he is willing to be present at Prontera's Church"
+			mes "for the newly weds"
+			mes "in a hope that they'll live happily ever after."
+			mes "This is really a blessing from His Majesty."
+			wait
+			mes "[Sister Mary]"
+			mes "A proposal for marriage is an honorable thing."
+			mes "Therefore, consider it carefully before you do it."
+			mes "Once two people get married,"
+			mes "they will never be seperated again."
+			mes "The couple will stay together forever,"
+			mes "and, only in death will they part."
+			wait
+			mes "[Sister Mary]"
+			mes "Besides that, only a man can marry a woman,"
+			mes "and, only a woman can marry a man."
+			mes "It might be possible that"
+			mes "some will suggest marriage among same sex or marrying a monster."
+			mes "Such suggestions... are not acceptable."
+			wait 	
+			mes "[Sister Mary]"
+			mes "If you have someone special,"
+			mes "why not try to make a marriage proposal?"
+			mes "I wish that all the married couples"
+			mes "will find their desired happiness!!"
+			close
+		break
+		case 2
+			mes "[Sister Mary]"
+			mes "First, I'll have to make sure whether the bride and bridegroom"
+			mes "have completed the application."
+			mes "Of course, both of you must not get married before"
+			mes "you have already filled out the application."
+			mes "Please proceed to meet the King after you've formed a party of two."
+			wait
+			mes "[Sister Mary]"
+			mes "When you've met the King,"
+			mes "the bridegroom shall speak first"
+			mes "and mention the name of the bride."
+			mes "You have to mention the correct name,"
+			mes "or the ceremony will not be able to continue."
+			wait
+			mes "[Sister Mary]"
+			mes "After that..."
+			mes "the bride will have to speak to the King."
+			mes "His Majesty will ask"
+			mes "the name of the bridegroom."
+			mes "So, answer it correctly."
+			wait
+			mes "[Sister Mary]"
+			mes "If both names are correct,"
+			mes "they will be able to exchange rings."
+			mes "From that moment onwards,"
+			mes "the couple will stay together forever, isn't this right?"
+			mes "Well, maybe you will be rejected..."
+			mes "but don't be sad."
+			wait
+			mes "[Sister Mary]"
+			mes "If there are too many couples"
+			mes "who want to get married,"
+			mes "please queue up and talk to His Majesty in order."
+			mes "For it is impossible for His Majesty"
+			mes "to conduct several ceremonies at the same time."
+			wait
+			mes "[Sister Mary]"
+			mes "Last but not least: "
+			mes "be quick when you mention your partner's name."
+			mes "The bride ^ff0000is given 3 minutes after "
+			mes "the bridegroom has finished his speech^000000..."
+			mes "or else"
+			mes "the ceremony will be cancelled."
+			wait
+			mes "[Sister Mary]"
+			mes "The easiest way to write the partner's name is"
+			mes "to send a private message to the other side"
+			mes "the left click"
+			mes "the mouse cursor"
+			mes "on the name section at the chat window."
+			wait
+			mes "[Sister Mary]"
+			mes "That means you'd be sending a private message."
+			mes "Press the 'Ctrl' button"
+			mes "and 'C' button at the same time to copy the name."
+			mes "When you're asked to key in the name"
+			mes "press the 'shift' button"
+			mes "and 'insert' button at the same time"
+			mes "the name will be inserted there easily."
+			wait
+			mes "[Sister Mary]"
+			mes "Let's try it then."
+			mes "Write the name of your partner"
+			mes "according to the method mentioned."
+			mes "Press 'Ctrl' button together with 'C' button at the same time"
+			mes "Then, answer 'Yes'."
+			mes "After that, press the 'shift' button and 'insert'"
+			mes "button at the same time."
+			wait
+			dlgwritestr
+			mes "[Sister Mary]"
+			mes "Good. Nice job."
+			mes "If you have made up your mind, do come and submit your application here."
+			close
+		break
+		case 3
+			mes "[Sister Mary]"
+			mes "If you want to make an application..."
+			mes "The bridegroom has to pay ^3377FF1,300,000 zeny and"
+			mes "prepare Tuxedo x 1^000000, while the bride has to pay^3377FF1,200,000"
+			mes "zeny and Wedding Dress x 1^000000. "
+			mes "Then, fill out the application form."
+			mes "If both the bride and bridegroom have completed it,"
+			mes "they can get married."
+			wait
+			mes "[Sister Mary]"
+			mes "Besides that, you'll have to prepare the wedding ring too."
+			mes "Both the bride and bridegroom have to prepare ^3377FFDiamond Ring x 1^000000"
+			mes "and give it to me"
+			mes "when you submit your application."
+			wait
+			mes "[Sister Mary]"
+			mes "After you complete all the procedures,"
+			mes "you can have the wedding ceremony."
+			mes "Do you want to fill out a marriage application?"
+			wait
+			choose menu "Yes" "No" 
+				case 1
+					if v[VAR_ISMARRIED] == 1
+						mes "[Sister Mary]"
+						mes "For those who've already got married..."
+						mes "What will your partner think"
+						mes "if you want to marry another person?"
+						mes "Haven't you sworn to stay together forever?"
+						mes "What will that be"
+						mes "if you've broken the vow?"
+						wait
+						mes "[Sister Mary]"
+						mes "I think you've heard..."
+						mes "Once you're married, you won't be able to return to previous status."
+						mes "This shall remain even when the partner leaves the world..."
+						mes "Besides that, those who"
+						mes "fool around with others' feelings"
+						mes "will feel the bad karma in future."
+						close
+					elseif v[wedding_sign] == 1
+						mes "[Sister Mary]"
+						mes "Hmm...? Did you already fill out the form??"
+						mes "Since you've equipped your form,"
+						mes "I'll ask you..."
+						mes "Has your partner also filled out the registration form?"
+						mes "If the process is done,"
+						mes "then please proceed through the room and talk to the King to start the ceremony."
+						close
+					elseif v[VAR_CLEVEL] < 45
+						mes "[Sister Mary]"
+						mes "Before you propose to your lover,"
+						mes "you should think of your growth."
+						mes "Maybe you can find a better future,"
+						mes "but after you're married"
+						mes "you have the responsibility to take care of your partner too."
+						wait
+						mes "[Sister Mary]"
+						mes "If you think that you have come to the stage"
+						mes "where you can protect your loved ones..."
+						mes "Find me then."
+						mes "I'll always be waiting for your presence."
+						close
+					elseif v[Diamond_Ring] < 1
+						mes "[Sister Mary]"
+						mes "Looks like you've forgotten"
+						mes "to bring along the Diamond Ring that is used as a wedding ring."
+						mes "Have you misplaced it somewhere else?"
+						mes "Look for it carefully and return to me when you find it."
+						close
+					elseif ((v[VAR_SEX] == 0) & (v[VAR_MONEY] < 1200000))
+						mes "[Sister Mary]"
+						mes "Aiyo aiyo. Like I have said before..."
+						mes "1,200,000 zeny."
+						mes "Have you misplaced it?"
+						mes "Look through your pockets carefully and come to me again."
+						close
+					elseif ((v[VAR_SEX] == 0) & (v[Wedding_Dress] < 1))
+						mes "[Sister Mary]"
+						mes "Aiyo, have you misplaced"
+						mes "the wedding dress?"
+						mes "Look for it carefully and come again."
+						mes "You'll need to wear it at the ceremony..."
+						mes "So give it to me directly if you're wearing it."
+						close
+					elseif ((v[VAR_SEX] == 1) & (v[VAR_MONEY] < 1300000))
+						mes "[Sister Mary]"
+						mes "Aiyo aiyo. Like I have said before..."
+						mes "1,300,000 zeny."
+						mes "Have you misplaced it?"
+						mes "Look through your pockets carefully and come to me again."
+						close
+					elseif ((v[VAR_SEX] == 1) & (v[Tuxedo] < 1))
+						mes "[Sister Mary]"
+						mes "Aiyo, have you misplaced"
+						mes "the tuxedo?"
+						mes "Look for it carefully and come again."
+						mes "You'll need to wear it at the ceremony..."
+						mes "So give it to me directly if you're wearing it."
+						close
+					else
+						mes "[Sister Mary]"
+						mes "Congratulations!"
+						mes "I'm not sure who your partner is, but you must be very happy."
+						wait
+						mes "[Sister Mary]"
+						mes "Let's begin the application process."
+						mes "Now please write down your name here."
+						wait 
+						while(1)
+							var name = PcName
+							dlgwritestr
+							if inputstr != name
+								mes "[Sister Mary]" 
+								mes "Aiyo, you don't even know how to write a name?"
+								mes "Do you still want to get married?"
+								mes "Learn to write the name before you come back here."
+								mes "It might be better if you write faster."
+								mes "Please write again."
+								wait
+							else
+								exitwhile
+							endif
+						endwhile
+						mes "[Sister Mary]"
+						mes "Yes, we've received the complete application form."
+						mes "Please use this method too "
+						mes "when you mention the name of your partner to His Majesty."
+						mes "You should know the exact name of your partner."
+						mes "Do you understand?"
+						mes "Get prepared before you go."
+						wait
+						mes "[Sister Mary]"
+						mes "Then, Miss " + name + " ....."
+						mes "Let me ask again... "
+						mes "Has your partner completed the application?"
+						mes "If you've completed the application,"
+						mes "proceed to meet the King and start the wedding ceremony."
+						mes "Finally... Be happy, and let's hope that all well shall end well~"
+						Emotion "Sister Mary" ET_THROB
+						if v[VAR_SEX] == 0
+							dropgold 1200000
+							dropitem Wedding_Dress 1
+						else
+							dropgold 1300000
+							dropitem Tuxedo 1
+						endif
+						dropitem Diamond_Ring 1
+						setitem wedding_sign 1 
+						close
+					endif
+				break
+				case 2
+					mes "[Sister Mary]"
+					mes "I wish you a happy and memorable day...!"
+					close
+				break
+			endchoose
+		break 
+
+		case 4
+			cmdothernpc "Single Army#Prontera" "on"
+			cmdothernpc "Single Army#Geffen" "on"
+			cmdothernpc "Single Army#Morocc" "on"
+			cmdothernpc "Single Army#Payon" "on"
+			cmdothernpc "Single Army#Amatsu" "on"
+			cmdothernpc "Single Army#Gonryun" "on"
+			Emotion "Wedding Staff" ET_HUK
+			mes "[Single Army]"
+			mes "You have to refine things yourself to produce great items!"
+			mes "It is a waste to form a party in a dungeon!"
+			mes "I can become a heart-shaped NPC!"
+			mes "I train by myself from my creation to my job change!"
+			mes "During Christmas, I'll cut grass outside the house!"
+			mes "...We are the invincible Single Army!"
+			close 
+			Emotion "Wedding Staff" ET_SWEAT
+			cmdothernpc "Single Army#Prontera" "off"
+			cmdothernpc "Single Army#Geffen" "off"
+			cmdothernpc "Single Army#Morocc" "off"
+			cmdothernpc "Single Army#Payon" "off"
+			cmdothernpc "Single Army#Amatsu" "off"
+			cmdothernpc "Single Army#Gonryun" "off"
+		break 
+	endchoose 
+	close
+
+npc "prt_church" "Single Army#Prontera" 8W_SOLDIER 97 102 0 1 1
+OnInit:
+	disablenpc "Single Army#Prontera"
+return
+OnCommand: "off"
+	disablenpc "Single Army#Prontera" 
+return
+OnCommand: "on"
+	enablenpc "Single Army#Prontera"
+	Emotion "Single Army#Prontera" ET_GO
+return
+OnClick:
+	mes "[Single Army]"
+	mes "You have to refine things yourself to produce great items!"
+	close
+	return
+
+
+npc "prt_church" "Single Army#Geffen" 4_M_GEF_SOLDIER 98 102 0 1 1
+OnInit:
+	disablenpc "Single Army#Geffen"
+return
+OnCommand: "off"
+	disablenpc "Single Army#Geffen" 
+return
+OnCommand: "on"
+	enablenpc "Single Army#Geffen"
+	Emotion "Single Army#Geffen" ET_GO 
+return
+OnClick:
+	mes "[Single Army]"
+	mes "It is a waste to form a party in a dungeon!"
+	close 
+	return
+
+npc "prt_church" "Single Army#Morocc" 4_M_MOC_SOLDIER 99 102 0 1 1
+OnInit:
+	disablenpc "Single Army#Morocc"
+return
+OnCommand: "off"
+	disablenpc "Single Army#Morocc"
+return 
+OnCommand: "on"
+	enablenpc "Single Army#Morocc"
+	Emotion "Single Army#Morocc" ET_GO
+return
+OnClick:
+	mes "[Single Army]"
+	mes "I can become a heart-shaped NPC!"
+	close
+	return
+
+npc "prt_church" "Single Army#Payon" 4_M_PAY_SOLDIER 100 102 0 1 1
+OnInit:
+	disablenpc "Single Army#Payon" 
+return
+OnCommand: "off"
+	disablenpc "Single Army#Payon"
+return
+OnCommand: "on"
+	enablenpc "Single Army#Payon" 
+	Emotion "Single Army#Payon" ET_GO
+return
+OnClick:
+	mes "[Single Army]" 
+	mes "I train by myself from my creation to my job change!"
+	close
+	return
+
+npc "prt_church" "Single Army#Amatsu" 8_M_JPNSOLDIER 101 102 0 1 1
+OnInit: 
+	disablenpc "Single Army#Amatsu"
+return 
+OnCommand: "off"
+	disablenpc "Single Army#Amatsu"
+return 
+OnCommand: "on"
+	enablenpc "Single Army#Amatsu"
+	Emotion "Single Army#Amatsu" ET_GO
+return
+OnClick:
+	mes "[Single Army]"
+	mes "During Christmas, I'll cut grass outside the house!"
+	close
+	return 
+
+npc "prt_church" "Single Army#Gonryun" 8_M_TWSOLDIER 102 102 0 1 1
+OnInit:
+	disablenpc "Single Army#Gonryun"
+return
+OnCommand: "off"
+	disablenpc "Single Army#Gonryun"
+return 
+OnCommand: "on"
+	enablenpc "Single Army#Gonryun"
+	Emotion "Single Army#Gonryun" ET_GO
+return
+OnClick:
+	mes "[Single Army]" 
+	mes "...We are the invincible Single Army!"
+	close
+	return
+
+npc "prt_church" "The king of Midgard" 1_M_PRON_KING 99 125 4 1 1
+OnInit:
+	strlocalvar 0 "wedding"
+	SetLocalVar "wedding" 0 
+	return
+OnClick:
+  var baby_w = IsBaby
+  if (baby_w == 1)
+    mes "[Vomars]"
+    mes "You cannot marry yet... you are too young."
+    close
+    return
+  endif
+	if v[VAR_ISMARRIED] == 0
+		if lv["wedding"] == 0
+			if v[wedding_sign] == 1
+				if v[VAR_CPARTY] == 2
+					if v[VAR_SEX] == 1
+						SetLocalVar "wedding" 1
+						InitTimer
+						mes "[Tristan III]"
+						mes "The young lovers who seek happiness in future..."
+						mes "Please remember this moment forever."
+						mes "May your future be blessed with goodness and serenity forever."
+						mes "And may you two"
+						mes "stay together forever."
+						wait
+						var name = PcName
+						broadcastinmap "This statement was from the groom, " + name + ",..."
+						mes "[Tristan III]"
+						mes "Till the end of the world..."
+						mes "I shall stay with you forever."
+						mes "Let me be the one to shine up the path of your life in future."
+						mes "May I know what is the name of the lady"
+						mes "who wants to get married?"
+						wait
+						dlgwritestr // 신부 이름 받음
+						mes "[Tristan III]"
+						mes "Bridegroom Mr " + name + ","
+						mes "Will you swear with your life that you will protect"
+						mes "your bride Miss " + inputstr + ","
+						mes "to care and value her forever?"
+						wait
+						choose menu "Yes"
+					case 1
+					break
+						endchoose
+						strlocalvar 2 inputstr // 2에 신부 이름 입력
+						strlocalvar 1 PcName //1에 신랑 이름 입력
+						mes "[Tristan III]"
+						mes "Now, I would like to hear"
+						mes "the bride's opinion."
+						close
+						broadcastinmap "The bridegroom Mr "+ name +" swore to marry the bride, Miss "+ inputstr +"" "
+					else
+						mes "[Tristan III]"
+						mes "It is the woman's turn..."
+						close
+					endif 
+				else
+					mes "[Tristan III]"
+					mes "If you wanted to marry..."
+					mes "Then please form a party before coming here."
+					close 
+				endif
+			else
+				mes "[Tristan III]"
+				mes "If you want to marry, you need to hand over the registration form beforehand."
+				close
+			endif 
+		elseif lv["wedding"] == 1
+			var name_1
+			var name_2
+			name_1 = GetLocalVarName 1
+			name_2 = GetLocalVarName 2
+			if v[wedding_sign] == 1
+				if v[VAR_CPARTY] == 2
+					if v[VAR_SEX] == 0
+						if PcName == name_2
+							mes "[Tristan III]"
+							mes "The young lovers who seek happiness in future..."
+							mes "Please remember this moment forever."
+							mes "May your future be blessed with goodness and serenity forever."
+							mes "And may you two"
+							mes "stay together forever."
+							wait
+							broadcastinmap "Let us listen to what the woman, " + name_2 + ", wishes to say..."
+							mes "[Tristan III]"
+							mes "Bride, Miss " + name_2 + ","
+							mes "Will you swear with your life that you will protect"
+							mes "your groom, Mr " + name_1 + ","
+							mes "to care and value him forever?" 
+							wait
+							choose menu "Yes" "No"
+								case 1
+								var result = GetMarried
+									if result == 1
+										broadcastinmap "I hereby pronounce " + name_1 + " and Miss " + name_2 + " husband and wife."
+										mes "[Tristan III]"
+										mes "I, The leader of the Rune Midgard kingdom,"
+										mes "In the name of Tristan the III,"
+										mes "bless your future with happiness forever," 
+										mes "and hope for a good continuing and ending." 
+										wait
+										mes "[Tristan III]"
+										mes "And... finally..."
+										mes "live happily ever after with  " + name_2 + "..."
+										strlocalvar 1 0
+										strlocalvar 2 0
+										SetLocalVar "wedding" 0
+										close 
+										stoptimer
+									else
+									endif
+								break
+								case 2
+									broadcastinmap "The bride, Miss " + name_2 + " has refused the invitation to marry the groom, Mr " + name_1 + "."
+									mes "[Tristan III]"
+									mes "It seems that you did not yet sever him."
+									mes "Possibly you needed to consider him as a husband"
+									mes "before you thought about marrying." 
+									strlocalvar 1 0
+									strlocalvar 2 0
+									SetLocalVar "wedding" 0
+									close
+									stoptimer
+								break
+							endchoose
+						else 
+							if ((name_1 != 0) & (name_2 != 0))
+								mes "[Tristan III]"
+								mes "This is a celebration of the marriage of  "
+								mes "the bride, Miss "+ name_2 +";"
+								mes "do not interrupt."
+								close
+							else
+								mes "[Tristan III]"
+								mes "The celebration of another couple is currently in progress."
+								mes "Please have patience and wait for your turn."
+								close 
+							endif
+						endif
+					else
+						if ((name_1 != 0) & (name_2 != 0))
+							mes "[Tristan III]"
+							mes "This is a celebration of the marriage of  "
+							mes "the bride, Miss "+ name_2 +","
+							mes "and the groom Mr. "+ name_1 + ";"
+							mes "do not interrupt."
+							close
+						else
+							mes "[Tristan III]"
+							mes "The celebration of another couple is currently in progress."
+							mes "Please have patience and wait for your turn."
+							close
+						endif
+					endif
+				else 
+					if ((name_1 != 0) & (name_2 != 0))
+						mes "[Tristan III]"
+						mes "This is a celebration of the marriage of  "
+						mes "the bride, Miss "+ name_2 +","
+						mes "and the groom Mr. "+ name_1 + ";"
+						mes "do not interrupt."
+						close
+					else
+						mes "[Tristan III]"
+						mes "The celebration of another couple is currently in progress."
+						mes "Please have patience and wait for your turn."
+						close
+					endif
+				endif
+			else 
+				if PcName == name_2
+					mes "[Tristan III]"
+					mes "Ahh.. You have still not filled out the registration form."
+					mes "Please do so if you wish to marry."
+					close
+					return
+				endif
+				if ((name_1 != 0) & (name_2 != 0)) 
+					mes "[Tristan III]"
+					mes "This is a celebration of the marriage of  "
+					mes "the bride, Miss "+ name_2 +","
+					mes "and the groom Mr. "+ name_1 + ";"
+					mes "do not interrupt.""
+					close
+				else
+					mes "[Tristan III]"
+					mes "Please hand over the registration form if you wish to marry."
+					close
+				endif 
+			endif
+		endif
+	else 
+		mes "[Tristan III]"
+		mes "I hope you'll live happy together forever."
+		close
+	endif
+	return
+
+OnCommand: "stop"
+	stoptimer
+return
+OnCommand: "reset"
+	strlocalvar 1 0
+
+	strlocalvar 2 0
+	SetLocalVar "wedding" 0 
+return
+OnTimer: 180000
+	broadcastinmap "You've waited too long for the answer... Please let the other couple come forward."
+	strlocalvar 1 0
+	strlocalvar 2 0
+	SetLocalVar "wedding" 0
+	stoptimer
+return
+
+npc "prt_church" "The king of Midgard#Switch" 1_M_PRON_KING 28 178 4 1 1
+OnClick:
+		mes "[Tristan III]"
+		mes "Who are you...?"
+		wait 
+		dlgwrite 0 4000
+		if error
+			mes "[Tristan III]"
+			mes "Don't play here."
+			close
+			moveto "prt_church" 101 102
+			return
+		elseif input == 0
+			mes "[Tristan III]"
+			mes "Don't play here."
+			close
+			moveto "prt_church" 101 102
+			return 
+		elseif input == 1854
+			mes "[Wedding Switch]"
+			mes "If youre having a problem with the marriage celebration,"
+			mes "then please try again."
+			wait	
+			choose menu "No, thanks" "Try again"
+				case 1
+					mes "[Wedding Switch]"
+					mes "The main security,"
+					mes "The marriage celebration ought to go smooth."
+					close
+				break 
+				case 2
+					cmdothernpc "The king of Midgard" "stop"
+					cmdothernpc "The king of Midgard" "reset"
+					broadcastinmap "You have waited too long... Let the other couple come through."
+					mes "[Wedding Switch]"
+					mes "Tristan III... Reactivate!!"
+					mes "Let us begin this marriage ceremony."
+					close
+				break
+			endchoose 
+		else
+			mes "[Tristan III]"
+			mes "Don't play here."
+			close 
+			moveto "prt_church" 101 102
+			return
+		endif
+	return 
+
+npc "prt_church" "Divorce Staff" 1_F_LIBRARYGIRL 20 179 4 1 1
+OnClick:
+		mes "[Bad Ending]" 
+		mes "Aiyo, what happened?"
+		wait
+		dlgwrite 0 4000
+		if error
+			mes "[Bad Ending]"
+			mes "A mistake~"
+			close
+			return
+		elseif input == 0 
+			mes "[Bad Ending]"
+			mes "A mistake~"
+			close 
+			return
+		elseif input == 1854
+			mes "[Bad Ending]"
+			mes "Nobody can get rid of the wedding ring."
+			mes "Do you want me to help you do that?"
+			wait	
+			choose menu "Get rid of it." "Keep it."
+				case 1
+					if v[VAR_SEX] == 0 // 여성
+						if v[Bride_Ring] > 0
+							dropitem Bride_Ring 1
+							mes "[Bad Endding]"
+							mes "It is done~"
+							mes "Please take it off if you're wearing it."
+							close
+						else
+							mes "[Bad Endding]"
+							mes "The wedding ring is nowhere to be found-"
+							mes "Please take it off if you're wearing it."
+							close
+						endif
+					else
+						if v[Bridegroom_Ring] > 0
+							dropitem Bridegroom_Ring 1
+							mes "[Bad Endding]"
+							mes "It is done~"
+							mes "Please take it off if you're wearing it."
+							close
+						else
+							mes "[Bad Endding]"
+							mes "The wedding ring is nowhere to be found-"
+							mes "Please take it off if you're wearing it."
+							close
+						endif
+					endif
+				break
+				case 2
+					mes "[Bad Endding]"
+					mes "Marriage is the end, the graveyard."
+					mes "I shall get rid of it. Trust me."
+					close
+				break
+			endchoose
+		else
+			mes "[Bad Endding]"
+			mes "A mistake~"
+			close
+		endif
+	return
+
+npc "prt_church" "Remarry Staff" 1_F_LIBRARYGIRL 22 179 4 1 1
+OnClick:
+		mes "[Wedding Again]"
+		mes "Hey, what's up?"
+		wait
+		dlgwrite 0 4000
+		if error
+			mes "[Wedding Again]"
+			mes "A mistake~"
+			close
+			return
+		elseif input == 0
+			mes "[Wedding Again]"
+			mes "A mistake~"
+			close 
+			return
+		elseif input == 1854
+			if v[VAR_ISMARRIED] == 0
+				mes "[Wedding Again]"
+				mes "How can you have the wedding ring when you haven't married yet?"
+				mes "Please come again after you have a groom!"
+				close
+				return
+			endif
+			var ring
+			mes "[Wedding Again]"
+			mes "If you've lost the wedding ring, you'll necessarily have to tell me that."
+			mes "I'll return it once more."
+			wait
+			choose menu "Give me one once more." "I am still keeping it."
+				case 1
+					if v[VAR_SEX] == 0
+						var ring = GetEquipCount Bride_Ring
+						if ((v[Bride_Ring] > 0) | (ring == 1))
+							mes "[Wedding Again]"
+							mes "Did you wear a ring?"
+							mes "You do not need more than one ring."
+							close
+						else
+							getitem Bride_Ring 1
+							mes "[Wedding Again]"
+							mes "Here you have a new ring-"
+							mes "Please don't lose it again."
+							close
+						endif
+					else
+						var ring = GetEquipCount Bridegroom_Ring
+						if ((v[Bridegroom_Ring] > 0) | (ring == 1))
+							mes "[Wedding Again]]"
+							mes "Did you wear a ring?"
+							mes "You do not need more than one ring."
+							close
+						else
+							getitem Bridegroom_Ring 1
+							mes "[Wedding Again]]"
+							mes "Here you have a new ring-"
+							mes "Please don't lose it again."
+							close 
+						endif 
+					endif
+				break
+				case 2
+					mes "[Wedding Again]]"
+					mes "That you're in fact still married, keep it well."
+					mes "If you have any problems than come visit me."
+					close
+				break
+			endchoose
+		else
+			mes "[Wedding Again]]"
+			mes "A mistake~"
+			close
+		endif
+	return
+
