@@ -27,7 +27,7 @@ set baby_w = IsBaby
     mes "Hello~"
     mes "I am Sister Mary. If you want to fill out a wedding form, it must go through me."
     mes "What do you wish to do? ?"
-    wait
+    next;
     choose menu "I want to marry." "Nothing."
       case 1
         mes "[Sister Mary]"
@@ -52,7 +52,7 @@ set baby_w = IsBaby
 	mes "that hope that everybody will find their desired happiness."
 	mes "So, may I ask..."
 	mes "is there someone special you wish to be with forever?"
-	wait
+	next;
 	choose menu "Inquire about the Wedding ceremony." "Inquire about the procedure of a Wedding ceremony." "Apply for a Wedding ceremony." "I am the invincible single army!"
 		case 1
 			mes "[Sister Mary]"
@@ -61,14 +61,14 @@ set baby_w = IsBaby
 			mes "will bless his beloved citizens"
 			mes "with his honorable presence..."
 			mes "and be the high priest who conducts the wedding ceremony."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "Although his Majesty is busy every day,"
 			mes "he is willing to be present at Prontera's Church"
 			mes "for the newly weds"
 			mes "in a hope that they'll live happily ever after."
 			mes "This is really a blessing from His Majesty."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "A proposal for marriage is an honorable thing."
 			mes "Therefore, consider it carefully before you do it."
@@ -76,14 +76,14 @@ set baby_w = IsBaby
 			mes "they will never be seperated again."
 			mes "The couple will stay together forever,"
 			mes "and, only in death will they part."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "Besides that, only a man can marry a woman,"
 			mes "and, only a woman can marry a man."
 			mes "It might be possible that"
 			mes "some will suggest marriage among same sex or marrying a monster."
 			mes "Such suggestions... are not acceptable."
-			wait 	
+			next; 	
 			mes "[Sister Mary]"
 			mes "If you have someone special,"
 			mes "why not try to make a marriage proposal?"
@@ -98,21 +98,21 @@ set baby_w = IsBaby
 			mes "Of course, both of you must not get married before"
 			mes "you have already filled out the application."
 			mes "Please proceed to meet the King after you've formed a party of two."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "When you've met the King,"
 			mes "the bridegroom shall speak first"
 			mes "and mention the name of the bride."
 			mes "You have to mention the correct name,"
 			mes "or the ceremony will not be able to continue."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "After that..."
 			mes "the bride will have to speak to the King."
 			mes "His Majesty will ask"
 			mes "the name of the bridegroom."
 			mes "So, answer it correctly."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "If both names are correct,"
 			mes "they will be able to exchange rings."
@@ -120,14 +120,14 @@ set baby_w = IsBaby
 			mes "the couple will stay together forever, isn't this right?"
 			mes "Well, maybe you will be rejected..."
 			mes "but don't be sad."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "If there are too many couples"
 			mes "who want to get married,"
 			mes "please queue up and talk to His Majesty in order."
 			mes "For it is impossible for His Majesty"
 			mes "to conduct several ceremonies at the same time."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "Last but not least: "
 			mes "be quick when you mention your partner's name."
@@ -135,14 +135,14 @@ set baby_w = IsBaby
 			mes "the bridegroom has finished his speech^000000..."
 			mes "or else"
 			mes "the ceremony will be cancelled."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "The easiest way to write the partner's name is"
 			mes "to send a private message to the other side"
 			mes "the left click"
 			mes "the mouse cursor"
 			mes "on the name section at the chat window."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "That means you'd be sending a private message."
 			mes "Press the 'Ctrl' button"
@@ -151,7 +151,7 @@ set baby_w = IsBaby
 			mes "press the 'shift' button"
 			mes "and 'insert' button at the same time"
 			mes "the name will be inserted there easily."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "Let's try it then."
 			mes "Write the name of your partner"
@@ -160,7 +160,7 @@ set baby_w = IsBaby
 			mes "Then, answer 'Yes'."
 			mes "After that, press the 'shift' button and 'insert'"
 			mes "button at the same time."
-			wait
+			next;
 			dlgwritestr
 			mes "[Sister Mary]"
 			mes "Good. Nice job."
@@ -176,18 +176,18 @@ set baby_w = IsBaby
 			mes "Then, fill out the application form."
 			mes "If both the bride and bridegroom have completed it,"
 			mes "they can get married."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "Besides that, you'll have to prepare the wedding ring too."
 			mes "Both the bride and bridegroom have to prepare ^3377FFDiamond Ring x 1^000000"
 			mes "and give it to me"
 			mes "when you submit your application."
-			wait
+			next;
 			mes "[Sister Mary]"
 			mes "After you complete all the procedures,"
 			mes "you can have the wedding ceremony."
 			mes "Do you want to fill out a marriage application?"
-			wait
+			next;
 			choose menu "Yes" "No" 
 				case 1
 					if v[VAR_ISMARRIED] == 1
@@ -198,7 +198,7 @@ set baby_w = IsBaby
 						mes "Haven't you sworn to stay together forever?"
 						mes "What will that be"
 						mes "if you've broken the vow?"
-						wait
+						next;
 						mes "[Sister Mary]"
 						mes "I think you've heard..."
 						mes "Once you're married, you won't be able to return to previous status."
@@ -223,12 +223,12 @@ set baby_w = IsBaby
 						mes "Maybe you can find a better future,"
 						mes "but after you're married"
 						mes "you have the responsibility to take care of your partner too."
-						wait
+						next;
 						mes "[Sister Mary]"
 						mes "If you think that you have come to the stage"
 						mes "where you can protect your loved ones..."
 						mes "Find me then."
-						mes "I'll always be waiting for your presence."
+						mes "I'll always be next;ing for your presence."
 						close
 					elseif v[Diamond_Ring] < 1
 						mes "[Sister Mary]"
@@ -271,11 +271,11 @@ set baby_w = IsBaby
 						mes "[Sister Mary]"
 						mes "Congratulations!"
 						mes "I'm not sure who your partner is, but you must be very happy."
-						wait
+						next;
 						mes "[Sister Mary]"
 						mes "Let's begin the application process."
 						mes "Now please write down your name here."
-						wait 
+						next; 
 						while(1)
 							var name = PcName
 							dlgwritestr
@@ -286,7 +286,7 @@ set baby_w = IsBaby
 								mes "Learn to write the name before you come back here."
 								mes "It might be better if you write faster."
 								mes "Please write again."
-								wait
+								next;
 							else
 								exitwhile
 							endif
@@ -298,7 +298,7 @@ set baby_w = IsBaby
 						mes "You should know the exact name of your partner."
 						mes "Do you understand?"
 						mes "Get prepared before you go."
-						wait
+						next;
 						mes "[Sister Mary]"
 						mes "Then, Miss " + name + " ....."
 						mes "Let me ask again... "
@@ -483,7 +483,7 @@ OnClick:
 						mes "May your future be blessed with goodness and serenity forever."
 						mes "And may you two"
 						mes "stay together forever."
-						wait
+						next;
 						var name = PcName
 						broadcastinmap "This statement was from the groom, " + name + ",..."
 						mes "[Tristan III]"
@@ -492,14 +492,14 @@ OnClick:
 						mes "Let me be the one to shine up the path of your life in future."
 						mes "May I know what is the name of the lady"
 						mes "who wants to get married?"
-						wait
+						next;
 						dlgwritestr // 신부 이름 받음
 						mes "[Tristan III]"
 						mes "Bridegroom Mr " + name + ","
 						mes "Will you swear with your life that you will protect"
 						mes "your bride Miss " + inputstr + ","
 						mes "to care and value her forever?"
-						wait
+						next;
 						choose menu "Yes"
 					case 1
 					break
@@ -542,14 +542,14 @@ OnClick:
 							mes "May your future be blessed with goodness and serenity forever."
 							mes "And may you two"
 							mes "stay together forever."
-							wait
+							next;
 							broadcastinmap "Let us listen to what the woman, " + name_2 + ", wishes to say..."
 							mes "[Tristan III]"
 							mes "Bride, Miss " + name_2 + ","
 							mes "Will you swear with your life that you will protect"
 							mes "your groom, Mr " + name_1 + ","
 							mes "to care and value him forever?" 
-							wait
+							next;
 							choose menu "Yes" "No"
 								case 1
 								var result = GetMarried
@@ -560,7 +560,7 @@ OnClick:
 										mes "In the name of Tristan the III,"
 										mes "bless your future with happiness forever," 
 										mes "and hope for a good continuing and ending." 
-										wait
+										next;
 										mes "[Tristan III]"
 										mes "And... finally..."
 										mes "live happily ever after with  " + name_2 + "..."
@@ -595,7 +595,7 @@ OnClick:
 							else
 								mes "[Tristan III]"
 								mes "The celebration of another couple is currently in progress."
-								mes "Please have patience and wait for your turn."
+								mes "Please have patience and next; for your turn."
 								close 
 							endif
 						endif
@@ -610,7 +610,7 @@ OnClick:
 						else
 							mes "[Tristan III]"
 							mes "The celebration of another couple is currently in progress."
-							mes "Please have patience and wait for your turn."
+							mes "Please have patience and next; for your turn."
 							close
 						endif
 					endif
@@ -625,7 +625,7 @@ OnClick:
 					else
 						mes "[Tristan III]"
 						mes "The celebration of another couple is currently in progress."
-						mes "Please have patience and wait for your turn."
+						mes "Please have patience and next; for your turn."
 						close
 					endif
 				endif
@@ -668,7 +668,7 @@ OnCommand: "reset"
 	SetLocalVar "wedding" 0 
 return
 OnTimer: 180000
-	broadcastinmap "You've waited too long for the answer... Please let the other couple come forward."
+	broadcastinmap "You've next;ed too long for the answer... Please let the other couple come forward."
 	strlocalvar 1 0
 	strlocalvar 2 0
 	SetLocalVar "wedding" 0
@@ -679,7 +679,7 @@ npc "prt_church" "The king of Midgard#Switch" 1_M_PRON_KING 28 178 4 1 1
 OnClick:
 		mes "[Tristan III]"
 		mes "Who are you...?"
-		wait 
+		next; 
 		dlgwrite 0 4000
 		if error
 			mes "[Tristan III]"
@@ -697,7 +697,7 @@ OnClick:
 			mes "[Wedding Switch]"
 			mes "If youre having a problem with the marriage celebration,"
 			mes "then please try again."
-			wait	
+			next;	
 			choose menu "No, thanks" "Try again"
 				case 1
 					mes "[Wedding Switch]"
@@ -708,7 +708,7 @@ OnClick:
 				case 2
 					cmdothernpc "The king of Midgard" "stop"
 					cmdothernpc "The king of Midgard" "reset"
-					broadcastinmap "You have waited too long... Let the other couple come through."
+					broadcastinmap "You have next;ed too long... Let the other couple come through."
 					mes "[Wedding Switch]"
 					mes "Tristan III... Reactivate!!"
 					mes "Let us begin this marriage ceremony."
@@ -728,7 +728,7 @@ npc "prt_church" "Divorce Staff" 1_F_LIBRARYGIRL 20 179 4 1 1
 OnClick:
 		mes "[Bad Ending]" 
 		mes "Aiyo, what happened?"
-		wait
+		next;
 		dlgwrite 0 4000
 		if error
 			mes "[Bad Ending]"
@@ -744,7 +744,7 @@ OnClick:
 			mes "[Bad Ending]"
 			mes "Nobody can get rid of the wedding ring."
 			mes "Do you want me to help you do that?"
-			wait	
+			next;	
 			choose menu "Get rid of it." "Keep it."
 				case 1
 					if v[VAR_SEX] == 0 // 여성
@@ -793,7 +793,7 @@ npc "prt_church" "Remarry Staff" 1_F_LIBRARYGIRL 22 179 4 1 1
 OnClick:
 		mes "[Wedding Again]"
 		mes "Hey, what's up?"
-		wait
+		next;
 		dlgwrite 0 4000
 		if error
 			mes "[Wedding Again]"
@@ -817,7 +817,7 @@ OnClick:
 			mes "[Wedding Again]"
 			mes "If you've lost the wedding ring, you'll necessarily have to tell me that."
 			mes "I'll return it once more."
-			wait
+			next;
 			choose menu "Give me one once more." "I am still keeping it."
 				case 1
 					if v[VAR_SEX] == 0
