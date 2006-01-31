@@ -1,3 +1,3 @@
-stable - Current proposed development release of eAthena
+stable - Current proposed stable development release of eAthena
 eapp - Shinomori's C++ version of eAthena
-mouse - MouseJstr's branch for rewrite of transport
+clownphobia - Clownisius' branch for ???
