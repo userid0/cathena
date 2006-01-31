@@ -10,7 +10,7 @@ Contains all main development branches
 ------------------
 - /trunk
 ------------------
-As of SVN Revision 5901, all untested bugfixes and features go into /trunk.
+As of SVN Revision 5091, all untested bugfixes and features go into /trunk.
 Once a bugfix or feature has been tested and proven to be working,
 it will be added to the stable branch by either Valaris or Wizputer.
 
