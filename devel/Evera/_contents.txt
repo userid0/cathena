@@ -1,0 +1,6 @@
+Contents of Evera's Developer Folder
+------------------------------------
+_contents.txt			List of files and descriptions of them
+me.txt				About me
+setd_getd.txt			Simple NPC to aid NPC scripters that are using variables
+				Sets and/or gets a variable.

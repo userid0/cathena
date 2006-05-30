@@ -1,5 +1,9 @@
 Evera-
 I'm an old developer, now a script dev.
+15 Years of age, currently enrolled in Palos Verdes Peninsula High School as a Freshman (Class of 2009)
+Also a web designer
 
 TODO:
 Look on Playtester's list on sig to make NPCs, update NPCs up to iRO translations.
+Finish DTS warper
+Optimize scripts

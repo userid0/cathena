@@ -1,0 +1,63 @@
+//===== eAthena Script ======================================= 
+//= Getd and Setd tool
+//===== By: ================================================== 
+//= Evera
+//===== Current Version: ===================================== 
+//= 1.0
+//===== Compatible With: ===================================== 
+//= eAthena 1.0+
+//===== Description: ========================================= 
+//= Useful for testing scripts with variables, sets variables
+//= to whatever, and can retrieve the given variable
+//= Checks GM level, and also is hidden in mid-se pront for easy access
+//= Works only with GM level 40 or above
+//===== Additional Comments: ================================
+//= 1.0: initial release [Evera]
+//============================================================ 
+
+prontera.gat,185,144,5	script	Script	111,{
+	if(getgmlevel(0)<=40){
+	mes "[Script]";
+	mes "Hello there, I'm the NPC variable aid. I can assist you by getting variables or setting variables.";
+	mes "I can do global, character, and account variables, both temporary and permanent.";
+	next;
+	mes "[Script]";
+	mes "If you accidentally type a wrong variable name, you can go back and change the variable to be null to disable it.";
+	mes "You also cannot set character variables on another character";
+	mes "Which action would you like to take";
+	next;
+	switch(select("Set variable","Get variable")){
+		case 1:
+			mes "[Script]";
+			mes "Please input the name of the variable you would like to change.";
+			mes "Remember to include the variable signs.";
+			input @input$;
+			next;
+			mes "[Script]";
+			mes "Please input the value you would like for variable "+@input$;
+			input @input2$;
+			next;
+			setd @input$,@input2$;
+			mes "[Script]";
+			mes "Variable set!";
+			close;
+			break;
+		case 2:
+			mes "[Script]";
+			mes "Please input the name of the variable for which you would like for me to display.";
+			mes "Remember to include the variable signs.";
+			input @input$;
+			next;
+			mes "[Script]";
+			mes "Contents of "+@input$+" is as follows:";
+			mes getd(@input$);
+			close;
+			break;
+	}
+	}
+	else{
+	mes "[Script]";
+	mes "Why hello there.";
+	mes "I guess you found my hiding spot.";
+	}
+}
