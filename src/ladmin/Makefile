@@ -1,17 +1,37 @@
 all txt sql: ladmin
 
-COMMON_OBJ = ../common/obj/minicore.o ../common/obj/minisocket.o ../common/obj/timer.o \
-	../common/obj/malloc.o ../common/obj/showmsg.o ../common/obj/strlib.o
-COMMON_H = ../common/core.h ../common/socket.h ../common/timer.h ../common/mmo.h \
-	../common/version.h ../common/malloc.h ../common/showmsg.h ../common/strlib.h
+##########################################################
+# stupid make does not know .cpp suffix by default
+.SUFFIXES: .cpp
 
-ladmin: ladmin.o md5calc.o $(COMMON_OBJ)
-	$(CC) -o ../../$@ ladmin.o md5calc.o $(COMMON_OBJ) $(LIB_S)
+.cpp.o:
+	$(CCC) $(CPPFLAGS) -c $<
+##########################################################
+
+
+##########################################################
+RETURN_PATH ?= .
+COMMON_PATH ?= ../common
+BASE_PATH   ?= ../basics
+CCC         ?= g++ -pipe
+CPPFLAGS    ?= -g -O3 -ffast-math -D_REENTRANT
+LIBS        ?= -lpthread -lsocket -lnsl -ldl -lrt -lz
+##########################################################
+BP = $(RETURN_PATH)/$(BASE_PATH)
+##########################################################
+include $(BP)/Makefile.dep
+
+##########################################################
+CP = $(RETURN_PATH)/$(COMMON_PATH)
+##########################################################
+include $(CP)/Makefile.dep
+
+
+
+ladmin: ladmin.o $(COMMON_OBJ) $(BASE_OBJ)
+	$(CCC) $> $(LIBS) -o $(RETURN_PATH)/$@
+
+ladmin.o: ladmin.cpp ladmin.h $(COMMON_H)  $(BASE_H)
 
 clean:
-	rm -f *.o ../../ladmin
-
-# DO NOT DELETE
-
-ladmin.o: ladmin.c ladmin.h md5calc.h $(COMMON_H)
-md5calc.o: md5calc.c md5calc.h
+	rm -rf *.o $(RETURN_PATH)/ladmin GNUmakefile

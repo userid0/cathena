@@ -145,7 +145,7 @@ N_SolarS:
 N_CaesarS:
 	if (#Treasure_Token < 170) goto N_NeedToken;
 	set #Treasure_Token,#Treasure_Token-170;
-	logmes "Treasure Token: Bought a Caesars Sword";
+	logmes "Treasure Token: Bought a Caesar's Sword";
 	getitem 1134,1;
 	close;
 N_Nagan:
@@ -279,13 +279,13 @@ N_Bow:
 
 	if (#Treasure_Token < 150) goto N_NeedToken;
 	set #Treasure_Token,#Treasure_Token-150;
-	logmes "Treasure Token: Bought a Rudra Bow";
+	logmes "Treasure Token: Bought a Rudra's Bow";
 	getitem 1720,1;
 	close;
 N_Rogue:
 	if (#Treasure_Token < 150) goto N_NeedToken;
 	set #Treasure_Token,#Treasure_Token-150;
-	logmes "Treasure Token: Bought a Roguemaster Bow";
+	logmes "Treasure Token: Bought a Roguemaster's Bow";
 	getitem 1719,1;
 	close;
 
@@ -407,7 +407,7 @@ N_Wand:
 	mes "[Ash]";
 	mes "This is what we have to offer.";
 	next;
-	menu "Mighty Staff - 90T",-,"Wizardry Staff - 150T",N_Wizardry,"Bone Wand - 110T",N_BoneW,"Staff of Soul - 120T",N_SOSoul,"Nevermind",N_NVM;
+	menu "Mighty Staff - 90T",-,"Wizardry Staff - 90T",N_Wizardry,"Bone Wand - 100T",N_BoneW,"Staff of Soul - 110T",N_SOSoul,"Nevermind",N_NVM;
 
 	if (#Treasure_Token < 90) goto N_NeedToken;
 	set #Treasure_Token,#Treasure_Token-90;
@@ -437,7 +437,7 @@ N_BuyCards:
 	mes "[Ash]";
 	mes "This is what we have to offer. All Cards are 300T";
 	next;
-	menu "Poring Card - 2T",-,"Pasana Card - 420T",N_CPasana,"Dokebi Card - 420T",N_CDok,"Swordfish Card - 420T",N_CSFish,
+	menu "Poring Card - 2T",-,"Pasana Card - 420T",N_CPasana,"Dokkebi Card - 420T",N_CDokk,"Swordfish Card - 420T",N_CSFish,
 		"Sandman Card - 420T",N_CSMan,"Drainliar Card - 360T",N_CDrain,"Kaho Card - 360T",N_CKaho,"Mandragora Card - 360T",N_CMand,
 		"Vadon Card - 360T",N_CVadon,"Mummy Card - 540T",N_CMummy,"Zenorc Card - 240T",N_CZeno,"Condor Card - 240T",N_CCond,
 		"Zombie Card - 210T",N_CZomb,"Nevermind",N_NVM;
@@ -454,10 +454,10 @@ N_CPasana:
 	logmes "Treasure Token: Bought a Pasana Card";
 	getitem 4099,1;//Items: Pasana_Card,
 	close;
-N_CDok:
+N_CDokk:
 	if (#Treasure_Token < 420) goto N_NeedToken;
 	set #Treasure_Token,#Treasure_Token-420;
-	logmes "Treasure Token: Bought a Dokebi Card";
+	logmes "Treasure Token: Bought a Dokkebi Card";
 	getitem 4098,1;//Items: Dokebi_Card,
 	close;
 N_CSFish:

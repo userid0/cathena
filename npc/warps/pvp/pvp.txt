@@ -1,24 +1,27 @@
 //===== Athena Script ========================================
 //= Prontera Arena & PvP Warp Script
 //===== By: ==================================================
-//= Athena (any)
+//= Athena (1.0)
 //===== Current Version: =====================================
-//= 1.1
+//= 1.0
 //===== Compatible With: =====================================
 //= Any Athena Version
 //===== Description: =========================================
 //= Warp Points for Prontera Arena and PvP Maps
 //===== Additional Comments: =================================
 //= Split off npc_warp.txt
-//= 1.1 Fixed Prontera Arena warp [Yor]
 //============================================================
 
 //Prontera Arena
-prt_are_in.gat,142,13,0	warp	warp1076	1,1,prt_are_in.gat,177,78
-prt_are_in.gat,177,75,0	warp	warp1077	1,1,prt_are_in.gat,139,13
-prt_are_in.gat,55,13,0	warp	warp1078	1,1,prt_are_in.gat,125,78
-prt_are_in.gat,125,75,0	warp	warp1079	1,1,prt_are_in.gat,58,13
-prt_are_in.gat,97,7,0	warp	warp1080	1,1,izlude.gat,128,222
+prt_are_in.gat,127,82,0	warp	warp1082	1,1,prt_are_in.gat,156,82
+prt_are_in.gat,152,82,0	warp	warp1083	1,1,prt_are_in.gat,123,82
+prt_are_in.gat,169,122,0	warp	warp1084	1,1,prt_are_in.gat,169,92
+prt_are_in.gat,31,122,0	warp	warp1076	1,1,prt_are_in.gat,31,92
+prt_are_in.gat,49,82,0	warp	warp1077	1,1,prt_are_in.gat,76,82
+prt_are_in.gat,72,82,0	warp	warp1078	1,1,prt_are_in.gat,44,82
+prt_are_in.gat,99,24,0	warp	warp1079	1,1,izlude.gat,127,221
+prt_are_in.gat,99,47,0	warp	warp1080	1,1,prt_are_in.gat,99,76
+prt_are_in.gat,99,72,0	warp	warp1081	1,1,prt_are_in.gat,99,43
 
 
 //Time Limit Mode
@@ -30,7 +33,7 @@ force_1-1.gat,44,26,0	warp	fc103	1,1,force_1-1.gat,66,26
 force_1-1.gat,62,26,0	warp	fc103-1	1,1,force_1-1.gat,40,26
 force_1-1.gat,44,174,0	warp	fc104	1,1,force_1-1.gat,69,174
 force_1-1.gat,65,174,0	warp	fc104-1	1,1,force_1-1.gat,40,174
-force_1-1.gat,99,54,0	warp	fc105	1,1,force_1-1.gat,96,82
+force_1-1.gat,99,54,0	warp	fc105	1,1,force_1-1.gat,99,82
 force_1-1.gat,100,81,0	warp	fc105-1	1,1,force_1-1.gat,99,51
 force_1-1.gat,134,174,0	warp	fc106	1,1,force_1-1.gat,159,174
 force_1-1.gat,155,174,0	warp	fc106-1	1,1,force_1-1.gat,130,174
@@ -246,12 +249,11 @@ ordeal_3-4.gat,153,180,0	warp	ord345	1,1,ordeal_3-4.gat,144,284
 ordeal_3-4.gat,172,135,0	warp	ord346	1,1,ordeal_3-4.gat,284,24
 ordeal_3-4.gat,172,172,0	warp	ord347	1,1,ordeal_3-4.gat,284,284
 ordeal_3-4.gat,180,154,0	warp	ord348	1,1,ordeal_3-4.gat,284,164
-//This map doesn't even exists. Is it ordeal_a02 or ordea_la00?
-//ordeal_a04.gat,128,154,0	warp	orda1	0,0,ordeal_a04.gat,24,154
-//ordeal_a04.gat,136,136,0	warp	orda2	0,0,ordeal_a04.gat,24,24
-//ordeal_a04.gat,136,172,0	warp	orda3	0,0,ordeal_a04.gat,24,284
-//ordeal_a04.gat,153,128,0	warp	orda4	0,0,ordeal_a04.gat,153,23
-//ordeal_a04.gat,153,180,0	warp	orda5	0,0,ordeal_a04.gat,144,284
-//ordeal_a04.gat,172,135,0	warp	orda6	0,0,ordeal_a04.gat,284,24
-//ordeal_a04.gat,172,172,0	warp	orda7	0,0,ordeal_a04.gat,284,284
-//ordeal_a04.gat,180,154,0	warp	orda8	0,0,ordeal_a04.gat,284,164
+ordeal_a04.gat,128,154,0	warp	orda1	0,0,ordeal_a04.gat,24,154
+ordeal_a04.gat,136,136,0	warp	orda2	0,0,ordeal_a04.gat,24,24
+ordeal_a04.gat,136,172,0	warp	orda3	0,0,ordeal_a04.gat,24,284
+ordeal_a04.gat,153,128,0	warp	orda4	0,0,ordeal_a04.gat,153,23
+ordeal_a04.gat,153,180,0	warp	orda5	0,0,ordeal_a04.gat,144,284
+ordeal_a04.gat,172,135,0	warp	orda6	0,0,ordeal_a04.gat,284,24
+ordeal_a04.gat,172,172,0	warp	orda7	0,0,ordeal_a04.gat,284,284
+ordeal_a04.gat,180,154,0	warp	orda8	0,0,ordeal_a04.gat,284,164

@@ -1,25 +1,14 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
-
 #ifndef _NULLPO_H_
 #define _NULLPO_H_
 
+#include "basetypes.h"
 
 #define NULLPO_CHECK 1
 		// 全体のスイッチを宣言しているヘッダがあれば
 		// そこに移動していただけると
 
-#ifndef __NETBSD__
-#if __STDC_VERSION__ < 199901L
-# if __GNUC__ >= 2
-#  define __func__ __FUNCTION__
-# else
-#  define __func__ ""
-# endif
-#endif
-#endif
 
-#ifdef _WIN32
+#ifdef WIN32
 #define __attribute__(x)	/* nothing */
 #endif
 
@@ -82,51 +71,38 @@
 
 #if NULLPO_CHECK
 
-#define nullpo_ret(t) \
-	if (nullpo_chk(NLP_MARK, (void *)(t))) {return(0);}
+#define nullpo_ret(t) if (nullpo_chk(NLP_MARK, (void *)(t))) {return(0);}
 
-#define nullpo_retv(t) \
-	if (nullpo_chk(NLP_MARK, (void *)(t))) {return;}
+#define nullpo_retv(t) if (nullpo_chk(NLP_MARK, (void *)(t))) {return;}
 
-#define nullpo_retr(ret, t) \
-	if (nullpo_chk(NLP_MARK, (void *)(t))) {return(ret);}
+#define nullpo_retr(ret, t) if (nullpo_chk(NLP_MARK, (void *)(t))) {return(ret);}
 
-#define nullpo_retb(t) \
-	if (nullpo_chk(NLP_MARK, (void *)(t))) {break;}
+#define nullpo_retb(t) if (nullpo_chk(NLP_MARK, (void *)(t))) {break;}
 
 // 可変引数マクロに関する条件コンパイル
 #if __STDC_VERSION__ >= 199901L
 /* C99に対応 */
-#define nullpo_ret_f(t, fmt, ...) \
-	if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), __VA_ARGS__)) {return(0);}
+#define nullpo_ret_f(t, fmt, ...) if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), __VA_ARGS__)) {return(0);}
 
-#define nullpo_retv_f(t, fmt, ...) \
-	if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), __VA_ARGS__)) {return;}
+#define nullpo_retv_f(t, fmt, ...) if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), __VA_ARGS__)) {return;}
 
-#define nullpo_retr_f(ret, t, fmt, ...) \
-	if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), __VA_ARGS__)) {return(ret);}
+#define nullpo_retr_f(ret, t, fmt, ...) if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), __VA_ARGS__)) {return(ret);}
 
-#define nullpo_retb_f(t, fmt, ...) \
-	if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), __VA_ARGS__)) {break;}
+#define nullpo_retb_f(t, fmt, ...) if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), __VA_ARGS__)) {break;}
 
 #elif __GNUC__ >= 2
 /* GCC用 */
-#define nullpo_ret_f(t, fmt, args...) \
-	if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), ## args)) {return(0);}
+#define nullpo_ret_f(t, fmt, args...) if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), ## args)) {return(0);}
 
-#define nullpo_retv_f(t, fmt, args...) \
-	if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), ## args)) {return;}
+#define nullpo_retv_f(t, fmt, args...) if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), ## args)) {return;}
 
-#define nullpo_retr_f(ret, t, fmt, args...) \
-	if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), ## args)) {return(ret);}
+#define nullpo_retr_f(ret, t, fmt, args...) if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), ## args)) {return(ret);}
 
-#define nullpo_retb_f(t, fmt, args...) \
-	if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), ## args)) {break;}
+#define nullpo_retb_f(t, fmt, args...) if (nullpo_chk_f(NLP_MARK, (void *)(t), (fmt), ## args)) {break;}
 
 #else
 
 /* その他の場合・・・ orz */
-
 #endif
 
 #else /* NULLPO_CHECK */

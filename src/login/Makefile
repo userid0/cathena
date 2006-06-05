@@ -1,25 +1,39 @@
-all txt: login-server
+all: txt sql
+txt: login-server 
+sql: login-server_sql
 
-COMMON_OBJ = ../common/obj/core.o ../common/obj/socket.o ../common/obj/timer.o \
-	../common/obj/db.o ../common/obj/plugins.o ../common/obj/lock.o \
-	../common/obj/malloc.o ../common/obj/showmsg.o ../common/obj/utils.o \
-	../common/obj/strlib.o ../common/obj/graph.o ../common/obj/grfio.o \
-	../common/obj/mapindex.o ../common/obj/ers.o ../zlib/unz.o
-COMMON_H = ../common/core.h ../common/socket.h ../common/timer.h ../common/mmo.h \
-	../common/version.h ../common/db.h ../common/plugins.h ../common/lock.h \
-	../common/malloc.h ../common/showmsg.h ../common/utils.h ../common/strlib.h \
-	../common/graph.h ../common/grfio.h ../common/mapindex.h
+##########################################################
+# stupid make does not know .cpp suffix by default
+.SUFFIXES: .cpp
 
-%.o: %.c
-	$(COMPILE.c) -DTXT_ONLY $(OUTPUT_OPTION) $<
+.cpp.o:
+	$(CCC) $(CPPFLAGS) -c $<
+##########################################################
 
-login-server: login.o md5calc.o $(COMMON_OBJ)
-	$(CC) -o ../../$@ login.o md5calc.o $(COMMON_OBJ) $(LIB_S)
-	
+##########################################################
+RETURN_PATH ?= .
+COMMON_PATH ?= ../common
+BASE_PATH   ?= ../basics
+CCC         ?= g++ -pipe
+CPPFLAGS    ?= -g -O3 -ffast-math -D_REENTRANT
+LIBS        ?= -lpthread -lsocket -lnsl -ldl -lrt -lz
+##########################################################
+BP = $(RETURN_PATH)/$(BASE_PATH)
+##########################################################
+include $(BP)/Makefile.dep
+
+##########################################################
+CP = $(RETURN_PATH)/$(COMMON_PATH)
+##########################################################
+include $(CP)/Makefile.dep
+
+
+login-server: login.o $(COMMON_TXT) $(COMMON_OBJ) $(BASE_OBJ)
+	$(CCC) $> $(LIBS) -o $(RETURN_PATH)/$@
+login-server_sql: login.o $(COMMON_SQL) $(COMMON_OBJ) $(BASE_OBJ)
+	$(CCC) $> $(LIBS) -o $(RETURN_PATH)/$@
+
+login.o: login.cpp login.h $(COMMON_H) $(BASE_H)
+
 clean:
-	rm -f *.o ../../login-server
-
-# DO NOT DELETE
-
-login.o: login.c login.h md5calc.h $(COMMON_H)
-md5calc.o: md5calc.c md5calc.h
+	rm -rf *.o $(RETURN_PATH)/login-server $(RETURN_PATH)/login-server_sql GNUmakefile

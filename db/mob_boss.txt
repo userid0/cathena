@@ -1,10 +1,11 @@
-// Bloody Branch Summonable Monsters Database
-//
-// Structure of Database:
-// MobID,DummyName,Rate
+// mob_branch.txtのMVPBOSS版
+// MobID, MobName(Dummy), Rate
+// モンスターID、モンスターの名前(ダミー)、確率(*10000)をした物です。500000なら50%で1000000なら100%です。)
+// モンスターIDが0の場合確率をモンスターの選択に失敗した時に召還されるモンスターのIDとして認識します。(複数である場合最後の物だけ有効です。) 
+// クライアント側で未実装のものを書くとクライアントが重力エラー
+// そしてその敵がキャラクターの付近にいる間ログインできないので注意。
 
 0,Baphomet,1039
-//1022,Werewolf,1000000
 1038,Osiris,1000000
 1039,Baphomet,1000000
 1046,Doppelganger,1000000
@@ -18,30 +19,7 @@
 1157,Pharaoh,1000000
 1159,Phreeoni,1000000
 1190,Orc Lord,1000000
-1251,Stormy Knight,1000000
-1252,Garm,1000000
 1272,Dark Lord,1000000
 1312,Turtle General,1000000
 1373,Lord of Death,1000000
-1389,Dracula,1000000
-1418,Evil Snake Lord,1000000
 1492,Incantation Samurai,1000000
-1511,Amon Ra,1000000
-1518,Bacsojin,1000000
-1583,Tao Gunka,1000000
-1623,RSX 0806,1000000
-1685,Vesper,1000000
-1688,Lady Tany,1000000
-1719,Detale,1000000
-
-//== Not "Normal" MvP's. (Level 99 or Quest ones)
-//1646,Lord Knight Seyren,1000000
-//1647,Assassin Cross Eremes,1000000
-//1648,Whitesmith Harword,1000000
-//1649,High Priest Magaleta,1000000
-//1650,Sniper Shecil,1000000
-//1651,High Wizard Katrinn,1000000
-//1658,Egnigem Cenia,1000000
-//1708,Thanatos,1000000
-//1734,Kiel D-01,1000000
-//1751,Valkyrie Randgris,1000000

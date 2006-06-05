@@ -1,13 +1,19 @@
 // The packet database allows you to add support for new clients,
 // because packets change every release.
-// Note: Every packet version needs a wanttoconnection specification, since
-// that is the packet used to identify a client's version, if multiple versions
-// have the same connection packet, the higher version will be used (unless
-// the lower one is specified as the default)
+// By default this only allows 1 type of client at a time, make sure your
+// client is the last one in the list
+// EX: You have client 628 and it goes up to 1021,
+// delete or comment (use //) till your client is last.
 
-// Main packet version of the DB to use (default = max available version)
-// Client detection is faster when all clients use the specified here version.
+
+// Whether to allow identifying clients via the packet DB
+enable_packet_db: yes
+
+// Main packet version of the DB (default = Auto Detect)
 packet_db_ver: default
+
+// Whether the packet DB takes higher precedence over the hardcoded packet
+// length and functions, and whether to overwrite them when reading
 
 packet_ver: 5
 0x0064,55
@@ -310,7 +316,7 @@ packet_ver: 5
 0x018d,-1
 0x018e,10,producemix,2:4:6:8
 0x018f,6
-0x0190,90,useskilltoposinfo,2:4:6:8:10
+0x0190,90,useskilltopos,2:4:6:8:10
 0x0191,86
 0x0192,24
 0x0193,6,solvecharname,2
@@ -438,6 +444,7 @@ packet_ver: 5
 0x020d,-1
 0x020e,24
 0x020f,10
+//jRO‚Í‚±‚±‚Ü‚Å
 
 //2004-07-06kRO
 packet_ver: 6
@@ -446,7 +453,7 @@ packet_ver: 6
 0x00a7,13,useitem,5:9
 0x0113,15,useskilltoid,4:9:11
 0x0116,15,useskilltopos,4:9:11:13
-0x0190,95,useskilltoposinfo,4:9:11:13:15
+0x0190,95,useskilltopos,4:9:11:13:15
 
 //2004-07-13kRO
 packet_ver: 7
@@ -457,7 +464,7 @@ packet_ver: 7
 0x00a7,17,useitem,6:13
 0x0113,19,useskilltoid,7:9:15
 0x0116,19,useskilltopos,7:9:15:17
-0x0190,99,useskilltoposinfo,7:9:15:17:19
+0x0190,99,useskilltopos,7:9:15:17:19
 
 //2004-07-26kRO
 packet_ver: 8
@@ -469,7 +476,7 @@ packet_ver: 8
 0x0094,10,takeitem,6
 0x009b,6,walktoxy,3
 0x009f,13,changedir,5:12
-0x00a2,103,useskilltoposinfo,3:6:17:21:23
+0x00a2,103,useskilltopos,3:6:17:21:23
 0x00a7,12,solvecharname,8
 0x00f3,-1,globalmessage,2:4
 0x00f5,17,useitem,6:12
@@ -490,7 +497,7 @@ packet_ver: 9
 0x0094,13,takeitem,9
 0x009b,15,walktoxy,12
 0x009f,12,changedir,7:11
-0x00a2,120,useskilltoposinfo,5:15:29:38:40
+0x00a2,120,useskilltopos,5:15:29:38:40
 0x00a7,11,solvecharname,7
 0x00f5,24,useitem,9:20
 0x00f7,13,ticksend,9
@@ -499,8 +506,8 @@ packet_ver: 9
 0x0193,18,actionrequest,7:17
 
 //2004-08-16aSakexe
-0x020f,0
-0x0210,0
+// 0x020f,0
+// 0x0210,0
 0x0211,0
 0x0212,26
 0x0213,26
@@ -512,11 +519,11 @@ packet_ver: 9
 
 //2004-09-06aSakexe
 packet_ver: 10
-0x0072,20,useitem,9:20
+//0x0072,20,useitem,9:20
 0x007e,19,movetokafra,3:15
 0x0085,23,actionrequest,9:22
 0x0089,9,walktoxy,6
-0x008c,105,useskilltoposinfo,10:14:18:23:25
+0x008c,105,useskilltopos,10:14:18:23:25
 0x0094,17,dropitem,6:15
 0x009b,14,getcharnamerequest,10
 0x009f,-1,globalmessage,2:4
@@ -537,7 +544,7 @@ packet_ver: 11
 0x007e,25,movetokafra,6:21
 0x0085,9,actionrequest,3:8
 0x0089,14,walktoxy,11
-0x008c,109,useskilltoposinfo,16:20:23:27:29
+0x008c,109,useskilltopos,16:20:23:27:29
 0x0094,19,dropitem,12:17
 0x00a2,10,solvecharname,6
 0x00a7,29,useskilltopos,6:20:23:27
@@ -554,7 +561,7 @@ packet_ver: 12
 0x0072,17,useitem,6:13
 0x007e,16,movetokafra,5:12
 0x0089,6,walktoxy,3
-0x008c,103,useskilltoposinfo,2:6:17:21:23
+0x008c,103,useskilltopos,2:6:17:21:23
 0x0094,14,dropitem,5:12
 0x009b,15,getcharnamerequest,11
 0x00a2,12,solvecharname,8
@@ -571,7 +578,7 @@ packet_ver: 13
 0x0072,13,useitem,5:9
 0x007e,13,movetokafra,6:9
 0x0085,15,actionrequest,4:14
-0x008c,108,useskilltoposinfo,6:9:23:26:28
+0x008c,108,useskilltopos,6:9:23:26:28
 0x0094,12,dropitem,6:10
 0x009b,10,getcharnamerequest,6
 0x00a2,16,solvecharname,12
@@ -584,11 +591,10 @@ packet_ver: 13
 0x0193,22,movefromkafra,12:18
 
 //2004-11-01aSakexe by Sara
-//It has been reported that this npcamountinput line is WRONG. Therefore this
-//new data is now part of packet version 13
-//packet_ver: 14
-//0x00f5,29,wanttoconnection,5:14:20:24:28
-//0x0143,23,npcamountinput,2:6
+// disabled
+packet_ver: 14
+0x0000,0,wanttoconnection,0
+0x0143,23,npcamountinput,2:6
 0x0215,6
 0x0216,6
 
@@ -603,7 +609,7 @@ packet_ver: 15
 0x008c,13,getcharnamerequest,9
 0x0085,-1,globalmessage,2:4
 0x00f7,14,solvecharname,10
-0x0113,110,useskilltoposinfo,4:9:22:28:30
+0x0113,110,useskilltopos,4:9:22:28:30
 0x00f3,8,changedir,3:7
 0x00f5,29,wanttoconnection,3:10:20:24:28
 0x00a2,7,takeitem,3
@@ -640,7 +646,7 @@ packet_ver: 16
 0x00f5,9,takeitem,5
 0x0113,34,useskilltopos,10:18:22:32
 0x0072,26,useskilltoid,8:16:22
-0x007e,114,useskilltoposinfo,10:18:22:32:34
+0x007e,114,useskilltopos,10:18:22:32:34
 0x00a2,11,solvecharname,7
 0x0143,10,npcamountinput,2:6
 0x021f,66
@@ -663,11 +669,11 @@ packet_ver: 17
 0x00f5,8,takeitem,4
 0x0113,22,useskilltopos,5:9:12:20
 0x0072,25,useskilltoid,6:10:21
-0x007e,102,useskilltoposinfo,5:9:12:20:22
+0x007e,102,useskilltopos,5:9:12:20:22
 0x00a2,15,solvecharname,11
 0x0143,10,npcamountinput,2:6
 0x0224,10
-0x0225,2,taekwon,0
+0x0225,2
 0x0226,282
 0x0227,18
 0x0228,18
@@ -682,35 +688,31 @@ packet_ver: 17
 
 //2005-06-28aSakexe by Sara
 packet_ver: 18
-0x0072,34,useskilltoid,6:17:30
-0x007e,113,useskilltoposinfo,12:15:18:31:33
-0x0085,17,changedir,8:16
+0x009b,32,wanttoconnection,9:15:23:30:31
 0x0089,13,ticksend,9
-0x008c,8,getcharnamerequest,4
-0x0094,31,movetokafra,16:27
-0x009b,32,wanttoconnection,9:15:23:27:31
-0x009f,19,useitem,9:15
-0x00a2,9,solvecharname,5
 0x00a7,11,walktoxy,8
-0x00f3,-1,globalmessage,2:4
-0x00f5,13,takeitem,9
-0x00f7,18,movefromkafra,11:14
-0x0113,33,useskilltopos,12:15:18:31
-0x0116,12,dropitem,3:10
-0x0143,10,npcamountinput,2:6
 0x0190,24,actionrequest,11:23
+0x00f3,-1,globalmessage,2:4
+0x008c,8,getcharnamerequest,4
+0x0085,17,changedir,8:16
+0x0094,31,movetokafra,16:27
 0x0193,2,closekafra,0
+0x00f7,18,movefromkafra,11:14
+0x009f,19,useitem,9:15
+0x0116,12,dropitem,3:10
+0x00f5,13,takeitem,9
+0x0113,33,useskilltopos,12:15:18:31
+0x0072,34,useskilltoid,6:17:30
+0x007e,113,useskilltopos,12:15:18:31:33
+0x00a2,9,solvecharname,5
+0x0143,10,npcamountinput,2:6
 0x20e,10
-//Homon Status
 0x22e,71
-//Start Homunculus?
 0x230,12
-//Homon Skill list
 0x235,115
 0x237,2,rankingpk,0
 0x23d,-1
 0x23e,4
-//Start mail system?
 0x23f,2
 0x240,-1
 0x241,-1
@@ -718,13 +720,9 @@ packet_ver: 18
 0x243,-1
 0x244,-1
 0x245,3
-//Start writing a mail?
 0x246,4
-//Send Item/Zeny
 0x247,8
-//Message
 0x248,116
-//Delivered?
 0x249,3
 0x24a,70
 0x24b,4
@@ -748,22 +746,34 @@ packet_ver: 18
 0x25d,-1
 0x25e,4
 
+
 //2006-04-04aSakexe by blackhole89
 packet_ver: 19
-0x009b,37,wanttoconnection,9:21:28:32:36
-0x00a2,11,solvecharname,7
-0x008c,12,getcharnamerequest,8
-0x00a7,15,walktoxy,12
-0x0116,17,dropitem,8:15
-0x00f5,13,takeitem,9
-0x009f,24,useitem,9:20
 0x0072,26,useskilltoid,11:18:22
-0x0113,40,useskilltopos,5:15:29:38
-0x0085,12,changedir,7:11
 0x007e,120,useskilltoposinfo,5:15:29:38:40
+0x0085,12,changedir,7:11
+0x0089,13,ticksend,7
+0x008c,12,getcharnamerequest,8
 0x0094,23,movetokafra,5:19
+0x009b,37,wanttoconnection,9:21:28:32:36
+0x009f,24,useitem,9:20
+0x00a2,11,solvecharname,7
+0x00a7,15,walktoxy,12
+0x00f3,-1,globalmessage,2:4
+0x00f5,13,takeitem,9
 0x00f7,26,movefromkafra,11:22
+0x0113,40,useskilltopos,5:15:29:38
+0x0116,17,dropitem,8:15
 0x0190,18,actionrequest,7:17
+0x0193,2,closekafra,0
+0x023f,2,refleshmailbox,0
+0x0241,6,readmail,2
+0x0243,6,deletemail,2
+0x0244,6,mailgetappend,2
+0x0246,4,mailwinopen,2
+0x0247,8,sendmailsetappend,2,4
+0x0248,-1,sendmail,2:4:28:69
+
 
 // Add new packets here
-packet_ver: 20
+//packet_ver: 20

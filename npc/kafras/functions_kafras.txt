@@ -5,35 +5,27 @@
 //= eAthena Dev Team
 //= Darlskies, Darkchild, Syrus22, Lupus, kobra_k88 (2.0)
 //===== Current Version: ===================================== 
-//= 5.1
+//= 2.4
 //===== Compatible With: ===================================== 
 //= eAthena 1.0
-//===== Description: =========================================
+//===== Description: ===============================================
 //= These functions  handle save, storage, cart rental, teleport,
 //= and Kafra pass options for all Kafra NPCs.
 //===== Additional Comments: ================================= 
-//= v1.1 Now using functions v2.1 Added Cart Rent for Classes: Whitesmith, Professor.
-//= Replaced checkoption(x) into checkcart(0) [Lupus] v2.1b Added Fix Kafra Pass Func [Kobra_k88]
+//= v1.1 Now using functions :)
+//= v2.1 Added Cart Rent for Classes: Whitesmith, Professor.
+//= Replaced checkoption(x) into checkcart(0) [Lupus]
+//= v2.1b Added Fix Kafra Pass Func [Kobra_k88]
 //= 2.2 Final fix of the Kafra Pass Exploit! [Lupus] a -Izlude[4] fix
 //= 2.2a Minor changes to function calls.  Using agruments. Added Guild options. [kobra_k88]
-//= 2.2b This version uses arrays for the teleport option. Rearranged next statements to make menu transitions smoother. [kobra_k88]
+//= 2.2b This version uses arrays for the teleport option.
+//= Rearranged next statements to make menu transitions smoother. [kobra_k88]
 //= 2.3 Removed SAVE from Niflheim. [Lupus]
-//= 2.3 removed "fix" by HawkMoon RTFM and check supernovice.txt . There's a SPECIAL Kafra which gives CARTS to SN for a special proce. [Lupus]
-//= 2.4 Added Baby Class Support (Baby Novice check) Removed annoying storage feature where u had to close dialog window to be able to use your storage [Lupus]
-//= 2.5 Added Louyang official Kafra, fixes some Kafras, not letting you to Save your position [Lupus]
-//= 2.6 Reverted Dungeons Kafras (they should offer only Storage). Added temp Ayothaya Kafra
-//= 2.7 Added correct Ayothaya, Louyang & Amatsu Kafras. [Lupus]
-//= 2.8 Fixed Amatsu Storage problems [Lupus] 2.9 Fixed spelling mistakes. [Nexon]
-//= 3.0 Added special "not working teleport menu" for Einbroch Kafras [Lupus]
-//= 3.1 Removed callfunc Is_####_Class in favor of baseClass [Silentdragon]
-//= 3.2 Fixed an exploit [Lupus]
-//= 4.0 Added Kafra storage password protection. [Lupus]
-//=	to block Kafra Password, read comments at 350 line
-//=	Note: You can change '1337' value to another to raise password protection
-//= 5.0 Fixed the close2;....close; end; lines. Who let them slip away? =/ [erKURITA]
-//=	  Also, the kafra upon warp was giving back the zeny. Removed. [erKURITA]
-//= 5.1 Optimized a little, added no tele/save arg's [Evera]
-//= 5.1a Temporary? Added F_ClearGarbage to clear unused/outdated variables [Lupus]
+//= 2.3 removed "fix" by HawkMoon RTFM and check supernovice.txt . There's a SPECIAL Kafra
+//= which gives CARTS to SN for a special proce. [Lupus]
+//= 2.4 Added Baby Class Support (Baby Novice check)
+//= Removed annoying storage feature where u had to close dialog
+//= window to be able to use your storage [Lupus]
 //============================================================ 
 
 
@@ -44,155 +36,55 @@
 //==========================================================================
 function	script	F_Kafra	{
 	set @kafPass, 0;
-
-	callfunc "F_ClearGarbage"; //Clear outdated, unused variables
-
 	mes "[Kafra]";
-	switch(getarg(0)){
-		default:
-		case 0:
-			mes "Welcome to Kafra Corp.  We will stay with you wherever you go.";
-			break;
-		//Niflheim
-		case 1:
-			mes "Welcome... Kafra Services.... Will be with you even if you die.....";
-			break;
-		//Guilds Castles
-		case 2:
-			mes "Welcome, ^5533FF" + GetGuildName(@GID) + "^000000 members.  We will stay with you wherever you go";
-			break;
-		//Amatsu
-		case 3:
-			mes "So, have you come from a faraway land to study our culture, or are you just sightseeing?";
-			mes "In either case, why not stay awhile?";
-			mes "The air is eternally heavy with the";
-			mes "scent of pleasant wildflowers.";
-			break;
-		//Louyang, Ayothaya
-		case 4:
-			mes "With our many Kafra";
-			mes "service locations, you're never";
-			mes "far from home.";
-			break;
-	}
+	if(getarg(0)==0) mes "Welcome to Kafra Corp.  We will stay with you wherever you go.";
+	if(getarg(0)==1) mes "Welcome... Kafra Services.... Will be with you even if you die.....";
+	if(getarg(0)==2) mes "Welcome, ^5533FF" + GetGuildName(@GID) + "^000000 members.  We will stay with you wherever you go";
 	next;
-
 	M_Menu:
-		cleararray @K_Menu0$[0],"",7;
-	switch(getarg(1)){
-		//only Save & Storage
-		case 1:
-			setarray @K_Menu0$[0],"-Save","-Use Storage","-Cancel";
-			break;
-		//only Storage
-		case 2:
-			setarray @K_Menu0$[0],"-Use Storage","-Cancel";
-			break;
-		//Common w/o teleport
-		case 3: 
-			setarray @K_Menu0$[0],"-Save","-Use Storage","-Rent a Cart","-Kafra Pass","-Other Information Check","-Cancel";
-			break;
-		//Case 4 is Einbroch no tele message.
-		//Common w/o save and teleport
-		case 5:
-			setarray @K_Menu0$[0],"-Use Storage","-Rent a Cart","-Kafra Pass","-Other Information Check","-Cancel";
-			break;
-		//Only storage and other info check
-		case 6:
-			setarray @K_Menu0$[0],"-Use Storage","-Other Information Check","-Cancel";
-		//Common Kafra
-		default:
-			setarray @K_Menu0$[0],"-Save","-Use Storage","-Use Teleport Service","-Rent a Cart","-Kafra Pass","-Other Information Check","-Cancel";
-			break;
-	}
-	if(getarg(0)==2) {
-	//Guilds Kafra
-		cleararray @K_Menu0$[0],"",7;
-		setarray @K_Menu0$[0],"-Use Storage","-Use Guild Storage","-Rent a Cart","-Use Teleport Service","-Cancel";
-	}
-	menu 	@K_Menu0$[0],K_Menu0,@K_Menu0$[1],K_Menu1,@K_Menu0$[2],K_Menu2,
-		@K_Menu0$[3],K_Menu3,@K_Menu0$[4],K_Menu4,@K_Menu0$[5],K_Menu5,
-		@K_Menu0$[6],K_Menu6,@K_Menu0$[7],K_Menu7;
-	K_Menu0:
-		set @num,0;
-		goto K_Menuf;
-	K_Menu1:
-		set @num,1;
-		goto K_Menuf;
-	K_Menu2:
-		set @num,2;
-		goto K_Menuf;
-	K_Menu3:
-		set @num,3;
-		goto K_Menuf;
-	K_Menu4:
-		set @num,4;
-		goto K_Menuf;
-	K_Menu5:
-		set @num,5;
-		goto K_Menuf;
-	K_Menu6:
-		set @num,6;
-		goto K_Menuf;
-	K_Menu7:
-		set @num,7;
-	K_Menuf:
-		if (@K_Menu0$[@num] == "-Save") return;
-		if (@K_Menu0$[@num] == "-Use Storage"){
-			//Don't charge for a common Kafra Storage in your Castle
-			if(getarg(0) == 2) callfunc "F_KafStor",2;
-			else callfunc "F_KafStor",0;
-			next;
-			goto M_Menu;
-		}
-		if (@K_Menu0$[@num] == "-Use Teleport Service"){
-			if(getarg(1) == 4){				//Check for Einbroch Tele notice
-				mes "[Kafra]";
-				mes "Because of the ^FF0000Limited Transport Agreement^000000, the Kafra Corporation cannot provide Teleport Services in the Schwarzwald Republic.";
-				next;
-				mes "[Kafra]";
-				mes "We ask that you please";
-				mes "use the Airship Service";
-				mes "instead. Thank you for your";
-				mes "understanding and cooperation.";
-				next;
-				goto M_Menu;
-			}
-			callfunc "F_KafTele",getarg(0);
-			goto M_Menu;
-		}
-		if (@K_Menu0$[@num] == "-Rent a Cart"){
-			if(callfunc("F_KafCart",getarg(0)) == 1) next;
-			goto M_Menu;
-		}
-		if (@K_Menu0$[@num] == "-Kafra Pass"){
-			if(callfunc("F_KafPass") == 1) next;
-			goto M_Menu;
-		}
-		if (@K_Menu0$[@num] == "-Other Information Check"){
-			callfunc "F_KafInfo",getarg(2);
-			goto M_Menu;
-		}
-		if (@K_Menu0$[@num] == "-Cancel"){
-			callfunc "F_KafEnd",getarg(0),0;
-			end;
-		}
-		if (@K_Menu0$[@num] == "-Use Guild Storage"){
-			callfunc "F_KafStor",1;
-			next;
-			goto M_Menu;
-		}
 
+	if(getarg(0)==2) menu "-Use Storage",M_Storage, "-Use Guild Storage",M_GStorage, "-Rent a Cart",M_Cart, "-Use Teleport Service",M_Teleport, "-Cancel",M_End;
+
+	if(getarg(1)==1) menu "-Use Storage",M_Storage, "-Cancel",M_End;
+
+	menu	"-Save",M_Save, "-Use Storage",M_Storage, "-Use Teleport Service",M_Teleport, "-Rent a Cart",M_Cart, "-Kafra Pass",M_Pass, 
+		"-Other Information Check",M_Info, "-Cancel",M_End;
+
+	M_Save:
+		return;
+	M_Storage:
+		callfunc "F_KafStor",getarg(0);
+		next;
+		goto M_Menu;
+	M_GStorage:
+		callfunc "F_KafStor",3;
+		next;
+		goto M_Menu;
+	M_Teleport:
+		callfunc "F_KafTele",getarg(0);
+		goto M_Menu;
+	M_Cart:
+		if(callfunc("F_KafCart",getarg(0)) == 1) next;
+		goto M_Menu;
+	M_Pass:
+		if(callfunc("F_KafPass") == 1) next;
+		goto M_Menu;
+	M_Info:
+		callfunc "F_KafInfo",getarg(2);
+		goto M_Menu;
+	M_End:
+		callfunc "F_KafEnd",getarg(0),0;
+		end;
 }
 
 
 // Storage Function =======================================================
 function	script	F_KafStor	{
-	if(getarg(0) == 1) goto L_Guild;
-	if(basicskillcheck(0) > 0 && getskilllv(1) < 6) goto sL_JbLvl;
+	if(getarg(0) == 3) goto L_Guild;
+	if((BaseJob ==Job_Novice) && (JobLevel<6)) goto sL_JbLvl;
 	if(BaseJob == Job_Novice) set @fee, 30;
 	if(BaseJob != Job_Novice) set @fee, 60;
-	if(@kafPass==1 || getarg(0) == 2) set @fee, 0;
+	if(@kafPass==1 || getarg(0)==2) set @fee, 0;
 	if(Zeny<@fee) goto sL_Zeny;
 	set Zeny, Zeny-@fee;
 	set RESRVPTS, RESRVPTS + (@fee/5);
@@ -200,9 +92,6 @@ function	script	F_KafStor	{
 	mes "[Kafra]";
 	mes "Close this window to open your storage.";
 	mes "We hope to see you again soon.";
-
-	callfunc("F_CheckKafCode");	//check your storage password, if set
-
 	close2;
 	openstorage;
 	cutin "", 255;
@@ -224,7 +113,7 @@ L_Guild:
 	L_InUse:
 		mes "[Kafra]";
 		mes "I'm sorry but another guild member is using the guild storage";
-		mes "right now.  Please wait until that person is finished.";
+		mes "right now.  Please wait untill that person is finished.";
 		close2;
 		cutin "", 255;
 		end;
@@ -283,6 +172,8 @@ function	script	F_KafTele	{
 		if (@wrpD$[@num] == "Orc Dungeon") warp "gef_fild10.gat", 52, 326;
 		if (@wrpD$[@num] == "Umbala") warp "umbala.gat", 130, 130;
 		if (@wrpD$[@num] == "Yuno") warp "yuno.gat", 157, 123;
+		close2;		// this part safegaurds against errors/typos
+		set zeny, zeny + @wrpP[@num];
 		cutin "", 255;
 		end;
 
@@ -297,21 +188,19 @@ function	script	F_KafTele	{
 
 // Cart Function ========================================================
 function	script	F_KafCart	{
-	if(baseClass != Job_Merchant) goto sL_CantRent;
+	if(callfunc("Is_Merc_Class") == 0) goto sL_CantRent;
 	if(getskilllv(39)==0) goto sL_NeedSkill;
 	if(checkcart(0) == 1) goto sL_GotCart;
 	if(getarg(0) == 2) goto L_Guild;
 	mes "[Kafra]";
 	if(@kafPass==0) mes "The Cart Fee is 800 Zeny.  Do you want to Rent a Cart?";
-	else mes "Since you're using a Kafra Pass, you can rent a cart for free!";
+	if(@kafPass==1) mes "Since you're using a Kafra Pass, you can rent a cart for free!";
 	next;
 	menu "-Rent a Cart.",-, "-Cancel.",M_End;
 
 		if(Zeny<800 && kafPass==0) goto sL_CartFee;
-		if(@kafPass==0) {
-			set Zeny,Zeny-800;
-			if(@kafPass==0) set RESRVPTS, RESRVPTS + 48;
-		}
+		if(@kafPass==0) set Zeny,Zeny-800;
+		if(@kafPass==0) set RESRVPTS, RESRVPTS + 48;
 	L_Guild:
 		setcart;
 		mes "[Kafra]";
@@ -354,12 +243,12 @@ function	script	F_KafPass	{
 		set usedKafPass, usedKafPass + 1;
 		if(usedKafPass>=3) goto sL_PassExpire;
 		if(usedKafPass > 1) goto L_Cont; //fixed Lupus
-		delitem 1084,1;
 		mes "(you hand her your pass)";
 		next;
 		mes "[Kafra]";
 		mes "Great! Everything seems to be in order.  Now that your pass is activated, you may rent a cart or use the teleport services for free.";
 		mes "Your pass number has been entered into our database so you no longer need it.";
+		delitem 1084,1;
 		next;
 
 		L_Cont:
@@ -393,7 +282,7 @@ function	script	F_KafPass	{
 		mes "Your pass number will be entered into our database, and you will then be able to use the Teleport, and Cart Rental Kafra services free of charge.";
 		next;
 		mes "[Kafra]";
-		mes "Once you have finished using the desired services, and have stopped interacting with the Kafra, your 'free use' session will end.";
+		mes "Once you have finished using the desired services, and have stoped interacting with the Kafra, your 'free use' session will end.";
 		mes "You will have a total of ^5533FF 3 'free use' sessions^000000 available upon activation of your Kafra Pass.";
 		next;
 		mes "[Kafra]";
@@ -413,9 +302,7 @@ function	script	F_KafPass	{
 function	script	F_KafInfo	{
 
 	sM_Menu:
-//Uncomment next line to block Kafra Storage Protection
-//	if(getarg(0) == 0) menu "-Special Reserve Check",sM_ResChk, "-Kafra Locations",sM_KafLoc, "-Cancel",sM_End;
-	if(getarg(0) == 0) menu "-Special Reserve Check",sM_ResChk, "-Storage Password Service",sM_KafPassword, "-Kafra Locations",sM_KafLoc, "-Cancel",sM_End;
+	if(getarg(0) == 0) menu "-Special Reserve Check",sM_ResChk, "-Kafra Locations",sM_KafLoc, "-Cancel",sM_End;
 
 	sM_ResChk:
 		mes "[Kafra]";
@@ -426,7 +313,7 @@ function	script	F_KafInfo	{
 		mes "Remember to continue using Kafra services such as Storage and Teleport, to earn more special reserve points.";
 		next;
 		mes "[Kafra]";
-		mes "You can trade them in at the Kafra Main Office in Al De Baran for useful items and cool prizes.";
+		mes "You can trade them in at the Kafra Main Office in Al De Baran for usefull items and cool prizes.";
 		next;
 		if(getarg(0) == 1) return;
 		goto sM_Menu;
@@ -443,10 +330,6 @@ function	script	F_KafInfo	{
 		viewpoint 2,@viewpX[2],@viewpY[2],3,0xFF00FF;
 		viewpoint 2,@viewpX[3],@viewpY[3],4,0xFF00FF;
 		goto sM_Menu;
-
-	sM_KafPassword:
-		callfunc("F_SetKafCode");
-
 	sM_End:
 		return;
 }
@@ -454,7 +337,7 @@ function	script	F_KafInfo	{
 
 // End Function =====================================================
 //  arg(0): used to determine what message to display.
-//  arg(1): used to determine if save message is displayed.
+//  arg(1): used to determine if save message is diplayed.
 //===================================================================
 function	script	F_KafEnd	{
 	mes "[Kafra]";
@@ -464,127 +347,5 @@ function	script	F_KafEnd	{
 	close2;
 	cutin "", 255;
 	emotion 15;
-	close;
 	end;
-}
-
-// Check Storage Password Function ====================
-function	script	F_CheckKafCode	{
-	if(#kafra_code==0) return;
-	mes "Enter your storage password:";
-	set @code_,0;
-	input @code_;
-	if(@code_ != #kafra_code-getcharid(3)-1337) {
-		dispbottom "Wrong storage password.";
-		close2;
-		cutin "",255;
-		end;
-	}
-	set @kafcode_try,0;
-	set @code_,0;
-	return;
-}
-
-// Set / Change / Clear Storage Password Function ====================
-function	script	F_SetKafCode	115,{
-	mes "[Kafra]";
-	if(#kafra_code) {
-		mes "Your storage is protected with a password. What would you do now?";
-		next;
-		menu "Change old password -> 5000z",-,
-		"Remove storage password -> 1000z",M_CLEAR,
-		"Cancel",M_END;
-	} else {
-		mes "Kafra Services proudly presents you a new service:";
-		mes "Additional storage protection with a password.";
-		next;
-		menu "Set new password -> 5000z",M_SET,
-		"Cancel",M_END;
-	}
-
-	mes "[Kafra]";
-	mes "At first, please enter your ^0000FFold password^000000.";
-	set @code,callfunc("F_EntKafCode");
-	if(@code==0 || @code != #kafra_code-getcharid(3)-1337) {
-		mes "Wrong password. You can't set a new password.";
-		emotion e_hmm;
-		goto M_END;
-	}
-	next;
-
-M_SET:
-	mes "[Kafra]";
-	mes "Now enter your ^FF0000new password^000000 to protect your storage from thieves.";
-	set @code,callfunc("F_EntKafCode");
-	if(@code==0) {
-		mes "The password hasn't been changed.";
-		emotion e_hmm;
-		goto M_END;
-	}
-	next;
-	mes "[Kafra]";
-	if(Zeny < 5000) goto L_ZENY;
-	set Zeny,Zeny-5000;
-	set RESRVPTS, RESRVPTS + (5000/50);
-
-	set #kafra_code,@code+getcharid(3)+1337;
-	mes "You've protected your storage with a secret password.";
-	mes "Thank you for using Kafra Services.";
-	emotion e_thx;
-	goto M_END;	
-
-M_CLEAR:
-	mes "[Kafra]";
-	mes "Please, enter your password before its removal.";
-	set @code,callfunc("F_EntKafCode");
-	if(@code==0) {
-		mes "The password hasn't been removed.";
-		emotion e_hmm;
-		goto M_END;
-	}
-	next;
-	mes "[Kafra]";
-	if(Zeny < 1000) goto L_ZENY;
-	set Zeny,Zeny-1000;
-	set RESRVPTS, RESRVPTS + (1000/50);
-	if(@code == #kafra_code-getcharid(3)-1337) {
-		set #kafra_code,0;
-		mes "You've successfully cleared your storage password.";
-		mes "Thank you for using Kafra Services.";
-		emotion e_thx;
-	} else {
-		mes "Wrong password. We won't return your 1000z.";
-		mes "Please, next time enter correct password.";
-		emotion e_sry;
-	}
-	goto M_END;	
-
-L_ZENY:
-	mes "You don't have enough zeny.";
-	emotion e_cash;
-M_END:
-	close2;
-	cutin "",255;
-	end;
-}
-
-// Basic Password Validation Function ====================
-function	script	F_EntKafCode	{
-	mes "Enter a number 1000~10000000:";
-	set @code_,0;
-	set @kafcode_try,@kafcode_try+1;
-	if(@kafcode_try>10) {
-		set @kafcode_try,0;
-		logmes "Hack: Tried to fit storage password.";
-	}
-	input @code_;
-	if(@code_<1000) {
-		mes "You shouldn't use such short password.";
-		return 0;
-	}
-	if(@code_>10000000) {
-		mes "You can't use such big password.";
-		return 0;
-	}
-	return @code_;
 }

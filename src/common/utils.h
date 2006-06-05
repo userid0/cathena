@@ -1,52 +1,45 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
-
 #ifndef COMMON_UTILS_H
 #define COMMON_UTILS_H
 
+#include "basetypes.h"
+#include "basefile.h"
 
-#ifndef NULL
-#define NULL (void *)0
-#endif
 
-#define LOWER(c)   (((c)>='A'  && (c) <= 'Z') ? ((c)+('a'-'A')) : (c))
-#define UPPER(c)   (((c)>='a'  && (c) <= 'z') ? ((c)+('A'-'a')) : (c) )
 
-/* strcasecmp -> stricmp -> str_cmp */
-#if defined(_WIN32) && !defined(MINGW)
-	int	strcasecmp(const char *arg1, const char *arg2);
-	int	strncasecmp(const char *arg1, const char *arg2, size_t n);
-	void str_upper(char *name);
-	void str_lower(char *name);
-    char *rindex(char *str, char c);
-#endif
+//////////////////////////////
+#ifdef WIN32
+//////////////////////////////
 
-void dump(unsigned char *buffer, int num);
-int newt_sqrt(int value); //Newton aproximation for getting a fast sqrt.
+#define RETCODE	"\r\n"
+#define RET RETCODE
 
-struct StringBuf {
-	char *buf_;
-	char *ptr_;
-	unsigned int max_;
-};
+//////////////////////////////
+#else/////////////////////////
+//////////////////////////////
 
-struct StringBuf * StringBuf_Malloc(void);
-void StringBuf_Init(struct StringBuf *);
-int StringBuf_Printf(struct StringBuf *,const char *,...);
-int StringBuf_Append(struct StringBuf *,const struct StringBuf *);
-char * StringBuf_Value(struct StringBuf *);
-void StringBuf_Destroy(struct StringBuf *);
-void StringBuf_Free(struct StringBuf *);
+#define RETCODE "\n"
+#define RET RETCODE
 
-void findfile(const char *p, const char *pat, void (func)(const char*));
+//////////////////////////////
+#endif////////////////////////
+//////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////
-// byte word dword access [Shinomori]
-//////////////////////////////////////////////////////////////////////////
 
-extern unsigned char GetByte(unsigned long val, size_t num);
-extern unsigned short GetWord(unsigned long val, size_t num);
-extern unsigned short MakeWord(unsigned char byte0, unsigned char byte1);
-extern unsigned long MakeDWord(unsigned short word0, unsigned short word1);
+void dump(unsigned char *buffer, size_t num);
 
-#endif
+int config_switch(const char *str);
+bool email_check(const char *email);
+bool remove_control_chars(char *str);
+const char *strcpytolower(char *tar, const char *str);
+const char *strcpytolower(char *tar, size_t sz, const char *str);
+const char *safestrcpy(char *tar, const char *src, size_t cnt);
+const char *replacecpy(char *tar, const char* src, size_t sz, char rplc='\t', char with=' ');
+const char *mapname2buffer(unsigned char *buffer, const char *mapname, size_t cnt);
+const char *get_prepared_line(const char *line);
+size_t prepare_line(char *line);
+
+
+
+
+
+#endif//COMMON_UTILS_H

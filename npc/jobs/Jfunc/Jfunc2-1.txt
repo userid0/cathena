@@ -3,14 +3,13 @@
 //===== By: ================================================== 
 //= massdriller
 //===== Current Version: ===================================== 
-//= 0.2
+//= 0.1
 //===== Compatible With: ===================================== 
 //= eAthena 1.0 +
 //===== Description: ========================================= 
 //= Optimised scripts by moving all their checkers here.
 //===== Additional Comments: ================================= 
 //= For 2-1 Jobs
-//= 0.2 Removed callfunc Is_####_Class in favor of baseClass [Silentdragon]
 //============================================================ 
 
 //Assasin Check
@@ -18,45 +17,45 @@ function	script	Ass_check	{
 
 	if(BaseJob==Job_Assassin) goto L_JobSin;
 	mes "[Angry looking man]";
-	if(baseClass == Job_Swordman) goto L_JobSwo;
-	if(baseClass == Job_Mage) goto L_JobMag;
-	if(baseClass == Job_Archer) goto L_JobArch;
-	if(baseClass == Job_Acolyte) goto L_JobAco;
-	if(baseClass == Job_Merchant) goto L_JobMerc;
-	if(baseClass == Job_Thief) goto L_JobOther;
+	if(callfunc("Is_Sword_Class")) goto L_JobSwo;
+	if(callfunc("Is_Magic_Class")) goto L_JobMag;
+	if(callfunc("Is_Bow_Class")) goto L_JobArch;
+	if(callfunc("Is_Holy_Class")) goto L_JobAco;
+	if(callfunc("Is_Merc_Class")) goto L_JobMerc;
+	if(callfunc("Is_Thief_Class")) goto L_JobOther;
 
 L_JobNov:
 	mes "....HEY Novice!!! GET out of here now!! I won't be held responsible if anything bad happens to you.......";
-	emotion e_gasp;
+	emotion 0;
 	close;
 L_JobSwo:
 	mes "....What are you doing here???";
-	emotion e_what;
+	emotion 1;
 	next;
 	mes "[Angry looking man]";
 	mes "Doing what you're ordered to do eh?........ You guys are nothing more than dogs that listen to their owners.............";
-	emotion e_pif;
+	emotion 32;
 	close;
 L_JobMag:
 	mes "...What's a mage like you doing here? You should be paying more attention to your training.....";
-	emotion e_hmm;
+	emotion 20;
 	close;
 L_JobArch:
 	mes "Uh.... you're one of those people with bows right? Sorry but there are no cute pets here for u to kill..........";
-	emotion e_swt;
+	emotion 4;
 	next;
 	mes "[Angry looking man]";
 	mes "Wait...... You're not here to create trouble eh!!? ....LEAVE AT ONCE!!";
-	emotion e_gasp;
+	emotion 0;
 	close;
 L_JobAco:
 	mes "...Oh God's little helper..... What are you doing down in a dreadful place like this?";
 	mes "Trust me, you're not going to find any salvation here........ why don't you just run along ok?........";
-	emotion e_hmm;
+	emotion 20;
 	close;
 L_JobMerc:
 	mes ".... What the??? Do you have any idea where you are??...... GREEDY SCAMMERS like you are not welcome here!!";
-	emotion e_gg;
+	emotion 29;
 	close;
 L_JobOther:
 	mes ".... Hmm.... although you're not an Assassin or Thief... I have to say I like your sense of style.";
@@ -75,11 +74,11 @@ L_JobSin:
 function	script	Bla_check	{
 
 	if (BaseJob == 0) goto L_Nov;
-	if (baseClass == Job_Swordman) goto L_Sword;
-	if (baseClass == Job_Acolyte) goto L_Aco;
-	if (baseClass == Job_Thief) goto L_Thief;
-	if (baseClass == Job_Mage) goto L_Wiz;
-	if (baseClass == Job_Archer) goto L_Arc;
+	if (callfunc("Is_Sword_Class")) goto L_Sword;
+	if (callfunc("Is_Holy_Class")) goto L_Aco;
+	if (callfunc("Is_Thief_Class")) goto L_Theif;
+	if (callfunc("Is_Magic_Class")) goto L_Wiz;
+	if (callfunc("Is_Bow_Class")) goto L_Arc;
 	if (BaseJob == 10) goto L_Black;
 	mes "Only Merchants can become Blacksmiths.";
 	close;
@@ -100,7 +99,7 @@ L_Wiz:
 L_Aco:
 	mes "Oh! A Holy one...! Do me a favor and bless the sword I'm crafting!";
 	close;
-L_Thief:	
+L_Theif:	
 	mes "Sorry, but this is more of a office, so there's nothing worth money.  We CAN do knife forges though.";
 	close;
 L_Black:
@@ -113,17 +112,17 @@ L_Black:
 function	script	Hun_check	{
 
 	if(BaseJob==Job_Hunter) goto L_Hunt;
-	if(baseClass == Job_Archer) goto L_Other;
-	if(baseClass == Job_Swordman) goto L_Swo;
-	if(baseClass == Job_Mage) goto L_Mage;
-	if(baseClass == Job_Thief) goto L_Thf;
-	if(baseClass == Job_Acolyte) goto L_Aco;
-	if(baseClass == Job_Merchant) goto L_Merc;
+	if(callfunc("Is_Bow_Class")) goto L_Other;
+	if(callfunc("Is_Sword_Class")) goto L_Swo;
+	if(callfunc("Is_Magic_Class")) goto L_Mage;
+	if(callfunc("Is_Thief_Class")) goto L_Thf;
+	if(callfunc("Is_Holy_Class")) goto L_Aco;
+	if(callfunc("Is_Merc_Class")) goto L_Merc;
 
 L_Nov:
 	mes "[Hunter Sharon]";
 	mes "What's a novice like you doing here? Leave, we have nothing for you.";
-	emotion e_what;
+	emotion 1;
 	close;
 L_Swo:
 	mes "[Hunter Sharon]";
@@ -144,20 +143,20 @@ L_Merc:
 L_Thf:
 	mes "[Hunter Sharon]";
 	mes "Eeep! There's nothing to steal here!! Leave us alone..... go rob an old lady or something......";
-	emotion e_omg;
+	emotion 23;
 	close;
 L_Hunt:
 	mes "[Hunter Sharon]";
 	mes "What up! "+strcharinfo(0)+" Why did you come back? Falcon run away or something? Te hehe.";
-	emotion e_heh;
+	emotion 18;
 	next;
 	mes "[Hunter Sharon]";
 	mes "I hope you didn't think you could get free stuff from us just because your part of our guild now......";
 	close;
 L_Other:
 	mes "[Hunter Sharon]";
-	mes "What are YOU doing here? Did you come to do a little song and dance... ke.. keke....kekekeHahahahhaha!!!";
-	emotion e_heh;
+	mes "What are YOU doing her? Did you come to do a little song and dance... ke.. keke....kekekeHahahahhaha!!!";
+	emotion 18;
 	close;
 
 }
@@ -190,12 +189,12 @@ function	script	Kni_check	{
 
 			sL_JobKni:
 				mes "...(sighs)...what are you doing here WASTING my time??  GO FORTH!!, and continue protecting Rune Midgard my young Knight.";
-				emotion e_pif;
+				emotion 32;
 				close;
 
 			sL_JobNov:
 				mes "Hahahaha!!  You have no job experience what so ever and yet you stumble in here asking to be a knight.  Hahahaha!!";
-				emotion e_heh;
+				emotion 18;
 				next;
 				mes "[Chivalry Captain Herman]";
 				mes "You must first become a Swordsman before even thinking about becoming a Knight.  Now scurry along little novice.  Hahahahaha!!!";
@@ -263,7 +262,7 @@ L_Priest:
 	M_1b:
 		mes "[Father Thomas]";
 		mes "Oh...thats a great idea! Since you're a priest, you can't forget that you have to help the Acolytes when they need it.";
-		emotion e_ic;
+		emotion 5;
 		next;
 		mes "[Father Thomas]";
 		mes "Even so, you must be carefull not to do everyting for them.  It is important that they gain their own experiences through training ";
@@ -327,19 +326,19 @@ L_Priest:
 
 function	script	Wiz1_check	{
 
-	if(baseClass == Job_Mage) goto L_Magic;
-	if(baseClass == Job_Acolyte) goto L_Holy;
+	if(callfunc("Is_Magic_Class")) goto L_Magic;
+	if(callfunc("Is_Holy_Class")) goto L_Holy;
 L_Other:
 	mes "[Dog]";
 	mes "Sheesh....... Why would someone who can't even cast a single spell come all the way up here???";
 	next;
 	mes "[Dog]";
 	mes "If you're that bored, do the world a favor and climb to the top of this building from the outside, then do some acrobatics....";
-	emotion e_pif;
+	emotion 32;
 	next;
 	mes "[Dog]";
 	mes "~WOOF~ Get lost! I don't have time for people like you!!";
-	emotion e_go;
+	emotion 27;
 	close;
 L_Holy:
 	mes "[Dog]";
@@ -368,7 +367,7 @@ L_Other:
 	close;
 L_Novice:
 	mes "Awwww, a little novice!  How cute! This place is for Wizards only though.";
-	emotion e_lv2;
+	emotion 14;
 	next;
 	mes "[Catherine Medichi]";
 	mes "If you're interested in magic, the ^0000FFMagician's Guild^000000 is the place for you.";
@@ -379,7 +378,7 @@ L_Wizard:
 	mes "[Catherine Medichi]";
 	if(sex==1) mes "... Of course, if your here to ask me out... (*giggles*)....";
 	if(sex==0) mes "If you get yourself a boyfriend, feel free to drop by and show him off. XD";
-	emotion e_lv;
+	emotion 3;
 	close;
 
 }

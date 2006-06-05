@@ -3,14 +3,13 @@
 //===== By: ================================================== 
 //=  edited by x[tsk] 4/30/04
 //===== Current Version: ===================================== 
-//= 1.1
+//= 1.0 
 //===== Compatible With: ===================================== 
 //= eAthena 1.0
 //===== Description: ========================================= 
 //
 //===== Additional Comments: ================================= 
 // May be missing npc's and dialogue.
-//= 1.1 Fixed Typo’s [Nexon]
 //============================================================
 
 
@@ -35,7 +34,7 @@ alberta.gat,245,69,4	script	Gonryun Public Relations Official	776,{
 		goto M_Menu;
 	M_2:
 		mes "[Waba]";
-		mes "The traveling expenses are ^0000ff10,000 zeny^000000.  The fee is a bit pricy but this is because of the dangerous nature of the trip.";
+		mes "The traveling expenses are ^0000ff10,000 zeny^000000.  The fee is a bit pricy but this is beacuse of the dangerous nature of the trip.";
 		mes "The return trip is free, however. Are you prepared to go?";
 		next;
 		menu "Let's Go!",-, "Actually... I changed my mind, sorry.",M_End;
@@ -44,9 +43,9 @@ alberta.gat,245,69,4	script	Gonryun Public Relations Official	776,{
 			set Zeny,Zeny-10000;
 			warp "gon_fild01.gat",258,82;
 			end;
-		L_NoZeny:
+		L_Zeny:
 			mes "[Waba]";
-			mes "I am sorry if it seems like a lot, but the ^0000ff10,000 zeny^000000 we request is necessary in order to make the trip.";
+			mes "I am sorry if it seems like alot, but the ^0000ff10,000 zeny^000000 we request is necessary in order to make the trip.";
 			close;
 	M_End:
 		mes "[Waba]";	
@@ -139,7 +138,7 @@ gon_in.gat,165,16,4	script	Drunkard	748,{
 	mes "[Sorubun]";
 	mes "Oh my head! I had too much to drink yesterday and passed out right here on the table.";
 	mes "The manager told me that I shouldn't drink anymore and I should have listened.";
-	emotion e_swt2;
+	emotion 19;
 	next;
 	mes "[Sorubun]";
 	mes "Wow, the drinks here are strong! Much stronger than anything we have back home.";
@@ -154,8 +153,8 @@ gonryun.gat,139,142,6	script	Girl	772,{
 	mes "It's been great having new visitors come to the village, but........ ever since I was robbed by that Thief.......";
 	next;
 	mes "[Sanfayon]";
-	mes "I have been so afraid of the foreigners.....";
-	emotion e_wah;
+	mes "I have been sooooo afraid of the foreigners.....";
+	emotion 16;
 	close;
 }
 
@@ -211,7 +210,7 @@ gon_in.gat,18,27,4	script	Elder's Wife	771,{
 
 gon_in.gat,17,93,4	script	Village Elder	775,{
 	mes "[Sayoumun]";
-	emotion e_yawn;
+	emotion 45;
 	mes "Zzzzzzzzzzz.......";
 	next;
 	mes "[Sayoumun]";
@@ -242,7 +241,7 @@ gonryun.gat,119,111,4	script	Chen Wan Sok	89,{
 //===============================================================================
 
 gonryun.gat,100,241,5	script	Unsociable Man	733,{
-	emotion e_dots;
+	emotion 9;
 	mes "[Saunso]";
 	mes "I am too busy to talk, come back later!";
 	close;
@@ -286,7 +285,7 @@ gonryun.gat,237,225,4	script	Hanyon Kyou	776,{
 
 gonryun.gat,51,101,4	script	Gaiysonchoru	778,{
 	mes "[Gaiysonchoru]";
-	emotion e_swt;
+	emotion 4;
 	mes "..............";
 	next;
 	mes "[Gaiysonchoru]";

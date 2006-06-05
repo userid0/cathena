@@ -3,7 +3,7 @@
 //===== By: ================================================== 
 //= kobra_k88
 //===== Current Version: ===================================== 
-//= 1.6
+//= 1.3c
 //===== Compatible With: ===================================== 
 //= eAthena 7.15 +
 //===== Description: ========================================= 
@@ -14,9 +14,6 @@
 //= (in both NPC/Warps) [Lupus]. Removed it from NPC and put in Warp
 //= 1.3 Removed some NPC due to Assassin Job Quest [kobra_k88]
 //= 1.3b mobs name corrected [Lupus], 1.3c - Adv classes support
-//= 1.4 Fixed typo’s [Nexon]
-//= 1.5 Added a lvl 4 weapon quest related NPC [MasterOfMuppets]
-//= 1.6 Added Bartender NPC, made by Persian69 [Vicious_Pucca]
 //============================================================
 
 
@@ -25,7 +22,7 @@
 // Old Scholar ===============================
 morocc_in.gat,112,122,2	script	Old Scholar	61,{
 	mes "[Old Scholar]";
-	mes "I've devoted my Life to researching the Pyramids.  Although I not found anything significant yet, I am confident that I will find the Tomb of Ancient King, Osiris!";
+	mes "I've devoted my Life to researching the Pyramids.  Although I not found anything significant yet, I am confindent that I will find the Tomb of Ancient King, Osiris!";
 	next;
 	mes "[Old Scholar]";
 	mes "It is within the largest of the Morroc Pyramids, that the Greatest King in History sleeps the eternal sleep.  That is... if my memory serves me correctly......";
@@ -48,7 +45,7 @@ morocc.gat,44,180,8	script	Drunk Man	89,{
 	mes "[Drunk Man]";
 	mes "How about you? Why don't you Look for it? It shouldn't be a problem for someone as brave as yourself?";
 	mes "Kekeke keke(Hiccup)! Buy me a drink later if you ever find that dagger.  Promise me, alright?(Hiccup!)";
-	emotion e_hmm;
+	emotion 20;
 	close;
 }
 
@@ -76,14 +73,14 @@ M_Menu:
 	M_Anthell:
 		mes "[Ant Man Akira]";
 		mes "Anthell gets it's name from the fact that the cave is home to the largest colony of giant ants in Rune-Midgard.";
-		mes "There are literally thousands of ants performing work for the colony while their queens lay hundreds and hundreds of eggs.";
+		mes "There are litterally thousands of ants performing work for the colony while their queens lay hundreds and hundreds of eggs.";
 		next;
 		mes "[Ant Man Akira]";
-		mes "Many people go there to train because of the numerous amounts of ant eggs.  But be careful...";
+		mes "Many people go there to traine because of the numerous amounts of ant eggs.  But be carefull...";
 		next;
 		mes "[Ant Man Akira]";
 		mes "Attack an ant by mistake, and you'll find yourself surrounded by a swarm of them before you can even use a fly wing!";
-		emotion e_gasp;
+		emotion 0;
 		goto M_Menu;
 	M_Ants:
 		mes "[Ant Man Akira]";
@@ -91,11 +88,11 @@ M_Menu:
 		mes "Andres are white, Pieres are green, and Deniros are red colored.  Their differences are not merely cosmetic however.";
 		next;
 		mes "[Ant Man Akira]";
-		mes "Andres are the weakest of the ants while Deniros are the most fierce some of the ants.  Pieres lay somewhere in the middle.";
+		mes "Andres are the weakest of the ants while Deniros are the most fiercesome of the ants.  Pieres lay somewhere in the middle.";
 		next;
 		mes "[Ant Man Akira]";
-		mes "Be careful when your around them.  If you hit 1 Andre the other Andres in the area with swarm and attack you.";
-		mes "The same goes for Deniros and Pieres.  You should also know that ants are looters so watch out for your items.";
+		mes "Becarefull when your around them.  If you hit 1 Andre the other Andres in the area with swarm and attack you.";
+		mes "The same goes for Deniros and Pieres.  You should also know that ants are looters so watchout for your items.";
 		goto M_Menu;
 	M_End:
 		mes "[Ant Man Akira]";
@@ -110,10 +107,10 @@ M_Menu:
 // Poring Lady Syvia ==================================
 morocc.gat,79,111,2	script	Poring Lady Syvia	700,{
 	mes "[Poring Lady Syvia]";
-	mes "All over Rune-Midgard you can see lots of cute monsters such as Spores, the mushroom type creature....";
+	mes "All over Rune-Midgard you can see lots of cute monsters such as Spores, the musroom type creature....";
 	next;
 	mes "[Poring Lady Syvia]";
-	mes "Or Pickys, desert chicks that wear egg shells on their heads and jump around in the Morroc Desert..!";
+	mes "Or Pickys, desert chicks that wear egg shells on their heads and jump around in the Morrc Desert..!";
 	mes "However you can't deny that the ^FF8888Poring^000000 is the cutest and most popular creature in all of Rune-Midgard.";
 	next;
 	mes "[Poring Lady Syvia]";
@@ -131,7 +128,7 @@ M_Menu:
 		mes "It is a high level monster armed with the Holy property.  It is immune to almost all magic attacks except those of the neutral & shadow property.";
 		next;
 		mes "[Poring Lady Syvia]";
-		mes "Physical attacks are definitely the way to go against these monsters.";
+		mes "Physical attacks are definately the way to go against these monsters.";
 		next;
 		mes "[Poring Lady Syvia]";
 		mes "Don't I know a lot about porings?  Quite frankly I'm in love with them.... =P";
@@ -142,8 +139,8 @@ M_Menu:
 		mes "The Ghostring is an evil ghost poring.  It is rarely seen and luckly so.";
 		next;
 		mes "[Poring Lady Syvia]";
-		mes "It is a high-level monster armed with the ghost property.  This makes it immune to physical attacks.  So Archers, Swordsman, and Thieves beware!";
-		mes "Only weapons with elemental properties will work on Ghostrings.  Of course magic attacks work very well on them also.";
+		mes "It is a high-level monster armed with the ghost property.  This makes it immume to physical attacks.  So Archers, Swordsman, and Thieves beware!";
+		mes "Only weapons with elemental properites will work on Ghostrings.  Of course magic attacks work very well on them also.";
 		next;
 		mes "[Poring Lady Syvia]";
 		mes "Don't I know a lot about porings?  Quite frankly I'm in love with them.... =P";
@@ -152,14 +149,14 @@ M_Menu:
 	M_Quit:
 		mes "[Poring Lady Syvia]";
 		mes "OMG!";
-		emotion e_omg;
+		emotion 23;
 		next;
 		mes "[Poring Lady Syvia]";
 		mes "You dare dismiss a poring expert such as myself? I am proud of my knowledge about all things poring!!";
 		next;
 		mes "[Poring Lady Syvia]";
 		mes "Hmf!";
-		emotion e_pif;
+		emotion 32;
 		close;
 }
 
@@ -219,7 +216,7 @@ morocc.gat,180,155,4	script	Uncle Dimitri	49,{
 	mes "The avarage temperature in the Morroc Desert is many times higher than anywhere else in the Rune-Midgard Kingdom.";
 	next;
 	mes "[Uncle Dimitrii]";
-	mes "Be careful of where you choose to sit down and rest.  Choose the wrong spot and your butt may catch on fire!!";
+	mes "Be carefull of where you choose to sit down and rest.  Choose the wrong spot and your butt may catch on fire!!";
 M_Menu:
 	next;
 	menu "About the Desert sand",M_1,"About the remedy for Fatigue",M_2,"End conversation",M_End;
@@ -243,7 +240,7 @@ M_Menu:
 		mes "Aaaaahhh!!!!";
 		next;
 		mes "[Uncle Dimitri]";
-		mes "Nothing beats desert fatigue like a couple of potions! The ^ff0000Red^000000 ones are especially popular because of their low cost and light weight.";
+		mes "Nothing beats desert fatigue like a couple of potions! The ^ff0000Red^000000 ones are especially populare because of their low cost and light weight.";
 		next;
 		mes "[Uncle Dimitri]";
 		mes "They only recover a small amount of hp, but combined with a dip in a desert oasis, a couple ^ff0000Reds^000000 are all you need.";
@@ -266,7 +263,7 @@ morocc.gat,208,85,7	script	Trader Joe	83,{
 	next;
 	mes "[Trader Joe]";
 	mes "ALL OF THE SUDDEN!!! The cactus let out this LOUD SCREAM and started to SHOOT its NEEDLES at me!!";
-	emotion e_omg;
+	emotion 23;
 	next;
 	mes "[Trader Joe]";
 	mes "It was THE WORST experience of my ENTIRE LIFE.";
@@ -275,7 +272,7 @@ morocc.gat,208,85,7	script	Trader Joe	83,{
 	mes "I figured out later that it wasn't a normal cactus that attacked me but it was ^00cc00Muka^000000, the cactus monster.";
 	next;
 	mes "[Trader Joe]";
-	mes "So be careful the next time you're out in the desert.  You don't want to make the same mistake I made. (~Sigh~)";
+	mes "So be carefull the next time you're out in the desert.  You don't want to make the same mistake I made. (~Sigh~)";
 	close;
 }
 
@@ -283,21 +280,21 @@ morocc.gat,208,85,7	script	Trader Joe	83,{
 morocc.gat,234,273,3	script	Fly Man Armani	54,{
 	mes "[Fly Man Armani]";
 	mes "I SAW IT!! I SAW IT!!!";
-	emotion e_ic;
+	emotion 5;
 	next;
 	mes "[Fly Man Armani]";
-	mes "I saw the rare ^ff0000Dragon Fly^000000 just South of here! It was incredible!!";
+	mes "I saw the rare ^ff0000Dragon Fly^000000 just North of here! It was incredible!!";
 	next;
 	menu "What... Dragon Fly?!",M_0,"So what?",M_1;
 	
 	M_0:
 		mes "[Fly Man Armani]";
-		mes "It is the boss of desert flies and its much stronger than any other ordinary fly.";
+		mes "It is the boss of desert flies and its much stronger than any other ordanary fly.";
 		mes "It's a rare sight to behold, and for anybody strong enough and lucky enough to defeat it.... ";
 		next;
 		mes "[Fly Man Armani]";
 		mes "The Dragon Fly may even drop an UTLRA RARE item called a ^0000ddClip^000000!";
-		mes "Clips are items that you can attach to weapons, armor, and almost every kind of accessory.";
+		mes "Clips are items that you can attach to weapons, armor, and almost everykind of accessory.";
 		next;
 		mes "[Fly Man Armani]";
 		mes "Clips are ^ffaa00slotted^000000 and therefore you can insert cards into them.  That's what makes them so valuable.";
@@ -305,22 +302,22 @@ morocc.gat,234,273,3	script	Fly Man Armani	54,{
 		next;
 		mes "[Fly Man Armani]";
 		mes "Say.... why don't YOU challenge the Dragon Fly?";
-		emotion e_hmm;
+		emotion 20;
 		close;
 	M_1:
 		mes "[Fly Man Armani]";
 		mes "SO WHAT!!??";
-		emotion e_omg;
+		emotion 23;
 		next;
 		mes "[Fly Man Armani]";
-		mes "Do you dare underestimate the Dragon Fly??  Bleh! It may be a fly, but I guarantee you THIS FLY is more than you can handle!";
-		emotion e_pif;
+		mes "Do you dare underestimate the Dragon Fly??  Bleh! It may be a fly, but I gaurantee you THIS FLY is more than you can handle!";
+		emotion 32;
 		next;
 		mes "[Fly Man Armani]";
-		mes "No matter.  If you ARE fortunate enough to run into it, you'll quickly see what I mean.  After all, it IS the FLY of ALL FLIES!!!!";
+		mes "No matter.  If you ARE fortunate enough to run into it, you'll quickly see what I mean.  Afterall, it IS the FLY of ALL FLIES!!!!";
 		next;
 		mes "[Fly Man Armani]";
-		mes "^ff0000Dragon Fly^000000.  Remember this name well!!";
+		mes "^ff0000Dragon Fly^000000.  Remeber this name well!!";
 		close;
 }
 
@@ -341,81 +338,26 @@ M_Menu:
 		mes "Even so there are plants that seem to thrive in the desert.  And where there are plants, there are animals.";
 		next;
 		mes "[Uncle Phlanette]";
-		mes "So even with the high temperatures, and limited water, living creatures still find a way to survive in the desert."; 
+		mes "So even with the high temperatutres, and limited water, living creatures still find a way to survive in the desert."; 
 		next;
 		mes "[Uncle Phlanette]";
-		mes "Unfortunately, for unknown reasons, some of the plants and animals in the desert have turned into dangerous monsters.";
-		mes "The ^00cc00'Mukas'^000000 are one of those monsters.  They were originally cactus plants.";
+		mes "Unfortunately, for unkown reasons, some of the plants and animals in the desert have turned into dangerous monsters.";
+		mes "The ^00cc00'Mukas'^000000 are one of those mosters.  They were originaly cactus plants.";
 		goto M_Menu;
 	M_End:
 		mes "[Uncle Phlanette]";
 		mes "Sand HERE! Sand THERE! Sand EVERYWHERE!!!!";
-		emotion e_gasp;
+		emotion 0;
 		next;
 		mes "[Uncle Phlanette]";
 		mes "(~Sigh~) I'm SICK and TIRED of this sand and desert...";
 		next;
 		mes "[Uncle Phlantette]";
 		mes "Morroc......!! I HATE YOU!!!!!!";
-		emotion e_pif;
+		emotion 32;
 		close;
 }
 
-//Bartender
-morocc_in.gat,166,76,3	script	Bartender	46,{
-	mes "[Bartender]";
-	mes "What are you going to order?";
-	next;
-	menu "Tropical Sograt",L1,"Vemillion the Beach",L2,"Nothing.",-;
-
-	mes "[Bartender]";
-	mes "Hmm...";
-	close;
-
-L1:
-	if (zeny < 1000 ) goto Nomoney;
-	getitem 12112,1;
-	set zeny,zeny-1000;
-	mes "[Bartender]";
-	mes "Here you go.";
-	mes "Fruits are major ingredients,";
-	mes "but don't drink too much.";
-	close;
-
-L2:
-	if (zeny < 1000 ) goto Nomoney;
-	getitem 12113,1;
-	set zeny,zeny-1000;
-	mes "[Bartender]";
-	mes "Here you go.";
-	mes "but don't drink too much.";
-	close;
-
-Nomoney:
-	mes "[Bartender]";
-	mes "Are you asking me to give it for free?";
-	mes "You are one crazy person.";
-	mes "Don't even think about drinking if you don't have 1,000 zeny.";
-	close;
-}
-
-// Lvl 4 weapon quest related NPC ================================
-
-morocc.gat,289,230,3	script	Citizen	92, {
-	mes "[Citizen]";
-	mes "Meeting a dead man is basically";
-	mes "impossible.";
-	mes "Even if you met one,";
-	mes "he would not have the full memory of his life.";
-	next;
-	mes "[Citizen]";
-	mes "But if you brought a thing that he";
-	mes "used to keep in his life,";
-	mes "it would be possible to retrieve his memory of the life.";
-	mes "Of course, we can confirm this theory only";
-	mes "when we meet a dead man.";
-	close;
-}
 
 //<================================================== Assassin Guild ====================================================>\\
 
@@ -431,11 +373,11 @@ moc_fild16.gat,199,212,4	script	Hashisid	48,{
 		mes "Let me tell you a little bit about Assassins";
 		next;
 		mes "[Hashisid]";
-		mes "Assassin's are hired to infiltrate, gather intelligence, and even commit murder without being seen or heard.";
+		mes "Assassin's are hired to infiltrate, gather intellegence, and even commit murder without being seen or heard.";
 		mes "Stealth and speed are vital to Assassins.  Assassins live in the shadows and never get praise or congratulations.";
 		next;
 		mes "[Hashisid]";
-		mes "It's their job to go unnoticed.  Though an Assassin may seem like a cruel and heartless individual....";
+		mes "It's their job to go unoticed.  Though an Assassin may seem like a cruel and heartless individual....";
 		mes "An Assassin will never do any harm to an innocent being.  The main purpose of the Assassin to seek out and destroy evil forces!";
 		close;
 	M_End:
@@ -448,10 +390,9 @@ moc_fild16.gat,199,212,4	script	Hashisid	48,{
 
 moc_fild16.gat,195,281,4	script	Assassin Guardian#1::SinGuard	707,{
 	mes "[Assassin Guardian]";
-	if(BaseJob == Job_Assassin) {
-		mes "Welcome.";
-		close;
-	}
+	if(BaseJob == Job_Assassin) mes "Welcome.";
+	if(BaseJob == Job_Assassin) close;
+
 	set @temp, rand(1,4);
 	if(@temp == 1) mes "........";
 	if(@temp == 2) mes "Hmmm..........";

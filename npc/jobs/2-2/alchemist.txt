@@ -1,9 +1,10 @@
 //===== eAthena Script ======================================= 
 //= Alchemist Job Quest
 //===== By: ==================================================
-//= nestor_zulueta (Fusion), converted by Darkchild
+//= nestor_zulueta (Fusion)
+//= converted by Darkchild
 //===== Current Version: ===================================== 
-//= 2.2
+//= 1.3
 //===== Compatible With: ===================================== 
 //= eAthena 1.0 +
 //===== Description: ========================================= 
@@ -17,12 +18,6 @@
 //= Having a joblvl of 50 allows you to skip Rasputin's test. (based of mRO website) [kobra_k88]
 //= 1.2 fixed a few typos (have to hunt more) [Lupus]
 //= 1.3 Added Baby Class Support [Lupus]
-//= 1.6 Added a func which prevent advanced classes passing
-//= 2nd Job Quests again. It also guides adv classes where
-//= to go. [Lupus]
-//= 1.6a fixed some wrong answers, thanks to zlider for info [Lupus]
-//= 2.0 Changed numbers to constants. [Vicious]
-//= 2.2 Got rid of 'al_morgen' var. Now uses (MISC_QUEST & 4) [Lupus]
 //============================================================ 
 
 
@@ -30,8 +25,6 @@
 //					Registration and First Test
 //==================================================================================================//
 alde_alche.gat,27,185,4	script	Parmry Gianino	744,{
-	callfunc "F_BlockHigh",Job_Merchant_High,"Merchant High",Job_Creator,"Creator","Parmry Gianino";
-
 	mes "[Parmry Gianino]";
 	if(BaseJob == 5) goto L_Merc;
 	if(BaseJob == Job_Alchem) goto L_Alch;
@@ -306,7 +299,7 @@ L_Start:
 		mes "Muffler, Boots, and Ear Muffs?";
 		next;
 		input @num;
-		if(@num == 19) set @score,@score+10;
+		if(@num == 22) set @score,@score+10;
 	q8:	
 		mes "[Rasputin Gregory]";
 		mes "If you buy 5 Helms with a 24%";
@@ -363,7 +356,7 @@ L_ReTest:
 		mes "(35*19) - (1792/7) =?";
 		next;
 		input @num;
-		if(@num == 409) set @score,@score+10;
+		if(@num == 400) set @score,@score+10;
 	q16:
 		mes "[Rasputin Gregory]";
 		mes "(2368/8) + (24*17) = ?";
@@ -388,7 +381,7 @@ L_ReTest:
 	q19:
 		mes "[Rasputin Gregory]";
 		mes "What is the total weight of ";
-		mes "3 Ring Pommel Sabers,";
+		mes "3 Ring Pommels Saber,";
 		mes "4 Caps and 2 Boots?";
 		next;
 		input @num;
@@ -396,7 +389,7 @@ L_ReTest:
 	q20:
 		mes "[Rasputin Gregory]";
 		mes "What is the total defense of a ";
-		mes "Buckler, Coat, Gas Mask, Big";
+		mes "Bucler, Coat, Gas Mask, Big";
 		mes "Ribbon, Ribbon, Sakkat and";
 		mes "Glasses?";
 		next;
@@ -774,7 +767,7 @@ L_Start:
 		mes "If you dont have business here just go away. Ok!!!";
 		close;
 L_Check:	
-	if((MISC_QUEST & 4)==0) goto L_NotRdy;
+	if(al_morgen != 1) goto L_NotRdy;
 	mes "Yes, cut the Tentacle..";
 	mes "and mix some Sticku Mucus,";
 	mes "Jellopy solution in the test tube Darn, where did the Medicine Bowl go...";
@@ -832,6 +825,7 @@ L_Result:
 	mes "Go out and to the room next to here.  ^5533FFNicholas^000000 probably has more to teach you than me.";
 	set ALCH_Q,5;
 	set ALCH_Q2,0;
+	set al_morgen, 0;
 	close;
 
 	L_Failed:
@@ -1058,7 +1052,7 @@ L_Change:
 	mes "Ooh, Ok. You joined and learned the basics, too. Well done.";
 	next;
 	callfunc "Job_Change",Job_Alchem;
-	emotion e_grat;
+	emotion 46;
 	mes "[Vincent Carsciallo]";
 	mes "From now on, you are also a member of the Union as an Alchemist.";
 	mes "I hope you learn a lot...";

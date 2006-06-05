@@ -3,7 +3,7 @@
 //===== By: =========================
 //= eAthena Dev Team
 //===== Current Version: ===================
-//= 2.4
+//= 2.1b
 //===== Compatible With: =====================
 //= eAthena 1.0
 //===== Description: ============================================
@@ -17,22 +17,17 @@
 //= v1.1 Now using functions :)
 //= v2.1b Minor changes to function calls. Using arguments.
 //= This version uses arrays .[kobra_k88]
-//= 2.2 North Kafra allows you save your position
-//= 2.3 New Teleport list, new prices, 2.3a fixed Alberta Teleport [Lupus]
-//= 2.3b One Kafra's been moved to Prontera, thx to Vicious_Pucca [Lupus]
-//= 2.4 Updated Kafras locations for the mini-map [Lupus]
-//= 2.41 New prices [Evera]
 //=====================================================================
 
 
-// North ==================================
-prontera.gat,152,326,4	script	Kafra	112,{
+// North of Prontera==================================
+prt_fild01.gat,198,47,8	script	Kafra	112,{
 	cutin "kafra_06",2;
 	callfunc "F_Kafra",0,1,1;
 
-M_Save:
-	savepoint "prontera.gat",157,327;
-	callfunc "F_KafEnd",0,1;
+	M_Save:
+		savepoint "prt_fild01.gat",197,50;
+		callfunc "F_KafEnd",0,1;
 }
 
 // SOUTH ======================================
@@ -86,22 +81,12 @@ prontera.gat,282,200,4	script	Kafra	115,{
 			callfunc "F_KafEnd",0,1;
 }
 
-// Center ===========================================
-prontera.gat,146,86,6	script	Kafra	117,{
-	cutin "kafra_01",2;
-	callfunc "F_KafSetPront";
-	callfunc "F_Kafra",0,0,0;
-
-M_Save:
-	savepoint "prontera.gat",116,73;
-	callfunc "F_KafEnd",0,1;
-}
-
 
 // Function: Sets variables for Prontera Kafras ----------------------------
 function	script	F_KafSetPront	{
-	setarray @wrpD$[0], "Izlude", "Geffen", "Payon", "Morroc", "Orc Dungeon", "Alberta";
-	setarray @wrpP[0], 600, 1200, 1200, 1200, 1200, 1800;
+
+	setarray @wrpD$[0], "Izlude", "Geffen", "Payon", "Morroc", "Comodo", "Orc Dungeon";
+	setarray @wrpP[0], 900, 1400, 1700, 1800, 2100, 1700;
 	set @wrpC$[0], @wrpD$[0]+" -> "+@wrpP[0];
 	set @wrpC$[1], @wrpD$[1]+" -> "+@wrpP[1];
 	set @wrpC$[2], @wrpD$[2]+" -> "+@wrpP[2];
@@ -109,7 +94,7 @@ function	script	F_KafSetPront	{
 	set @wrpC$[4], @wrpD$[4]+" -> "+@wrpP[4];
 	set @wrpC$[5], @wrpD$[5]+" -> "+@wrpP[5];
 	set @wrpC$[6], "Cancel";
-	setarray @viewpX[0], 151, 29, 282, 152;
-	setarray @viewpY[0], 29, 207, 200, 326;
+	setarray @viewpX[0], 151, 29, 282, 0;
+	setarray @viewpY[0], 29, 207, 200, 0;
 	return;
 }

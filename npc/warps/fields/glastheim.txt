@@ -3,18 +3,17 @@
 //===== By: ==================================================
 //= Athena (1.0)
 //===== Current Version: =====================================
-//= 1.3
+//= 1.1
 //===== Compatible With: =====================================
 //= Any Athena Version; RO Episode 2.x
 //===== Description: =========================================
 //= Warp Points for Glastheim
 //===== Additional Comments: =================================
 //= Split off npc_warp.txt, 1.1 added gl18-2 [Lupus]
-//= optimized random warp [Lupus] fixed looped warps
 //============================================================
 
 //Glastheim
-gef_fild06.gat,20,304,0	warp	gef027	3,3,glast_01.gat,370,304
+gef_fild06.gat,20,304,0	warp	gef027	3,3,glast_01.gat,375,304
 gl_cas01.gat,135,40,0	warp	gl01	1,1,gl_cas01.gat,144,314
 gl_cas01.gat,149,314,0	warp	gl02	1,1,gl_prison.gat,14,70
 gl_cas01.gat,167,191,0	warp	gl03	1,1,gl_prison.gat,14,70
@@ -52,8 +51,10 @@ gl_knt02.gat,157,292,0	warp	gl16-1	1,1,gl_knt01.gat,150,286
 gl_knt02.gat,289,138,0	warp	gl17-1	1,1,gl_knt01.gat,292,144
 gl_prison.gat,149,183,0	warp	gl18-1	1,1,gl_prison1.gat,150,14
 gl_prison.gat,10,70,4	script	gl18-2	45,1,1,{
-if(rand(2)==1) goto w2;
-	warp "gl_cas01",236,192; end;
+set @r,rand(2);
+if(@r==0) goto w1;
+if(@r==1) goto w2;
+w1: warp "gl_cas01",236,192; end;
 w2: warp "gl_cas01",164,191; end;
 }
 gl_prison1.gat,150,10,0	warp	gl18	1,1,gl_prison.gat,149,178
@@ -79,6 +80,6 @@ glast_01.gat,200,137,0	warp	gl9	1,1,gl_church.gat,156,7
 glast_01.gat,200,297,0	warp	gl7	1,1,gl_cas01.gat,199,29
 glast_01.gat,220,360,0	warp	gl5	1,1,gl_in01.gat,110,125
 glast_01.gat,237,330,0	warp	gl6	1,1,gl_in01.gat,122,59
-glast_01.gat,377,304,0	warp	glst001	3,3,gef_fild06.gat,27,304
+glast_01.gat,377,304,0	warp	glst001	3,3,gef_fild06.gat,22,304
 glast_01.gat,51,108,0	warp	gl1	1,1,gl_step.gat,12,7
 glast_01.gat,77,193,0	warp	gl2	1,1,gl_knt01.gat,150,15

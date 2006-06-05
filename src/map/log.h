@@ -1,42 +1,79 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
-
 #ifndef _LOG_H_
 #define _LOG_H_
 
-#include "map.h"
-
-#ifndef TXT_ONLY
+#if defined(WITH_MYSQL)
 
 extern char db_server_logdb[32];
 
-#endif //NOT TXT_ONLY
+#endif
 
-//New logs
-int log_pick(struct map_session_data *sd, char *type, int mob_id, int nameid, int amount, struct item *itm);
-int log_zeny(struct map_session_data *sd, char *type, struct map_session_data *src_sd, int amount);
+// predeclaration
+struct map_session_data;
 
-int log_npc(struct map_session_data *sd, const char *message);
-int log_chat(char *type, int type_id, int src_charid, int src_accid, char *map, int x, int y, char *dst_charname, char *message);
-int log_atcommand(struct map_session_data *sd, const char *message);
+int log_branch(struct map_session_data &sd);
+int log_drop(struct map_session_data &sd, uint32 monster_id, int log_drop[]);
+int log_mvpdrop(struct map_session_data &sd, uint32 monster_id, int log_mvp[]);
+int log_present(struct map_session_data &sd, int source_type, unsigned short nameid);
+int log_produce(struct map_session_data &sd, unsigned short nameid, int slot1, int slot2, int slot3, int success);
+int log_refine(struct map_session_data &sd, int n, int success);
+int log_trade(struct map_session_data &sd,struct map_session_data &target_sd,int n,int amount);
+int log_tostorage(struct map_session_data &sd,int n, uint32 guild);
+int log_fromstorage(struct map_session_data &sd,int n, uint32 guild);
 
-//Old, but useful logs
-int log_branch(struct map_session_data *sd);
-int log_mvpdrop(struct map_session_data *sd, int monster_id, int *log_mvp);
+int log_vend(struct map_session_data &sd,struct map_session_data &vsd,int n,int amount,int zeny);
+int log_zeny(struct map_session_data &sd, struct map_session_data &target_sd,int amount);
+int log_atcommand(struct map_session_data &sd, const char *message);
+int log_npc(struct map_session_data &sd, const char *message);
+int log_chat(const char *type, int type_id, int src_charid, int src_accid, const char *mapname, int x, int y, const char *dst_charname, const char *message);
 
-int log_config_read(char *cfgName);
+int log_config_read(const char *cfgName);
 
-int should_log_item(int filter, int nameid, int amount); //log filter check
-
-extern struct Log_Config {
+struct LogConfig {
 	int enable_logs;
 	int sql_logs;
-	int rare_items_log,refine_items_log,price_items_log,amount_items_log; //for filter
-	int branch, pick, drop, mvpdrop, zeny, gm, npc, chat;
-	char log_branch[32], log_pick[32], log_zeny[32], log_mvpdrop[32], log_gm[32], log_npc[32], log_chat[32];
-	char log_branch_db[32], log_pick_db[32], log_zeny_db[32], log_mvpdrop_db[32], log_gm_db[32], log_npc_db[32], log_chat_db[32];
-	int uptime;
+	int rare_items_log;
+	int refine_items_log;
+	int price_items_log;
+	int amount_items_log;
+	int branch;
+	int drop;
+	int mvpdrop;
+	int present;
+	int produce;
+	int refine;
+	int trade;
+	int vend;
+	int zeny;
+	int gm;
+	int npc;
+	int storage;
+	int chat;
+	char log_branch[32];
+	char log_drop[32];
+	char log_mvpdrop[32];
+	char log_present[32];
+	char log_produce[32];
+	char log_refine[32];
+	char log_trade[32];
+	char log_vend[32];
+	char log_gm[32];
+	char log_npc[32];
+	char log_storage[32];
+	char log_chat[32];
+	char log_branch_db[32];
+	char log_drop_db[32];
+	char log_mvpdrop_db[32];
+	char log_present_db[32];
+	char log_produce_db[32];
+	char log_refine_db[32];
+	char log_trade_db[32];
+	char log_vend_db[32];
+	char log_gm_db[32];
+	char log_npc_db[32];
+	char log_chat_db[32];
 	char log_uptime[32];
-} log_config;
+};
+
+extern struct LogConfig log_config;
 
 #endif

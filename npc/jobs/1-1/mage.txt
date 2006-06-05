@@ -19,7 +19,7 @@
 
 // -- Expert Mage -- 
 geffen_in.gat,164,124,4	script	Expert Mage	123,{
-	callfunc "F_ToHigh",Job_Mage_High,"High Mage",Job_High_Wizard,"High Wizard",157,0,0,0,"Expert Mage";
+	callfunc "F_ToHigh",26,"High Mage",33,"High Wizard",157,0,0,0,"Expert Mage";
 	if(BaseJob==Job_Novice && job_magician_q >= 1) goto L_BeMage;
 
 	mes "[Expert Mage]";
@@ -79,11 +79,11 @@ L_BeMage:
 	if(SkillPoint > 0) mes "You need to use up all of your skill points before I can make you a Mage.";
 	if(SkillPoint > 0) close;
 
-	mes ".....The color's not quit right.... there is a little to much precipitate..... hmmm......";
+	mes ".....The color's not quit right.... there is a little to much percipitate..... hmmm......";
 	next;
 	mes "[Expert Mage]";
-	mes "Well it's not perfect but it seems you worked very hard on this so...... alright! I'll let you pass!  You are now officially qualified to become a mage!";
-	emotion e_no1;
+	mes "Well it's not perfect but it seems you worked very hard on this so...... alright! I'll let you pass!  You are now officialy qualified to become a mage!";
+	emotion 21;
 	next;
 	mes "[Expert Mage]";
 	mes "Abra-kadabra and hocus pocus, turn this young novice into a ^00aa00MAGE^000000!!";
@@ -98,8 +98,8 @@ L_BeMage:
 
 	callfunc "F_ClearJobVar";		// clears all job variables for the current player
 	mes "[Expert Mage]";
-	mes "'Welcome to My World~ teh hehe.  I've always wanted to say that.  Anyways, congratulations!  You're one of us now so let's be friends okays!";
-	emotion e_heh;
+	mes "'Welcome to My World~ teh hehe.  I've always wanted to say that.  Anyways, congratulations!.  You're one of us now so let's be friends okays!";
+	emotion 18;
 	next;
 	mes "[Expert Mage]";
 	mes "Good luck to ya and take care!";
@@ -107,15 +107,15 @@ L_BeMage:
 
 	L_Retry:
 		mes "I'm sorry but the solution you have is no good.  I'm afraid that you didn't pass the test.  You can try again though.";
-		mes "Let me explain the test for you once more okays.";
-		emotion e_swt;
+		mes "Let me exlpain the test for you once more okays.";
+		emotion 4;
 		next;
 		delitem 1090,1;//Items: Unknown_Test_Tube,
 		goto L_Explain;
 
 	L_NoSol:
 		mes "Where is the solution I asked for?  I'm sorry but I can't check the solution when you don't have it.  Let me remind you what solution you need.";
-		emotion e_what;
+		emotion 1;
 		next;
 		goto L_Explain;
 
@@ -286,7 +286,7 @@ geffen_in.gat,164,112,1	script	Mixing Machine	111,{
 			L_Input:
 			input @INPUT;
 			mes "[Mixing Machine]";
-			mes "You have inputted the number ^5555FF"+@INPUT+".  Is this correct?";
+			mes "You have inputed the number ^5555FF"+@INPUT+".  Is this correct?";
 			next;
 			menu "Yes.",-, "No.",L_Input;
 
@@ -409,7 +409,7 @@ moc_ruins.gat,91,150,5	script	Ponka-Hontas	93,{
 		getitem 1088,1;//Items: Morroc_Solution,
 		mes "Thank you, I think you will be a great mage, you are so generous.";
 		mes "I hope i'll see you soon again here";
-		emotion e_no1;
+		emotion 21;
 		close;
 
 		L0NoT:
@@ -448,7 +448,7 @@ pay_arche.gat,122,100,5	script	Dollshoi	88,{
 		getitem 1089,1;//Items: Payon_Solution,
 		mes "Thank you, I think you will be a great mage, you are so generous.";
 		mes "I hope i'll see you soon again here";
-		emotion e_no1;
+		emotion 21;
 		close;
 
 		L0NoT:

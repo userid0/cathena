@@ -1,245 +1,144 @@
+CCC = g++ -pipe
+OPT = -g -O3 -ffast-math -D_REENTRANT -DPCRE_SUPPORT
+LIBS =  -lpthread -lz -lpcre
 
-CACHED = $(shell ls | grep Makefile.cache)
-ifeq ($(findstring Makefile.cache,$(CACHED)), Makefile.cache)
-MKDEF = $(shell cat Makefile.cache)
-else
-
-CC = gcc -pipe
-# CC = g++ --pipe
-
-MAKE = make
-# MAKE = gmake
-
-OPT = -g
-OPT += -O2
-# OPT += -O3
-# OPT += -mmmx
-# OPT += -msse
-# OPT += -msse2
-# OPT += -msse3
-# OPT += -rdynamic
-OPT += -ffast-math
-# OPT += -fbounds-checking
-# OPT += -fstack-protector
-# OPT += -fomit-frame-pointer
-OPT += -Wall -Wno-sign-compare
-# OPT += -DMAPREGSQL
-# OPT += -DCHRIF_OLDINFO
-# OPT += -DPCRE_SUPPORT
-# OPT += -DGCOLLECT
-# OPT += -DMEMWATCH
-# OPT += -DDMALLOC -DDMALLOC_FUNC_CHECK
-# OPT += -DBCHECK
-
-# LIBS += -lgc
-# LIBS += -ldmalloc
-# LIBS += -L/usr/local/lib -lpcre
-
+##########################################################
 PLATFORM = $(shell uname)
-
 ifeq ($(findstring Linux,$(PLATFORM)), Linux)
    LIBS += -ldl
 endif
-
 ifeq ($(findstring SunOS,$(PLATFORM)), SunOS)
-   LIBS += -lsocket -lnsl -ldl
-   MAKE = gmake
+   LIBS += -lsocket -lnsl -ldl -lrt
 endif
-
 ifeq ($(findstring FreeBSD,$(PLATFORM)), FreeBSD)
    MAKE = gmake
-   OS_TYPE = -D__FREEBSD__
 endif
-
 ifeq ($(findstring NetBSD,$(PLATFORM)), NetBSD)
    MAKE = gmake
    OS_TYPE = -D__NETBSD__
 endif
-
 ifeq ($(findstring CYGWIN,$(PLATFORM)), CYGWIN)
-   OPT += -DFD_SETSIZE=4096
-   ifeq ($(findstring mingw,$(shell gcc --version)), mingw)
-      IS_MINGW = 1
-      OS_TYPE = -DMINGW
-      LIBS += -L../.. -lwsock32
-   else
-      OS_TYPE = -DCYGWIN
-   endif
+   OS_TYPE = -DCYGWIN
 endif
 
-CFLAGS = $(OPT) -I../common $(OS_TYPE)
+##########################################################
+# set some path variables for convenience
+RETURN_PATH = ../..
+BASE_PATH   = src/basics
+COMMON_PATH = src/common
 
+##########################################################
+CPPFLAGS = $(OPT) -I$(RETURN_PATH)/$(COMMON_PATH) -I$(RETURN_PATH)/$(BASE_PATH) $(OS_TYPE)
+
+##########################################################
+# my defaults for mysql libs
+MYSQL_INCLUDE = -I../../../mysql/include/ 
+MYSQL_LIB     = -L../../../mysql/lib -lmysqlclient -lposix4 -lcrypt -lgen -lnsl -lm
+
+##########################################################
 ifdef SQLFLAG
-  ifdef IS_MINGW
-    CFLAGS += -I../mysql
-    LIBS += -lmysql
-  else
-    MYSQLFLAG_CONFIG = $(shell which mysql_config)
-    ifeq ($(findstring /,$(MYSQLFLAG_CONFIG)), /)
-      MYSQLFLAG_VERSION = $(shell $(MYSQLFLAG_CONFIG) --version | sed s:\\..*::)
-      ifeq ($(findstring 5,$(MYSQLFLAG_VERSION)), 5)
-        MYSQLFLAG_CONFIG_ARGUMENT = --include
-      else
-        MYSQLFLAG_CONFIG_ARGUMENT = --cflags
-      endif
-      CFLAGS += $(shell $(MYSQLFLAG_CONFIG) $(MYSQLFLAG_CONFIG_ARGUMENT))
-      LIBS += $(shell $(MYSQLFLAG_CONFIG) --libs)
-    else
-      CFLAGS += -I/usr/local/include/mysql
-      LIBS += -L/usr/local/lib/mysql -lmysqlclient
-    endif
-  endif
+MYSQLFLAG_CONFIG = $(shell which mysql_config)
+
+ifeq ($(findstring /mysql_config,$(MYSQLFLAG_CONFIG)), /mysql_config)
+
+MYSQLFLAG_VERSION = $(shell $(MYSQLFLAG_CONFIG) --version | sed s:\\..*::) 
+
+ifeq ($(findstring 4,$(MYSQLFLAG_VERSION)), 4)
+MYSQLFLAG_CONFIG_ARGUMENT = --cflags
 endif
 
-ifneq ($(findstring -lz,$(LIBS)), -lz)
-   LIBS += -lz
-endif
-ifneq ($(findstring -lm,$(LIBS)), -lm)
-   LIBS += -lm
+ifeq ($(findstring 5,$(MYSQLFLAG_VERSION)), 5)
+MYSQLFLAG_CONFIG_ARGUMENT = --include
 endif
 
-MKDEF = CC="$(CC)" CFLAGS="$(CFLAGS)" LIB_S="$(LIBS)"
-
+ifndef MYSQLFLAG_CONFIG_ARGUMENT
+MYSQLFLAG_CONFIG_ARGUMENT = --cflags
 endif
 
-.PHONY: txt sql common login login_sql char char_sql map map_sql ladmin converters \
-	addons plugins tools webserver clean zlib depend
+MYSQL_INCLUDE = $(shell $(MYSQLFLAG_CONFIG) $(MYSQLFLAG_CONFIG_ARGUMENT)) 
+MYSQL_LIB     = $(shell $(MYSQLFLAG_CONFIG) --libs)
+endif
 
-all: txt
-
-txt : Makefile.cache conf common login char map ladmin
-
-ifdef SQLFLAG
-sql: Makefile.cache conf common login_sql char_sql map_sql
+MKDEF = CCC="$(CCC)" CPPFLAGS="$(CPPFLAGS) -DWITH_MYSQL $(MYSQL_INCLUDE)" LIBS="$(MYSQL_LIB) $(LIBS) $(GCLIB)" RETURN_PATH="$(RETURN_PATH)" BASE_PATH="$(BASE_PATH)" COMMON_PATH="$(COMMON_PATH)"
 else
-sql:
-	$(MAKE) SQLFLAG=1 $@
+MKDEF = CCC="$(CCC)" CPPFLAGS="$(CPPFLAGS) -DWITH_TEXT" LIBS="$(LIBS) $(GCLIB)" RETURN_PATH="$(RETURN_PATH)" BASE_PATH="$(BASE_PATH)" COMMON_PATH="$(COMMON_PATH)"
 endif
+
+
+all: txt sql
 
 conf:
 	cp -r conf-tmpl conf
 	rm -rf conf/.svn conf/*/.svn
-	cp -r save-tmpl save
-	rm -rf save/.svn
 
-common: src/common/GNUmakefile
-	$(MAKE) -C src/$@ $(MKDEF)
+txt : conf basics common login char map ladmin scriptchk
 
-login: src/login/GNUmakefile common
-	$(MAKE) -C src/$@ $(MKDEF) txt
+.PHONY : basics
+basics: src/basics/GNUmakefile
+	cd $(BASE_PATH) ; $(MAKE) $(MKDEF) all ; cd $(RETURN_PATH)
 
-char: src/char/GNUmakefile common
-	$(MAKE) -C src/$@ $(MKDEF) txt
+.PHONY : common
+common: basics src/common/GNUmakefile
+	cd $(COMMON_PATH) ; $(MAKE) $(MKDEF) txt ; cd $(RETURN_PATH)
 
-map: src/map/GNUmakefile common
-	$(MAKE) -C src/$@ $(MKDEF) txt
+login: basics common src/login/GNUmakefile
+	cd src/login ; $(MAKE) $(MKDEF) txt ; cd $(RETURN_PATH)
 
-login_sql: src/login_sql/GNUmakefile common
-	$(MAKE) -C src/$@ $(MKDEF) sql
+char: basics common src/char/GNUmakefile
+	cd src/char ; $(MAKE) $(MKDEF) txt ; cd $(RETURN_PATH)
 
-char_sql: src/char_sql/GNUmakefile common
-	$(MAKE) -C src/$@ $(MKDEF) sql
+map: basics common src/map/GNUmakefile 
+	cd src/map ; $(MAKE) $(MKDEF) txt ; cd $(RETURN_PATH)
 
-map_sql: src/map/GNUmakefile common
-	$(MAKE) -C src/map $(MKDEF) sql
+ladmin: basics common src/ladmin/GNUmakefile
+	cd src/ladmin ; $(MAKE) $(MKDEF) all ; cd $(RETURN_PATH)
 
-ladmin: src/ladmin/GNUmakefile common
-	$(MAKE) -C src/$@ $(MKDEF)
+scriptchk: basics src/scriptchk/GNUmakefile
+	cd src/scriptchk ; $(MAKE) $(MKDEF) all ; cd $(RETURN_PATH)
 
-plugins addons: src/plugins/GNUmakefile common
-	$(MAKE) -C src/plugins $(MKDEF)
-
-webserver:
-	$(MAKE) -C src/$@ $(MKDEF)
-
-tools:
-	$(MAKE) -C src/tool $(MKDEF)
-	
 ifdef SQLFLAG
-converters: src/txt-converter/GNUmakefile common
-	$(MAKE) -C src/txt-converter $(MKDEF)
+sql : conf basics common_sql login_sql char_sql map_sql scriptchk
+
+.PHONY : common_sql
+common_sql: basics src/common/GNUmakefile
+	cd $(COMMON_PATH) ; $(MAKE) $(MKDEF) sql ; cd $(RETURN_PATH)
+
+login_sql: basics common_sql src/login/GNUmakefile
+	cd src/login ; $(MAKE) $(MKDEF) sql ; cd $(RETURN_PATH)
+
+char_sql: basics common_sql src/char/GNUmakefile
+	cd src/char ; $(MAKE) $(MKDEF) sql ; cd $(RETURN_PATH)
+
+map_sql: basics common_sql src/map/GNUmakefile
+	cd src/map ; $(MAKE) $(MKDEF) sql ; cd $(RETURN_PATH)
+
 else
-converters:
+
+sql common_sql login_sql char_sql map_sql:
 	$(MAKE) SQLFLAG=1 $@
 endif
 
-zlib:
-	$(MAKE) -C src/$@ $(MKDEF)
+clean: src/basics/GNUmakefile src/common/GNUmakefile src/login/GNUmakefile src/char/GNUmakefile src/map/GNUmakefile src/ladmin/GNUmakefile src/scriptchk/GNUmakefile
+	cd src/basics ; $(MAKE) $(MKDEF) $@ ; cd $(RETURN_PATH)
+	cd src/common ; $(MAKE) $(MKDEF) $@ ; cd $(RETURN_PATH)
+	cd src/login ; $(MAKE) $(MKDEF) $@ ; cd $(RETURN_PATH)
+	cd src/char ; $(MAKE) $(MKDEF) $@ ; cd $(RETURN_PATH)
+	cd src/map ; $(MAKE) $(MKDEF) $@ ; cd $(RETURN_PATH)
+	cd src/ladmin ; $(MAKE) $(MKDEF) $@ ; cd $(RETURN_PATH)
+	cd src/scriptchk ; $(MAKE) $(MKDEF) $@ ; cd $(RETURN_PATH)
 
-clean: src/common/GNUmakefile src/login/GNUmakefile src/login_sql/GNUmakefile \
-	src/char/GNUmakefile src/char_sql/GNUmakefile src/map/GNUmakefile \
-	src/ladmin/GNUmakefile src/plugins/GNUmakefile src/txt-converter/GNUmakefile
-	rm -f Makefile.cache
-	$(MAKE) -C src/common $@
-	$(MAKE) -C src/login $@
-	$(MAKE) -C src/login_sql $@
-	$(MAKE) -C src/char $@
-	$(MAKE) -C src/char_sql $@
-	$(MAKE) -C src/map $@
-	$(MAKE) -C src/ladmin $@
-	$(MAKE) -C src/plugins $@
-	$(MAKE) -C src/zlib $@
-	$(MAKE) -C src/txt-converter $@
 
-depend: src/common/GNUmakefile src/login/GNUmakefile src/login_sql/GNUmakefile \
-	src/char/GNUmakefile src/char_sql/GNUmakefile src/map/GNUmakefile \
-	src/ladmin/GNUmakefile src/plugins/GNUmakefile src/txt-converter/GNUmakefile
-	cd src/common; makedepend -fGNUmakefile -pobj/ -Y. *.c; cd ../..;
-	cd src/login; makedepend -DTXT_ONLY -fGNUmakefile -Y. -Y../common *.c; cd ../..;
-	cd src/login_sql; makedepend -fGNUmakefile -Y. -Y../common *.c; cd ../..;
-	cd src/char; makedepend -DTXT_ONLY -fGNUmakefile -Y. -Y../common *.c; cd ../..;
-	cd src/char_sql; makedepend -fGNUmakefile -Y. -Y../common *.c; cd ../..;
-	cd src/map; makedepend -DTXT_ONLY -fGNUmakefile -ptxtobj/ -Y. -Y../common *.c; cd ../..;
-	cd src/map; makedepend -fGNUmakefile -a -psqlobj/ -Y. -Y../common *.c; cd ../..;
-	cd src/ladmin; makedepend -fGNUmakefile -Y. -Y../common *.c; cd ../..;
-	cd src/txt-converter; makedepend -fGNUmakefile -Y. -Y../common *.c; cd ../..;
-	$(MAKE) -C src/plugins $@
-
-Makefile.cache:
-	printf "$(subst ",\",$(MKDEF))" > Makefile.cache
-
-src/%/GNUmakefile: src/%/Makefile
-	sed -e 's/$$>/$$^/' $< > $@
-
+src/basics/GNUmakefile: src/basics/Makefile
+	sed -e 's/$$>/$$^/' src/basics/Makefile > src/basics/GNUmakefile
 src/common/GNUmakefile: src/common/Makefile
+	sed -e 's/$$>/$$^/' src/common/Makefile > src/common/GNUmakefile
 src/login/GNUmakefile: src/login/Makefile
-src/login_sql/GNUmakefile: src/login_sql/Makefile
+	sed -e 's/$$>/$$^/' src/login/Makefile > src/login/GNUmakefile
 src/char/GNUmakefile: src/char/Makefile
-src/char_sql/GNUmakefile: src/char_sql/Makefile
+	sed -e 's/$$>/$$^/' src/char/Makefile > src/char/GNUmakefile
 src/map/GNUmakefile: src/map/Makefile
-src/plugins/GNUmakefile: src/plugins/Makefile
+	sed -e 's/$$>/$$^/' src/map/Makefile > src/map/GNUmakefile
 src/ladmin/GNUmakefile: src/ladmin/Makefile
-src/txt-converter/GNUmakefile: src/txt-converter/Makefile
-
-install:	conf/%.conf conf/%.txt
-	$(shell mkdir -p /opt/eathena/bin/)
-	$(shell mkdir -p /opt/eathena/etc/eathena/)
-	$(shell mkdir -p /opt/eathena/var/log/eathena/)
-	$(shell mv save /opt/eathena/etc/eathena/save)
-	$(shell mv db /opt/eathena/etc/eathena/db)
-	$(shell mv conf /opt/eathena/etc/eathena/conf)
-	$(shell mv npc /opt/eathena/etc/eathena/npc)
-	$(shell mv log/* /opt/eathena/var/log/eathena/)
-	$(shell cp *-server* /opt/eathena/bin/)
-	$(shell cp ladmin /opt/eathena/bin/)
-	$(shell ln -s /opt/eathena/etc/eathena/save/ /opt/eathena/bin/)
-	$(shell ln -s /opt/eathena/etc/eathena/db/ /opt/eathena/bin/)
-	$(shell ln -s /opt/eathena/etc/eathena/conf/ /opt/eathena/bin/)
-	$(shell ln -s /opt/eathena/etc/eathena/npc/ /opt/eathena/bin/)
-	$(shell ln -s /opt/eathena/var/log/eathena/ /opt/eathena/bin/log)
-
-bin-clean:
-	$(shell rm /opt/eathena/bin/login-server*)
-	$(shell rm /opt/eathena/bin/char-server*)
-	$(shell rm /opt/eathena/bin/map-server*)
-	$(shell rm /opt/eathena/bin/ladmin)
-
-uninstall:
-	bin-clean
-	$(shell rm /opt/eathena/bin/save)
-	$(shell rm /opt/eathena/bin/db)
-	$(shell rm /opt/eathena/bin/conf)
-	$(shell rm /opt/eathena/bin/npc)
-	$(shell rm /opt/eathena/bin/log)
-	$(shell rm -rf /opt/eathena/etc/eathena)
-	$(shell rm -rf /opt/eathena/var/log/eathena)
+	sed -e 's/$$>/$$^/' src/ladmin/Makefile > src/ladmin/GNUmakefile
+src/scriptchk/GNUmakefile: src/scriptchk/Makefile
+	sed -e 's/$$>/$$^/' src/scriptchk/Makefile > src/scriptchk/GNUmakefile

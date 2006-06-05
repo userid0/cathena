@@ -23,10 +23,10 @@
 //= Now they appear in castles from 00:01 to 00:24. [Lupus]
 //= 1.5 Fixed WOE end messages on non-WOE days, by Avaj
 //============================================================
-//| To know how to set up WoE times, go to doc\woe_time_explanation.txt
+
 // WoE Start/Stop times
 //======================================
-- script Agit_Event -1,{
+-	script	Agit_Event	-1,{
 	end;
 
 OnClock2100:	//start time for Tues(2), Thurs(4)
@@ -49,17 +49,17 @@ if((gettime(4)==6) && (gettime(3)==18)) goto L_End;
 L_End:
 Announce "The War Of Emperium is over!",8;
 AgitEnd;
-end;
+Break;
 
 L_Start:
 	Announce "The War Of Emperium has begun!",8;
 	AgitStart;
-	end;
+	Break;
 }
 
 // Treasure Spawn Time
 //========================================
-- script TreasSpawn -1,{
+-	script	TreasSpawn	-1,{
 	end;
 
 OnClock0001:

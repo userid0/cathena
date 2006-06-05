@@ -3,7 +3,7 @@
 //===== By: ================================================== 
 //= kobra_k88
 //===== Current Version: ===================================== 
-//= 2.0
+//= 1.3
 //===== Compatible With: ===================================== 
 //= eAthena RC4
 //===== Description: ========================================= 
@@ -21,11 +21,6 @@
 //= 1.2 Fixed WRONG skillpoint check! [Lupus]
 //= 1.2b Fixed missing commands and typos [Lupus]
 //= 1.3 Baby class Support added [Lupus]
-//= 1.5 Fixed possible EXP abuse [Lupus]
-//= 1.6 Added a func which prevent advanced classes passing
-//= 2nd Job Quests again. It also guides adv classes where
-//= to go. [Lupus]
-//= 2.0 Changed numbers to constants. [Vicious]
 //============================================================ 
 
 
@@ -35,15 +30,13 @@
 //****************************************************************************//
 
 in_moc_16.gat,19,33,4	script	Guildsman	55,{
-	callfunc "F_BlockHigh",Job_Thief_High,"Thief High",Job_Assassin_Cross,"Assassin Cross","Assassin Huey";
-
 	if(BaseJob==Job_Thief) goto L_Thief;
 	callfunc "Ass_check";
 
 L_Thief:
 	if(JobLevel >= 40) goto L_Start;
 	mes "Hmm? What brings you here?.... I don't think I like the way you're looking at me....?!";
-	emotion e_what;
+	emotion 1;
 	next;
 	mes "[Angry looking man]";
 	mes ".... Hmm.... You're not qualified yet.  To become an Assassin you will have to meet our expectations.";
@@ -57,7 +50,7 @@ L_Start:
 	if(ASSIN_Q == 2) goto L_Failed2;
 	if(ASSIN_Q == 4) goto L_Change;
 	mes ".... A Thief huh?..... And a well trained one at that, cause I can't seem to find my wallet!";
-	emotion e_heh;
+	emotion 18;
 	next;
 	mes "[Angry looking man]";
 	mes "We need people like you, you know........ So how about taking the next step in the world of crime, and become an Assassin?";
@@ -112,7 +105,7 @@ L_Change:
 	next;
 	mes "[Assassin Huey]";
 	mes "Congratulations! After all of your hard work, you can finally become an Assassin!";
-	emotion e_no1;
+	emotion 21;
 	next;
 	mes "[Assassin Huey]";
 	mes "Very well done, you are now offically an Assassin.  Although you are free to visit us at anytime..............";
@@ -229,7 +222,7 @@ OnTouch:
 	M_No:
 		mes "[Assassin Kai]";
 		mes "Huh?? You don't?........";
-		emotion e_what;
+		emotion 1;
 		next;
 		mes "[Assassin Kai]";
 		mes "Are you trying to play games with me??";
@@ -252,22 +245,22 @@ OnTouch:
 
 L_Failed:
 	mes "Ehhh? Weren't you just here a minute ago?";
-	emotion e_what;
+	emotion 1;
 	next;
 	mes "[Assassin Kai]";
 	mes "What's this?..... You failed the first test?";
 	next;
 	mes "[Assassin Kai]";
 	mes "HAHAHAHAAHAHAHAHA!!!!";
-	emotion e_heh;
+	emotion 18;
 	next;
 	mes "[Assassin Kai]";
 	mes "Hehe...HAHA...~cough~..Damn.... It's been a long time since I've met a looser like you..... Ha Ha....";
-	emotion e_heh;
+	emotion 18;
 	next;
 	mes "[Assassin Kai]";
 	mes "Oh...sorry for laughing in your face like this.... but it's just too funny... hahahehehe....";
-	emotion e_heh;
+	emotion 18;
 	next;
 	mes "[Assassin Kai]";
 	mes "So..... do you need me to give you any hints?";
@@ -277,14 +270,14 @@ L_Failed:
 		mes "[Assassin Kai]";
 		mes "Hahaahhaha!!! Well at least you're honest.....";
 		mes "Haha....My stomach...ouch... my stomach hurts!! You're killing me! Hahahaha!!!";
-		emotion e_heh;
+		emotion 18;
 		next;
 		mes "[Nameless One]";
 		mes ".....Hahaha.";
 		next;
 		mes "[Assasin Kai]";
 		mes "HAHAHAHA!! Nameless One, you think its funny too?";
-		emotion e_heh;
+		emotion 18;
 		next;
 		mes "[Nameless One]";
 		mes "Hehehe..... yes very.....";
@@ -312,7 +305,7 @@ L_Failed:
 		next;
 		mes "[Assassin Kai]";
 		mes "Hahaha.... I can't beleive this..... hahaha.....";
-		emotion e_heh;
+		emotion 18;
 		close2;
 		warp "in_moc_16.gat", 19, 141;
 		end;
@@ -382,18 +375,18 @@ L_Failed:
 		sM_End:
 			mes "[Assassin Kai]";
 			mes ".... Hmf... how can you be such an idiot??? You couldn't understand what I was talking about??";
-			emotion e_omg;
+			emotion 23;
 			next;
 			mes "[Assassin Kai]";
 			mes "Is an Assassin's honor that hard to comprehend?!";
 			next;
 			mes "[Assassin Kai]";
 			mes "Grrrrr!!! You're probably going to be a moron all of your life...........";
-			emotion e_an;
+			emotion 6;
 			next;
 			mes "[Assassin Kai]";
 			mes "GET OUT! Get out of here right now!! You're not fit to become an Assassin!!!";
-			emotion e_pif;
+			emotion 32;
 			close2;
 			warp "c_tower4.gat", 64, 76;
 			close;
@@ -438,7 +431,7 @@ sF_Quiz:
 		mes "The Katar is one of the strongest weapons a Assassin can use.";
 		next;
 		mes "[Assassin Kai]";
-		mes "I ^554433wouldn't want to raise a Roda Frog as pet^000000, and neither would anyone else for that matter.";
+		mes "I ^554433wouldn't want to raise a Rohda Frog as pet^000000, and neither would anyone else for that matter.";
 		next;
 		mes "[Assassin Kai]";
 		mes "^554433Fire^000000 is effective against ^554433ground type monsters^000000.";
@@ -1029,7 +1022,7 @@ in_moc_16.gat,21,165,4	script	Barcardi	725,{
 		next;
 		mes "[Barcardi]";
 		mes "....... Oh, and don't forget to bring some courage with you loser!";
-		emotion e_pif;
+		emotion 32;
 		next;
 		warp "moc_fild16.gat", 206, 241;
 		close;
@@ -1045,13 +1038,12 @@ OnStart:
 	if ((getwaitingroomstate(33)) == 0) end;		// stops the rest of the script from running if there is no one in the waiting room
 	killmonsterall "in_moc_16.gat";
 	warpwaitingpc "in_moc_16.gat", 65, 150;
-	donpcevent "SinTest2::OnStart";
+	donpcevent "SinTest2";
 	end;
 }
 
 // Job Change Monsters ======================>\\
 in_moc_16.gat,1,1,0	script	SinTest2	-1,{
-OnStart:
 	set $@SinMob, 6;
 	disablenpc "sinWarp1";
 	// Target Monsters
@@ -1079,7 +1071,7 @@ OnStart:
 	monster "in_moc_16.gat",86,170,"Job target change",1031,1,"SinTest2::OnFailed";
 	monster "in_moc_16.gat",86,171,"Target",1002,1,"SinTest2::OnFailed";
 	monster "in_moc_16.gat",86,170,"Target",1113,1,"SinTest2::OnFailed";
-	monster "in_moc_16.gat",86,173,"Hope you can become an assassin..",1063,1,"SinTest2::OnFailed";
+	monster "in_moc_16.gat",86,173,"Hope you can become an assassin..",10631,"SinTest2::OnFailed";
 	monster "in_moc_16.gat",85,170,"Battle Monster",1031,1,"SinTest2::OnFailed";
 	monster "in_moc_16.gat",89,156,"Target",1002,1,"SinTest2::OnFailed";
 	monster "in_moc_16.gat",89,156,"Speed182",1113,1,"SinTest2::OnFailed";
@@ -1259,7 +1251,7 @@ OnTimer600:
 	next;
 	set ASSIN_Q2, 1;
 	disablenpc "Thomas";
-	donpcevent "SinTest2_2::OnStart";
+	donpcevent "SinTest2_2";
 	close;
 L_ReTest:
 	mes "[Thomas]";
@@ -1270,7 +1262,7 @@ L_ReTest:
 	percentheal 100, 100;
 	next;
 	disablenpc "Thomas";
-	donpcevent "SinTest2_2::OnStart";
+	donpcevent "SinTest2_2";
 	close;
 OnTouch:
 	warp "in_moc_16.gat",87,99;
@@ -1281,7 +1273,6 @@ OnTouch:
 
 // SinTest2_2 ===============================>\\
 in_moc_16.gat,1,1,1	script	SinTest2_2	-1,{
-OnStart:
 	monster "in_moc_16.gat", 81, 77, "MUMMY", 1041,1, "SinTest2_2::OnMobDead";
 	monster "in_moc_16.gat", 83, 77, "MUMMY", 1041,1, "SinTest2_2::OnMobDead";
 	monster "in_moc_16.gat", 85, 77, "MUMMY", 1041,1, "SinTest2_2::OnMobDead";
@@ -1860,14 +1851,3 @@ in_moc_16.gat,156,79,1	script	Barcardi#End	725,{end;}
 in_moc_16.gat,156,77,1	script	Observer#End	55,{end;}
 in_moc_16.gat,156,75,1	script	Thomas#End	118,{end;}
 
-
-//==============================================================================
-// mapflag
-//==============================================================================
-in_moc_16.gat	mapflag	nomemo
-in_moc_16.gat	mapflag	noteleport
-in_moc_16.gat	mapflag	nosave	SavePoint
-in_moc_16.gat	mapflag	nopenalty
-in_moc_16.gat	mapflag	nobranch
-in_moc_16.gat	mapflag	noexp
-in_moc_16.gat	mapflag	noloot

@@ -1,9 +1,12 @@
 //===== eAthena script =======================================
 //= Umbala Town script
 //===== By: ==================================================
-//= jAthena (1.0) Fusion Dev Team (1.1) Muad Dib (1.2) Darkchild (1.3)
+//= jAthena (1.0)
+//= Fusion Dev Team (1.1)
+//= Muad Dib (1.2)
+//= Darkchild (1.3)
 //===== Current Version: =====================================
-//= 1.7
+//= 1.4
 //===== Compatible With: =====================================
 //= Any eAthena Version; RO Episode XX
 //===== Description: =========================================
@@ -26,9 +29,6 @@
 //= 1.3 - Fixed up For eA by Darkchild
 //= 1.4 - Fixed some wrong item names [Lupus]
 //= 1.5 – Spell Checked [massdriller]
-//= 1.6 - Fixed item names, added a chance to get to Niflheim via Jumping Bungy Area [Lupus]
-//= 1.7 - Fixed bugs and exploits [Lupus]
-//= 1.8 - Warps you to Niff with 1HP [Lance]
 //============================================================
 
 
@@ -39,10 +39,10 @@
 comodo.gat,170,137,7	script	Reid	84,{
 	close;
 On_Emotion20:
-	emotion e_hmm;
+	emotion 20;
 	end;
 On_Emotion29:
-	emotion e_gg;
+	emotion 29;
 	end;
 }
 
@@ -61,7 +61,7 @@ comodo.gat,171,137,1	script	Heath	92,{
 	mes "We'll keep looking as long as it takes!";
 	next;
 	donpcevent "Reid::On_Emotion29";
-	emotion e_gg;
+	emotion 29;
 	mes "[Heath]";
 	mes "Hey, Reid, come on!";
 	next;
@@ -69,7 +69,7 @@ comodo.gat,171,137,1	script	Heath	92,{
 	mes "............";
 	next;
 	donpcevent "Reid::On_Emotion29";
-	emotion e_hmm;
+	emotion 20;
 	mes "[Reid]";
 	mes "Okay, okay...I'm coming.";
 	next;
@@ -79,7 +79,7 @@ comodo.gat,171,137,1	script	Heath	92,{
 		mes "[Reid]";
 		mes "You mean you've never heard of it?!";
 		next;
-		emotion e_gg;
+		emotion 29;
 		mes "[Heath]";
 		mes "Oh, you want to hear the story of the";
 		mes "treasure, huh?  Well, how important";
@@ -87,7 +87,7 @@ comodo.gat,171,137,1	script	Heath	92,{
 		next;
 		mes "[Reid and Heath]";
 		donpcevent "Reid::On_Emotion29";
-		emotion e_gg;
+		emotion 29;
 		mes "Important enough for you to";
 		mes "cough up 1000 zeny?!";
 		next;
@@ -122,7 +122,7 @@ comodo.gat,171,137,1	script	Heath	92,{
 			mes "I'm on a search for that box!";
 			mes "I'm going to find it!";
 			next;
-			emotion e_hmm;
+			emotion 20;
 			mes "[Heath]";
 			mes "There's just one problem.";
 			mes "We don't have the slightest";
@@ -154,7 +154,7 @@ comodo.gat,171,137,1	script	Heath	92,{
 
 		Lzeny_2:
 			donpcevent "Reid::On_Emotion20";
-			emotion e_hmm;
+			emotion 20;
 			mes "[Heath]";
 			mes "Whaaaaat?!  I swear that our marks";
 			mes "aren't as gullible as they used to be.";
@@ -258,14 +258,14 @@ if(event_umbala < 3) goto LumWord;
 	mes "[???]";
 	mes "My name is Hatan!  Nice to";
 	mes "meet you.";
-	emotion e_heh;
+	emotion 18;
 	next;
 	mes "[Hatan]";
 	mes "...I can't play now, because";
 	mes "a recent thunderstorm caused";
 	mes "the roof of our house to become";
 	mes "cracked...";
-	emotion e_sob;
+	emotion 28;
 	next;
 	mes "[Hatan]";
 	mes "...!";
@@ -276,7 +276,7 @@ if(event_umbala < 3) goto LumWord;
 	mes "give us a little zeny";
 	mes "so we can fix the crack?";
 	mes "Please!";
-	emotion e_sob;
+	emotion 28;
 	next;
 	menu "Nod",-,"Shake Head",Lend2;
 
@@ -286,23 +286,23 @@ if(event_umbala < 3) goto LumWord;
 		mes "You're the best!!";
 		set Zeny,Zeny-1000;
 		getitem 517,1;//Items: Meat,
-		emotion e_swt2;
+		emotion 19;
 		next;
 		mes "[Hatan]";
 		mes "Please take this as a token of my gratitude.";
-		emotion e_heh;
+		emotion 18;
 		close;
 
 		LError2:
 			mes "[Hatan]";
 			mes "Well, maybe I underestimated your";
 			mes "wealth, but you shouldn't lie...";
-			emotion e_pif;
+			emotion 32;
 			close;
 	Lend2:
 		mes "[Hatan]";
 		mes "...Awwwww.";
-		emotion e_sob;
+		emotion 28;
 		close;
 
 LumWord:
@@ -313,7 +313,7 @@ LumWord:
 	mes "[???]";
 	mes "Umba!  Umbaumba!";
 	mes "Umbabama Hatan baba.";
-	emotion e_heh;
+	emotion 18;
 	next;
 	mes "[Hatan]";
 	mes "...Umba, Umbaumbaumba.";
@@ -321,7 +321,7 @@ LumWord:
 	mes "Umbabawaumbaumbaba.";
 	mes "Umbaumba.";
 	mes "...Umbaumbamabababumba.";
-	emotion e_sob;
+	emotion 28;
 	next;
 	mes "[Hatan]";
 	mes "...!";
@@ -332,7 +332,7 @@ LumWord:
 	mes "Umbababaumbawabaumba!";
 	mes "Umbaumbaumbababa.";
 	mes "wamfuba!  Umba!";
-	emotion e_sob;
+	emotion 28;
 	next;
 	menu "Nod",-,"Shake Head",Lend;
 
@@ -343,22 +343,22 @@ LumWord:
 		mes "Umba-umba-Umbabawamamaba!";
 		set Zeny,Zeny-1000;
 		getitem 517,1;//Items: Meat,
-		emotion e_swt2;
+		emotion 19;
 		next;
 		mes "[Hatan]";
 		mes "Umbaumba....";
-		emotion e_heh;
+		emotion 18;
 		close;
 
 		LError:
 			mes "[Hatan]";
 			mes "Umba-Umbana!";
-			emotion e_pif;
+			emotion 32;
 			close;
 	Lend:
 		mes "[Hatan]";
 		mes "....Umba....";
-		emotion e_sob;
+		emotion 28;
 		close;
 }
 
@@ -374,11 +374,11 @@ if(event_umbala < 3) goto LumWord;
 	next;
 	menu "Sure",-,"No way!",L2;
 	if(countitem(517) < 1) goto LError;//Items: Meat,
-		delitem 517,1;//Items: Meat,
 		mes "[Kotan]";
 		mes "Hey, thanks!";
 		mes "Take these!";
-		emotion e_scissors;
+		emotion 10;
+		delitem 517,1;//Items: Meat,
 		getitem 909,2;//Items: Jellopy,
 		getitem 914,2;//Items: Fluff,
 		getitem 705,2;//Items: Clover,
@@ -388,14 +388,14 @@ if(event_umbala < 3) goto LumWord;
 		mes "......";
 		mes "...I'm hungry!";
 		mes "...Gimme meat!";
-		emotion e_sob;
+		emotion 28;
 		close;
 LError:
 	mes "[Kotan]";
 	mes "Hey!  You said you have";
 	mes "meat!  So you were lying?";
 	mes "I hate you!";
-	emotion e_an;
+	emotion 6;
 	close;
 LumWord:
 	mes "[???]";
@@ -403,15 +403,15 @@ LumWord:
 	mes "....";
 	mes "...Umbaba!";
 	mes "...Famba!";
-	emotion e_rock;
+	emotion 11;
 	next;
 	menu "Umba",-,"Umbabu",Lu2;
 	if(countitem(517) < 1) goto LuError;//Items: Meat,
-		delitem 517,1;//Items: Meat,
 		mes "[???]";
 		mes "Umbaumbaumbababa.";
 		mes "Umbababauma.";
-		emotion e_scissors;
+		emotion 10;
+		delitem 517,1;//Items: Meat,
 		getitem 909,2;//Items: Jellopy,
 		getitem 914,2;//Items: Fluff,
 		getitem 705,2;//Items: Clover,
@@ -421,13 +421,13 @@ LumWord:
 		mes "....";
 		mes "......Unguba!";
 		mes "....Umbababa.";
-		emotion e_sob;
+		emotion 28;
 		close;
 LuError:
 	mes "[???]";
 	mes "Umbawamufumabababa!";
 	mes "Umbabababaumbaumbu!";
-	emotion e_an;
+	emotion 6;
 	close;
 }
 
@@ -520,7 +520,7 @@ umbala.gat,221,193,1	script	 #Skeletal Gate	111,{
 			//Blue
 			if(countitem(717) < 1) goto L2_2_e;//Items: Blue Gemstone,
 				mes "^3355FFYou inserted a Blue Gemstone into the";
-				mes "right socket.^000000";
+				mes "left socket.^000000";
 				next;
 				delitem 717,1;//Items: Blue Gemstone,
 				getitem 717,1;//Items: Blue Gemstone,
@@ -533,7 +533,7 @@ umbala.gat,221,193,1	script	 #Skeletal Gate	111,{
 			//Yellow
 			if(countitem(715) < 1) goto L2_3_e;//Items: Yellow Gemstone,
 				mes "^3355FFYou inserted a Yellow Gemstone into the";
-				mes "right socket.^000000";
+				mes "left socket.^000000";
 				next;
 				delitem 715,1;//Items: Yellow Gemstone,
 				getitem 715,1;//Items: Yellow Gemstone,
@@ -546,7 +546,7 @@ umbala.gat,221,193,1	script	 #Skeletal Gate	111,{
 			//Red
 			if(countitem(716) < 1) goto L2_4_e;//Items: Red Gemstone,
 				mes "^3355FFYou inserted a Red Gemstone into the";
-				mes "right socket.^000000";
+				mes "left socket.^000000";
 				next;
 				delitem 716,1;//Items: Red Gemstone,
 				getitem 716,1;//Items: Red Gemstone,
@@ -725,7 +725,7 @@ LStart2:
 		mes "I intend to teach.";
 		next;
 		mes "[Karukatan]";
-		mes "I need ^3377FF10x Oil Paper^000000, and ^3377FF5x Slick Paper^000000.";
+		mes "I need ^3377FF10x Oiled Paper^000000, and ^3377FF5x String Paper^000000.";
 		mes "I also need something to write with.";
 		mes "of course.";
 		mes "For that, ^3377FF1x Squid Ink^000000 and ^3377FF1x Feather of Birds^000000";
@@ -775,18 +775,14 @@ LStart3:
 	mes "teach you the language?  You need to gather";
 	next;
 	mes "[Karukatan]";
-	mes "^3377FF10x Oil Paper^000000,";
-	mes "^3377FF5x Slick Paper^000000,";
+	mes "^3377FF10x Oiled Paper^000000,";
+	mes "^3377FF5x String Paper^000000,";
 	mes "^3377FF1x Squid Ink^000000, and";
 	mes "^3377FF1x Feather of Bird^000000.";
 	mes "Once you have gathered those, I can teach";
 	mes "you Utan tribal language.";
 	close;
 Lchkok:
-	delitem 7151,10;//Items: Oiled Paper,
-	delitem 7111,5;//Items: String Paper,
-	delitem 1024,1;//Items: Squid Ink,
-	delitem 916,1;//Items: Feather of Birds,
 	mes "[Karukatan]";
 	mes "Good.  You've prepared all the";
 	mes "necessary materials.  Now, I can";
@@ -810,6 +806,10 @@ Lchkok:
 	mes "Try talking to others in the Utan";
 	mes "tribe.  They'll warm up to your quickly";
 	mes "now that you speak the language.";
+	delitem 7151,10;//Items: Oiled Paper,
+	delitem 7111,5;//Items: String Paper,
+	delitem 1024,1;//Items: Squid Ink,
+	delitem 916,1;//Items: Feather of Birds,
 	set event_umbala,3;
 	next;
 	mes "[Karukatan]";
@@ -867,13 +867,13 @@ LStart6:
 	mes "a good mood, also.";
 	close;
 Lsmileok:
-	delitem 2278,1;//Items: Mr. Smile,
 	mes "[Karukatan]";
 	mes "Ahh!  It's a Smile Mask!";
 	mes "I would really like to put this";
 	mes "on just once, but I promised to";
 	mes "give this to Putsuchiritan as";
 	mes "a gift.";
+	delitem 2278,1;//Items: Mr. Smile,
 	set event_umbala,6;
 	next;
 	mes "[Karukatan]";
@@ -1024,7 +1024,6 @@ L1:
 		mes "Damtsuha Ombabaraka! Unba! Shi!";
 		mes "Sukatamba Aburumba! Umba! Shi!";
 		next;
-		if (countitem(@umchange[1])<@umchange[2]) goto L1_cancel;
 		delitem @umchange[1],@umchange[2];
 		getitem @umchange[3],@umchange[4];
 		mes "[Putsuchiritan]";
@@ -1149,7 +1148,6 @@ L2:
 		mes "Onbaruzu Zan Kata!  Unba Ka!";
 		mes "Kan Tsun Rakarakan!  Unba!  Ha!";
 		next;
-		if (countitem(@umchange[1])<@umchange[2]) goto L1_cancel;
 		delitem @umchange[1],@umchange[2];
 		getitem @umchange[3],@umchange[4];
 		mes "[Putsuchiritan]";
@@ -1219,7 +1217,7 @@ LumWord:
 
 //=====================================================================
 umbala.gat,177,153,3	script	Bast	97,{
-	if (event_umbala>=3) emotion e_gasp;
+	if (event_umbala>=3) emotion 0;
 	mes "[Bast]";
 	mes "Oh!  Another outsider.  It's";
 	mes "great to encounter another one";
@@ -1248,7 +1246,7 @@ umbala.gat,177,153,3	script	Bast	97,{
 	mes "doesn't necessarily mean his";
 	mes "heart is laughing.  Understand?";
 	next;
-	emotion e_sob;
+	emotion 28;
 	mes "[Bast]";
 	mes "Because of that, people in the village";
 	mes "who know our language may have trouble!!";
@@ -1398,7 +1396,7 @@ LumWord:
 	next;
 	mes "[????]";
 	mes "Umbaumbabaungaha.";
-	emotion e_sob;
+	emotion 28;
 	close;
 }
 
@@ -1513,7 +1511,7 @@ um_in.gat,158,71,3	script	Utan Tribesman	787,{
 	mes "It stretches into the sky as far";
 	mes "as the eye can see!";
 	mes "It's supposed to be the tallest tree in the world!";
-	emotion e_ok;
+	emotion 33;
 	next;
 	mes "[Mutakutan]";
 	mes "It's so old and large that";
@@ -1530,12 +1528,12 @@ um_in.gat,158,71,3	script	Utan Tribesman	787,{
 	mes "That said, the fruit I was able";
 	mes "to pick off of some of the higher";
 	mes "branches is yummy!";
-	emotion e_no1;
+	emotion 21;
 	next;
 	mes "[Mutakutan]";
 	mes "It has a slightly sour taste.  Eating";
 	mes "it makes me feel all tingly inside!!";
-	emotion e_no1;
+	emotion 21;
 	next;
 	mes "[Mutakutan]";
 	mes "At the same time, a terrible illness";
@@ -1548,7 +1546,7 @@ um_in.gat,158,71,3	script	Utan Tribesman	787,{
 	mes "fruit, his health improved";
 	mes "dramatically in a short time.  Surely";
 	mes "this fruit was a gift from the forest!";
-	emotion e_sob;
+	emotion 28;
 	next;
 	mes "[Mutakutan]";
 	mes "The tree is north of the village.  Why";
@@ -1595,18 +1593,18 @@ LumWord:
 	mes "Umbaumbaugaga!";
 	mes "Umbaumbabababa!";
 	mes "Umbaumba!";
-	emotion e_an;
+	emotion 6;
 	next;
 	mes "[Purenotan]";
 	mes "Umbaumabaumbaumbaba!";
 	mes "Umbababababaugau!";
 	mes "Uguugaumbabaumbagumba!";
-	emotion e_oh;
+	emotion 24;
 	next;
-	emotion e_go;
+	emotion 27;
 	close;
 On_emo:
-emotion e_an;
+emotion 6;
 end;
 }
 
@@ -1627,7 +1625,7 @@ LumWord:
 	mes "Umbaumbaba.....";
 	mes "Umbaugua!";
 	mes "Umbagumumbabagumbagaga!";
-	emotion e_heh;
+	emotion 18;
 	next;
 	donpcevent "Purenotan::On_emo";
 	close;
@@ -1637,38 +1635,30 @@ LumWord:
 //Bungee jumping!
 //==============================================================================
 umbala.gat,140,197,0	script	#Shibonochikka	139,0,1,{
-	set @jumprand,rand(0,4);
-	if (@jumprand == 1) goto L1;
-	if (@jumprand == 2) goto L2;
-	if (@jumprand == 3) goto L3;
-	if (@jumprand == 4) goto L4;
-	mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : Iyahaaaaahh!",8;
-	end;
+set @jumprand,rand(4);
+if (@jumprand == 1) goto L1;
+if (@jumprand == 2) goto L2;
+if (@jumprand == 3) goto L3;
+mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : Iyahaaaaahh!",8;
+end;
 
 L1:
 //Dead
-	mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : Ukiyaaaaaaaaaa!",8;
+mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : Ukiyaaaaaaaaaa!",8;
 	percentheal -100,0;
-	end;
+end;
 
 L2:
 //HP50% Damage
-	mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : Kyaaaaaaaaaaa!",8;
+mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : Kyaaaaaaaaaaa!",8;
 	percentheal -50,0;
-	end;
+end;
 
 L3:
-//HP99% Damage
-	mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : Waaaaaaaaaah!",8;
+//HP99%‚Ì Damage
+mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : Waaaaaaaaaah!",8;
 	percentheal -99,0;
-	end;
-
-L4:
-//1 HP left, warp to Niflheim
-	mapannounce "umbala.gat","Bungy Jumping Area: " + strcharinfo(0) + " : No-o!",8;
-	heal -HP+1,0;
-	warp "nif_in.gat",69,15;
-	end;
+end;
 }
 
 //=====================================================================

@@ -1,5 +1,3 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
 
 #ifndef	_PLUGIN_H_
 #define _PLUGIN_H_
@@ -8,9 +6,13 @@
 
 #define PLUGIN_VERSION "1.02"
 
+
+//////////////////////////////////////////////////////////////////////////
+// data definitions
+
 typedef struct _Plugin_Info {
 	char *name;
-	char type;
+	unsigned char type;
 	char *version;
 	char *req_version;
 	char *description;
@@ -21,20 +23,23 @@ typedef struct _Plugin_Event_Table {
 	char *event_name;
 } Plugin_Event_Table;
 
+//////////////////////////////////////////////////////////////////////////
 ////// Plugin Export functions /////////////
 
-#define PLUGIN_ALL			0
-#define PLUGIN_LOGIN		1
-#define PLUGIN_CHAR			2
-#define PLUGIN_MAP			8
-#define PLUGIN_CORE			16
+// same layout than ServerType from version.h
+typedef enum 
+{
+	PLUGIN_NONE	=	0x00,
+	PLUGIN_LOGIN=	0x01,
+	PLUGIN_CHAR	=	0x02,
+	PLUGIN_INTER=	0x04,
+	PLUGIN_MAP	=	0x08,
+	PLUGIN_CORE	=	0x10,
+	PLUGIN_xxx1	=	0x20,
+	PLUGIN_xxx2	=	0x40,
+	PLUGIN_xxx3	=	0x80,
+	PLUGIN_ALL	=	0xFF
+} AddonType;
 
-#define IMPORT_SYMBOL(s,n)	(s) = plugin_call_table[n]
-
-////// Global Plugin variables /////////////
-
-#define PLUGIN_INFO			struct _Plugin_Info plugin_info
-#define PLUGIN_EVENTS_TABLE	struct _Plugin_Event_Table plugin_event_table[]
-void **plugin_call_table;
 
 #endif	// _PLUGIN_H_

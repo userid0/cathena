@@ -3,7 +3,7 @@
 //===== By: ================================================== 
 //= Some people & eAthena Dev Team
 //===== Current Version: ===================================== 
-//= 1.05
+//= 1.02
 //===== Compatible With: ===================================== 
 //= Any eAthena Version; Niflheim Required
 //===== Description: ========================================= 
@@ -13,9 +13,6 @@
 // 1.01 event_sushi -> ama_sushi fixed
 //      and other fixes, thanks to Shinomori
 // 1.02 Fixed & Spell Checked [massdriller]
-// 1.03 Fixed 2 NPC names, slight optimization [Lupus]
-// 1.04 Fixed a few typo's [Nexon]
-// 1.05 Changed all breaks to ends. [Skotlex] 
 //=====================================================================
 alberta.gat,245,93,4	script	Captain	709,{
 	mes "[Carter Moores]";
@@ -113,7 +110,7 @@ alberta.gat,245,93,4	script	Captain	709,{
 			mes "All aboard!";
 			next;
 			warp "amatsu",197,83;
-			end;
+			break;
 		Lzeny:
 			mes "[Carter Moores]";
 			mes "Did you forget what I said?";
@@ -142,7 +139,7 @@ amatsu.gat,194,79,4	script	Captain	709,{
 		mes "souvenirs.";
 		next;
 		warp "alberta",243,91;
-		end;
+		break;
 }
 //=====================================================================
 // Amatsu Citizen
@@ -255,7 +252,7 @@ ama_in01.gat,162,17,0	script	Iron Chef	765,{
 	mes "Everyday more customers come,";
 	mes "but I can never get";
 	mes "enough material, even today.";
-	mes "A lot of customers surely will be hungry?";
+	mes "A lot of customers surely will be huntry?";
 	next;
 	mes "[ShabuShabu]";
 	mes "*Sigh*, a customer. Welcome.";
@@ -358,11 +355,11 @@ LStart2:
 	mes "You must help me find them!";
 	close;
 Lok:
-	delitem 964,10;
-	getitem 551,20;
 	mes "[ShabuShabu]";
 	mes "Hmm! Thank you so much";
 	next;
+	delitem 964,10;
+	getitem 551,20;
 	mes "[ShabuShabu]";
 	mes "Here is my thanks, take it!";
 	set ama_sushi,0;
@@ -384,7 +381,7 @@ L0:
 	mes "Hanging Under the Blue Sky's Blue Roof";
 	mes "Shining on Blue Wall's Reflection on the Blue Lake";
 	mes "Blue Hearting Containing a Blue Desire";
-	mes "Blue, Blue Every thing's Blue";
+	mes "Blue Blue Every thing's Blue";
 	next;
 	goto LEnd;
 L1:
@@ -397,7 +394,7 @@ L1:
 	goto LEnd;
 L2:
 	mes "[Kuruchi]";
-	mes "Monk, Monk, The Fox Is Following Me";
+	mes "Monk,Monk, The Fox Is Following Me";
 	mes "Shout At Him To Scare It Off!";
 	mes "Voice Too Small So It Didn't Run Off";
 	mes "Followed All The Way To North Side's Shrine!";
@@ -405,7 +402,7 @@ L2:
 	goto LEnd;
 L3:
 	mes "[Kuruchi]";
-	mes "Monk, Monk, The Fox Is Following Me";
+	mes "Monk,Monk, The Fox Is Following Me";
 	mes "Ramen noodles My Favorite";
 	mes "But Now I am No Longer Afraid?";
 	mes "I Shouted Loudly To Scare It Off!";
@@ -442,6 +439,7 @@ amatsu.gat,205,163,4	script	Mimi	759,{
 	close;
 }
 //=====================================================================
+//Done Done Done
 amatsu.gat,230,160,4	script	Lady	757,{
 	mes "[Yorukoc]";
 	mes "Although I come to the well for water everyday,";
@@ -496,6 +494,7 @@ L2:
 }
 //=====================================================================
 amatsu.gat,164,174,4	script	Guard Soldier	767,{
+//FlagGET
 	if (event_amatsu == 0) goto LOnce;
 	if ((event_amatsu >= 2) && (event_amatsu <= 5)) goto L2;
 	if (event_amatsu == 6) goto L3;
@@ -565,7 +564,7 @@ amatsu.gat,112,164,4	script	Guard Soldier	767,{
 	mes "[Guard Soldier]";
 	mes "From your clothes, it looks like you are from another continent.";
 	mes "In the past, the Master specifically";
-	mes "permitted the travelers to come in and out.";
+	mes "permitted the travellers to come in and out.";
 	mes "Now you may go in.";
 	close;
 }
@@ -587,7 +586,7 @@ ama_in01.gat,22,111,0	script	Old Lady	761,{
 	mes "Stop bothering me and get out! Clang Clannng!^000000";
 	next;
 	warp "amatsu",167,197;
-	end;
+	break;
 LStart2:
 	mes "[...]";
 	mes "^FF0066Clang Clannng! Clang Clannng! Here comes another one!";
@@ -625,11 +624,11 @@ LStart2:
 Lfail:
 	mes "[...]";
 	mes "^FF0066Clang Clannng! Haha! Clang Clannng! Hahahaha!";
-	mes "How dare you, wanting to throw me out!";
+	mes "How dare you,wanting to throw me out!";
 	mes "Get out of here!! Clang Clannng!^000000";
 	next;
 	warp "amatsu",167,197;
-	end;
+	break;
 LStart3:
 	mes "[Ishida Sauk]";
 	mes "...*Sigh* Where from young man...?";
@@ -708,6 +707,8 @@ LStart4:
 	close;
 }
 
+
+
 //=====================================================================
 ama_in02.gat,207,40,6	script	Guard Soldier	767,{
 	mes "[Guard Soldier]";
@@ -757,8 +758,8 @@ ama_in02.gat,170,62,4	script	Soldier	767,{
 	mes "I handle all the administrative work.";
 	mes "What type of service do you need?";
 	next;
-	menu "Please give me a pass",-,"I want to live here",L2,"Nothing",L3;
-
+	menu "Please give me a pass",L1,"I want to live here",L2,"Nothing",L3;
+L1:
 	if (event_amatsu == 7) goto L1_1;
 		mes "[Kyro]";
 		mes "The master said that the guests from the continent";
@@ -782,20 +783,20 @@ L1_2:
 			mes "If you need anything please come talk to me again!";
 			close;
 L1_2_1:
-		if (Zeny < 10000) goto LError;
-		set Zeny,Zeny-10000;
-		getitem 7160,1;
-		mes "[Kyro]";
-		mes "Come, this is it.";
-		mes "Please be careful and don't lose it again.";
-		close;
+	if (Zeny < 10000) goto LError;
+	set Zeny,Zeny-10000;
+	getitem 7160,1;
+	mes "[Kyro]";
+	mes "Come, this is it.";
+	mes "Please be careful and don't lose it again.";
+	close;
 LError:
-		mes "[Kyro]";
-		mes "You don't have enough zeny!";
-		close;
+	mes "[Kyro]";
+	mes "You don't have enough zeny!";
+	close;
 L2:
 		mes "[Kyro]";
-		mes "This will be difficult, you can";
+		mes "This will be difficult,you can";
 		mes "freely move around, but the master";
 		mes "hasn't considered anything about immigration.";
 		mes "But, you can stay as long as you want";
@@ -825,7 +826,7 @@ ama_in02.gat,37,157,4	script	Soldier	767,{
 	mes "And I also frequently see strange people.";
 	mes "I've heard that the customers upstairs are";
 	mes "from far away, but because of their";
-	mes "auspicious behaviors.  I already command the soldiers";
+	mes "auspicious behaviours.  I already command the soldiers";
 	mes "to monitor their movements...";
 	next;
 	mes "[Sbarro]";
@@ -838,7 +839,7 @@ ama_in02.gat,37,157,4	script	Soldier	767,{
 //=====================================================================
 ama_in02.gat,32,51,6	script	Shiro	767,{
 	mes "[Shiro]";
-	mes "Cough cough, cough cough, what... leave me alone";
+	mes "Cough cOugh, cough cough, what... leave me alone";
 	mes "Go visit another place...";
 	mes "Cough cough, cough cough... ouch, my throat";
 	next;
@@ -862,7 +863,7 @@ ama_in02.gat,40,167,3	script	Soldier	767,{
 	mes "I will tell you a story";
 	next;
 	mes "[Kuro]";
-	mes "In Amatsu there is this rumor.";
+	mes "In Amatsu there is this rumour.";
 	mes "The truth is the current master";
 	mes "is not the real master of the town... shh, quiet!";
 	mes "Don't panic, please continue to listen.";
@@ -886,7 +887,7 @@ ama_in02.gat,40,167,3	script	Soldier	767,{
 	close;
 }
 //=====================================================================
-ama_in02.gat,32,167,5	script	Kukuro	767,{
+ama_in02.gat,32,167,5	script	¤h§L	767,{
 	mes "[Kukuro]";
 	mes "That guy is always rambling";
 	mes "some gibberish, saying that our master";
@@ -910,6 +911,7 @@ ama_in02.gat,32,167,5	script	Kukuro	767,{
 }
 //=====================================================================
 ama_in02.gat,42,34,2	script	Soldier	767,{
+//	npcs made by eAthena
 	mes "[Hakiro]";
 	mes "Rest for a while before leaving,";
 	mes "master has already prepared";
@@ -925,7 +927,7 @@ ama_in02.gat,42,34,2	script	Soldier	767,{
 	mes "Then, good day to you";
 	close;
 }
-
+// eAthena Team
 //=====================================================================
 ama_in02.gat,203,156,4	script	Soldier	767,{
 	mes "[Hakiro]";
@@ -940,7 +942,7 @@ ama_in02.gat,203,156,4	script	Soldier	767,{
 	mes "Don't know what happened today.....";
 	close;
 }
-
+// eAthena Dev Team
 //=====================================================================
 ama_in02.gat,195,156,4	script	Soldier	767,{
 	mes "[Kuro]";
@@ -949,22 +951,22 @@ ama_in02.gat,195,156,4	script	Soldier	767,{
 	mes "Usually he's a very nice guy...";
 	next;
 	mes "[Kuro]";
-	mes "There are strange rumors going around,";
+	mes "There are strange rumours going around,";
 	mes "but I still trust my master,";
 	mes "because he was the one who";
 	mes "transformed our town. So I became";
 	mes "a soldier to serve him";
 	close;
 }
-
 //=====================================================================
-ama_in02.gat,115,177,7	script	Juro	767,{
+// eAthena Team
+ama_in02.gat,115,177,7	script	§L¤h	767,{
 	mes "[Juro]";
 	mes "What are you here for?";
 	mes "There is nothing much over here.";
 	next;
-	menu "Oh, really",-,"Please open the door for me",L2;
-
+	menu "Oh, really",L1,"Please open the door for me",L2;
+L1:
 		mes "[Juro]";
 		mes "The town has much more stuff.";
 		mes "Have a wonderful time...";
@@ -977,14 +979,14 @@ L2:
 		mes "Do you want to go in directly? Or";
 		mes "Do you want me to explain first...?";
 		next;
-		menu "Direct access",-,"Listen to explanation",L2_2;
-
+		menu "Direct access",L2_1,"Listen to explanation",L2_2;
+L2_1:
 			mes "[Juro]";
 			mes "Then, I will open the door for you.";
 			mes "Please take care...";
 			next;
 			warp "ama_dun01.gat",229,10;
-			end;
+			break;
 L2_2:
 			mes "[Juro]";
 			mes "The inner space seems to be ";
@@ -1018,7 +1020,7 @@ L2_2:
 			mes "Please be careful...";
 			next;
 			warp "ama_dun01.gat",229,10;
-			end;
+			break;
 Llost:
 		mes "[Juro]";
 		mes "You don't have the pass";
@@ -1046,7 +1048,7 @@ ama_dun01.gat,229,7,0	script	Soldier	767,{
 		mes "Gogo!!";
 		next;
 		warp "ama_in02.gat",119,181;
-		end;
+		break;
 L1:
 		mes "[Juro]";
 		mes "Take care of yourself!";
@@ -1054,6 +1056,7 @@ L1:
 }
 
 //=====================================================================
+// eAthena Team
 ama_in02.gat,200,176,4	script	Castle Owner	768,{
 	if (event_amatsu == 1) goto LStart2;
 	if ((event_amatsu >= 2) && (event_amatsu <=5)) goto LStart3;
@@ -1070,7 +1073,7 @@ ama_in02.gat,200,176,4	script	Castle Owner	768,{
 	close;
 LStart2:
 	mes "[Ishida Yoshinaku]";
-	mes "What! A visitor...? Oh, sorry";
+	mes "What! A visitor...? Oh,sorry";
 	mes "But today I am not in the mood";
 	mes "of seeing a visitor!";
 	next;
@@ -1193,7 +1196,7 @@ LStart5:
 	mes "We always welcome the foreigners!";
 	close;
 }
-
+// eAthena Dev Team
 ama_in01.gat,180,173,2	script	Fox Mask	762,{
 	if (event_amatsu == 4) goto LStart2;
 	if (event_amatsu == 5) goto LStart3;
@@ -1224,7 +1227,7 @@ LStart2:
 	mes "[Takikuwi]";
 	mes "It is very hard to get rid of a fox in a person's body";
 	mes "If there's alcohol and ramen noodle,";
-	mes "It might be a little easier,";
+	mes "Iit might be a little easier,";
 	mes "But they are hard to find!";
 	next;
 	mes "[Takikuwi]";
@@ -1243,7 +1246,7 @@ LStart2:
 	mes "and to friend and family as well!";
 	next;
 	mes "[Takikuwi]";
-	mes "Anyway, I've heard that when";
+	mes "Anyway,I've heard that when";
 	mes "there's a strong animal then a fox will chased,";
 	mes "away from the human.";
 	mes "So try hard, and try summoning the animal spirit!";
@@ -1267,7 +1270,7 @@ LStart3:
 	mes "Remember....... Stronger than a fox....";
 	close;
 }
-
+// eAthena Dev Team
 ama_in01.gat,169,173,0	script	Miko	769,{
 	mes "[Tokari]";
 	mes "I'm not a real shrine maiden."; 
@@ -1289,7 +1292,7 @@ ama_in01.gat,169,173,0	script	Miko	769,{
 	mes "He knows... He always does!";
 	close;
 }
-
+// eAthena Dev Team
 amatsu.gat,269,221,1	script	Proposing Girl	758,{
 	mes "[Hutari Sioko]";
 	mes "Nice to meet you";
@@ -1316,7 +1319,7 @@ amatsu.gat,269,221,1	script	Proposing Girl	758,{
 	mes "Furthermore, the proposal has to be answered";
 	mes "prior to Sunday night after";
 	next;
-	emotion e_lv;
+	emotion 3;
 	mes "[Hutari Sioko]";
 	mes "If you have a secret admirer...";
 	mes "why not meet under that tree";
@@ -1324,14 +1327,14 @@ amatsu.gat,269,221,1	script	Proposing Girl	758,{
 	mes "I bet something good will happen";
 	close;
 }
-
+// eAthena Dev Team
 amatsu.gat,287,266,3	script	Jyaburo	766,{
 	mes "[Jyaburo]";
 	mes "This is a special place";
 	mes "for my wife and me";
 	next;
 	mes "[Jyaburo]";
-	mes "..When I was here proposing";
+	mes "..When I was here Proposing";
 	mes "to her here under the tree..";
 	mes "I didn't know that she";
 	mes "liked me as well";
@@ -1339,7 +1342,7 @@ amatsu.gat,287,266,3	script	Jyaburo	766,{
 	mes "[Jyaburo]";
 	mes "After that, we talked a lot here under this tree,";
 	mes "this is the ideal location";
-	mes "because of its tranquility and harmony,";
+	mes "because of its tranquillity and harmony,";
 	mes "an everlasting moment of happiness";
 	next;
 	mes "[Jyaburo]";
@@ -1367,7 +1370,7 @@ amatsu.gat,287,266,3	script	Jyaburo	766,{
 	mes "Always try to live a happy life";
 	close;
 }
-
+// eAthena Dev Team
 amatsu.gat,274,178,0	script	Vet	735,{
 	mes "[Sakura Seiichi]";
 	mes "Oww... I'm not a suspicious guy,";
@@ -1389,14 +1392,14 @@ amatsu.gat,274,178,0	script	Vet	735,{
 	mes "that is... Because below the tree";
 	mes "dead people are buried...";
 	next;
-	menu "Can buried people feel the pain?",-,"Speaking of bullshit...",L2;
-
+	menu "Can buried people feel the pain?",L1,"Speaking of bullshit...",L2;
+L1:
 	mes "[Sakura Seiichi]";
 	mes "... Maybe...";
 	mes "Anyway, do you believe me or not";
 	mes "want to make a bet...?";
 	next;
-	emotion e_dots;
+	emotion 9;
 	mes "[Sakura Seiichi]";
 	mes "What if I...";
 	mes "............";
@@ -1414,7 +1417,7 @@ L2:
 	mes "be careful, one day that kind of things";
 	mes "Will happen to you as well..";
 	next;
-	emotion e_dots;
+	Emotion 9;
 	mes "[Sakura Seiichi]";
 	mes "Hahaha... Hahahaha.....";
 	mes "...............";
@@ -1427,21 +1430,21 @@ L2:
 	mes "^6633FFMe that...^000000";
 	close;
 }
-
+// eAthena Dev Team
 amatsu.gat,283,203,1	script	PokePoke	738,{
-	emotion e_swt2;
+	Emotion 19;
 	mes "[Pokepoke]";
 	mes "The tree on this hill";
 	mes "has existed for a long time, a deep-rooted";
 	mes "and ever-blooming Sakura Tree King";
 	next;
-	emotion e_swt2;
+	Emotion 19;
 	mes "[Pokepoke]";
 	mes "And I am very thankful of this tree,";
 	mes "whenever I feel any sorrow or sadness";
 	mes "I always go sit under that tree";
 	next;
-	emotion e_swt2;
+	Emotion 19;
 	mes "[Pokepoke]";
 	mes "That way no matter what happened";
 	mes "I can forget it all....";
@@ -1449,14 +1452,14 @@ amatsu.gat,283,203,1	script	PokePoke	738,{
 	mes "and make us forget sad things";
 	mes "a magic tree";
 	next;
-	emotion e_swt2;
+	Emotion 19;
 	mes "[Pokepoke]";
 	mes "If you feel any sadness or sorrow";
 	mes "you can try to sit under this tree";
 	mes "a really magical and thankful tree...";
 	close;
 }
-
+// eAthena Dev Team
 amatsu.gat,261,197,4	script	Legendary Sakura Tree	111,{
 	mes "^0000FFJust as she said";
 	mes "this tree is famous because";
@@ -1474,9 +1477,4 @@ amatsu.gat,261,197,4	script	Legendary Sakura Tree	111,{
 	close;
 }
 
-//| Ninja map portion dummy npcs, commented by default.
-//que_ng.gat,27,18,3	script	Seaman	709,{end;}
-//que_ng.gat,28,45,3	script	Man	86,{end;}
-//que_ng.gat,28,50,3	script	Seaman2	709,{end;}
-//que_ng.gat,22,62,3	script	Seaman2	709,{end;}
-//que_ng.gat,30,65,3	script	Ninja Sensei	730,{end;}
+// eAthena Dev Team

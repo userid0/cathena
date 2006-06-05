@@ -3,15 +3,13 @@
 //===== By: ================================================== 
 //= kobra_k88, Akaru
 //===== Current Version: ===================================== 
-//= 1.3
+//= 1.1
 //===== Compatible With: ===================================== 
 //= eAthena 7.15 +
 //===== Description: ========================================= 
 //= 
 //===== Additional Comments: ================================= 
 //= Fully working. 1.1 Optimized
-//= 1.2 updated Payon coords [Lupus]
-//= 1.3 fixed exploit [Lupus]
 //============================================================ 
 
 
@@ -48,16 +46,16 @@ alberta.gat,113,53,3	script	Smile Assistance::SmileAT	92,{
 		close;
 	M_1:
 		mes "[Smile Assistant]";
-		if(countitem(705) < 10 || countitem(909) < 10 || countitem(914) < 10) goto sL_NoItems;
-		delitem 705,10;
-		delitem 909,10;
-		delitem 914,10;
+		if((countitem(705) < 10) | (countitem(909) < 10) | (countitem(914) < 10)) goto sL_NoItems;
 		mes "Oh, great! You've brought back all of the items needed.  Wait just a sec while I get your Mr. Smile ready.....";
 		next;
 		mes "~!shook!~!shook!~!clack!~!clack!~!tok!~!tok!~";
 		next;
 		mes "[Smile Assistant]";
 		mes "Here ya go, your very own Mr. Smile!";
+		delitem 705,10;
+		delitem 909,10;
+		delitem 914,10;
 		getitem 2278,1;
 		next;
 		mes "[Smile Assistant]";
@@ -87,6 +85,6 @@ izlude.gat,129,118,4	duplicate(SmileAT)	Smile Assistance#4	92
 // Morroc -----------------------------------------------------------------------------------
 morocc.gat,158,97,4	duplicate(SmileAT)	Smile Assistance#5	92
 // Payon ------------------------------------------------------------------------------------
-payon.gat,168,225,4	duplicate(SmileAT)	Smile Assistance#6	92
+payon.gat,187,104,4	duplicate(SmileAT)	Smile Assistance#6	92
 // Prontera ---------------------------------------------------------------------------------
-prontera.gat,157,187,4	duplicate(SmileAT)	Smile Assistance#7	92
+prontera.gat,186,104,4	duplicate(SmileAT)	Smile Assistance#7	92

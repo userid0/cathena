@@ -1,11 +1,11 @@
 //===== eAthena Script ======================================= 
 //= Wizard Job Quest
 //===== By: ================================================== 
-//= (Aegis) Translated by yoshiki
+//= ?? (Aegis) Translated by yoshiki
 //= converted by kobra_k88
 //= Further bugfixed and tested by Lupus
 //===== Current Version: ===================================== 
-//= 2.0
+//= 1.3
 //===== Compatible With: ===================================== 
 //= eAthena 1.0
 //===== Description: ========================================= 
@@ -20,19 +20,11 @@
 //= 1.2c changed one Horong to Frilldora (now 3rd room contains 1 agressive mob.)
 //= 1.2d more simplified fire room - removed agressive Desert Wolf [Lupus]
 //= 1.3 Added Baby Class support [Lupus]
-//= 1.5 Fixed possible EXP abuse [Lupus]
-//= 1.6 Added a func which prevent advanced classes passing
-//= 2nd Job Quests again. It also guides adv classes where
-//= to go. [Lupus]
-//= 1.7 Replaced 2 Hodes with 2 Horong's (according to the official guide) [Lupus]
-//= 1.8 Removed callfunc Is_####_Class in favor of baseClass [Silentdragon]
-//= 2.0 Changed numbers to constants. [Vicious]
 //============================================================ 
 
 
 //<=================== Some dog =========================>
 gef_tower.gat,107,35,5	script	Some Dog	81,{
-	callfunc "F_BlockHigh",Job_Mage_High,"High Mage",Job_High_Wizard,"High Wizard","Dog";
 	if(BaseJob == Job_Mage) goto L_JobMage;
 	callfunc "Wiz1_check";
 
@@ -51,13 +43,13 @@ L_JobMage:
 	M_0:
 		mes "[Dog]";
 		mes "~Woof~ What is it? Why are you looking at me like that?? Is this the first time you've seen a dog talk?";
-		emotion e_what;
+		emotion 1;
 		mes "[Dog]";
 		mes "~Woof~ I suppose it's not that common to see a talking dog..... ~Woof~..... Yeah, it is a rare site actually.....";
 		next;
 		mes "[Dog]";
 		mes "~GRRRR!!~.... Hey! Stop GAWKING at me for goodness sake!! ~WOOOF~";
-		emotion e_an;
+		emotion 6;
 		next;
 
 		L_Cont:
@@ -73,7 +65,7 @@ L_JobMage:
 		next;
 		mes "[Maria]";
 		mes "Uh, anyways..... where were we?";
-		emotion e_hmm;
+		emotion 20;
 		next;
 		mes "[Maria]";
 		mes "Like I said before, if you want to become a Wizard you must first speak with Catherine.";
@@ -86,7 +78,7 @@ L_JobMage:
 		menu "Yes, please continue.",sM_0, "No, it's ok.",sM_1, "A talking dog......",sM_2;
 
 		sM_0:
-			mes "[Maria]";
+			mes "Maria]";
 			mes "Ok then.  Let me explain the process for becoming a Wizard to you....";
 			next;
 			mes "[Maria]";
@@ -119,18 +111,18 @@ L_JobMage:
 		sM_2:
 			mes "[Maria]";
 			mes "I'M NOT A DOG!!! ~ ARROOOOOOOOOWWWWW!!!! ~";
-			emotion e_an;
+			emotion 6;
 			next;
 			mes "[Maria]";
 			mes "Dang it! I hope you FAIL!! Now go get lost!";
-			emotion e_go;
+			emotion 27;
 			next;
 			warp "gef_dun00.gat",54,23;
 			end;
 	M_1:
 		mes "[Dog]";
 		mes "~WOOF~Woof~woof~ You DON'T have to state the obvious! I KNOW I'm a dog!";
-		emotion e_pif;
+		emotion 32;
 		next;
 		goto L_Cont;
 
@@ -139,8 +131,6 @@ L_JobMage:
 
 //<=========================================== Registrar and Examiner Catherine Medichi ==============================================>\\
 gef_tower.gat,111,37,4	script	Catherine Medichi	68,{
-	callfunc "F_BlockHigh",26,"High Mage",33,"High Wizard","Catherine Medichi";
-
 	mes "[Catherine Medichi]";
 	if(BaseJob == Job_Mage) goto L_Mage;
 	callfunc "Wiz2_check";
@@ -250,7 +240,7 @@ L_Mage:
 	M_0End:
 		mes "[Catherine Medichi]";
 		mes "What? You came up here for nothing!?";
-		emotion e_what;
+		emotion 1;
 		close;
 
 
@@ -283,7 +273,7 @@ L_Mage:
 				mes "[Catherine Medichi]";
 				mes "Congrats, you passed the first test.";
 				mes "Don't relax yet, you still got 2 tests left.";
-				emotion e_no1;
+				emotion 21;
 				next;
 				mes "[Catherine Medichi]";
 				mes "Now talk to the man in the corner for the tests.";
@@ -314,11 +304,11 @@ L_Mage:
 
 		sL_Failed2:
 			mes "Huh?? You failed the Q&A test!?";
-			emotion e_what;
+			emotion 1;
 			next;
 			mes "[Catherine Medichi]";
 			mes "You want to be a wizard and you can't answer a couple of questions?? Sheesh.";
-			emotion e_swt;
+			emotion 4;
 			next;
 			mes "[Catherine Medichi]";
 			mes "Well, do you want big sis to give you a hint? If you do, go buy me ^0099001 apple juice^000000.  I'm a bit thirsty. =P";
@@ -425,7 +415,7 @@ L_Mage:
 		if(SkillPoint > 0) close;
 
 		mes "Great! You finished all of the tests! Congrats, congrats, congrats!!";
-		emotion e_no1;
+		emotion 21;
 		next;
 		mes "[Catherine Medichi]";
 		mes "Ack, I'm wasting time, I better change you!";
@@ -464,18 +454,18 @@ gef_tower.gat,102,24,3	script	Raul Expagarus	735,{
 	mes "[Raul Expagarus]";
 	if(BaseJob == Job_Mage) goto L_Mage;
 	if(BaseJob == Job_Wizard) goto L_Wizard;
-	if(baseClass == Job_Acolyte) goto L_Holy;
+	if(callfunc("Is_Holy_Class")) goto L_Holy;
 	if(BaseJob == Job_Novice) goto L_Novice;
 L_Other:
 	mes "Ugh, I don't feel good....I feel like I'm trapped in ice........";
 	next;
 	mes "[Raul Expagarus]";
 	mes "Who're you?! Leave!";
-	emotion e_gasp;
+	emotion 0;
 	close;
 L_Novice:
 	mes "What's a little kid like you doing here? Get out!!";
-	emotion e_gasp;
+	emotion 0;
 	next;
 	warp "geffen.gat",120,110;
 	close;
@@ -533,7 +523,7 @@ L_Mage:
 
 	L_Done:
 		mes "Congratulations on finishing the final test!  You have now finished all of the Wizards tests and are ready to become a Wizard!";
-		emotion e_no1;
+		emotion 21;
 		next;
 		mes "[Raul Expagarus]";
 		mes "Go speak to Catherine to become a Wizard.  But be careful! Magic is a powerfull force and can easily destroy you!!";
@@ -560,7 +550,7 @@ L_Mage:
 			next;
 			mes "[Raul Expagarus]";
 			mes "Be that way! If you miss one question, you fail! What do you say!?";
-			emotion e_pif;
+			emotion 32;
 			next;
 			menu "I want to live in peace..........",M_0a, "I want to try again.",M_0b;
 
@@ -578,7 +568,7 @@ L_Mage:
 			next;
 			mes "[Raul Expagarus]";
 			mes "Lets start the test! If you miss one question, you're screwed! HA!";
-			emotion e_gg;
+			emotion 29;
 			next;
 			mes "[Raul Expagarus]";
 			mes "10 questions, get them right! I won't tell you the correct answer for the ones you miss.";
@@ -594,8 +584,7 @@ L_Mage:
 				mes "Cough, here are the questions!";
 				next;
 				mes "[Raul Expagarus]";
-				mes "1. Which of the following is not";
-				mes "necessary to learn Fire Wall?";
+				mes "1. What ISN'T required for fire wall?";
 				next;
 				menu "Fire Bolt Lv 4",sM0_0b, "Fire Ball Lv 5",sM0_0b, "Sight Lv 1",sM0_0b, "Napalm Beat Lv 4",sM0_0a;
 
@@ -605,12 +594,9 @@ L_Mage:
 				sM0_0b:
 
 				mes "[Raul Expagarus]";
-				mes "2. Regardless of it's previous";
-				mes "attribute. What does the monster's";
-				mes "attribute change to when you cast";
-				mes "Frost Diver on it?";
+				mes "2. What happens to a monster's element after it's frozen by Frost Diver?";
 				next;
-				menu "Water",sM0_1a, "Earth",sM0_1b, "Fire",sM0_1b, "Wind",sM0_1b;
+				menu "Changes to Water",sM0_1a, "Changes to Earth",sM0_1b, "Changes to Fire",sM0_1b, "Changes to Wind",sM0_1b;
 
 				sM0_1a:
 					set @SCORE, @SCORE + 10;
@@ -618,12 +604,9 @@ L_Mage:
 				sM0_1b:
 
 				mes "[Raul Expagarus]";
-				mes "3. When you completely master";
-				mes "Napalm Beat, what is the ratio of";
-				mes "the increased MATK using that";
-				mes "spell?";
+				mes "3. When you max out Napalm Beat, how many times matk will the dmg be?";
 				next;
-				menu "1.6 times",sM0_2b, "1.7 times",sM0_2a, "2 times",sM0_2b, "20 times",sM0_2b;
+				menu "1.6x",sM0_2b, "1.7x",sM0_2a, "2x",sM0_2b, "20x",sM0_2b;
 
 				sM0_2a:
 					set @SCORE, @SCORE + 10;
@@ -631,10 +614,9 @@ L_Mage:
 				sM0_2b:
 
 				mes "[Raul Expagarus]";
-				mes "4. What item do you need when";
-				mes "casting Stone Curse?";
+				mes "4. What item is required for stone curse?";
 				next;
-				menu "Red Blood",sM0_3b, "Blue Gemstone",sM0_3b, "Yellow Gemstone",sM0_3b, "Red Gemstone",sM0_3a;
+				menu "Red Blood",sM0_3b, "Blue Gem",sM0_3b, "Yellow Gem",sM0_3b, "Red Gem",sM0_3a;
 
 				sM0_3a:
 					set @SCORE, @SCORE + 10;
@@ -642,10 +624,9 @@ L_Mage:
 				sM0_3b:
 
 				mes "[Raul Expagarus]";
-				mes "5. Which of the following is not";
-				mes "required to master Safety Wall?";
+				mes "5. What isn't required for Safety Wall?";
 				next;
-				menu "Napalm Beat Lv 4",sM0_4b, "Soul Strike Lv 5",sM0_4b, "SP Recovery Lv 6",sM0_4a, "Safety Wall Lv 7",sM0_4b;
+				menu "Napalm Beat Lv 4",sM0_4b, "Soul Strike Lv 5",sM0_4b, "SP Recovery Lv. 6",sM0_4b, "Ice Wall Lv 7",sM0_4a;
 
 				sM0_4a:
 					set @SCORE, @SCORE + 10;
@@ -653,10 +634,7 @@ L_Mage:
 				sM0_4b:
 
 				mes "[Raul Expagarus]";
-				mes "6. Without the INT bonus, what";
-				mes "amount of SP is recovered every 10";
-				mes "seconds when you have learned";
-				mes "Increase SP Recovery Lv 7?";
+				mes "6. How much SP will you regain every 10 sec with lvl 7 SP Rec.?";
 				next;
 				menu "14",sM0_5b, "21",sM0_5a, "28",sM0_5b, "35",sM0_5b;
 
@@ -666,12 +644,9 @@ L_Mage:
 				sM0_5b:
 
 				mes "[Raul Expagarus]";
-				mes "7. Using Energy Coat, when you have";
-				mes "50% of your SP remaining, how much";
-				mes "SP is used when hit, and what";
-				mes "percentage is damage reduced by?";
+				mes "7. You have 50% SP, how much dmg will Energy Coat reduce and how much sp will it use?";
 				next;
-				menu "Damage 18% SP1.5%",sM0_6b, "Damage 18% SP2%",sM0_6a, "Damage 24% SP1.5%",sM0_6b, "Damage 24% SP2%",sM0_6b;
+				menu "dmg 18%, SP1.5%",sM0_6b, "dmg18%, SP2%",sM0_6a, "dmg 24%, SP1.5%",sM0_6b, "dmg 24%, SP2%",sM0_6b;
 
 				sM0_6a:
 					set @SCORE, @SCORE + 10;
@@ -679,11 +654,9 @@ L_Mage:
 				sM0_6b:
 
 				mes "[Raul Expagarus]";
-				mes "8. How much SP is consumed and how";
-				mes "many times can you avoid attacks";
-				mes "when using Safety Wall Lv 6?";
+				mes "8. Lvl 6 Safety Wall sp consumtion, and number of hits absorbed?";
 				next;
-				menu "SP 40, 6hits",sM0_7b, "SP 35, 6hits",sM0_7b, "SP 40, 7hits",sM0_7b, "SP 35, 7hits",sM0_7a;
+				menu "SP 40, 6hits",sM0_7b, "SP 35, 6hits",sM0_7b, "SP 40, 7hits",sM0_7a, "SP 35, 7hits",sM0_7b;
 
 				sM0_7a:
 					set @SCORE, @SCORE + 10;
@@ -691,8 +664,7 @@ L_Mage:
 				sM0_7b:
 
 				mes "[Raul Expagarus]";
-				mes "9. How much SP is needed when using";
-				mes "Lv 10 Thunderstorm?";
+				mes "9. Lv. 10 Thunder Storm's Sp Consume";
 				next;
 				menu "84",sM0_8b, "74",sM0_8a, "64",sM0_8b, "54",sM0_8b;
 
@@ -702,8 +674,7 @@ L_Mage:
 				sM0_8b:
 
 				mes "[Raul Expagarus]";
-				mes "10. Which skill is most useful";
-				mes "training in the Byalan Dungeon?";
+				mes "10. What would be a good skill to use in Byalan Dungeon?";
 				next;
 				menu "Lightning Bolt",sM0_9a, "Fire Bolt",sM0_9b, "Ice Bolt",sM0_9b, "Sight",sM0_9b;
 
@@ -716,10 +687,9 @@ L_Mage:
 			//Monster Quiz
 			R_1:
 				mes "[Raul Expagarus]";
-				mes "1. Which monster can you obtain a";
-				mes "slotted Guard from?";
+				mes "1. What drops a slot guard?";
 				next;
-				menu "Thief Bug",sM1_0b, "Peco Peco",sM1_0b, "Pupa",sM1_0a, "Kobold (Hammer)",sM1_0b;
+				menu "Thief Bug",sM1_0b, "Peco Peco",sM1_0b, "Pupa",sM1_0a, "Mace Kobold",sM1_0b;
 
 				sM1_0a:
 					set @SCORE, @SCORE + 10;
@@ -727,9 +697,7 @@ L_Mage:
 				sM1_0b:
 
 				mes "[Raul Expagarus]";
-				mes "2. Which of the following is the";
-				mes "easiest monster for a low level";
-				mes "Mage to hunt?";
+				mes "2. Which monster is the easiest for magicians?";
 				next;
 				menu "Flora",sM1_1a, "Gierth",sM1_1b, "Golem",sM1_1b, "Myst",sM1_1b;
 
@@ -739,10 +707,9 @@ L_Mage:
 				sM1_1b:
 
 				mes "[Raul Expagarus]";
-				mes "3. Which monster will not be";
-				mes "affected by Stone Curse?";
+				mes "3. What monster is completly immune to Stone Curse?";
 				next;
-				menu "Elder Willow",sM1_2b, "Evil Druid",sM1_2a, "Magnolia",sM1_2b, "Marc",sM1_2b;
+				menu "Elder Willow",sM1_2b, "Evil Druid",sM1_2a, "Baek-Ryuhn-Oak",sM1_2b, "Marc",sM1_2b;
 
 				sM1_2a:
 					set @SCORE, @SCORE + 10;
@@ -750,10 +717,7 @@ L_Mage:
 				sM1_2b:
 
 				mes "[Raul Expagarus]";
-				mes "4. When attacking a Lv 3 water";
-				mes "attribute monster with a wind";
-				mes "attribute weapon, what is the";
-				mes "damage percentage?";
+				mes "4. How much dmg do you do with a wind spell to a Water 3 monster?";
 				next;
 				menu "125%",sM1_3b, "150%",sM1_3b, "175%",sM1_3b, "200%",sM1_3a;
 
@@ -763,11 +727,9 @@ L_Mage:
 				sM1_3b:
 
 				mes "[Raul Expagarus]";
-				mes "5. If a Baby Desert Wolf and a";
-				mes "Familiar fought, which one would";
-				mes "win?";
+				mes "5. Baby Desert Wolves vs Familiar, which one wins?";
 				next;
-				menu "Baby Desert Wolf",sM1_4a, "Familiar",sM1_4b, "Neither",sM1_4b, "I don't know",sM1_4b;
+				menu "Baby Desert Wolf",sM1_4a, "Farmiliar",sM1_4b, "Tie",sM1_4b, "Don't Know",sM1_4b;
 
 				sM1_4a:
 					set @SCORE, @SCORE + 10;
@@ -775,8 +737,7 @@ L_Mage:
 				sM1_4b:
 
 				mes "[Raul Expagarus]";
-				mes "6. Which of the following cannot be";
-				mes "a Cute Pet?";
+				mes "6. Which monster can't be tamed as a pet?";
 				next;
 				menu "Poporing",sM1_5b, "Roda Frog",sM1_5a, "Smokie",sM1_5b, "Poison Spore",sM1_5b;
 
@@ -786,10 +747,9 @@ L_Mage:
 				sM1_5b:
 
 				mes "[Raul Expagarus]";
-				mes "7. Choose the monster that is weak";
-				mes "against a fire attribute attack.";
+				mes "7. Which monster is weak against fire?.";
 				next;
-				menu "Dagger Goblin",sM1_6b, "Mace Goblin",sM1_6b, "Morningstar Goblin",sM1_6b, "Hammer Goblin",sM1_6a;
+				menu "Knife Goblin",sM1_6b, "Mace Goblin",sM1_6b, "Flail Goblin",sM1_6b, "Hammer Goblin",sM1_6a;
 
 				sM1_6a:
 					set @SCORE, @SCORE + 10;
@@ -797,10 +757,9 @@ L_Mage:
 				sM1_6b:
 
 				mes "[Raul Expagarus]";
-				mes "8. Which of the following monsters";
-				mes "has the highest defence?";
+				mes "8. Which monster has the highest magic def?";
 				next;
-				menu "Horn",sM1_7b, "Chonchon",sM1_7b, "Andre",sM1_7b, "Caramel",sM1_7a;
+				menu "Horong",sM1_7b, "ChonChon",sM1_7b, "Andre",sM1_7b, "Caramel",sM1_7a;
 
 				sM1_7a:
 					set @SCORE, @SCORE + 10;
@@ -808,10 +767,9 @@ L_Mage:
 				sM1_7b:
 
 				mes "[Raul Expagarus]";
-				mes "9. Choose the monster that's a";
-				mes "different species.";
+				mes "9. Pick the monster that doesn't belong.";
 				next;
-				menu "Poring",sM1_8b, "Mastering",sM1_8b, "Ghostring",sM1_8a, "Spore",sM1_8b;
+				menu "Poring",sM1_8b, "Mastering",sM1_8b, "Ghostring",sM1_8b, "Spore",sM1_8a;
 
 				sM1_8a:
 					set @SCORE, @SCORE + 10;
@@ -819,8 +777,7 @@ L_Mage:
 				sM1_8b:
 
 				mes "[Raul Expagarus]";
-				mes "10. Which of the following is not";
-				mes "an Undead monster?";
+				mes "10. Which is not a undead?";
 				next;
 				menu "Drake",sM1_9b, "Megalodon",sM1_9b, "Deviace",sM1_9a, "Khalitzburg",sM1_9b;
 
@@ -833,8 +790,7 @@ L_Mage:
 			//Wizard Quiz
 			R_2:
 				mes "[Raul Expagarus]";
-				mes "1. Which stat is most important";
-				mes "for a Mage?";
+				mes "1. What is the most important stat for a Wizard?";
 				next;
 				menu "INT",sM2_0a, "AGI",sM2_0b, "DEX",sM2_0b, "VIT",sM2_0b;
 
@@ -844,10 +800,9 @@ L_Mage:
 				sM2_0b:
 
 				mes "[Raul Expagarus]";
-				mes "2. Which attribute does not have a";
-				mes "'Bolt' type attack?";
+				mes "2. Which element doesn't have a bolt spell?";
 				next;
-				menu "Water",sM2_1b, "Earth",sM2_1a, "Fire",sM2_1b, "Wind",sM2_1b;
+				menu "water",sM2_1b, "earth",sM2_1a, "fire",sM2_1b, "wind",sM2_1b;
 
 				sM2_1a:
 					set @SCORE, @SCORE + 10;
@@ -855,10 +810,9 @@ L_Mage:
 				sM2_1b:
 
 				mes "[Raul Expagarus]";
-				mes "3. Choose the one that does not";
-				mes "relate to a mage.";
+				mes "3. What is NOT a characteristic of a Wizard?";
 				next;
-				menu "Weak physical strength.",sM2_2b, "Attacks at a distance.",sM2_2b, "Good at selling stuff.",sM2_2a, "Magic Defense is high.",sM2_2b;
+				menu "Weak physical abilites",sM2_2b, "Distance Attacks",sM2_2b, "Good money maker",sM2_2a, "High Magic Def",sM2_2b;
 
 				sM2_2a:
 					set @SCORE, @SCORE + 10;
@@ -866,8 +820,7 @@ L_Mage:
 				sM2_2b:
 
 				mes "[Raul Expagarus]";
-				mes "4. Which town is the home of the";
-				mes "Mages?";
+				mes "4. Which town is the home of Wizards?";
 				next;
 				menu "Prontera",sM2_3b, "Morroc",sM2_3b, "Alberta",sM2_3b, "Geffen",sM2_3a;
 
@@ -877,10 +830,9 @@ L_Mage:
 				sM2_3b:
 
 				mes "[Raul Expagarus]";
-				mes "5. Which of the following cards has?";
-				mes "nothing to do with INT?";
+				mes "5. Which card has nothing to do with INT?";
 				next;
-				menu "Andre Larva Card",sM2_4b, "Soldier Andre Card",sM2_4a, "Baby Desert Wolf Card",sM2_4b, "Elder Willow Card",sM2_4b;
+				menu "Andre Card",sM2_4b, "Soldier Andre Card",sM2_4a, "Baby Desert Wolf Card",sM2_4b, "Elder Willow Card",sM2_4b;
 
 				sM2_4a:
 					set @SCORE, @SCORE + 10;
@@ -888,10 +840,9 @@ L_Mage:
 				sM2_4b:
 
 				mes "[Raul Expagarus]";
-				mes "6. What is the Mage good at";
-				mes "compared to other job classes?";
+				mes "6. What is superior about the mage class compared to others?";
 				next;
-				menu "Exceptional Vocal Ability",sM2_5b, "Exceptional Acting Ability",sM2_5b, "Exceptional Dance Skills",sM2_5b, "Exceptional Magic Skills",sM2_5a;
+				menu "Close Range Combat",sM2_5b, "High Dodge",sM2_5b, "Dance Skills",sM2_5b, "Magical Power",sM2_5a;
 
 				sM2_5a:
 					set @SCORE, @SCORE + 10;
@@ -899,8 +850,7 @@ L_Mage:
 				sM2_5b:
 
 				mes "[Raul Expagarus]";
-				mes "7. What is the INT bonus at Job Lv";
-				mes "40 for a mage?";
+				mes "7. What is the INT bonus at job lvl 40?";
 				next;
 				menu "8",sM2_6b, "7",sM2_6b, "6",sM2_6b, "5",sM2_6a;
 
@@ -910,9 +860,9 @@ L_Mage:
 				sM2_6b:
 
 				mes "[Raul Expagarus]";
-				mes "8. Which item can't be equipped by mages?";
+				mes "8. Which Item can't be equiped by mages?";
 				next;
-				menu "Knife",sM2_7b, "Cap",sM2_7a, "Sandals",sM2_7b, "Eye of Dullahan",sM2_7b;
+				menu "Knife",sM2_7b, "Cap",sM2_7a, "Sandel",sM2_7b, "Eye of Dullahan",sM2_7b;
 
 				sM2_7a:
 					set @SCORE, @SCORE + 10;
@@ -920,11 +870,9 @@ L_Mage:
 				sM2_7b:
 
 				mes "[Raul Expagarus]";
-				mes "9. Which of the following is the";
-				mes "catalyst when making the Mage test";
-				mes "solution 3?";
+				mes "9. During the mage test, which stone is NOT one of the Catalysts?";
 				next;
-				menu "Blue Gemstone",sM2_8a, "Red Gemstone",sM2_8b, "Yellow Gemstone",sM2_8b, "Red Blood",sM2_8b;
+				menu "Yellow Gemstone",sM2_8b, "Red Gemstone",sM2_8b, "Blue Gemstone",sM2_8b, "Red Blood",sM2_8a;
 
 				sM2_8a:
 					set @SCORE, @SCORE + 10;
@@ -932,10 +880,9 @@ L_Mage:
 				sM2_8b:
 
 				mes "[Raul Expagarus]";
-				mes "10. Which card is irrelevant to";
-				mes "magic?";
+				mes "10. Which card has nothing to do with magic?";
 				next;
-				menu "Marduk Card",sM2_9b, "Magnolia Card",sM2_9a, "Willow Card",sM2_9b, "Maya Card",sM2_9b;
+				menu "Marduk Card",sM2_9b, "Baek-Rhyun-Oak Card",sM2_9a, "Willow Card",sM2_9b, "Maya Card",sM2_9b;
 
 				sM2_9a:
 					set @SCORE, @SCORE + 10;
@@ -993,7 +940,7 @@ L_Mage:
 		M_1a:
 			mes "[Raul Expagarus]";
 			mes "Ignorant fool! Fine, go die if you wish! Your corpse will be left as food for the monsters.";
-			emotion e_omg;
+			emotion 23;
 			next;
 			mes "[Raul Expagarus]";
 			mes "I'll send you now... By the way, have fun getting slaughtered!";
@@ -1042,7 +989,7 @@ L_Mage:
 
 		sL_ReTest3:
 			mes "You want to take the test AGAIN!? You love magic THAT much!?";
-			emotion e_what;
+			emotion 1;
 			next;
 			mes "[Raul Expagarus]";
 			mes "You failed last time, so it's time for a quiz! If you don't want to take it, TOO BAD!.";
@@ -1053,11 +1000,9 @@ L_Mage:
 			set @SCORE, 0;
 
 			mes "[Raul Expagarus]";
-			mes "1. Choose the monster with a";
-			mes "different attribute than the";
-			mes "others.";
+			mes "1. Which monster doesn't exist?";
 			next;
-			menu "Mantis",sM_0b, "Cornutus",sM_0a, "Giearth",sM_0b, "Caramel",sM_0b;
+			menu "Mantis",sM_0b, "Cunner Tooth",sM_0a, "Giearth",sM_0b, "Caramel",sM_0b;
 
 			sM_0a:
 				set @SCORE, @SCORE + 20;
@@ -1065,10 +1010,9 @@ L_Mage:
 			sM_0b:
 
 			mes "[Raul Expagarus]";
-			mes "2. Choose the monster that is not a";
-			mes "looting one.";
+			mes "2. Which monster is NOT a animal type?";
 			next;
-			menu "Yoyo",sM_1b, "Magnolia",sM_1b, "Metaller",sM_1b, "Zerom",sM_1a;
+			menu "Yoyo",sM_1b, "Bigfoot",sM_1b, "Metaller",sM_1b, "Zerom",sM_1a;
 
 			sM_1a:
 				set @SCORE, @SCORE + 20;
@@ -1076,8 +1020,7 @@ L_Mage:
 			sM_1b:
 
 			mes "[Raul Expagarus]";
-			mes "3. Which of these monsters does not";
-			mes "recognize casting?";
+			mes "3. Which monster has no cast sense?";
 			next;
 			menu "Marina",sM_2a, "Vitata",sM_2b, "Scorpion",sM_2b, "Giearth",sM_2b;
 
@@ -1087,8 +1030,7 @@ L_Mage:
 			sM_2b:
 
 			mes "[Raul Expagarus]";
-			mes "4. Chose the spell that would be";
-			mes "efficient against a Marine Sphere.";
+			mes "4. What's a good spell to use on Marin Spheres?";
 			next;
 			menu "Cold Bolt",sM_3b, "Fire Bolt",sM_3b, "Lightning Bolt",sM_3a, "Stone Curse",sM_3b;
 
@@ -1098,8 +1040,7 @@ L_Mage:
 			sM_3b:
 
 			mes "[Raul Expagarus]";
-			mes "5. Choose the monster that can";
-			mes "move.";
+			mes "5. Which monster can move?";
 			next;
 			menu "Hydra",sM_4b, "Mandragora",sM_4b, "Greatest General",sM_4b, "Frilldora",sM_4a;
 
@@ -1193,14 +1134,12 @@ OnStart:
 	disablenpc "firewarpS";
 	killmonsterall "job_wiz.gat";		//makes sure there are no left over mobs from other testers
 	warpwaitingpc "job_wiz.gat",114,169;
-	donpcevent "WaterRm::OnStart";
+	donpcevent "WaterRm";
 	end;
 }
 
 // Room of Water  -----------------------------------------------------------------------------
 job_wiz.gat,1,1,1	script	WaterRm	-1,{
-
-OnStart:
 	set $@WzRm, 1;		// used to determine which map area(room) to make time announcements in
 	set $@WzMOB, 8;		//used as a counter for the monsters that are summoned
 	monster "job_wiz.gat",109,174,"Phen",1158,1,"WaterRm::OnMyMobDead1";
@@ -1253,8 +1192,6 @@ OnMyMobDead2:
 
 // Room of Earth -----------------------------------------------------------------------------------------------
 job_wiz.gat,1,1,1	script	EarthRm	-1,{
-
-OnStart:
 	set $@WzRm, 2;
 	set $@WzMOB, 10;
 	monster "job_wiz.gat",111,102,"Yoyo",1057,1,"EarthRm::OnMyMobDead1";
@@ -1311,8 +1248,6 @@ OnMyMobDead2:
 
 // Room of Fire ------------------------------------------------------------------------------------------------------------
 job_wiz.gat,1,1,1	script	FireRm	-1,{
-
-OnStart:
 	set $@WzRm, 3;
 	set $@WzMOB, 7;
 	monster "job_wiz.gat",58,110,"Zerom",1178,1,"FireRm::OnMyMobDead1";
@@ -1338,8 +1273,8 @@ OnTimer2000:
 	set $@WzMOB, 3;
 	areaannounce "job_wiz.gat", 30, 82, 61, 113, "[Test Guide]: You now must defeat the door gaurds! Hurry!.",8;
 	monster "job_wiz.gat",44,99,"Greatest General",1277,1,"FireRm::OnMyMobDead2";
-	monster "job_wiz.gat",43,99,"Horong",1129,1,"FireRm::OnMyMobDead2";
-	monster "job_wiz.gat",45,99,"Horong",1129,1,"FireRm::OnMyMobDead2";
+	monster "job_wiz.gat",43,99,"Hode",1127,1,"FireRm::OnMyMobDead2";
+	monster "job_wiz.gat",45,99,"Hode",1127,1,"FireRm::OnMyMobDead2";
 	setnpctimer 120000, "TimerWz";
 	startnpctimer "TimerWz";
 	end;
@@ -1423,7 +1358,7 @@ job_wiz.gat,129,169,1	script	waterwarpE::waterwrp	45,1,1,{
 OnTimer30000:
 	stopnpctimer "waterwrp";
 	areawarp "job_wiz.gat", 98, 154, 129, 185, "job_wiz.gat",116,98;
-	donpcevent "EarthRm::OnStart";
+	donpcevent "EarthRm";
 	end;
 }
 job_wiz.gat,98,169,1	duplicate(waterwrp)	waterwarpW	45,1,1
@@ -1437,7 +1372,7 @@ job_wiz.gat,131,98,1	script	earthwarpE::earthwrp	45,1,1,{
 OnTimer30000:
 	stopnpctimer "earthwrp";
 	areawarp "job_wiz.gat", 100, 82, 131, 113, "job_wiz.gat",47,98;
-	donpcevent "FireRm::OnStart";
+	donpcevent "FireRm";
 	end;
 }
 job_wiz.gat,100,98,1	duplicate(earthwrp)	earthwarpW	45,1,1
@@ -1457,15 +1392,3 @@ OnTimer30000:
 job_wiz.gat,30,97,1	duplicate(firewrp)	firewarpW	45,1,1
 job_wiz.gat,46,113,1	duplicate(firewrp)	firewarpN	45,1,1
 job_wiz.gat,46,82,1	duplicate(firewrp)	firewarpS	45,1,1
-
-
-//==============================================================================
-// mapflag
-//==============================================================================
-job_wiz.gat	mapflag	nomemo
-job_wiz.gat	mapflag	noteleport
-job_wiz.gat	mapflag	nosave	SavePoint
-job_wiz.gat	mapflag	nopenalty
-job_wiz.gat	mapflag	nobranch
-job_wiz.gat	mapflag	noexp
-job_wiz.gat	mapflag	noloot

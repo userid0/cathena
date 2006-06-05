@@ -1,124 +1,126 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
-
+// $Id: itemdb.h,v 1.3 2004/09/25 05:32:18 MouseJstr Exp $
 #ifndef _ITEMDB_H_
 #define _ITEMDB_H_
 
 #include "map.h"
-#define MAX_RANDITEM	10000
 
-struct item_data {
-	int nameid;
-	char name[ITEM_NAME_LENGTH],jname[ITEM_NAME_LENGTH];
-	char prefix[NAME_LENGTH],suffix[NAME_LENGTH];
+struct item_data
+{
+	unsigned short nameid;
+	char name[24];
+	char jname[24];
+	char prefix[24];
+	char suffix[24];
 	char cardillustname[64];
-	//Do not add stuff between value_buy and wlv (see how getiteminfo works)
-	int value_buy;
-	int value_sell;
-	int type;
-	int maxchance; //For logs, for external game info, for scripts: Max drop chance of this item (e.g. 0.01% , etc.. if it = 0, then monsters don't drop it) [Lupus]
-	int sex;
-	int equip;
-	int weight;
-	int atk;
-	int def;
-	int range;
-	int slot;
-	int look;
-	int elv;
-	int wlv;
-//Lupus: I rearranged order of these fields due to compatibility with ITEMINFO script command
-//		some script commands should be revised as well...
-	unsigned int class_base[3];	//Specifies if the base can wear this item (split in 3 indexes per type: 1-1, 2-1, 2-2)
-	unsigned class_upper : 3; //Specifies if the upper-type can equip it (1: normal, 2: upper, 3: baby)
-	struct {
-		unsigned short chance;
-		int id;
-	} mob[MAX_SEARCH]; //Holds the mobs that have the highest drop rate for this item. [Skotlex]
-	struct script_code *script;	//Default script for everything.
-	struct script_code *equip_script;	//Script executed once when equipping.
-	struct script_code *unequip_script;//Script executed once when unequipping.
-	struct {
-		unsigned available : 1;
-		unsigned value_notdc : 1;
-		unsigned value_notoc : 1;
-		short no_equip;
-		unsigned no_use : 1;
-		unsigned no_refine : 1;	// [celest]
-		unsigned delay_consume : 1;	// Signifies items that are not consumed inmediately upon double-click [Skotlex]
-		unsigned trade_restriction : 7;	//Item restrictions mask [Skotlex]
-		unsigned autoequip: 1;
+	long value_buy;
+	long value_sell;
+
+	uint32 weight;
+	uint32 atk;
+	uint32 def;
+
+	unsigned char type;
+	//0 Healing, 2: Usable, 3: Misc, 4: Weapon, 5: Armor, 6: Card, 7: Pet Egg,
+	//8: Pet Equipment, 10: Arrow, 11: Usable with delayed consumption (all items with script "pet" or "itemskill": Lures, Scrolls, Magnifier, Yggdrasil Leaf)
+
+	unsigned char gm_lv_trade_override;
+
+	uint32 class_array;
+	unsigned short equip;
+	unsigned short range;
+	unsigned short look;
+	unsigned short elv;
+	unsigned short wlv;
+	unsigned short view_id;
+
+	struct _flags {
+		unsigned available : 1;			// 0
+		unsigned value_notdc : 1;		// 1
+		unsigned value_notoc : 1;		// 2
+		unsigned no_use : 1;			// 3
+		unsigned sex : 2;				// 4,5 // male=0, female=1, all=2
+		unsigned slot : 3;				// 6,7,8 (0,1,2,3,4 [5..7 unused]
+		unsigned no_refine : 1;			// 9 [celest]
+		unsigned no_equip : 3;			// 10,11,12
+		unsigned delay_consume : 1;		// 13 Signifies items that are not consumed inmediately upon double-click [Skotlex]
+		unsigned trade_restriction : 7;	// 14-20 Item restrictions mask [Skotlex]
+		unsigned _unused : 3;			// 21-23
+
+		_flags() :
+			available(0),
+			value_notdc(0),
+			value_notoc(0),
+			no_use(0),
+			sex(0),
+			slot(0),
+			no_refine(0),
+			no_equip(0),
+			delay_consume(0),
+			trade_restriction(0)
+		{}
 	} flag;
-	short gm_lv_trade_override;	//GM-level to override trade_restriction
-	int view_id;
+
+	char *use_script;	// 回復とかも全部この中でやろうかなと
+	char *equip_script;	// 攻撃,防御の属性設定もこの中で可能かな?
+
+
+	unsigned char getType()	{ return (type==7) ? 4 : type; } // pet eggs are handled as weapons by the client
+
+	item_data(unsigned short nid=0) : 
+		nameid(nid),
+		value_buy(0),
+		value_sell(0),
+		weight(0),
+		atk(0),
+		def(0),
+		type(0),
+		gm_lv_trade_override(0),
+		class_array(0),
+		equip(0),
+		range(0),
+		look(0),
+		elv(0),
+		wlv(0),
+		view_id(0)
+	{
+		name[0]=0;
+		jname[0]=0;
+		prefix[0]=0;
+		suffix[0]=0;
+		cardillustname[0]=0;
+	}
+};
+
+
+struct random_item_data {
+	unsigned short nameid;
+	unsigned short per;
 };
 
 struct item_group {
-	int nameid[MAX_RANDITEM];
-	int qty; //Counts amount of items in the group.
-	int id[30];	// 120 bytes
+	unsigned short nameid[30];	// 60 bytes
 };
 
-enum {
-	IG_BLUEBOX=1,
-	IG_VIOLETBOX,	//2
-	IG_CARDALBUM,	//3
-	IG_GIFTBOX,	//4
-	IG_SCROLLBOX,	//5
-	IG_FINDINGORE,	//6
-	IG_COOKIEBAG,	//7
-	IG_POTION,	//8
-	IG_HERBS,	//9
-	IG_FRUITS,	//10
-	IG_MEAT,	//11
-	IG_CANDY,	//12
-	IG_JUICE,	//13
-	IG_FISH,	//14
-	IG_BOXES,	//15
-	IG_GEMSTONE,	//16
-	IG_JELLOPY,	//17
-	IG_ORE,	//18
-	IG_FOOD,	//19
-	IG_RECOVERY,	//20
-	IG_MINERALS,	//21
-	IG_TAMING,	//22
-	IG_SCROLLS,	//23
-	IG_QUIVERS,	//24
-	IG_MASKS,	//25
-	IG_ACCESORY,	//26
-	IG_JEWELS,	//27
-	IG_GIFTBOX_1,	//28
-	IG_GIFTBOX_2,	//29
-	IG_GIFTBOX_3,	//30
-	IG_GIFTBOX_4,	//31
-	IG_EGGBOY,	//32
-	IG_EGGGIRL,	//33
-	IG_GIFTBOXCHINA,	//34
-	MAX_ITEMGROUP,
-} item_group_list;
-
 struct item_data* itemdb_searchname(const char *name);
-int itemdb_searchname_array(struct item_data** data, int size, const char *str);
-struct item_data* itemdb_load(int nameid);
-struct item_data* itemdb_search(int nameid);
-struct item_data* itemdb_exists(int nameid);
+struct item_data* itemdb_search(unsigned short nameid);
+struct item_data* itemdb_exists(unsigned short nameid);
 #define itemdb_type(n) itemdb_search(n)->type
 #define itemdb_atk(n) itemdb_search(n)->atk
 #define itemdb_def(n) itemdb_search(n)->def
 #define itemdb_look(n) itemdb_search(n)->look
 #define itemdb_weight(n) itemdb_search(n)->weight
 #define itemdb_equip(n) itemdb_search(n)->equip
-#define itemdb_usescript(n) itemdb_search(n)->script
-#define itemdb_equipscript(n) itemdb_search(n)->script
+#define itemdb_usescript(n) itemdb_search(n)->use_script
+#define itemdb_equipscript(n) itemdb_search(n)->equip_script
 #define itemdb_wlv(n) itemdb_search(n)->wlv
 #define itemdb_range(n) itemdb_search(n)->range
 #define itemdb_slot(n) itemdb_search(n)->slot
-#define itemdb_available(n) (itemdb_exists(n) && itemdb_search(n)->flag.available)
-#define itemdb_viewid(n) (itemdb_search(n)->view_id)
-#define itemdb_autoequip(n) (itemdb_search(n)->flag.autoequip)
-int itemdb_group(int nameid);
+#define	itemdb_available(n) (itemdb_exists(n) && itemdb_search(n)->flag.available)
+#define	itemdb_viewid(n) (itemdb_search(n)->view_id)
+int itemdb_group(unsigned short nameid);
 
 int itemdb_searchrandomid(int flags);
+int itemdb_searchrandomgroup(unsigned short groupid);
 
 #define itemdb_value_buy(n) itemdb_search(n)->value_buy
 #define itemdb_value_sell(n) itemdb_search(n)->value_sell
@@ -126,17 +128,17 @@ int itemdb_searchrandomid(int flags);
 #define itemdb_value_notoc(n) itemdb_search(n)->flag.value_notoc
 #define itemdb_canrefine(n) itemdb_search(n)->flag.no_refine
 //Item trade restrictions [Skotlex]
-int itemdb_isdropable(int nameid, int gmlv);
-int itemdb_cantrade(int nameid, int gmlv, int gmlv2);
-int itemdb_cansell(int nameid, int gmlv);
-int itemdb_canstore(int nameid, int gmlv);
-int itemdb_canguildstore(int nameid, int gmlv);
-int itemdb_cancartstore(int nameid, int gmlv);
-int itemdb_canpartnertrade(int nameid, int gmlv, int gmlv2);
+bool itemdb_isdropable(unsigned short nameid, unsigned char gmlv);
+bool itemdb_cantrade(unsigned short nameid, unsigned char gmlv);
+bool itemdb_cansell(unsigned short nameid, unsigned char gmlv);
+bool itemdb_canstore(unsigned short nameid, unsigned char gmlv);
+bool itemdb_canguildstore(unsigned short nameid, unsigned char gmlv);
+bool itemdb_cancartstore(unsigned short nameid, unsigned char gmlv);
+bool itemdb_canpartnertrade(unsigned short nameid, unsigned char gmlv);
 
-int itemdb_isequip(int);
-int itemdb_isequip2(struct item_data *);
-int itemdb_isequip3(int);
+bool itemdb_isSingleStorage(unsigned short nameid);
+bool itemdb_isSingleStorage(struct item_data &data);
+bool itemdb_isEquipment(unsigned short nameid);
 
 // itemdb_equipマクロとitemdb_equippointとの違いは
 // 前者が鯖側dbで定義された値そのものを返すのに対し

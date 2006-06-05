@@ -1,6 +1,4 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
-
+// $Id: atcommand.h 148 2004-09-30 14:05:37Z MouseJstr $
 #ifndef _ATCOMMAND_H_
 #define _ATCOMMAND_H_
 
@@ -38,7 +36,6 @@ enum AtCommandType {
 	AtCommand_Alive,
 	AtCommand_Kami,
 	AtCommand_KamiB,
-	AtCommand_KamiC, //LuzZza
 	AtCommand_Heal,
 	AtCommand_Item,
 	AtCommand_Item2,
@@ -48,8 +45,6 @@ enum AtCommandType {
 	AtCommand_JobLevelUp,
 	AtCommand_H,
 	AtCommand_Help,
-	AtCommand_H2,
-	AtCommand_Help2,
 	AtCommand_GM,
 	AtCommand_PvPOff,
 	AtCommand_PvPOn,
@@ -58,7 +53,7 @@ enum AtCommandType {
 	AtCommand_Model,
 	AtCommand_Go,
 	AtCommand_Spawn,
-	//AtCommand_Monster,	// removed for Skots [Reddozen]
+	AtCommand_Monster,
 	AtCommand_MonsterSmall,
 	AtCommand_MonsterBig,
 	AtCommand_KillMonster,
@@ -68,7 +63,6 @@ enum AtCommandType {
 	AtCommand_Memo,
 	AtCommand_GAT,
 	AtCommand_Packet,
-	AtCommand_WaterLevel,
 	AtCommand_StatusPoint,
 	AtCommand_SkillPoint,
 	AtCommand_Zeny,
@@ -106,6 +100,13 @@ enum AtCommandType {
 	AtCommand_AgitEnd,
 	AtCommand_MapExit,
 	AtCommand_IDSearch,
+	AtCommand_CharSkReset,
+	AtCommand_CharStReset,
+	//by chbrules
+	AtCommand_CharModel, 
+	AtCommand_CharSKPoint,
+	AtCommand_CharSTPoint, 
+//	AtCommand_CharZeny, //now #zeny
 	AtCommand_RecallAll,
 	AtCommand_ReloadItemDB,
 	AtCommand_ReloadMobDB,
@@ -116,7 +117,6 @@ enum AtCommandType {
 	AtCommand_ReloadBattleConf,
 	AtCommand_ReloadStatusDB,
 	AtCommand_ReloadPcDB,
-	AtCommand_ReloadMOTD, // [Valaris]
 	AtCommand_MapInfo,
 	AtCommand_Dye,
 	AtCommand_Hstyle,
@@ -149,6 +149,8 @@ enum AtCommandType {
 	AtCommand_EMail, // by Yor
 	AtCommand_Hatch,
 	AtCommand_Effect, // by Apple
+// 	AtCommand_Char_Item_List, // by Yor, now #itemlist
+//	AtCommand_Char_Storage_List, // by Yor, now #storagelist
 	AtCommand_Char_Cart_List, // by Yor
 	AtCommand_AddWarp, // by MouseJstr
 	AtCommand_Follow, // by MouseJstr
@@ -158,6 +160,7 @@ enum AtCommandType {
 	AtCommand_NpcMove, // by MouseJstr
 	AtCommand_Killable, // by MouseJstr
 	AtCommand_CharKillable, // by MouseJstr
+//	AtCommand_Chareffect, // by MouseJstr, now #effect
 	AtCommand_Dropall, // by MouseJstr
 	AtCommand_Chardropall, // by MouseJstr
 	AtCommand_Storeall, // by MouseJstr
@@ -169,7 +172,7 @@ enum AtCommandType {
 	AtCommand_Snow,
 	AtCommand_Sakura,
 	AtCommand_Clouds,
-	AtCommand_Clouds2, // [Valaris]
+	AtCommand_Clouds2,
 	AtCommand_Fog,
 	AtCommand_Fireworks,
 	AtCommand_Leaves,
@@ -195,8 +198,7 @@ enum AtCommandType {
 	AtCommand_NpcTalk,
 	AtCommand_PetTalk,
 	AtCommand_Users,
-	// SQL-only commands start
-#ifndef TXT_ONLY
+
 	AtCommand_CheckMail, // [Valaris]
 	AtCommand_ListMail, // [Valaris]
 	AtCommand_ListNewMail, // [Valaris]
@@ -205,8 +207,7 @@ enum AtCommandType {
 	AtCommand_DeleteMail, // [Valaris]
 	AtCommand_SendPriorityMail, // [Valaris]
 	AtCommand_RefreshOnline, // [Valaris]
-	// SQL-only commands end
-#endif
+
 	AtCommand_SkillTree, // by MouseJstr
 	AtCommand_Marry, // by MouseJstr
 	AtCommand_Divorce, // by MouseJstr
@@ -236,89 +237,59 @@ enum AtCommandType {
 	AtCommand_ChangeLook,
 	AtCommand_AutoLoot, //by Upa-Kun
 	AtCommand_MobInfo, //by Lupus
-	AtCommand_Exp,	// by Skotlex
 	AtCommand_Adopt, // by Veider
 	AtCommand_Version, // by Ancyker
-
 	AtCommand_MuteArea, // MouseJstr
 	AtCommand_Shuffle, // MouseJstr
 	AtCommand_Rates, // MouseJstr
 
 	AtCommand_ItemInfo, // Lupus
-	AtCommand_WhoDrops, // Skotlex
 	AtCommand_MapFlag, // Lupus
-	AtCommand_MonsterIgnore, // [Valaris]
+
 	AtCommand_FakeName, // [Valaris]
 	AtCommand_Size, // [Valaris]
 	AtCommand_ShowDelay,
 	AtCommand_ShowExp,
-	AtCommand_ShowZeny,
-	AtCommand_AutoTrade,//durf
-	AtCommand_ChangeGM,//durf
-	AtCommand_ChangeLeader,
-	
-	AtCommand_Invite, // By LuzZza
-	AtCommand_Duel, // By LuzZza
-	AtCommand_Leave, // By LuzZza
-	AtCommand_Accept, // By LuzZza
-	AtCommand_Reject, // By LuzZza
-	
-	AtCommand_Away, // LuzZza
-	AtCommand_Main, // LuzZza
+	AtCommand_MonsterIgnore,
 
-	AtCommand_Clone, // [Valaris]
-	AtCommand_ToNPC, // LuzZza
-	AtCommand_Commands, // [Skotlex]
-	AtCommand_NoAsk, // [LuzZza]
-	AtCommand_Request, // [Skotlex], supposedly taken from Freya (heard the command was there, but I haven't seen the code yet)
-	// end <- Ahem, guys, don't place AtCommands after AtCommand_Unknown! [Skotlex]
+
+
+	// End. No more commans after this line.
 	AtCommand_Unknown,
 	AtCommand_MAX
 };
+typedef bool (*atcommand_function)(int, struct map_session_data&, const char* command, const char* message);
 
-typedef enum AtCommandType AtCommandType;
-
-typedef struct AtCommandInfo {
+struct AtCommandInfo
+{
 	AtCommandType type;
 	const char* command;
-	int level;
-	int (*proc)(const int, struct map_session_data*,
-		const char* command, const char* message);
-} AtCommandInfo;
+	unsigned char level;
+	atcommand_function proc;
+};
 
-AtCommandType
-is_atcommand(const int fd, struct map_session_data* sd, const char* message, int gmlvl);
 
-AtCommandType atcommand(
-	struct map_session_data *sd,
-	const int level, const char* message, AtCommandInfo* info);
-int get_atcommand_level(const AtCommandType type);
 
-char * msg_txt(int msg_number); // [Yor]
-char * player_title_txt(int level); // [Lupus]
+AtCommandType is_atcommand(int fd, struct map_session_data &sd, const char* message, unsigned char gmlvl);
+unsigned char get_atcommand_level(const AtCommandType type);
 
-void do_init_atcommand(void);
-void do_final_atcommand(void);
+bool atcommand_config_read(const char *cfgName);
 
-int atcommand_item(const int fd, struct map_session_data* sd,const char* command, const char* message); // [Valaris]
-int atcommand_rura(const int fd, struct map_session_data* sd,const char* command, const char* message); // [Yor]
-int atcommand_jumpto(const int fd, struct map_session_data* sd, const char* command, const char* message); // [Yor]
-int atcommand_recall(const int fd, struct map_session_data* sd, const char* command, const char* message); // [Yor]
-int atcommand_monster(const int fd, struct map_session_data* sd, const char* command, const char* message);
+bool atcommand_item(int fd, struct map_session_data &sd, const char* command, const char* message); // [Valaris]
+bool atcommand_rura(int fd, struct map_session_data &sd, const char* command, const char* message); // [Yor]
+bool atcommand_spawn(int fd, struct map_session_data &sd, const char* command, const char* message); // [Valaris]
+bool atcommand_jumpto(int fd, struct map_session_data &sd, const char* command, const char* message); // [Yor]
+bool atcommand_recall(int fd, struct map_session_data &sd, const char* command, const char* message); // [Yor]
 
-int duel_leave(const unsigned int did, struct map_session_data* sd); // [LuzZza]
-int duel_reject(const unsigned int did, struct map_session_data* sd); // [LuzZza]
 
-int atcommand_config_read(const char *cfgName);
-int msg_config_read(const char *cfgName);
-void do_final_msg(void);
-
-char *estr_lower(char *str);
-
-int e_mail_check(char *email);
+const char* job_name(int class_);
 
 #define MAX_MSG 1000
-extern char *msg_table[MAX_MSG];
+const char *msg_txt(size_t msg_number); // [Yor]
+bool msg_config_read(const char *cfgName);
+void do_final_msg();
+
+
 
 #endif
 

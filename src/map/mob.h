@@ -1,35 +1,19 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
-
+// $Id: mob.h,v 1.4 2004/09/25 05:32:18 MouseJstr Exp $
 #ifndef _MOB_H_
 #define _MOB_H_
 
-#include "unit.h"
-#include "map.h"
-
 #define MAX_RANDOMMONSTER 3
 #define MAX_MOB_RACE_DB 6
-#define MAX_MOB_DB 10000
-#define MAX_MOB_DROP 10
-	/* Change this to increase the table size in your mob_db to accomodate
-		a larger mob database. Be sure to note that IDs 4001 to 4048 are reserved for advanced/baby/expanded classes.
-	*/
-
-//Min time before mobs do a check to call nearby friends for help (or for slaves to support their master)
-#define MIN_MOBLINKTIME 1000
-
-//Distance that slaves should keep from their master.
-#define MOB_SLAVEDISTANCE 2
-
-// These define the range of available IDs for clones. [Valaris]
-#define MOB_CLONE_START 9001
-#define MOB_CLONE_END 10000
+#define MAX_MOB_DB 2000		/* Change this to increase the table size in your mob_db to accomodate
+				numbers more than 2000 for mobs if you want to (and know what you're doing).
+				Be sure to note that 4001 to 4047 are for advanced classes. */
 
 struct mob_skill {
 	short state;
 	short skill_id,skill_lv;
 	short permillage;
-	int casttime,delay;
+	int casttime;
+	int delay;
 	short cancel;
 	short cond1,cond2;
 	short target;
@@ -37,153 +21,141 @@ struct mob_skill {
 	short emotion;
 };
 
-struct mob_db {
-	char sprite[NAME_LENGTH],name[NAME_LENGTH],jname[NAME_LENGTH];
-	unsigned int base_exp,job_exp;
-	unsigned int mexp,mexpper;
-	int range2,range3;
+struct mob_db
+{
+	char name[24];
+	char jname[24];
+	short lv;
+	int max_hp,max_sp;
+	int base_exp,job_exp;
+	int atk1,atk2;
+	int def,mdef;
+	int str,agi,vit,int_,dex,luk;
+	int range,range2,range3;
+	int size,race,element,mode;
 	short race2;	// celest
-	unsigned short lv;
-	struct { int nameid,p; } dropitem[MAX_MOB_DROP];
-	struct { int nameid,p; } mvpitem[3];
-	struct status_data status;
-	struct view_data vd;
-	short option;
+	int speed,adelay,amotion,dmotion;
+	int mexp,mexpper;
+	struct 
+	{
+		unsigned short nameid;
+		unsigned short p;
+	} dropitem[10]; //8 -> 10 Lupus
+	struct 
+	{
+		unsigned short nameid;
+		unsigned short p;
+	} mvpitem[3];
+	int view_class,sex;
+	short hair,hair_color,weapon,shield,head_top,head_mid,head_buttom,option,clothes_color; // [Valaris]
+	int equip; // [Valaris]
 	int summonper[MAX_RANDOMMONSTER];
 	int maxskill;
 	struct mob_skill skill[MAX_MOBSKILL];
 };
+extern struct mob_db mob_db[];
 
 enum {
-	MST_TARGET =	0,
-	MST_SELF,
-	MST_FRIEND,
-	MST_MASTER,
-	MST_AROUND5,
-	MST_AROUND6,
-	MST_AROUND7,
-	MST_AROUND8,
-	MST_AROUND1,
-	MST_AROUND2,
-	MST_AROUND3,
-	MST_AROUND4,
+	MST_TARGET			=	0,
+	MST_SELF			=	1,
+	MST_FRIEND			=	2,
+	MST_AROUND5			=	3,
+	MST_AROUND6			=	4,
+	MST_AROUND7			=	5,
+	MST_AROUND8			=	6,
+	MST_AROUND1			=	7,
+	MST_AROUND2			=	8,
+	MST_AROUND3			=	9,
+	MST_AROUND4			=	10,
 	MST_AROUND			=	MST_AROUND4,
 
 	MSC_ALWAYS			=	0x0000,
-	MSC_MYHPLTMAXRATE,
-	MSC_MYHPINRATE,
-	MSC_FRIENDHPLTMAXRATE,
-	MSC_FRIENDHPINRATE,
-	MSC_MYSTATUSON,
-	MSC_MYSTATUSOFF,
-	MSC_FRIENDSTATUSON,
-	MSC_FRIENDSTATUSOFF,
-	MSC_ATTACKPCGT,
-	MSC_ATTACKPCGE,
-	MSC_SLAVELT,
-	MSC_SLAVELE,
-	MSC_CLOSEDATTACKED,
-	MSC_LONGRANGEATTACKED,
-	MSC_AFTERSKILL,
-	MSC_SKILLUSED	,
-	MSC_CASTTARGETED,
-	MSC_RUDEATTACKED,
-	MSC_MASTERHPLTMAXRATE,
-	MSC_MASTERATTACKED,
-	MSC_ALCHEMIST,
-	MSC_SPAWN,
+	MSC_MYHPLTMAXRATE	=	0x0001,
+	MSC_FRIENDHPLTMAXRATE=	0x0010,
+	MSC_MYSTATUSON		=	0x0020,
+	MSC_MYSTATUSOFF		=	0x0021,
+	MSC_FRIENDSTATUSON	=	0x0030,
+	MSC_FRIENDSTATUSOFF	=	0x0031,
+
+	MSC_ATTACKPCGT		=	0x0100,
+	MSC_ATTACKPCGE		=	0x0101,
+	MSC_SLAVELT			=	0x0110,
+	MSC_SLAVELE			=	0x0111,
+	MSC_CLOSEDATTACKED	=	0x1000,
+	MSC_LONGRANGEATTACKED=	0x1001,
+	MSC_SKILLUSED		=	0x1010,
+	MSC_CASTTARGETED	=	0x1011,
+	MSC_RUDEATTACKED	=	0x1100,
+	MSC_MASTERHPLTMAXRATE=	0x1101,
+	MSC_MASTERATTACKED	=	0x1110,
+	MSC_ALCHEMIST		=	0x1111
 };
 
-//Mob skill states.
 enum {
-	MSS_ANY = -1,
 	MSS_IDLE,
 	MSS_WALK,
-	MSS_LOOT,
+	MSS_ATTACK,
 	MSS_DEAD,
-	MSS_BERSERK, //Aggressive mob attacking
-	MSS_ANGRY,   //Mob retaliating from being attacked.
-	MSS_RUSH,    //Mob following a player after being attacked.
-	MSS_FOLLOW,  //Mob following a player without being attacked.
-	MSS_ANYTARGET,
+	MSS_LOOT,
+	MSS_CHASE,
 };
 
-
-/*==========================================
- * The structure object for item drop with delay
- * Since it is only two being able to pass [ int ] a timer function
- * Data is put in and passed to this structure object.
- *------------------------------------------
- */
-struct item_drop {
-	struct item item_data;
-	struct item_drop *next;
-};
-
-struct item_drop_list {
-	int m,x,y;
-	struct map_session_data *first_sd,*second_sd,*third_sd;
-	struct item_drop *item;
-};
-
-struct mob_db* mob_db(int class_);
 int mobdb_searchname(const char *str);
-int mobdb_searchname_array(struct mob_db** data, int size, const char *str);
-int mobdb_checkid(const int id);
-struct view_data* mob_get_viewdata(int class_);
-struct mob_data *mob_once_spawn_sub(struct block_list *bl, int m,
-	short x, short y, const char *mobname, int class_, const char *event);
-int mob_once_spawn(struct map_session_data *sd,char *mapname,
-	short x,short y,const char *mobname,int class_,int amount,const char *event);
-int mob_once_spawn_area(struct map_session_data *sd,char *mapname,
+int mobdb_checkid(const uint32 id);
+int mob_once_spawn(struct map_session_data *sd,const char *mapname,
+	int x,int y,const char *mobname,int class_,int amount,const char *event);
+int mob_once_spawn_area(struct map_session_data *sd,const char *mapname,
 	int x0,int y0,int x1,int y1,
 	const char *mobname,int class_,int amount,const char *event);
 
-int mob_spawn_guardian(struct map_session_data *sd,char *mapname,	// Spawning Guardians [Valaris]
+int mob_spawn_guardian(struct map_session_data *sd,const char *mapname,	// Spawning Guardians [Valaris]
 	int x,int y,const char *mobname,int class_,int amount,const char *event,int guardian);	// Spawning Guardians [Valaris]
-int mob_guardian_guildchange(struct block_list *bl,va_list ap); //Change Guardian's ownership. [Skotlex]
 
-int mob_randomwalk(struct mob_data *md,int tick);
+int mob_walktoxy(struct mob_data &md,int x,int y,int easy);
+int mob_randomwalk(struct mob_data &md,unsigned long tick);
+int mob_can_move(struct mob_data &md);
 
-int mob_target(struct mob_data *md,struct block_list *bl,int dist);
-int mob_unlocktarget(struct mob_data *md,int tick);
-struct mob_data* mob_spawn_dataset(struct spawn_data *data);
-int mob_spawn(struct mob_data *md);
-int mob_setdelayspawn(struct mob_data *md);
-int mob_parse_dataset(struct spawn_data *data);
-void mob_damage(struct mob_data *md, struct block_list *src, int damage);
-int mob_dead(struct mob_data *md, struct block_list *src, int type);
-void mob_revive(struct mob_data *md, unsigned int hp);
-void mob_heal(struct mob_data *md,unsigned int heal);
-
-#define mob_stop_walking(md, type) { if (md->ud.walktimer != -1) unit_stop_walking(&md->bl, type); }
-#define mob_stop_attack(md) { if (md->ud.attacktimer != -1) unit_stop_attack(&md->bl); }
-
+int mob_target(struct mob_data &md,struct block_list *bl,int dist);
+int mob_unlocktarget(struct mob_data &md,unsigned long tick);
+int mob_stop_walking(struct mob_data &md,int type);
+int mob_stopattack(struct mob_data &md);
+int mob_spawn(uint32 id);
+int mob_setdelayspawn(uint32 id);
+int mob_damage(struct mob_data &md,int damage,int type,struct block_list *src);
+int mob_changestate(struct mob_data &md,int state,int type);
+int mob_heal(struct mob_data &md,int heal);
+int mob_exclusion_add(struct mob_data &md,int type,uint32 id);
+int mob_exclusion_check(struct mob_data &md,struct map_session_data *sd);
+int mob_get_viewclass(int);
+int mob_get_sex(int);
+short mob_get_hair(int);
+short mob_get_hair_color(int);
+short mob_get_weapon(int);
+short mob_get_shield(int);
+short mob_get_head_top(int);
+short mob_get_head_mid(int);
+short mob_get_head_buttom(int);
+short mob_get_clothes_color(int);	//player mob dye [Valaris]
+int mob_get_equip(int); // mob equip [Valaris]
 int do_init_mob(void);
-int do_final_mob(void);
 
-int mob_timer_delete(int tid, unsigned int tick, int id, int data);
-int mob_deleteslave(struct mob_data *md);
+void mob_unload(struct mob_data &md);
+int mob_remove_map(struct mob_data &md, int type);
+int mob_timer_delete(int tid, unsigned long tick, int id, basics::numptr data);
 
-int mob_random_class (int *value, size_t count);
-int mob_get_random_id(int type, int flag, int lv);
-int mob_class_change(struct mob_data *md,int class_);
-int mob_warpslave(struct block_list *bl, int range);
-int mob_linksearch(struct block_list *bl,va_list ap);
+int mob_deleteslave(struct mob_data &md);
 
-int mobskill_use(struct mob_data *md,unsigned int tick,int event);
-int mobskill_event(struct mob_data *md,struct block_list *src,unsigned int tick, int flag);
-int mobskill_castend_id( int tid, unsigned int tick, int id,int data );
-int mobskill_castend_pos( int tid, unsigned int tick, int id,int data );
-int mob_summonslave(struct mob_data *md2,int *value,int amount,int skill_id);
-int mob_countslave(struct block_list *bl);
-int mob_convertslave(struct mob_data *md);
+int mob_class_change(struct mob_data &md,int value[], size_t count);
+int mob_warp(struct mob_data &md,int m,int x,int y,int type);
 
-int mob_is_clone(int class_);
+int mobskill_use(struct mob_data &md,unsigned long tick,int event);
+int mobskill_event(struct mob_data &md,int flag);
+int mobskill_castend_id(int tid, unsigned long tick, int id, basics::numptr data);
+int mobskill_castend_pos(int tid, unsigned long tick, int id, basics::numptr data);
+int mob_summonslave(struct mob_data &md2,int *value,size_t amount,unsigned short skillid);
+unsigned int mob_countslave(struct mob_data &md);
 
-int mob_clone_spawn(struct map_session_data *sd, int m, int x, int y, const char *event, int master_id, int mode, int flag, unsigned int duration);
-int mob_clone_delete(int class_);
-
+int mob_gvmobcheck(struct map_session_data &sd, struct block_list *bl);
 void mob_reload(void);
 
 #endif

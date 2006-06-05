@@ -5,7 +5,7 @@
 //= Converted by kobra_k88
 //= Further bugfixed and tested by Lupus
 //===== Current Version: ===================================== 
-//= 2.0
+//= 1.3
 //===== Compatible With: ===================================== 
 //= eAthena 1.0
 //===== Description: ========================================= 
@@ -19,20 +19,23 @@
 //= 1.1 Fixed skillpoints check bug [Lupus]
 //= 1.2 Fixed an exploit, thanks to nonox [celest]
 //= 1.3 Added Baby Class support [Lupus]
-//= 1.5 Fixed possible EXP abuse [Lupus]
-//= 1.6 Added a func which prevent advanced classes passing
-//= 2nd Job Quests again. It also guides adv classes where
-//= to go. [Lupus]
-//= 1.6a Infinite Arrows exploit fix (thanx to Lorky, that
-//= reported the bug) [Lupus]
-//= 1.7 Moved the Job QUest to Hugel [Poki#3]
-//= 2.0 Changed numbers to constants. [Vicious]
 //============================================================ 
 
-//<====================================== Job Changer ========================================>\\
-hu_in01.gat,386,374,4	script	Hunter Sharon	727,{
-	callfunc "F_BlockHigh",Job_Archer_High,"High Archer",Job_Sniper,"Sniper","Hunter Sharon";
 
+
+// Please add this warp to your warp/s script/s if it is not already there, or you can enable it here
+//in_hunter.gat,100,13,0	warp	hnt_to_payfild10	1,2,pay_fild10,145,250
+
+
+//<================================ Guildsman: Warps you to guild =======================================>\\
+pay_fild10.gat,148,251,4	script	Hunter Guildsman	98,{
+	warp "in_hunter.gat",100,18;
+	end;
+}
+
+
+//<====================================== Job Changer ========================================>\\
+in_hunter.gat,99,99,4	script	Hunter Sharon	727,{
 	if(BaseJob==Job_Archer) goto L_Start;
 	callfunc "Hun_check";
 
@@ -75,7 +78,7 @@ L_Start:
 			close;
 		sL_HighLvl:
 			mes "Well, well now!  A high level archer.... very nice!  You must have trained really hard.";
-			emotion e_ic;
+			emotion 5;
 			next;
 			mes "[Hunter Sharon]";
 			mes "My name is Sharon, nice to meet you.  Before I explain the process of becoming a Hunter, I'd like to do a short interview with you.";
@@ -226,7 +229,7 @@ L_Start:
 		sL_100:
 			mes "[Hunter Sharon]";
 			mes "Great! Based on the answers you gave, you seem to be just the type of person we're looking for.";
-			emotion e_no1;
+			emotion 21;
 			next;
 			mes "[Hunter Sharon]";
 			mes "With your kind of additude and values, you should have no problems becoming a Hunter.";
@@ -243,7 +246,7 @@ L_Start:
 		sL_Failed:
 			mes "[Hunter Sharon]";
 			mes "I.......don't think I can pass you..... The way you live your life is...... well... unexecptable for a Hunter candidate.";
-			emotion e_swt;
+			emotion 4;
 			next;
 			mes "[Hunter Sharon]";
 			mes "Think carefully about my questions and your answers.  Working well with people is just as important as loving nature.";
@@ -251,7 +254,7 @@ L_Start:
 			close;
 
 L_Test2:
-	mes "What you have to do next is go see ^5533FFMr. Demon Hunter^000000 behind me.  He'll tell you about the second test.";
+	mes "What you have to do next is go see ^5533FFMr. Demon Hunter^000000 over there to my left.  He'll tell you about the second test.";
 	next;
 	mes "[Hunter Sharon]";
 	mes "Good luck!";
@@ -261,7 +264,7 @@ L_Test2:
 
 L_Test3:
 	mes "Hmmm? The guild master? Oh, he's out right now.";
-	emotion e_hmm;
+	emotion 20;
 	next;
 	mes "[Hunter Sharon]";
 	mes "If I remember correctly, he should be somewhere in Archer Village.  I think he had to talk with someone in the ^5533FFArcher Guild^000000.";
@@ -274,7 +277,7 @@ L_Change:
 	next;
 	mes "[Hunter Sharon]";
 	mes "Congratulations!!";
-	emotion e_no1;
+	emotion 21;
 	next;
 	mes "[Hunter Sharon]";
 	mes "Now I can change you into a Hunter!";
@@ -283,7 +286,7 @@ L_Change:
 	mes "There you go! You look great in the hunter outfit";
 
 	callfunc "Job_Change",Job_Hunter;
-	emotion e_no1;
+	emotion 21;
 	next;
 	mes "[Hunter Sharon]";
 	mes "Now, for working so hard, the guild has a small reward for you.";
@@ -302,7 +305,7 @@ L_Change:
 	sL_NotRdy:
 		mes "[Hunter Sharon]";
 	       	mes "Hmmm, I received news of your success.... But you don't seem to have the ^5533FFNecklace of Wisdom^000000 as proof.";
-		emotion e_hmm;
+		emotion 20;
 		next;
 		mes "[Hunter Sharon]";
 	       	mes "You will need the Necklace of Wisdom to become a Hunter.  If you don't have it you will have to start the test over.";
@@ -311,12 +314,12 @@ L_Change:
 
 			mes "[Hunter Sharon]";
 			mes "Well then go get it!";
-			emotion e_an;
+			emotion 6;
 			close;
 		sM_ReStart:
 			mes "[Hunter Sharon]";
 			mes "..... That's just pathetic....... Have fun re-doing the ENTIRE TEST!";
-			emotion e_pif;
+			emotion 32;
 			set HNTR_Q, 0;
 			set HNTR_Q2, 0;
 	       		close;
@@ -324,7 +327,7 @@ L_Change:
 
 
 //<=========================== Demon Hunter: Second Test ===============================>\\
-hu_in01.gat,382,382,5	script	Demon Hunter	732,{
+in_hunter.gat,55,99,7	script	Demon Hunter	732,{
 	if(BaseJob == Job_Archer) goto L_Arc;
 	if(BaseJob == Job_Hunter) goto L_Hnt;
 
@@ -337,13 +340,13 @@ L_Other:
 	next;
 	mes "[Demon Hunter]";
 	mes "For your safety... it's best that you DON'T find out.....";
-	emotion e_gg;
+	emotion 29;
 	close;
 
 L_Hnt:
 	mes "[Demon Hunter]";
 	mes "Look at you! Nice and spiffy in that Hunter's outfit.  How does it feel?  Good I bet.  Well good luck to you.";
-	emotion e_gasp;
+	emotion 0;
 	close;
 
 L_Arc:
@@ -365,7 +368,7 @@ L_Start:
 		next;
 		mes "[Demon Hunter]";
 		mes "If you haven't noticed already, our guild is NOT as wealthy as some of the others.  I mean we're in the middle of the freaking forest for pete sake....";
-		emotion e_ag;
+		emotion 7;
 		next;
 		mes "[Demon Hunter]";
 		mes "Ehem... Like I was saying earlier we need certain materials to make our arrows.  That is where Hunter wanna be's like you come in handy.";
@@ -394,7 +397,7 @@ L_Start:
 			goto L_Cont;
 		sL_3:
 			mes "[Demon Hunter]";
-			mes "^5533FF3 Dokebi Horns";
+			mes "^5533FF3 Dokaebi Horns";
 			mes "3 Pieces of Egg Shell.";
 			mes "and 10 Feathers^000000.";
 			goto L_Cont;
@@ -424,8 +427,8 @@ L_Start:
 		sM_End:
 			mes "[Demon Hunter]";
 			mes "DON'T you mess around with me! If you're gonna fool around then LEAVE!";
-			emotion e_pif;
-			warp "hugel.gat", 207, 222;
+			emotion 32;
+			warp "pay_fild10.gat", 133, 235;
 			end;
 
 L_Check:
@@ -470,14 +473,14 @@ L_Check:
 	L_End:
 		mes "[Demon Hunter]";
 		mes "Good job.  You brought all the necesarry items.  Now go find the ^5533FFGuild Master^000000.";
-		mes "I think he's somewhere in the ^5533FFArcher Guild^000000.  He'll give you your final test. Good luck.";
+		mes "I think he's somewhere in the ^5533FFArcher Guild^000000.  He'll give you your final test.  Good luck.";
 		set HNTR_Q, 2;
 		set HNTR_Q2, 0;
 		close;
 
 L_Test3:
-	mes "Huh? Can't you find the guild master? He should be in the ^5533FFArcher Guild in Archer village^000000. Go find him.";
-	emotion e_hmm;
+	mes "Huh? Can't you find the guild master? He should be in the ^5533FFArcher Guild in Archer village^000000.  Go find him.";
+	emotion 20;
 	close;
 
 L_Done:
@@ -495,7 +498,7 @@ payon_in02.gat,21,31,1	script	Guild Master	59,{
 L_Other:
 	mes "[Hunter]";
 	mes "Is there something you want of me? I'm have some buisiness to take care of, so please be quiet.";
-	emotion e_hmm;
+	emotion 20;
 	close;
 
 L_Hnt:
@@ -553,12 +556,11 @@ L_Start:
 		mes "And ALWAYS watch your step!  There are traps everywhere!";
 		goto M_Menu;
 	M_Start:
-		if (countitem(1751) <= 5 && @HNTR_QA==0) callsub sF_GetArrows;
+		if (countitem(1751) <= 5) callsub sF_GetArrows;
 		mes "[Guild Master]";
 		mes "Good luck, I'll send you to the test room now.";
 		next;
 		set HNTR_Q2, 1;
-		set @HNTR_QA,0;
 		savepoint "payon_in02.gat", 16, 26;
 		warp "job_hunte.gat", 176, 22;
 		end;
@@ -567,7 +569,6 @@ L_Start:
 			mes "[Guild Master]";
 			mes "This is where your hard work in the 2nd test payed off.  Here are some arrows, made with the items you collected.";
  			getitem 1751, 200;
-			set @HNTR_QA,1;
 			next;
 			return;
 
@@ -581,7 +582,7 @@ L_ReTest:
 
 L_Passed:
 	mes "I see you suceeded. Great job! Now I will give you the proof of your success, the ^5533FFNecklace of Wisdom^000000.";
-	emotion e_no1;
+	emotion 21;
 	next;
 	mes "[Guild Master]";
 	mes "Here you go.  Make sure you show this to Hunter Sharon or you WON'T be able to become a Hunter.";
@@ -645,7 +646,7 @@ OnStart:
 	if ((getwaitingroomstate(33)) == 0) end;			// stops the rest of the script from running if there is no one in the waiting room
 	killmonsterall "job_hunte.gat";
 	warpwaitingpc "job_hunte.gat", 90, 67;
-	donpcevent "Ev_HntRm::OnStart";
+	donpcevent "Ev_HntRm";
 	end;
 
 }
@@ -654,7 +655,6 @@ OnStart:
 // Ev_HntRm: Test room --------------------------------------------------------
 job_hunte.gat,1,1,1	script	Ev_HntRm	-1,{
 
-OnStart:
 	disablenpc "SwitchHnt";
 	disablenpc "ExitHnt";
 	set $@HntMob, 4;
@@ -665,7 +665,7 @@ OnStart:
 	monster "job_hunte.gat",53,73,"Job Change Monster",1041,1,"Ev_HntRm::OnMyMobDead1";
 	monster "job_hunte.gat",125,70,"Job Change Monster",1016,1,"Ev_HntRm::OnMyMobDead1";
 	monster "job_hunte.gat",90,92,"Job Change Monster",1015,1,"Ev_HntRm::OnMyMobDead1";
-	donpcevent "Ev_HntRm2::OnStart";
+	donpcevent "Ev_HntRm2";
 	initnpctimer "TimerHnt";
 	end;
 
@@ -684,7 +684,6 @@ OnMyMobDead1:
 // Ev_HntRm2: Spawns the Decoy Monsters ----------------------------------------
 job_hunte.gat,1,1,1	script	Ev_HntRm2	-1,{
 
-OnStart:
 	// Decoy Monsters
 	monster "job_hunte.gat",85,100,"Test Monster",1016,1,"Ev_HntRm2::OnMyMobDead2";
 	monster "job_hunte.gat",72,102,"Test Monster",1041,1,"Ev_HntRm2::OnMyMobDead2";
@@ -1014,7 +1013,7 @@ job_hunte.gat,76,105,1	duplicate(HntTrap)	50-1	139,0,0
 job_hunte.gat,76,104,1	duplicate(HntTrap)	50-2	139,0,0
 job_hunte.gat,78,101,1	duplicate(HntTrap)	50-3	139,0,2
 job_hunte.gat,79,101,1	duplicate(HntTrap)	50-4	139,0,2
-job_hunte.gat,76,99,1	duplicate(HntTrap)	51-1	139,10
+job_hunte.gat,76,99,1	duplicate(HntTrap)	51-1	139,1,0
 job_hunte.gat,77,98,1	duplicate(HntTrap)	51-2	139,2,0
 job_hunte.gat,74,99,1	duplicate(HntTrap)	51-3	139,0,0
 job_hunte.gat,74,98,1	duplicate(HntTrap)	51-4	139,0,0

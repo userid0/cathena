@@ -31,16 +31,16 @@ aldeba_in.gat,152,166,4	script	Trader	86,{
 	mes "(4) · ^3355FFSakkat Hat^000000 :";
 	mes "^FF5533120 Trunk + 10000 Zeny^000000.";
 	next;
-	menu "Doctor Band",-, "Feather Bonnet",M_1, "Opera Masque",M_2, "Sakkat",M_3;
+	menu "Doctor Band",M_0, "Feather Bonnet",M_1, "Opera Masque",M_2, "Sakkat",M_3;
 		
+	M_0:
 		mes "[Trader]";
-		if(countitem(2275) == 0 || countitem(998) < 50 || countitem(733) == 0 || Zeny < 3500) goto L_CantMake;
+		if ((countitem(2275) == 0) || (countitem(998) < 50) || (Zeny < 3500)) goto L_CantMake; //Items: Red Bandana, Iron,
 		delitem 2275,1;//Items: Red Bandana,
 		delitem 998,50;//Items: Iron,
-		delitem 733,1;//Items: Cracked deamond
 		set Zeny,Zeny - 3500;
 		mes "Hmm.... Do you have a.... MEDICAL LICENSE?!";
-		emotion e_what;
+		emotion 1;
 		next;
 		mes "[Trader]";
 		mes "I've heard about a well-known unlicensed physician 'Cuwaki'... I hope you don't get caught....";
@@ -49,17 +49,17 @@ aldeba_in.gat,152,166,4	script	Trader	86,{
 		close;
 	M_1:
 		mes "[Trader]";
-		if(countitem(2247) == 0 || countitem(916) < 300 || Zeny < 500) goto L_CantMake;//Items: Romantic Gent, Feather of Birds,
+		if ((countitem(2247) == 0) || (countitem(916) < 300) || (Zeny < 500)) goto L_CantMake;//Items: Romantic Gent, Feather of Birds,
 		delitem 2247,1;//Items: Romantic Gent,
 		delitem 916,300;//Items: Feather of Birds,
 		set Zeny,Zeny - 500;
 		mes "Umhahaha. You have good fashion sense.  I know you had a hard time collecting these items, but this bonnet is definately worth it.  Take it.";
-		emotion e_heh;
+		emotion 18;
 		getitem 5018,1;//Items: Feather Bonnet,
 		close;
 	M_2:
 		mes "[Trader]";
-		if(countitem(998) < 20 || countitem(707) == 0 || Zeny < 5000) goto L_CantMake;//Items: Iron, Singing Plant,
+		if ((countitem(998) < 20) || (countitem(707) == 0) || (Zeny < 5000)) goto L_CantMake;//Items: Iron, Singing Plant,
 		delitem 998,20;//Items: Iron,
 		delitem 707,1;//Items: Singing Plant,
 		set Zeny,Zeny - 5000;
@@ -71,7 +71,7 @@ aldeba_in.gat,152,166,4	script	Trader	86,{
 		close;
 	M_3:
 		mes "[Trader]";
-		if(countitem(1019) < 120 || Zeny < 10000) goto L_CantMake;//Items: Trunk,
+		if ((countitem(1019) < 120) || (Zeny < 10000)) goto L_CantMake;//Items: Trunk,
 		delitem 1019,120;//Items: Trunk,
 		set Zeny,Zeny - 10000;
 		mes "If you have a chance to visit the Village of Payon, please go meet the Sakkat Craftsman.";
@@ -87,6 +87,7 @@ aldeba_in.gat,152,166,4	script	Trader	86,{
 
 	L_CantMake:
 		mes "You, fool! Check the requirements again..... you're not some kinda idiot are you? C'mon..... give me a break.";
-		emotion e_an;
+		emotion 6;
 		close;
 }
+

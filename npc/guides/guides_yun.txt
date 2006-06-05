@@ -3,7 +3,7 @@
 //===== By: ================================================== 
 //= KitsuneStarwind, usul, kobra_k88
 //===== Current Version: ===================================== 
-//= 1.2
+//= 1.1
 //===== Compatible With: ===================================== 
 //= eAthena 1.0 +
 //===== Description: ========================================= 
@@ -11,9 +11,8 @@
 //===== Additional Comments: ================================= 
 //= Edited Miss Yoon text. Added town soldiers by usul. Edited town soldiers
 //= and added map location option for them. [kobra_k88]
-//= 1.1 Changed sprites and cutins to Schwartzald Republic ones
-//= 1.2 Optimized, updated common guide names [Lupus]
 //============================================================ 
+
 
 
 //=====================================================================================
@@ -27,8 +26,8 @@ yuno.gat,153,47,4	script	Yuno Guide	700,{
 }
 
 //=====================================================================
-yuno.gat,333,182,2	script	Yuno Soldier	852,{
-	cutin "ein_soldier",2;
+yuno.gat,333,182,2	script	Yuno Soldier	105,{
+	cutin "prt_soldier",2;
 	set @name$, "[Yuno Soldier]";
 	set @menu1$, "^5533FF'Dagger of Counter'^000000.....";
 	callfunc "F_YunoLoc",0;
@@ -42,13 +41,13 @@ yuno.gat,333,182,2	script	Yuno Soldier	852,{
 }
 
 //=====================================================================
-yuno.gat,264,320,2	script	Yuno Soldier	852,{
-	cutin "ein_soldier",2;
+yuno.gat,264,320,2	script	Yuno Soldier	105,{
+	cutin "prt_soldier",2;
 	set @name$, "[Yuno Soldier]";
 	set @menu1$, "Holy shield, ^5533FF'Sacred Mission'^000000.....";
 	callfunc "F_YunoLoc",0;
 	mes "[Yuno Soldier]";
-	mes "There is a holy shield named ^5533FF'Sacred Mission'^000000, that can only be used by Cusaders.";
+	mes "There is a holy shield named ^5533FF'Sacred Mission'^000000, that can only be used by Cusadors.";
 	mes "The shield itself is long and narrow and has the wings of an angel engraved on its front.";
 	next;
 	mes "[Yuno Soldier]";
@@ -57,8 +56,8 @@ yuno.gat,264,320,2	script	Yuno Soldier	852,{
 }
 
 //=====================================================================
-yuno.gat,228,292,2	script	Yuno Soldier	852,{
-	cutin "ein_soldier",2;
+yuno.gat,228,292,2	script	Yuno Soldier	105,{
+	cutin "prt_soldier",2;
 	set @name$, "[Yuno Soldier]";
 	set @menu1$, "^FF3355'False Angel'^000000.....";
 	callfunc "F_YunoLoc",0;
@@ -72,8 +71,8 @@ yuno.gat,228,292,2	script	Yuno Soldier	852,{
 }
 
 //=====================================================================
-yuno.gat,164,283,4	script	Yuno Soldier	852,{
-	cutin "ein_soldier",2;
+yuno.gat,164,283,4	script	Yuno Soldier	105,{
+	cutin "prt_soldier",2;
 	set @name$, "[Yuno Soldier]";
 	set @menu1$, "^FF3355'Geographer'^000000.....";
 	callfunc "F_YunoLoc",0;
@@ -88,8 +87,8 @@ yuno.gat,164,283,4	script	Yuno Soldier	852,{
 }
 
 //=====================================================================
-yuno.gat,151,283,4	script	Yuno Soldier	852,{
-	cutin "ein_soldier",2;
+yuno.gat,151,283,4	script	Yuno Soldier	105,{
+	cutin "prt_soldier",2;
 	set @name$, "[Yuno Soldier]";
 	set @menu1$, "^FF3355'Lava Golem'^000000.....";
 	callfunc "F_YunoLoc",0;
@@ -107,8 +106,8 @@ yuno.gat,151,283,4	script	Yuno Soldier	852,{
 }
 
 //=====================================================================
-yuno.gat,164,228,4	script	Yuno Soldier	852,{
-	cutin "ein_soldier",2;
+yuno.gat,164,228,4	script	Yuno Soldier	105,{
+	cutin "prt_soldier",2;
 	set @name$, "[Yuno Soldier]";
 	set @menu1$, "Killer ^FF3355'Goats'^000000.....";
 	callfunc "F_YunoLoc",0;
@@ -122,8 +121,8 @@ yuno.gat,164,228,4	script	Yuno Soldier	852,{
 }
 
 //=====================================================================
-yuno.gat,151,228,4	script	Yuno Soldier	852,{
-	cutin "ein_soldier",2;
+yuno.gat,151,228,4	script	Yuno Soldier	105,{
+	cutin "prt_soldier",2;
 	set @name$, "[Yuno Soldier]";
 	set @menu1$, "Large Jellopy.....";
 	callfunc "F_YunoLoc",0;
@@ -143,17 +142,18 @@ function	script	F_YunoLoc	{
 	mes "Welcome to Yuno, the city of noble-mindedness.";
 	M_Menu:
 	next;
-	menu "View city locations.",-, @menu1$,M_1, "End conversation.",M_End;
+	menu "View city locations.",M_0, @menu1$,M_1, "End conversation.",M_End;
 
 	M_0:
 		mes @name$;
 		mes "Please choose a building to view...";
 		sM_Menu:
 		next;
-		menu "Armory",-, "Tool Dealer",sM_2, "Sage Castle",sM_3, "Street of Book Stores",sM_4, "Yuphero Plaza",sM_5,
+		menu 	"Armory",sM_1, "Tool Dealer",sM_2, "Sage Castle",sM_3, "Street of Book Stores",sM_4, "Yuphero Plaza",sM_5,
 			"Library of the Republic",sM_6, "Schwheicherbil Magic Academy",sM_7, "Museum of Monsters",sM_8,
 			"Wipe all indications from mini-map",sM_Wipe, "Cancel",M_End;
 
+		sM_1: 
 			mes @name$;
 			mes "This is the Weapon and Armor Shop.";
 			viewpoint 1,117,135,1,0xFF0000;
@@ -179,7 +179,7 @@ function	script	F_YunoLoc	{
 			viewpoint 1,157,327,5,0x00ffff;
 			goto sM_Menu;
 		sM_6: 
-			mes @name$;
+			mes "[Miss Yoon]"; 
 			mes "The Library of Republic houses an extensive collection of important historical books.";
 			viewpoint 1,335,204,6,0x0000ff;
 			goto sM_Menu;
@@ -204,13 +204,13 @@ function	script	F_YunoLoc	{
 			viewpoint 2,278,291,8,0xFFFFFF;
 			mes @name$; 
 			mes "All indications have been wiped.";
-			cutin "ein_soldier",255;
+			cutin "prt_soldier",255;
 			close;
 	M_1:
 		return;
 	M_End:
 		mes @name$;
 		mes "Have a nice day.";
-		cutin "ein_soldier",255;
+		cutin "prt_soldier",255;
 		close;
 }

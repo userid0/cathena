@@ -3,7 +3,7 @@
 //===== By: ==================================================
 //= RedxSwordxHero, Lupus
 //===== Current Version: =====================================
-//= 1.4b
+//= 1.2
 //===== Compatible With: =====================================
 //= eAthena 1.0
 //===== Description: =========================================
@@ -20,17 +20,15 @@
 //= Thanks to x[tsk],fixed all item requirments to iRO specs exept
 //= for hats which cannot be made on the real server. [Lupus]
 //= 1.2 removed already existing official hat quests [Lupus]
-//= 1.3 Spiffed up the NPC coords and their appearance [Lupus]
-//= 1.4 Fixed exploits. 1.4a fixed wrong item ID [Lupus] 
 //============================================================
 
 
-prt_in.gat,130,66,5	script	Zac	704,{
+prontera.gat,140,172,5	script	Zac	704,{
 	mes "[Zac]";
 	mes "I am the oldest and strongest of the 4 brothers that makes all the newer hats. You will need to bring me the correct items for each hat, so I can make them.";
 	next;
 	mes "[Zac]";
-	mes "I provide 1 hat and my brothers provides the other 5.";
+	mes "I provide 8 hats and my brothers provides the other 24.";
 	next;
 	menu "Join",L1,"Information",L2,"Cancel",L3;
 L1:	
@@ -42,15 +40,15 @@ L1_4:
 	mes "[Zac]";
 	mes "Let me check the items you have brought here.";
 	next;
-	if(countitem(609) < 10) goto L_ITEM_1c;//Items: Amulet,
-	if(countitem(978) < 1) goto L_ITEM_2c;//Items: Cobaltblue Dyestuff,
-	if(countitem(2264) < 1) goto L_ITEM_3c;//Items: Munak Hat,
-	delitem 609,10;//Items: Amulet,
-	delitem 978,1;//Items: Cobaltblue Dyestuff,
-	delitem 2264,1;	//Items: Munak Hat,
+	if((countitem(609) < 10)) goto L_ITEM_1c;//Items: Amulet,
+	if((countitem(978) < 1)) goto L_ITEM_2c;//Items: Cobaltblue Dyestuff,
+	if((countitem(2264) < 1)) goto L_ITEM_3c;//Items: Munak Hat,
 	mes "[Zac]";
 	mes "Wow!! Well done! Finally you have gathered all items needed! We will make the Bongun Hat for you right away. Please Wait a Moment.";
    	next;
+	delitem 609,100;//Items: Amulet,
+	delitem 978,1;//Items: Cobaltblue Dyestuff,
+	delitem 2264,1;	//Items: Munak Hat,
 	mes "[Zac]";
 	mes "Tah Dah! ^FF0000Bongun Hat^000000...! Please Take it!";
 	getitem 5046,1;//Items: Bongun Hat,
@@ -85,12 +83,12 @@ L3:
 	close;
 }
 
-prt_in.gat,162,131,5	script	Blac	732,{
+prontera.gat,143,172,5	script	Blac	732,{
 	mes "[Blac]";
 	mes "I am the youngest and sexiest of the 4 brothers that makes all the newer hats. You will need to bring me the correct items for each hat, so I can make them.";
 	next;
 	mes "[Blac]";
-	mes "I provide 1 hat and my brothers provides the other 5.";
+	mes "I provide 8 hats and my brothers provides the other 24.";
 	next;
 	menu "Join",L1,"Information",L2,"Cancel",L3;
 L1:	
@@ -102,13 +100,13 @@ L1_9:
 	mes "[Blac]";
 	mes "Let me check the items you have brought here.";
 	next;
-	if(countitem(5041) < 1) goto L_ITEM_1;//Items: Heart Hairpin,
-	if(countitem(999) < 10) goto L_ITEM_2;//Items: Steel,
-	delitem 5041,1;//Items: Heart Hairpin,
-	delitem 999,10;	//Items: Steel,
+	if((countitem(5041) < 1)) goto L_ITEM_1;//Items: Heart Hairpin,
+	if((countitem(999) < 10)) goto L_ITEM_2;//Items: Steel,
 	mes "[Blac]";
 	mes "Wow!! Well done! Finally you have gathered all items needed! We will make the Crescent Hairpin for you right away. Please Wait a Moment.";
    	next;
+	delitem 5041,1;//Items: Heart Hairpin,
+	delitem 999,10;	//Items: Steel,
 	mes "[Blac]";
 	mes "Tah Dah! ^FF0000Crescent Hairpin^000000...! Please Take it!";
 	getitem 5048,1;//Items: Cresent Hairpin,
@@ -139,12 +137,12 @@ L3:
 	close;
 }
 
-prt_in.gat,53,56,5	script	Jac	107,{
+prontera.gat,141,172,5	script	Jac	107,{
 	mes "[Jac]";
 	mes "I am the 2nd oldest and calmest of the 4 brothers that makes all the newer hats. You will need to bring me the correct items for each hat, so I can make them.";
 	next;
 	mes "[Jac]";
-	mes "I provide 2 hats and my brothers provides the other 4.";
+	mes "I provide 8 hats and my brothers provides the other 24.";
 	next;
 	menu "Join",L1,"Information",L2,"Cancel",L3;
 L1:	
@@ -156,13 +154,13 @@ L1_19:
 	mes "[Jac]";
 	mes "Let me check the items you have brought here.";
 	next;
-	if(countitem(10007) < 1) goto L_ITEM_1b;//Items: Silk Ribbon,
-	if(countitem(10009) < 1) goto L_ITEM_2b;//Items: Wild Flower,
-	delitem 10007,1;//Items: Silk Ribbon,
-	delitem 10009,1;	//Items: Wild Flower,
+	if((countitem(10007) < 1)) goto L_ITEM_1b;//Items: Silk Ribbon,
+	if((countitem(10008) < 1)) goto L_ITEM_2b;//Items: Punisher,
 	mes "[Jac]";
 	mes "Wow!! Well done! Finally you have gathered all items needed! We will make the Kafra Band for you right away. Please Wait a Moment.";
    	next;
+	delitem 10007,1;//Items: Silk Ribbon,
+	delitem 10009,1;	//Items: Wild Flower,
 	mes "[Jac]";
 	mes "Tah Dah! ^FF0000Kafra Band^000000...! Please Take it!";
 	getitem 5020,1;//Items: Kafra's Band,
@@ -182,13 +180,13 @@ L1_24:
 	mes "[Jac]";
 	mes "Let me check the items you have brought here.";
 	next;
-	if(countitem(999) < 10) goto L_ITEM_1g;//Items: Steel,
-	if(countitem(948) < 200) goto L_ITEM_2g;//Items: Bears Footskin,
-	delitem 999,10;//Items: Steel,
-	delitem 948,200;	//Items: Bears Footskin,
+	if((countitem(999) < 10)) goto L_ITEM_1g;//Items: Steel,
+	if((countitem(948) < 200)) goto L_ITEM_2g;//Items: Bears Footskin,
 	mes "[Jac]";
 	mes "Wow!! Well done! Finally you have gathered all items needed! We will make the Panda Hat for you right away. Please Wait a Moment.";
    	next;
+	delitem 999,10;//Items: Steel,
+	delitem 948,200;	//Items: Bears Footskin,
 	mes "[Jac]";
 	mes "Tah Dah! ^FF0000Panda Hat^000000...! Please Take it!";
 	getitem 5030,1;//Items: Panda Hat,
@@ -223,12 +221,12 @@ L3:
 	close;
 }
 
-prt_in.gat,45,113,5	script	Pac	705,{
+prontera.gat,142,172,5	script	Pac	705,{
 	mes "[Pac]";
 	mes "I am 3rd oldest and wisest of the 4 brothers that makes all the newer hats. You will need to bring me the correct items for each hat so I can make them.";
 	next;
 	mes "[Pac]";
-	mes "I provide 2 hats and my brothers provides the other 4.";
+	mes "I provide 8 hats and my brothers provides the other 24.";
 	next;
 	menu "Join",L1,"Information",L2,"Cancel",L3;
 L1:	
@@ -240,13 +238,13 @@ L1_26:
 	mes "[Pac]";
 	mes "Let me check the items you have brought here.";
 	next;
-	if(countitem(741) < 1) goto L_ITEM_1a;//Items: Poring Doll,
-	if(countitem(909) < 300) goto L_ITEM_2a;//Items: Jellopy,
-	delitem 741,1;//Items: Poring Doll,
-	delitem 909,300;//Items: Jellopy,
+	if((countitem(741) < 1)) goto L_ITEM_1a;//Items: Poring Doll,
+	if((countitem(909) < 300)) goto L_ITEM_2a;//Items: Jellopy,
 	mes "[Pac]";
 	mes "Wow!! Well done! Finally you have gathered all items needed! We will make the Poring Hat for you right away. Please Wait a Moment.";
    	next;
+	delitem 741,1;//Items: Poring Doll,
+	delitem 909,300;//Items: Jellopy,
 	mes "[Pac]";
 	mes "Tah Dah! ^FF0000Poring Hat^000000...! Please Take it!";
 	getitem 5035,1;//Items: Poring Hat,
@@ -266,19 +264,19 @@ L1_29:
 	mes "[Pac]";
 	mes "Let me check the items you have brought here.";
 	next;
-	if(countitem(999) < 25) goto L_ITEM_1d;//Items: Steel,
-	if(countitem(979) < 1) goto L_ITEM_2d;//Items: Darkgreen Dyestuff,
-	if(countitem(976) < 1) goto L_ITEM_3d;//Items: Lemon Dyestuffs,
-	if(countitem(1059) < 150) goto L_ITEM_4d;//Items: Fabric,
-	if(countitem(969) < 2) goto L_ITEM_5d;//Items: Gold,
-	delitem 999,25;//Items: Steel,
+	if((countitem(999) < 25)) goto L_ITEM_1d;//Items: Steel,
+	if((countitem(979) < 1)) goto L_ITEM_2d;//Items: Darkgreen Dyestuff,
+	if((countitem(976) < 1)) goto L_ITEM_3d;//Items: Lemon Dyestuffs,
+	if((countitem(1059) < 150)) goto L_ITEM_4d;//Items: Fabric,
+	if((countitem(969) < 2)) goto L_ITEM_5d;//Items: Gold,
+	mes "[Pac]";
+	mes "Wow!! Well done! Finally you have gathered all items needed! We will make the Sphinx Hat for you right away. Please Wait a Moment.";
+   	next;
+	delitem 999,1;//Items: Steel,
 	delitem 979,1;//Items: Darkgreen Dyestuff,
 	delitem 976,1;//Items: Lemon Dyestuffs,
 	delitem 1059,150;//Items: Fabric,
 	delitem 969,2; 	//Items: Gold,
-	mes "[Pac]";
-	mes "Wow!! Well done! Finally you have gathered all items needed! We will make the Sphinx Hat for you right away. Please Wait a Moment.";
-   	next;
 	mes "[Pac]";
 	mes "Tah Dah! ^FF0000Sphinx Hat^000000...! Please Take it!";
 	getitem 5053,1;//Items: Sphinx Hat,
@@ -333,7 +331,6 @@ OnMinute15:
 	disablenpc "Zac";
 	end;
 OnMinute01:
-	if(rand(2)) end;
 	enablenpc "Zac";
 	end;
 }
@@ -344,7 +341,6 @@ OnMinute30:
 	disablenpc "Jac";
 	end;
 OnMinute16:
-	if(rand(2)) end;
 	enablenpc "Jac";
 	end;
 }
@@ -355,7 +351,6 @@ OnMinute45:
 	disablenpc "Pac";
 	end;
 OnMinute31:
-	if(rand(2)) end;
 	enablenpc "Pac";
 	end;
 }
@@ -366,7 +361,6 @@ OnMinute00:
 	disablenpc "Blac";
 	end;
 OnMinute46:
-	if(rand(2)) end;
 	enablenpc "Blac";
 	end;
 }

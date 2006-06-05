@@ -1,19 +1,3 @@
-Client Version in date format (Client Version in 4 digit format):
-2004 06 28a (0628a)
-2004 10 25 (1025)
-2004 11 01 (1101)
-2004 12 13 (1213)
-2005 01 10 (0110)
-2005 03 15 (0315)
-2005 03 21 (0321)
-2005 04 04 (0404)
-2005 04 06 (0406)*
-2005 04 11a (0411a)
-2005 04 25a (0425a)
-2005 05 31b (0531b)
-2005 06 14 (0614)
-2005 06 28a (0628a)
-2005 08 08 (0808)
 
    10,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -108,7 +92,7 @@ S 0072 <account ID>.l <charactor ID>.l <login ID1>.l <login ID2>.l <sex>.b
 	ゲーム鯖接続要求
 R 0073 <server tick>.l <coordidate>.3B ?.2B
 	ゲーム鯖接続成功&サーバ側1ms時計&出現位置
-R 0078 <ID>.l <speed>.w <opt1>.w <opt2>.w <option>.w <class>.w <hair>.w <weapon>.w <head option bottom>.w <sheild>.w <head option top>.w <head option mid>.w <hair color>.w <cloth color>.w <head dir>.w <guild>.l <emblem>.l <manner>.w <karma>.B <sex>.B <X_Y_dir>.3B ?.B ?.B <sit>.B <Lv>.B
+R 0078 <ID>.l <speed>.w <opt1>.w <opt2>.w <option>.w <class>.w <hair>.w <weapon>.w <head option bottom>.w <sheild>.w <head option top>.w <head option mid>.w <hair color>.w ?.w <head dir>.w <guild>.l <emblem>.l <manner>.w <karma>.B <sex>.B <X_Y_dir>.3B ?.B ?.B <sit>.B <Lv>.B
 	マップロード時&移動時用、向き付き用キャラ情報?
 R 0079 <ID>.l <speed>.w <opt1>.w <opt2>.w <option>.w <class>.w <hair>.w <weapon>.w <head option bottom>.w <sheild>.w <head option top>.w <head option mid>.w <hair color>.w ?.w <head dir>.w <guild>.l <emblem>.l <manner>.w <karma>.B <sex>.B <X_Y_dir>.3B ?.B ?.B <Lv>.B
 	テレポ等の表示範囲内沸きキャラ用、向き付き無しキャラ情報?

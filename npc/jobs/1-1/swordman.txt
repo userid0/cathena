@@ -3,7 +3,7 @@
 //===== By: ================================================== 
 //= kobra_k88
 //===== Current Version: ===================================== 
-//= 1.6
+//= 1.5
 //===== Compatible With: ===================================== 
 //= eAthena 1.0 +
 //===== Description: ========================================= 
@@ -16,7 +16,6 @@
 //= 1.4 Changed the timing system to initnpctimer, now you do get warnings about time
 //=     and are limited to 7min to complete the quest [Fredzilla]
 //= v1.5 Optimised and moved first checker to Jfunc1-1 [massdriller]
-//= 1.6 Fixed possible EXP abuse [Lupus]
 //============================================================ 
 
 
@@ -55,7 +54,7 @@ izlude_in.gat,62,170,0	script	w1039	45,1,1,{
 // == Npcs ==
 // -- Master Swordsman --
 izlude_in.gat,74,172,5	script	Master Swordsman	119,{
-	callfunc "F_ToHigh",Job_Swordman_High,"Swordman High",Job_Lord_Knight,"Lord Knight",144,145,146,0,"Master Swordsman";
+	callfunc "F_ToHigh",25,"Swordman High",31,"Lord Knight",144,145,146,0,"Master Swordsman";
 	mes "[Master Swordsman]";
 	if(BaseJob==Job_Novice && job_sword_q == 2) goto L_Done;
 	mes "Welcome to the Swordsman Association! So.. What business brings you to us?";
@@ -119,7 +118,7 @@ L_Menu:
 		mes "[Master Swordsman]";
 		mes "Aside from this, in my personal opinion, being a 'Swordsman' is greatest job in all the land!";
 		mes "Muhahahah!!!";
-		emotion e_heh;
+		emotion 18;
 		goto L_Menu;
 
 	M_2:
@@ -149,13 +148,13 @@ L_Menu:
 		O_2b:
 			mes "[Master Swordsman]";
 			mes "....but you're already a Swordsman...????";
-			emotion e_hmm;
+			emotion 20;
 			close;
 					
 	M_End:
 		mes "[Master Swordsman]";
 		mes "Enjoy your youth before you lose it~~ Muhahahaha!!!!";
-		emotion e_heh;
+		emotion 18;
 		close;
 
 L_Done:
@@ -183,7 +182,7 @@ L_Done:
 
 // -- Swordsman --
 izlude_in.gat,65,171,5	script	Swordsman	85,{
-	doevent "Swordsman::OnStart";
+	doevent "Swordsman";
 	end;
 }
 
@@ -197,11 +196,11 @@ OnStart:
 
 L_Other:
 	mes "Who might you be?! Those who are not Novices are not permitted to go in! Please leave.";
-	emotion e_what;
+	emotion 1;
 	close;
 L_Sword:
 	mes "You're already a Swordsman!! You don't need to take this silly test!";
-	emotion e_gasp;
+	emotion 0;
 	close;
 
 L_Novice:
@@ -211,7 +210,7 @@ L_Novice:
 		mes "Halt! Do you want to take the Swordsman Test?";
 		mes "If so, please fill out the swordsman application first.";
 		mes "Speak with the 'Master Swordsman' for more information.";
-		emotion e_gasp;
+		emotion 0;
 		close;
 
 	L_Start:
@@ -766,14 +765,3 @@ sword_1-1.gat,183,167,4	duplicate(3_blank)	3_blank_29_g	139,0,1
 sword_1-1.gat,176,163,4	duplicate(3_blank)	3_blank_30_a	139,0,2
 sword_1-1.gat,177,163,4	duplicate(3_blank)	3_blank_30_b	139,0,2
 sword_1-1.gat,181,163,4	duplicate(3_blank)	3_blank_30_c	139,2,0
-
-//==============================================================================
-// mapflag
-//==============================================================================
-sword_1-1.gat	mapflag	nomemo
-sword_1-1.gat	mapflag	noteleport
-sword_1-1.gat	mapflag	nosave	SavePoint
-sword_1-1.gat	mapflag	nopenalty
-sword_1-1.gat	mapflag	nobranch
-sword_1-1.gat	mapflag	noexp
-sword_1-1.gat	mapflag	noloot

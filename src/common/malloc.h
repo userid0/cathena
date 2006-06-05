@@ -1,30 +1,92 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
-
 #ifndef _MALLOC_H_
 #define _MALLOC_H_
 
-#ifndef __NETBSD__
-#if __STDC_VERSION__ < 199901L
-#	if __GNUC__ >= 2
-#		define __func__ __FUNCTION__
-#	else
-#		define __func__ ""
-#	endif
-#endif
-#endif
+#include <stdio.h> // for size_t
+
+
+/*
+
 #define ALC_MARK __FILE__, __LINE__, __func__
+
+
+
+
+
 
 //////////////////////////////////////////////////////////////////////
 // Whether to use Athena's built-in Memory Manager (enabled by default)
 // To disable just comment the following line
-#if !defined(DMALLOC) && !defined(BCHECK)
-	#define USE_MEMMGR
-#endif
-// Whether to enable Memory Manager's logging
-#define LOG_MEMMGR
+#define USE_MEMMGR
+
+
+#define LOG_MEMMGR		// Whether to enable Memory Manager's logging
+//#define MEMTRACE		// can be used to mark and identify specific memories
+//#define MEMCHECKER	// checks validity of all pointers in and out of the memory manager
 
 #ifdef USE_MEMMGR
+
+
+#ifdef MEMTRACE
+#include "base.h"
+/////////////////////////////////////////////////////////////////////
+// memory tracer to locate conditions of memory leaks
+// each alloced memory can be stored in the list with a description
+// in case of a leak the description is shown, allowing to find
+// the conditions under which the leaking memory was allocated
+// (instead of just stating where it was allocated)
+// usage CMemDesc::Insert( <alloced memory pointer>, <description> );
+/////////////////////////////////////////////////////////////////////
+class CMemDesc : private Mutex
+{
+	/////////////////////////////////////////////////////////////////
+	// index structure
+	class _key
+	{
+	public:
+		void*	cMem;	// key value
+		char	cDesc[64];	// description
+
+		_key(void* m=NULL, const char* d=NULL):cMem(m)
+		{
+			if(d)
+			{
+				strncpy(cDesc,d,64);
+				cDesc[63]=0;
+			}
+			else
+				*cDesc=0;
+		}
+		bool operator==(const _key& k) const	{ return cMem==k.cMem; }
+		bool operator> (const _key& k) const	{ return cMem> k.cMem; }
+		bool operator< (const _key& k) const	{ return cMem< k.cMem; }
+	};
+	/////////////////////////////////////////////////////////////////
+	// class data
+	static TslistDST<_key>	cIndex;	// the index
+	CMemDesc(const CMemDesc&);
+	const CMemDesc& operator=(const CMemDesc&);
+public:
+	CMemDesc()	{}
+	~CMemDesc()	{}
+
+	static void Insert(void* m, const char* d=NULL)
+	{
+		if(m) cIndex.insert( _key(m,d) );
+	}
+	static void print(void* m)
+	{
+		size_t i;
+		if( m && cIndex.find( _key(m), 0, i) )
+		{
+			printf("%p: %s\n", m, cIndex[i].cDesc);
+		}
+		else
+			printf("no description\n");
+	}
+
+};
+#endif
+
 
 #	define aMalloc(n)		_mmalloc(n,ALC_MARK)
 #	define aMallocA(n)		_mmalloc(n,ALC_MARK)
@@ -78,8 +140,8 @@
 #	include "dmalloc.h"
 #	define MALLOC(n)	dmalloc_malloc(__FILE__, __LINE__, (n), DMALLOC_FUNC_MALLOC, 0, 0)
 #	define MALLOCA(n)	dmalloc_malloc(__FILE__, __LINE__, (n), DMALLOC_FUNC_MALLOC, 0, 0)
-#	define CALLOC(m,n)	dmalloc_malloc(__FILE__, __LINE__, (m)*(n), DMALLOC_FUNC_CALLOC, 0, 0)
-#	define CALLOCA(m,n)	dmalloc_malloc(__FILE__, __LINE__, (m)*(n), DMALLOC_FUNC_CALLOC, 0, 0)
+#	define CALLOC(m,n)	dmalloc_malloc(__FILE__, __LINE__, (p)*(n), DMALLOC_FUNC_CALLOC, 0, 0)
+#	define CALLOCA(m,n)	dmalloc_malloc(__FILE__, __LINE__, (p)*(n), DMALLOC_FUNC_CALLOC, 0, 0)
 #	define REALLOC(p,n)	dmalloc_realloc(__FILE__, __LINE__, (p), (n), DMALLOC_FUNC_REALLOC, 0)
 #	define STRDUP(p)	strdup(p)
 #	define FREE(p)		free(p)
@@ -109,7 +171,7 @@
 #	define STRDUP(p)	strdup(p)
 #	define FREE(p)		free(p)
 
-#else
+#else// neither GCOLLECT or BCHECK
 
 #	define MALLOC(n)	malloc(n)
 #	define MALLOCA(n)	malloc(n)
@@ -121,33 +183,61 @@
 
 #endif
 
+////////////// Others //////////////////////////
+// should be merged with any of above later
+#define CREATE(result, type, number) \
+	(result) = (type *) aCalloc ((number), sizeof(type));
+
+#define CREATE_A(result, type, number) \
+	(result) = (type *) aCallocA ((number), sizeof(type));
+
+#define RECREATE(result, type, number) \
+	(result) = (type *) aRealloc ((result), sizeof(type) * (number)); 	
+
+////////////////////////////////////////////////
+
+
+*/
+
+
 /////////////// Buffer Creation /////////////////
 // Full credit for this goes to Shinomori [Ajarn]
 
 #ifdef __GNUC__ // GCC has variable length arrays
 
-	#define CREATE_BUFFER(name, type, size) type name[size]
+	#define CREATE_BUFFER(name, type, size) type name[size]; memset(name,0,size*sizeof(type))
 	#define DELETE_BUFFER(name)
 
 #else // others don't, so we emulate them
 
-	#define CREATE_BUFFER(name, type, size) type *name = (type *) aCalloc (size, sizeof(type))
-	#define DELETE_BUFFER(name) aFree(name)
+	#define CREATE_BUFFER(name, type, size) type *name = (type *) calloc (size, sizeof(type))
+	#define DELETE_BUFFER(name) free(name)
 
 #endif
 
-////////////// Others //////////////////////////
-// should be merged with any of above later
-#define CREATE(result, type, number) (result) = (type *) aCalloc ((number), sizeof(type));
 
-#define CREATE_A(result, type, number) (result) = (type *) aCallocA ((number), sizeof(type));
 
-#define RECREATE(result, type, number) (result) = (type *) aRealloc ((result), sizeof(type) * (number)); 	
 
-////////////////////////////////////////////////
 
-unsigned int malloc_usage (void);
-void malloc_init (void);
-void malloc_final (void);
+// temporary memory realloc replacement using memcpy and memset
+// change to containers generally
+template<typename T> size_t new_realloc(T*& pointer, size_t oldsize, size_t addition)
+{
+	const size_t sz = oldsize+addition;
+	T* tmp = new T[sz];
+	memset(tmp+oldsize,0, addition*sizeof(T));
+	if(pointer)
+	{
+		memcpy(tmp, pointer, oldsize*sizeof(T));
+		delete[] pointer;
+	}
+	pointer = tmp;
+	return sz;
+}
+
+
+int memmgr_init(const char* file);
+void memmgr_final(void);
+
 
 #endif
