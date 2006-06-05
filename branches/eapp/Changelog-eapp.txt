@@ -1,0 +1,536 @@
+Date	Added
+06/07
+	* removed the usage of the "bl" block_list member
+	  and wrapped up some parts of block_list usage function
+	  added some safty to virtual destruction, but need to add 
+	  more data protection among the classes
+	* added Hinoko's pre-release of the script parser, 
+	  it should also read newer ea script with for/while/switch commands,
+	  although the compile step is not done yet, the script checker 
+	  already finds severe parse errors in almost all ea scripts 
+	  (which are real errors), so it's good enough for the current purpose
+	* implemented almost all ansi control sequences, only missing are insert/delete
+	  which should be possible with rectangle movements, but I need to check how 
+	  they actually work on msvc since description was not really comprehensible
+	  also beautified the internal loop a bit and made it more generic
+05/29
+	* added support for external parameter file processors so
+	  automatic file reloading can be used also for non-param configs
+	* some tweaking on the automatic wan setup, it now is possible to
+	  reenable it during runtime when disabled because of network errors
+	  it is also disabled now by default, to enable it add 
+	  "automatic_wan_setup = true" in char/map config
+	* changed parameter "engine" to "sql_engine" for selecting the 
+	  table engine on sql recreation, also changed some queries for mysql5
+	* simplified famelist storage/transfer, it's also using pc variables
+	  instead of explicit mmo_char elements now, so there will be no extra
+	  memory load for characters that don't use this values.
+	  update and requesting scheme is also changed and char holds a master copy
+	* slight cleaning of login, readded M/F registration and new login packet
+	* started capsuling existing class related functions in map
+	  and added some new types in map.h
+	  also unifying return types/values; this mixture of 0/!=0
+	  for success/failure is more than annoying
+	* some VC8 fixes (tnx to ALZ, there should be some more warnings, eh?)
+05/25
+	* after Hinoko acted a bit autonomous by removing all c style
+	  allocations and virtually broke the mapserver, I'm quite happy
+	  that this step is finally done, even if it has cost me the 
+	  rare free evenings of the last two weeks to get is usable again
+	  (might be still crashy since I didn't test much)
+	  anyway, final status message: map is c++ ready
+	* only drawback is that the memory manager is commented and 
+	  therefore completely useless but it will be replaced as soon 
+	  as I find some minute to write the new memory allocator
+	* for finding current leaks better add basics::global for 
+	  object counting whereever necessary
+	* I also put the hierarchy from the draft into map.h for reference
+	  and started to converge the classes
+	  deriving seems to work, too, I placed a helper blocklist reference 
+	  to emulate the previous bl data member, which now actually 
+	  is a base class, there are far too many usages of xy->bl stuff
+	  to get them removed at once. it also should be further discussed 
+	  how granular the hierarchy might be, there are several candidates 
+	  for new objects
+	* next step should be to add the separated movable/fightable classes 
+	  and to collect all the functions that belong exclusively to the 
+	  different objects and extract the similarities to be placed 
+	  at their base classes. This unfortunately will be a 
+	  recursive process of quite some time.
+	* since I had some time today as nobody of the eA devs seems to have 
+	  had any questions according my offers, I had a look at path.h instead
+	  and added documentation to all the functions there and also 
+	  revised the code when necessary, there are several possibilities 
+	  for more speedups especially at the initial path finder since 
+	  this thing is called for every movement [Shinomori]
+05/07
+	* since I had access to a windows machine with mysql this weekend,
+	  I spend some time merging the recent changes from Hinoko and
+	  also had a look at the current sql database implementation 
+	  (I actually won't talk about, but just one word: read more documentations)
+	* corrected the sql implementation as far as I could test it, also changed 
+	  to use the seperated sql module, which is much more convienient and threadsafe; 
+	  reduced the additional interfaces on the databases to only the simple one 
+	  (random access using the 'limit'-command) and also removed all the other things 
+	  like lists and creation/destruction of temp objects which I actually 
+	  don't understand have been useful for something
+	* added the 3 special function which absence made buuyo worry about performance
+	* changed some smaller things on the build flow to enable dynamically dependencies
+	  for now only basics have it, but it might be integratable also with common and map
+	* changed the global defines for selecting txt/sql: 
+	  WITH_MYSQL builds with mysql support, WITH_TEXT builds with text support,
+	  both defines are possible at once, the database is then selectable
+	  on startup with a "database_engine" parameter given either by commandline or configfile
+	  (though current buildflow does not have the last option integrated, needs manual make addition)
+	* some fixes for ladmin on windows, which might be a general case to look at:
+	  at least the encryption keys where send as strings without termination
+	  but used as cstrings with termination on the receiver side, causing unexpected behaviour 
+	  which worst were memory overwrites (because string copies without size checks have been used)
+	* also removed the session timeout limit for ladmin connections
+	* wrapped up all basics into a seperated namespace, so now std:: is usable in parallel
+	* changed to using the parameter class where easy to integrate
+	  but also needs some eye on where it might cause trouble
+	* some additions on the automatic WAN detection like the parts for configuration, 
+	  reconnection and dynamic check, this might possibly end all "cannot connect server" issues
+	  but still need Hinoko to finish her tests with it
+04/23	
+	* some changes to basics memory allocation class hierarchy
+	  (but will not generate a new doxygen tree since no interface changes)
+	* moving the threadsafe mysql wrapper example into a seperated module
+	  and adding a real usage example (see below), needs compilation
+	  with "WITH_MYSQL"-switch and global visible mysql headers
+	* splitting common/baseio into baseio for definitions only
+	  and basetx for the actual txt implementation of the database,
+	  next is that baseio implements parameters for runtime decision on
+	  what database is to be used and from where data gets converted
+	* integrated the example for sql reading on an in-memory database
+	  into basetxt, illustrating it for account_db,
+	  compile with SQL_EMBED define for a running example
+	* splitting this as third database type under "basesx"
+	  maybe have general file renamings to better reflect the content
+	* preparing phoenix database module
+	* applying some of the login<->char protocol change from working copy
+	* merging some fixes from ea stable
+04/02
+	* changed doxygen formatting to javadoc since the new version did
+	  not recognize my former style template
+	* some smaller (untested) additions, notably mysql reconnect and map.rsw reading
+03/28
+	* still cleaning code/moving section etc.
+	  fixed compile errors on MSVC/commented out some warning throwing variables
+	* mapped std::vectors to basics since not usable in combination on windows
+	* fixed PROCESS_CONFIG_FOR defines, fixed config_var_matrix usable for non-gcc
+	  which results in beeing really ugly code, maybe rethink the design
+	  possibly switching to CParam's, which also include the file processing
+	* added some doxygen doc's (though might still be missing a lot)
+03/13
+	* some cleaning on basesql (making it compileable, simplifying query building, 
+	  explaining questioned functions, etc)
+	* reenabled npc_chat
+03/07
+	* more cleaning in common; removing strlib, moving code from socket
+	* restructuring makefile dependencies
+	* adding switch for using whatsmyip.com for wan-lookup (although not recommended)
+	* prevent setting wanip when using multiple network interfaces
+	* findFiles no longer works on substrings but on matches 
+	* threadpool is also usable in singlethread mode
+	* more vector/map/string functionality
+	* added some experimental printf-like and direct formatings
+02/17
+	* adding some more base environment stuff
+	* wrapped test code into debug defines, but existing test cases
+	  still not cover all files/necessary circumstances
+	* updated to Hinoko's newer regex engine (not yet updated the tests,
+	  so there are some wrong error detects on lazy operators and char sets)
+	* some general code cleaning, renaming interfering variables
+	* adding automatic WAN setup (not yet configurable)
+	* combined map server's sql interface and seperated the files
+	  in make process to allow minimum difference of dependecies
+	* updated makefiles to allow individual makes targets 
+	  with proper dependecies, so ie. 'make all' now really makes all, 
+	  and 'make login' only makes the txt login server with its dependencies
+	* cleaned some unused account variables in login and started 
+	  to remove unused/unnecessary packets
+02/05
+	* sql database connection pool with example
+	* added vector/stack/fifo/slist classes, testcases not yet complete
+	* some code optimisation/speedup in memory/strings/parser
+	* automatic safty replacements of sprintf to snprintf, not tested
+01/27
+	* still evacuating my stuff from common to basics
+	* adding inet functions/simple lists/regular expressions/threads
+	* cleaning basic string functions, unifying string conversion
+	* fixing error in basememory in case of non-throwing new operator
+	* split stringsearch and zlib example to seperate files and expand them
+	* adding minizip code, but still need to clean and fully integrate it
+01/22
+	* cleaning common/removing functions that now are in basics 
+	* adding dynamic library load interface
+	  still need to split the zlib example from that file 
+	  and add the minizip code
+01/15	
+	* cleaned warnings from base test functions on 64bit compilations
+	- revised base includes and makefiles
+	* replaced the old parse input scanner [Hinoko]
+	* smaller modifications on the script compiler
+	- checks now for variable usage before declaration
+	- counts the usages of labels and variables (aka detects unused)
+	- modified label jump generation, still testing [Shinomori]
+01/08	
+	* added merged part of my general programming environment,
+	  though, some important parts are still not ready to be copied
+	- basically contains the full versions the formally trimmed-down base.h
+	- unix makefiles are provided, for windows create a new static library 
+	  with the folder content and add the path to additional includes [Shinomori]
+	- finished work basic string classes, currently done as templates
+	  for normal use it is safe to take default paramerters with "string<>"
+	  look at the testfunctions in basestring.cpp for examples
+	- the script checker should be also compilable now
+12/26
+	* adding elements for replacing existing structures
+	  such as dynamic buffers as replacement for session fifos,
+	  experimental stringbuffers and adding some enhancements on temporary ministrings
+	* set type of variables/parameters to ipaddress wherever appropriate [Shinomori]
+12/23
+	* small bugfixes/protections here and there, mostly replacing sprintf with snprintf
+	  and supplementing initialisation/destruction for c++ object that need to run 
+	  temporarily in the old c style allocation model, but not looked over all places yet
+	* finished debugging of char rewrite and removed commented fallback code
+	* moved mail system from map over to char and added mail support for txt
+	* corrected automatic change of temporary variable scope to enable temp map vars
+	* removed necessity of using ".gat" for mapnames and unified some naming convention
+	  the extension is now omitted whenever mapnames are read/transfered internally
+	  and added automatically when sending mapnames to the client, rebuilding the mapcache 
+	  is mandatory since the maps were originally identified by the full name
+	  the search order for map loading is cache/gat/afm/af2
+	  (whenever zipped af2 support is not yet added)
+12/10
+	* since returned from travel I clean up the stuff a bit first
+	  to get some consistency between different working copies and svn code
+	  before processing and forwarding items from the task list [Shinomori]
+11/11
+	* New readme content/layout (IE warning: IE hates new readme) [Evera]
+10/29
+	* Updated readme with new layout [Evera]
+	* following the wishes I enable the hidden functions in the script checker for public
+	  which includes a bunch of the parsing debug outputs (but might be only useful
+	  for those interested in parsing), debug outputs from the compiler and 
+	  a short dump of the generated program in binary form and a code sequence.
+	- the code transformation and the compiler currently only have rudimentary functionality
+	  since the final grammar for the script language is not yet fixed
+	  still, extension is easy possible independend from parsing and interpreting engine
+	- also added the experimental feature of "code beautification" (option 'b'), 
+	  which dumps the input script in a unified format, scope and function call style
+	  when finished with the final arrangements on the eaScript grammar, 
+	  this tool might be used for automatic conversion of existing scripts.
+	* corrected CCharDB_txt not saving the character data on programm exit
+	* changed char server to use the finished baseio data classes, still need debugging
+	  also experimenting with a new data access interface using integrated iterators 
+	  which might simplify subsequent access on sql data
+	* edited basesq code slightly to enable at least clean compile
+	  needed for check other sql code
+	- modification mainly consists of renaming some variables and correcting
+	  the doubled buffer usage (aka: "sprintf(buf, "%s%i", buf, 1);") 
+	  which is not really dangerous with common sprintf implementations 
+	  but still risky and quite unnecessary (since the data length in the buffer is known)
+	  also switched to use snprintf as far as I've seen them
+	* removed parameter related code from baseio (putting it to baseparam)
+	  tests have been successful, though, memory fragmentation could be reduced
+	  now only need to implement callbacks then all ini-file reading/processing 
+	  can be switched to use those dynamic parameters [Shinomori]
+10/21
+	* adding parts of the new script engine, currently only in form of a simple script checker
+	  the provided pre-compiled w32 version (needs zlib1.dll from precompiled zlib folder)
+	  only does basic syntax checks, which might be enought for testing purpose
+	  the folloing stages of parse tree transformation and compiling are disabled 
+	  since those outputs are currently only interesting for debugging
+	  use syntax: "eascriptchk [optional engine file] <file or folder to check>"
+	  if using folders it parses all encountered files that contain 'txt' in the name from all subdirectories
+	  note that this is more like a preview to the development direction than a full featured tool
+	! compilation of the script checker is not possible since I cannot provide my standard environment
+	  for public use at the moment
+	+ implemented is the complete set of current script syntax (if I interpreted all the informations right)
+	  additionally the engine understands C syntax without pointers and some C++ (ie. member functions on function return values)
+	  feel free to experiment with it, for those able to read grammar, yacc file is included
+	+ the only change to the current engine is that the synatx is case sensitive and key words need to be lower case
+	  (like 'if', 'goto', 'while', 'for' etc.), scope depth and expression complexity is not limited
+	+ since 'if' is now a keyword instead of beeing a buildin function it always needs brackets around the parameters
+	  constructions like "if (a) || (b) || (c) goto somewhere;" as used at some places of the code are invalid now
+	+ very problematic are script/mob/warp/shop headers in the current form since those headers do not allow 
+	  context free parsing, they instead slow down the parsing roughly by factor 10 to 20
+	  therefore a modification of the current grammar might be advisable, I will come up with a suggestion 
+	  for discussion after having a look at the lua thing to prevent possible double work; 
+	  in any case of script syntax modification, automatic conversion from old to new syntax would be supplied
+	* the npc folder in eapp has been checked and a bunch of (more or less critical) errors removed
+	* some smaller edits and only very few copies from stable; 
+	  stable seems now to become more and more incomatible to its former structures
+	  I guess I have to look up an new definition of "feature freeze", maybe it's "features <until you> freeze"... [Shinomori]
+10/07
+	* added database interace and txt implementation for party, guild, castle,
+	  pcstorage and guildstorage, 
+	  still need to make use of them in char server, sql part is also missing
+	* slight modification of some field names in the login sql database interface 
+	  (sry for conflicting with your work CLOWNISIUS)
+	* restructured map reading
+	* testing of named parameter storage for simplified configuration
+09/27
+	* replaced varargs with callback objects providing type safe argument passing
+	  additionally it is a bit faster since it does not copy the passed variables
+	  though, readability might be strange for habitual C programmers
+	* started class wrapping for general map management and the database subsystem
+	  currently only covering the map_foreach...-functions and the db_foreach
+	* changed the database to also make use of the doubled linked list
+	  since the nodes contained the necessary items, just the table anchors were not implemented
+	  the list allows a very simplified db_foreach and deletion safe iterator support
+	  the iterator might be a more intuitive replacement for the db_foreach
+	* rewrote the current database into a class by wrapping up the functions
+	  currently not in use, still need to check if replacing the current red-black tree 
+	  with another binary tree (ie. AVL) or with an order-N balanced tree is favourable
+	  (Hinoko, you could check if the (N)BTree from Caldon would fit while I'm on travel) [Shinomori]
+09/22
+	* try to temporarily overcome the vararg issue on the amd64
+	  appearently the changed structures and storing on the amd64 
+	  make a gained va_list only usable once, you cannot just make a copy 
+	  of the original for having it usable again, but need to va_start it again 
+	  so (if it works) the fix is quite a drawback on speed
+	  but varargs are to be generally removed, so it's ok
+	* wrapped the parser, but have it running in parallel until I'm sure it is safe
+	  need to rethink the str_data/str_buf thing as it is not very efficient and quite inconvinient
+09/12
+	* debugged and fixed the apparent 64bit issues, so the servers should
+	  also run on 64bit machines now, but still more issues might exist
+	* temporary introduced some new types for portablility 
+	  checking a possible switch to a portable stdint.h
+	* some more additions to the script engine to prevent unclean scripts
+	  breaking the execution, but still under investigation
+09/03
+	* added types for combined transfer of pointers and number
+	  with some checking posibilities, 
+	* exchanged some more int usages with machine independend types
+	  so the whole thing now builds clean on my 64bit sparc
+	  login and char seem ok but map need some more twiddling
+	* continued on rewriting the old script enbedding/calling scheme
+08/30
+	* renamed the sql class files to 'basesq.cpp/h' since having 'sql'
+	  within the name conflicts with the makefile build environment
+	* finished the functional rewrite of the script engine
+	  most notable features are multiple script support and working input
+	  functions for event and equip scripts 
+	 (with the exeption of clients before 2004-06-28)
+	  will still need a clean up of the buildin functions since they
+	  only have been converted automatically and might lack efficiency
+	* some regular copies from stables updates
+08/27
+	* Fixed MS VC type coversion error in socket.h [Wizputer]
+	* Made Shinomori's CMySQL class little more friendly
+	- Cleaned up some of Shinomori's classes so they can be utilized
+	  more easily
+
+08/26	forked out the changes from cuteboi, they have to be merged in 
+	a more decent manner
+	changes for the current update compared with the 07/17 release include:
+	
+	* converting the servers to use a unified data interface
+	  so different database concepts can be added more easily
+	- login server is working but still need some modification on 
+	  the sql side to be fully functional
+	  and also need cleaning of all unnecessary packets
+	- partially converted char server (party and guilds are missing)
+	  txt is working but the complete sql implementation of 
+	  the char database is missing (char_sql and login_sql is still working)
+	  the changes have enhanced txt to be orders of magnitude faster than
+	  sql now 
+	  (basically by replacing all searching for-loops with 
+	  binary searches and throwing out the braindead implementation 
+	  of the friend.txt read/write)
+	* added new authentification system which will make any guessing 
+	  on packetvers obsolete
+	- introduced temporary packets in login/char and char/map 
+	  to emulate the targeted authentification
+	- cleaned clif_parse entry code (not finished), WantToConnection 
+	  and packet version detection
+	* updated packetdb reading and internal structure
+	- put in defaults from current packet_db.txt, 
+	  packet_db.txt reading can now be used optional
+	* rewrote the old script engine
+	- partially converted the script engine to fit the structure of
+	  the new execution machine to simplify switching over/using them 
+	  in parallel/getinf an idea for an interface to lua 
+	  (if still of interest)
+	- fixed dangling pointers in stack elements
+	- added a script queue so scripts will be queued when starting 
+	  multiple scripts on a character that is already running one 
+	  (like starting both PCLoginEvent and PCMapLoadEvent on login)
+	  but need to rethink the attach_id stuff, since it might need 
+	  a completely different scheme
+	- added a check to script command "input"
+	  this script command is only working when called with a visible npc,
+	  so eventscripts, equipscripts will just freeze the pc;
+	  the script will be now terminated with a warning if this is detected
+	  (example scripts included in npc/a_tests.txt), a better workaround is prepared
+	- fixed close command to now really close the script when the 
+	  "close" button has been pressed by the pc and not when the command
+	  is encountered
+	* other stuff from last week that I don't remember anymore [Shinomori]
+/////////////////////////////////////////////////////////////////
+changelog from devel/shinomori, which the above is based on
+08/10
+	minor changes/additions
+	still preparing the replacements for current data access and authentification
+	notice for Hinoko: I corrected your Multilist and made an modification
+	that is using pointer storage; check the comments at the classes
+	your fix for the system ip check on bsd type unix is working fine
+07/29
+	new makefiles (look for suitable compile options on your system)
+	fix for guild creation crash
+	some changes on freeing script allocated strings 
+	(possible source of some observed memory overwrites)
+	and added some block checking on memory manager [Shinomori]
+	changed sockets to use c++ allocation/deallocation
+	will use managed memory again when switched completely [Hinoko]
+07/23
+	Moving back to devel dir, since I've been efficiently thrown out 
+	of my own sources after beeing away for just some days and 
+	beeing fair enough to not do the same [Shinomori]
+	Start to integrate the baseio playground, it actually does nothing at the moment
+	but is aimed to store all the data operations of the servers [Shinomori]
+	Replacement for the initial ipaddress class from caldon project
+	with a better class hierarchy [Hinoko]	
+/////////////////////////////////////////////////////////////////
+changelog from cuteboi's changes on eapp which is forked to eapp_old
+code is basically reverted to 07/17 from here
+07/22
+	- Removal of checks whether the client is LAN or WAN, Must be fixed ASAP, map, login, char
+	  updated to allow players to log in.[CLOWNISIUS]
+	- Completed Update of char.c/h for optimized SQL access.[CLOWNISIUS]
+	- Removal of PASSWORDENC from Login_sql comple, Cleaning of the code from login.c/h 
+	  now almost complete.[CLOWNISIUS]
+	- Removal of PASSWORDENC from Ladmin complete.[CLOWNISIUS]
+	- Cleansing of the directory structure almost complete.[CLOWNISIUS]
+	- Repair of Shino's IP structure from login workaround complete, using LANIP instead 
+	  of the blank WANIP that always seems to be blank, and LAN is a simple 
+	  workaround [CLOWNISIUS]
+07/21
+	- Added new md5.cc and md5.hh for usage in the PASSWORDENC and CLOWNPHOBIA sections
+	  of the login.c/h and in the ladmin for compiling of some other things.
+	  lAdmin at the meantime is bugged, and will be that way for a while, till things
+	  are stable.[CLOWNISIUS]
+	- Login server fixed to use PASSWORDENC properly, CLOWNPHOBIA updated also to use salted
+	  hashes.[CLOWNISIUS]
+07/18
+	- Fixed Makefiles for all SQL based compiles (login,char,map) [CLOWNISIUS]
+	- Implementation of the dbaccess.c/h files to help ease usage of SQL commands,
+	and allowing others to make a small dbaccess.c/h for any other type of SQL
+	API [CLOWNISIUS]
+	- Updated Login, Char and Map SQL server to use the new dbaccess.c/h [CLOWNISIUS]
+	- Updated the main Makefile to not touch TXT based servers, and simplified compiling options
+	for the login, char and map servers. [CLOWNISIUS]
+/////////////////////////////////////////////////////////////////
+07/17
+	modification on the ip storage and transfer,
+	removed the lan support stuff and integrated it directly to the server configs
+	corrections on the fame system
+	beautified some outputs [Shinomori]
+07/10
+	merges from stable
+	Paladin's new Sacrifical Ritual
+	adding chaos as additional characterisation variable (besides karma)
+	and some code reordering [Shinomori]
+07/3
+	* Updated NPCs [massdriller]
+06/18
+	just to note all the differences of eApp to stable branch
+	might be quite incomplete, though; there are lots of playgrounds 
+	that I don't explain in detail, just the basics:
+
+	converting function call parameters from pointers
+	to references as far as possible, initial step to 
+	compound all that stuff into classes
+
+	implemented 64bit compatible usage of time_t
+	corrected gettimeofday on windows builds
+
+	checking of comments in config files is
+	skipping all whitespace characters
+	the "//" is also detected when not at the beginning of the line
+
+	changed dynamic mobs to a different dataset
+	_all_ script mobs are created with a cache and each mob
+	gets an additional pointer to their corrosponding cache slot
+	on creation, allowing to share a common data set among multiple
+	mobs created from a common cache slot. this data is not necessary 
+	at the mob itself anymore
+	the cache is build with counter, so when a mob is spawned on
+	the map, the cache counter is decremented, if the mob
+	is unloaded, the corrosponding cache counter is incremented
+	thus preventing mob duplication
+	only non-delayed mobs with a cache are actually unloaded,
+	ensuring that guardians, quest mobs and spawned mobs
+	are not touched as they do not have a cache
+	if a cached master is unloaded, it's slaves are destroyed as well
+
+	introduced slight changes the character file format (txt)
+	so be sure to make a backup before trying this version
+	otherwise you might not be able to switch back to branch
+
+	change all data to real types for better type checking
+	and preperation of automatic transfer buffers
+
+	integrated the anti freeze system into the user count update messages
+	(which are already send between chat,login and map)
+
+	changes on map.gat structures and access
+	planning on reducing memory usage for this even more
+	but still testing the possibilities/effort
+	you will need to delete the map cache file from stable branch
+	since those are not compatible
+
+	removed parts of RoVeRT's npc timer system
+
+	added forcefull disconnect detection and let the pc online
+	for 10 seconds so Alt-F4 cannot be used to flee a fight
+	moved the clif_waitclose to the socket
+
+	changes packet processing interaction scheme between
+	core socket and parse_func's,
+	changed eof to a couple of flags that are used to hold
+	the status of the connection, also added access function
+
+	changed all usages of ip numbers to host byte order
+	for better consitency,
+
+	simplified and tighted timers a bit
+
+	fix for moving npcs with ontouch event
+
+	reading npcs recursively from folder
+	no need to spcify any single script file
+	just put path : <path name> to map config
+	and have any *.txt file read in
+
+	working npc duplication fix for multimap
+
+	fast socket access
+	replacing the loop with IS_FDSET
+	is much faster, still testing
+	adding different socket handling on WIN32
+	it is not exactly the same version I did for jAthena,
+
+	a "real" ShowMessage
+	includes a ansi sequence parser for windows and switchable
+	calling conventions depending on the compiler
+
+	vararray support for non-gnu compilers
+	actually not really a support for that but a macro
+	to create and free variable size buffers using
+	the fastest supported method for the given compiler
+
+	little/big endian support and memory allignment fixes
+	start to make types checking more tight
+
+	c++ compilable with VC and g++
+	the makefiles are for solaris,
+	so might need to edit linker options on linux
+06/10
+	* eA++ will now compile on VC.net 2003. Just prepare the appropriate conf files and run.
+	  read the README.txt for notes on compilation. [davidsiaw]
