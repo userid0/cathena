@@ -1,5 +1,0 @@
-Date	Added
-
-07/03
-	* Added/changed several session checks and some code cleanup in chrif.c
-	  Didn't test or compile, anyone that does, PM me in IRC.
