@@ -10058,7 +10058,11 @@ void clif_parse_NpcSelectMenu(int fd,struct map_session_data *sd)
  *------------------------------------------*/
 void clif_parse_NpcNextClicked(int fd,struct map_session_data *sd)
 {
-	npc_scriptcont(sd,RFIFOL(fd,2));
+	//npc_scriptcont(sd,RFIFOL(fd,2));
+	if ( sd->lua_script_state != L_NEXT )
+		return;
+		
+	script_resume(sd,"");
 }
 
 /*==========================================

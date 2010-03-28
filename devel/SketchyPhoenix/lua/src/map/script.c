@@ -67,6 +67,7 @@
 lua_State *L;
 static struct map_session_data* script_get_target(lua_State *NL,int idx);
 
+//TODO: merge this into e_script_state at some point
 extern enum { NRUN,CLOSE,NEXT,INPUT,MENU };
 	/*
 	NRUN // Script is ready
@@ -14326,10 +14327,10 @@ static int buildin_addnpc(lua_State *NL)
 	sprintf(exname, "%s", lua_tostring(NL,2));
 	sprintf(map, "%s", lua_tostring(NL,3));
 	m=map_mapname2mapid(map);
-	x=lua_tonumber(NL,4);
-	y=lua_tonumber(NL,5);
-	dir=lua_tonumber(NL,6);
-	class_=lua_tonumber(NL,7);
+	x=(short)lua_tonumber(NL,4);
+	y=(short)lua_tonumber(NL,5);
+	dir=(short)lua_tonumber(NL,6);
+	class_=(short)lua_tonumber(NL,7);
 	sprintf(function, "%s", lua_tostring(NL,8));
 	
 	npc_add_lua(name,exname,m,x,y,dir,class_,function);
@@ -14353,9 +14354,17 @@ static int buildin_npcmes(lua_State *NL)
 }
 
 //Display a [Next] button in the NPC dialog window
+//npcnext(id)
 static int buildin_npcnext(lua_State *NL)
 {
-	return 0;
+	struct map_session_data *sd;
+
+	sd = script_get_target(NL, 1);
+
+	clif_scriptnext(sd,sd->npc_id);
+
+	sd->lua_script_state = L_NEXT;
+	return lua_yield(NL, 0);
 }
 
 // npcclose([id])
@@ -14394,12 +14403,13 @@ static int buildin_addspawn(lua_State *NL)
 }
 
 //Display a NPC input window asking the player for a value
+//npcinput(type,id)
 static int buildin_npcinput(lua_State *NL)
 {
 	struct map_session_data *sd;
 	int type;
 
-	type = lua_tonumber(NL, 1);
+	type = (int)lua_tonumber(NL, 1);
 	sd = script_get_target(NL, 2);
 
 	switch(type){
@@ -14411,6 +14421,7 @@ static int buildin_npcinput(lua_State *NL)
 			break;
 	}
 	
+	//TODO: there's a sd->state.menu_or_input for this
 	sd->lua_script_state = L_INPUT;
 	return lua_yield(NL, 1);
 }
@@ -14428,7 +14439,7 @@ static int buildin_npcmenu(lua_State *NL)
 
 	lua_pushliteral(NL, "n");
 	lua_rawget(NL, 1);
-	n = lua_tonumber(NL, -1);
+	n = (int)lua_tonumber(NL, -1);
 	lua_pop(NL, 1);
 
 	if(n%2 == 1) {
@@ -14459,7 +14470,7 @@ static int buildin_npcmenu(lua_State *NL)
 
 		lua_pushnumber(NL, i+2);
 		lua_rawget(NL, 1);
-		sd->npc_menu_data.value[sd->npc_menu_data.current] = lua_tonumber(NL, -1);
+		sd->npc_menu_data.value[sd->npc_menu_data.current] = (int)lua_tonumber(NL, -1);
 		lua_pop(NL, 1);
 
 		sd->npc_menu_data.id[sd->npc_menu_data.current] = sd->npc_menu_data.current;
@@ -14514,6 +14525,11 @@ static int buildin_jobchange_lua(lua_State *NL)
 
 //Change the look of the character
 static int buildin_setlook_lua(lua_State *NL)
+{
+	return 0;
+}
+
+static int buildin_npcwarp(lua_State *NL)
 {
 	return 0;
 }
@@ -14937,7 +14953,7 @@ static struct LuaCommandInfo commands[] = {
 	{"heal", buildin_heal_lua},
 	{"percentheal", buildin_percentheal_lua},
 	{"itemheal", buildin_itemheal_lua},
-	{"warp", buildin_warp},
+	{"npcwarp", buildin_npcwarp},
 	{"jobchange", buildin_jobchange_lua},
 	{"setlook", buildin_setlook_lua},
 	// End of build-in functions list
@@ -14980,10 +14996,10 @@ static struct map_session_data* script_get_target(lua_State *NL,int idx)
 	int char_id;
 	struct map_session_data* sd;
 
-	if((char_id=lua_tonumber(NL, idx))==0) { // If 0 or nothing was passed as argument
+	if((char_id=(int)lua_tonumber(NL, idx))==0) { // If 0 or nothing was passed as argument
 		lua_pushliteral(NL, "char_id");
 		lua_rawget(NL, LUA_GLOBALSINDEX);
-		char_id=lua_tonumber(NL, -1); // Get the thread's char ID if it's a personal one
+		char_id=(int)lua_tonumber(NL, -1); // Get the thread's char ID if it's a personal one
 		lua_pop(NL, 1);
 	}
 

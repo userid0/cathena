@@ -2,5 +2,11 @@ Date	Added
 
 Running from Trunk (feb, 09, 2010)
 
+2010/03/28
+	* Added npcnext
+	* Fixed a few cast warnings
+	* Deleted some garbage
+
 2010/03/27
 	* It's alive! [SketchyPhoenix]
+	- Updated to trunk r14270
