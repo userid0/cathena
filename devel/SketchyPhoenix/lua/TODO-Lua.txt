@@ -1,0 +1,11 @@
+TODO:
+	*Merge the special lua functions into their counterpart functions.
+		I started with different functions thinking that I would eventually
+		remove the old script engine piece by piece. I later changed my mind
+		and decided to allow the server to load eascript and lua with the user
+		being able to use whatever they want.
+
+	*Cleaning up said code. Badly.
+
+	*Finish all these blasted buildin functions. There's like a million of these :(
+	
