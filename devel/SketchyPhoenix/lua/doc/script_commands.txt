@@ -1,4 +1,4 @@
-//===== Athena Doc ========================================
+﻿//===== Athena Doc ========================================
 //= eAthena Script Commands
 //===== Description =======================================
 //= A reference manual for the eAthena scripting language.
@@ -1124,6 +1124,7 @@ of 'end' stops this, and ends the script.
 ---------------------------------------
 
 *set <variable>,<expression>;
+*set(<variable>,<expression>)
 
 This command will set a variable to the value that the expression results in. 
 This is the only way to set a variable directly.
@@ -2240,7 +2241,7 @@ Example:
 
 ---------------------------------------
 
-*getpartyleader(<party id>{,<type>});
+*getpartyleader(<party id>{,<type>})
 
 This function returns some information about the given party-id's leader.
 When type is ommitted, the default information retrieved is the leader's name.
@@ -2521,6 +2522,7 @@ recreate these items perfectly if they are destroyed. Here's what you get:
 @inventorylist_card3[]       inscribed on the items, so you can explicitly check
 @inventorylist_card4[]       if the character owns an item made by a specific 
                              craftsman.
+@inventorylist_expire[]    - expire time (Unix timestamp). 0 means never expires.
 @inventorylist_count       - the number of items in these lists.
 
 This could be handy to save/restore a character's inventory, since no other 
@@ -2592,13 +2594,13 @@ Valid types are:
 		if = 0, then monsters don't drop it at all (rare or a quest item)
 		if = 10000, then this item is sold in NPC shops only
 	4 - sex; 5 - equip; 6 - weight; 7 - atk; 8 - def; 9 - range;
-	10 - slot; 11 - look; 12 - elv; 13 - wlv;
+	10 - slot; 11 - look; 12 - elv; 13 - wlv; 14 - view id
 
 Check sample in nps\sample\getiteminfo.txt
 
 ---------------------------------------
 
-*getequipcardid (<equipment slot>,<card slot>);
+*getequipcardid(<equipment slot>,<card slot>)
 
 Returns value from equipped item slot in the indicated slot:
 
@@ -2615,7 +2617,7 @@ when you want to check item cards or if it's signed. Useful for such quests as
 	
 ---------------------------------------
 
-*getitemslots (<item id>);
+*getitemslots(<item id>)
 
 Returns the amount of slots the item has.
 
@@ -2911,7 +2913,7 @@ the specified event as in a 'doevent' call.
 
 ---------------------------------------
 
-*getmapguildusers <mapname>,<guild id>;
+*getmapguildusers(<mapname>,<guild id>)
 
 Returns the amount of persons from the given guild that are on the given map.
 Example(s):
@@ -2919,7 +2921,7 @@ Example(s):
 //Will set the @persons variable to the amount of persons from the guild
 //which ID's = 10 and are at prontera.
 
-	set @persons,getMapGuildUsers "prontera",10;
+	set @persons,getMapGuildUsers("prontera",10);
 
 ---------------------------------------
 //
@@ -2992,6 +2994,7 @@ currently has active. Valid types are:
  3 - Pet friendly level (intimacy score). 1000 is full loyalty.
  4 - Pet hungry level. 100 is completely full.
  5 - Pet rename flag. 0 means this pet has not been named yet.
+
 ---------------------------------------
 
 *gethominfo(<type>)
@@ -3004,6 +3007,7 @@ This function works as a direct counterpart of 'getpetinfo':
  4 - Hungry level. 100 is completely full.
  5 - Rename flag. 0 means this homunculus has not been named yet.
  6 - Homunculus level
+
 ---------------------------------------
 
 
@@ -4745,27 +4749,6 @@ This function will also destroy both wedding rings and send a message to both
 players, telling them they are now divorced.
 
 ---------------------------------------
-
-*adopt "<parent name>","<parent name>","<novice name>";
-*adopt("<parent name>","<parent name>","<novice name>")
-
-This command will set up a novice as a baby of a married couple. All three are 
-referred to by character name. The correct variables are set on all three 
-characters in the same call. The command will unequip anything the novice has 
-equipped and make them a Job_Baby class, as well as send them a 'your job has 
-been changed' message.
-
-Beware of calling this from inside a 'callfunc' function, cause upon successful 
-adoption, this command returns a zero, as if it were a function. This is likely 
-to screw up execution of a 'return' command. You may try to call it as a 
-function instead, but it doesn't return anything upon an error, which may also 
-cause script execution to throw up errors.
-
-Nothing will happen (and nothing will be returned either) if either future 
-parent is below base level 70 and/or if any of the three characters is not found 
-online.
-
----------------------------------------
 //
 4,3.- End of marriage-related commands
 //
@@ -5623,7 +5606,7 @@ will be warped.
 This command can also keep track of who just got warped. It does this by setting 
 special variables:
 
-$@warpwaitingpc[] is an array containing the character id numbers of the 
+$@warpwaitingpc[] is an array containing the account_id numbers of the 
                   characters who were just warped.
 $@warpwaitingpcnum contains the number of the character it just warped.
 
@@ -6259,10 +6242,30 @@ Example 1:
 
 ---------------------------------------
 
+*setiteminfo(<item id>,<type>,<value>)
+
+This function will set some value of an item.
+Returns the new value on success, or -1 on fail (item_id not found or invalid type).
+
+Valid types are:
+	0 - Buy Price; 1 - Sell Price; 2 - Item Type;
+	3 - maxchance (Max drop chance of this item e.g. 1 = 0.01% , etc..
+		if = 0, then monsters don't drop it at all (rare or a quest item)
+		if = 10000, then this item is sold in NPC shops only
+	4 - sex; 5 - equip; 6 - weight; 7 - atk; 8 - def; 9 - range;
+	10 - slot; 11 - look; 12 - elv; 13 - wlv; 14 - view id
+
+Example:
+
+setiteminfo 7049,6,999; // Stone now weighs 999
+
+---------------------------------------
+
 *setitemscript(<item id>,<"{ new item script }">{,<type>});
 
 Set a new script bonus to the Item. Very useful for game events.
 You can remove an item's itemscript by leaving the itemscript argument empty.
+Returns 1 on success, or 0 on fail (item_id not found or new item script is invalid).
 Type can optionally be used indicates which script to set (default is 0):
  0 - Script
  1 - OnEquip_Script
@@ -6504,7 +6507,8 @@ Example:
 
 Creates an invisible wall, an array of "setcell" starting from x,y and doing a
 line of the given size in the given direction. The difference with setcell is
-this one update client part too to avoid the glith problem.
+this one update client part too to avoid the glith problem. Directions are the 
+same as NPC sprite facing directions: 0=north, 1=northwest, 2=west, etc.
 
 ---------------------------------------
 

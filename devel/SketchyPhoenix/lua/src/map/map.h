@@ -257,6 +257,7 @@ struct spawn_data {
 		unsigned dynamic :1; //Whether this data is indexed by a map's dynamic mob list
 	} state;
 	char name[NAME_LENGTH],eventname[50]; //Name/event
+	char function[50];
 };
 
 

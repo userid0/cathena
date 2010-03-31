@@ -157,5 +157,6 @@ extern struct npc_data* fake_nd;
 //Lua
 int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short class_,char *function);
 void npc_parsesrcfile_lua(const char *filepath);
+int npc_add_mob_lua(char* name,short m,short x,short y,short xs,short ys,short class_,int num,int d1,int d2,char* function);
 
 #endif /* _NPC_H_ */

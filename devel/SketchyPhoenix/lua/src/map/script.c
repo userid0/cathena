@@ -10526,6 +10526,7 @@ BUILDIN_FUNC(getinventorylist)
 				sprintf(card_var, "@inventorylist_card%d",k+1);
 				pc_setreg(sd,add_str(card_var)+(j<<24),sd->status.inventory[i].card[k]);
 			}
+			pc_setreg(sd,add_str("@inventorylist_expire")+(j<<24),sd->status.inventory[i].expire_time);
 			j++;
 		}
 	}
@@ -14399,11 +14400,29 @@ static int buildin_addwarp(lua_State *NL)
 //Add a monster spawn
 static int buildin_addspawn(lua_State *NL)
 {
+	char name[24],map[16],function[50];
+	short m,x,y,xs,ys,class_,num,d1,d2;
+
+	sprintf(name,"%s",lua_tostring(NL,1));
+	sprintf(map,"%s",lua_tostring(NL,2));
+	m=map_mapname2mapid(map);
+	x=(short)lua_tonumber(NL,3);
+	y=(short)lua_tonumber(NL,4);
+	xs=(short)lua_tonumber(NL,5);
+	ys=(short)lua_tonumber(NL,6);
+	class_=(short)lua_tonumber(NL,7);
+	num=(short)lua_tonumber(NL,8);
+	d1=(short)lua_tonumber(NL,9);
+	d2=(short)lua_tonumber(NL,10);
+	sprintf(function,"%s",lua_tostring(NL,11));
+
+	npc_add_mob_lua(name,m,x,y,xs,ys,class_,num,d1,d2,function);
+
 	return 0;
 }
 
 //Display a NPC input window asking the player for a value
-//npcinput(type,id)
+//npcinput(type,[id])
 static int buildin_npcinput(lua_State *NL)
 {
 	struct map_session_data *sd;
@@ -14488,49 +14507,180 @@ static int buildin_npcmenu(lua_State *NL)
 }
 
 //Start a npc shop
+//npcshop(item_id1,item_price1,...)
 static int buildin_npcshop(lua_State *NL)
 {
-	return 0;
+	struct map_session_data *sd;
+	int n, i, j;
+
+	sd = script_get_target(NL, 2);
+
+	lua_pushliteral(NL, "n");
+	lua_rawget(NL, 1);
+	n = (int)lua_tonumber(NL, -1);
+	lua_pop(NL, 1);
+
+	if(n%2 == 1) {
+		lua_pushstring(NL, "Incorrect number of arguments for function 'npcmenu'\n");
+		lua_error(NL);
+		return -1;
+	}
+
+	sd->shop_data.n = n/2;
+
+	for(i=1, j=0; i<=n; i+=2, j++) {
+		lua_pushnumber(NL, i);
+		lua_rawget(NL, 1);
+		sd->shop_data.nameid[j] = (int)lua_tonumber(NL, -1);
+		lua_pop(NL, 1);
+
+		lua_pushnumber(NL, i+1);
+		lua_rawget(NL, 1);
+		sd->shop_data.value[j] = (int)lua_tonumber(NL, -1);
+		lua_pop(NL, 1);
+	}
+
+	/* Needs cash shop support
+	if ( nd->subtype == CASHSHOP )
+		clif_cashshop_show(sd, sd->npc_id);
+	else*/
+		clif_npcbuysell(sd, sd->npc_id);
+
+	//sd->npc_shopid = nd->bl.id
+	//May need this later
+	sd->lua_script_state = SHOP;
+	return lua_yield(NL, 1);
 }
 
 //Display a cutin picture on the screen
+//npccutin(name,type,[id])
 static int buildin_npccutin(lua_State *NL)
 {
+	struct map_session_data *sd;
+	char name[50];
+	int type;
+
+	sprintf(name, "%s", lua_tostring(NL,1));
+	type = (int)lua_tonumber(NL, 2);
+	sd = script_get_target(NL, 3);
+
+	clif_cutin(sd,name,type);
+
 	return 0;
 }
 
 //Heals the character by a set amount of HP and SP
-static int buildin_heal_lua(lua_State *NL)
+//npcheal(hp,sp,[id])
+static int buildin_npcheal(lua_State *NL)
 {
+	struct map_session_data *sd;
+	int hp, sp;
+
+	hp = (int)lua_tonumber(NL, 1);
+	sp = (int)lua_tonumber(NL, 2);
+	sd = script_get_target(NL, 3);
+
+	pc_heal(sd, hp, sp, 0);
+
 	return 0;
 }
 
 //Heals the character by a percentage of their Max HP / SP
-static int buildin_percentheal_lua(lua_State *NL)
+//npcpercentheal(hp,sp,[id])
+static int buildin_npcpercentheal(lua_State *NL)
 {
+	struct map_session_data *sd;
+	int hp, sp;
+
+	hp = (int)lua_tonumber(NL, 1);
+	sp = (int)lua_tonumber(NL, 2);
+	sd = script_get_target(NL, 3);
+
+	pc_percentheal(sd, hp, sp);
+
 	return 0;
 }
 
 //Heal the character by an amount that increases with VIT/INT, skills, etc
-static int buildin_itemheal_lua(lua_State *NL)
+//npcitemheal(hp,sp,[id]);
+static int buildin_npcitemheal(lua_State *NL)
 {
+	struct map_session_data *sd;
+	int hp, sp;
+
+	hp = (int)lua_tonumber(NL, 1);
+	sp = (int)lua_tonumber(NL, 2);
+	sd = script_get_target(NL, 3);
+	
+	if ( sd == NULL )
+		return 0;
+
+	if ( potion_flag == 1 )
+	{
+		potion_hp = hp;
+		potion_sp = sp;
+		return 0;
+	}
+	
+	pc_itemheal(sd, sd->itemid, hp, sp);
+
 	return 0;
 }
 
 //Change the job of the character
-static int buildin_jobchange_lua(lua_State *NL)
+//npcjobchange(job_id,[id])
+static int buildin_npcjobchange(lua_State *NL)
 {
+	struct map_session_data *sd;
+	int job;
+
+	job = (int)lua_tonumber(NL, 1);
+	sd = script_get_target(NL, 2);
+
+	pc_jobchange(sd,job,0);
+
 	return 0;
 }
 
 //Change the look of the character
-static int buildin_setlook_lua(lua_State *NL)
+//npcsetlook(type,val,[id])
+static int buildin_npcsetlook(lua_State *NL)
 {
+	struct map_session_data *sd;
+	int type,val;
+
+	type = (int)lua_tonumber(NL, 1);
+	val = (int)lua_tonumber(NL, 2);
+	sd = script_get_target(NL, 3);
+
+	pc_changelook(sd,type,val);
+
 	return 0;
 }
 
+//Warp a player to a set location
+//warp("map",x,y,[id])
 static int buildin_npcwarp(lua_State *NL)
 {
+	struct map_session_data *sd;
+	char str[16];
+	int x, y;
+
+	sprintf(str, "%s", lua_tostring(NL,1));
+	x = (int)lua_tonumber(NL, 2);
+	y = (int)lua_tonumber(NL, 3);
+	sd = script_get_target(NL, 4);
+	
+	if ( sd == NULL )
+		return 0;
+
+	if(strcmp(str,"Random")==0) // Warp to random location
+		pc_randomwarp(sd,3);
+	else if(strcmp(str,"SavePoint")==0 || strcmp(str,"Save")==0) { // Warp to save point
+		pc_setpos(sd,sd->status.save_point.map,sd->status.save_point.x,sd->status.save_point.y,3);
+	} else // Warp to given location
+		pc_setpos(sd,mapindex_name2id(str),x,y,0);
+
 	return 0;
 }
 
@@ -14950,12 +15100,12 @@ static struct LuaCommandInfo commands[] = {
 	{"npcshop_", buildin_npcshop},
 	{"npccutin", buildin_npccutin},
 	// Player related functions
-	{"heal", buildin_heal_lua},
-	{"percentheal", buildin_percentheal_lua},
-	{"itemheal", buildin_itemheal_lua},
+	{"npcheal", buildin_npcheal},
+	{"npcpercentheal", buildin_npcpercentheal},
+	{"npcitemheal", buildin_npcitemheal},
 	{"npcwarp", buildin_npcwarp},
-	{"jobchange", buildin_jobchange_lua},
-	{"setlook", buildin_setlook_lua},
+	{"npcjobchange", buildin_npcjobchange},
+	{"npcsetlook", buildin_npcsetlook},
 	// End of build-in functions list
 	{"-End of list-", NULL},
 };

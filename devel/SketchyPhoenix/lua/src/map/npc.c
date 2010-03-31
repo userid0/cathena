@@ -2187,78 +2187,6 @@ static const char* npc_parse_script(char* w1, char* w2, char* w3, char* w4, cons
 	return end;
 }
 
-//----------------------------------------------------------------------------------------------
-// Lua Functions
-//----------------------------------------------------------------------------------------------
-int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short class_,char *function)
-{
-    struct npc_data *nd=(struct npc_data *)aCalloc(1, sizeof(struct npc_data));
-
-	nd->bl.prev=nd->bl.next=NULL;
-	nd->bl.m=m;
-	nd->bl.x=x;
-	nd->bl.y=y;
-	nd->bl.id=npc_get_new_npc_id();
-	strcpy(nd->name, name);
-	strcpy(nd->exname, exname);
-	strcpy(nd->function, function);
-	nd->class_=class_;
-	nd->speed = 200;
-	nd->u.scr.guild_id=0;
-	nd->chat_id=0;
-
-	//nd->n=map_addnpc(m,nd);
-	//map_addblock(&nd->bl);
-	//clif_spawn(&nd->bl);
-	++npc_script;
-
-	nd->bl.type=BL_NPC;
-	nd->subtype = SCRIPT;
-	
-	if ( m >= 0 )
-	{
-		map_addnpc(m,nd);
-		status_change_init(&nd->bl);
-		unit_dataset(&nd->bl);
-		nd->ud.dir = dir;
-		npc_setcells(nd);
-		map_addblock(&nd->bl);
-		if ( class_ >= 0 )
-		{
-			status_set_viewdata(&nd->bl, nd->class_);
-			clif_spawn(&nd->bl);
-		}
-	}
-	else
-	{
-		map_addiddb(&nd->bl);
-	}
-	strdb_put(npcname_db,nd->exname,nd);	
-
-	return 0;
-}
-
-void npc_parsesrcfile_lua(const char *filepath)
-{
-	FILE *fp = fopen (filepath,"r");
-	if (fp == NULL) {
-		ShowError("File not found : %s\n",filepath);
-		exit(1);
-	}
-
-	if (luaL_loadfile(L,filepath))
-		ShowError("Cannot load script file %s : %s",filepath,lua_tostring(L,-1));
-	if (lua_pcall(L,0,0,0))
-		ShowError("Cannot run script file %s : %s",filepath,lua_tostring(L,-1));
-
-	fclose(fp);
-
-	return;
-}
-//----------------------------------------------------------------------------------------------
-// End Lua Functions 
-//----------------------------------------------------------------------------------------------
-
 /// Duplicate a warp, shop, cashshop or script. [Orcao]
 /// warp: <map name>,<x>,<y>,<facing>%TAB%duplicate(<name of target>)%TAB%<NPC Name>%TAB%<spanx>,<spany>
 /// shop/cashshop/npc: -%TAB%duplicate(<name of target>)%TAB%<NPC Name>%TAB%<sprite id>
@@ -3420,6 +3348,230 @@ int npc_reload(void)
 	}
 	return 0;
 }
+
+//----------------------------------------------------------------------------------------------
+// Lua Functions
+//----------------------------------------------------------------------------------------------
+int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short class_,char *function)
+{
+    struct npc_data *nd=(struct npc_data *)aCalloc(1, sizeof(struct npc_data));
+
+	nd->bl.prev=nd->bl.next=NULL;
+	nd->bl.m=m;
+	nd->bl.x=x;
+	nd->bl.y=y;
+	nd->bl.id=npc_get_new_npc_id();
+	strcpy(nd->name, name);
+	strcpy(nd->exname, exname);
+	strcpy(nd->function, function);
+	nd->class_=class_;
+	nd->speed = 200;
+	nd->u.scr.guild_id=0;
+	nd->chat_id=0;
+
+	//nd->n=map_addnpc(m,nd);
+	//map_addblock(&nd->bl);
+	//clif_spawn(&nd->bl);
+	++npc_script;
+
+	nd->bl.type=BL_NPC;
+	nd->subtype = SCRIPT;
+	
+	if ( m >= 0 )
+	{
+		map_addnpc(m,nd);
+		status_change_init(&nd->bl);
+		unit_dataset(&nd->bl);
+		nd->ud.dir = (uint8)dir;
+		npc_setcells(nd);
+		map_addblock(&nd->bl);
+		if ( class_ >= 0 )
+		{
+			status_set_viewdata(&nd->bl, nd->class_);
+			clif_spawn(&nd->bl);
+		}
+	}
+	else
+	{
+		map_addiddb(&nd->bl);
+	}
+	strdb_put(npcname_db,nd->exname,nd);	
+
+	return 0;
+}
+
+void npc_parsesrcfile_lua(const char *filepath)
+{
+	FILE *fp = fopen (filepath,"r");
+	if (fp == NULL) {
+		ShowError("File not found : %s\n",filepath);
+		exit(1);
+	}
+
+	if (luaL_loadfile(L,filepath))
+		ShowError("Cannot load script file %s : %s",filepath,lua_tostring(L,-1));
+	if (lua_pcall(L,0,0,0))
+		ShowError("Cannot run script file %s : %s",filepath,lua_tostring(L,-1));
+
+	fclose(fp);
+
+	return;
+}
+
+//Function to add a mob to the server
+int npc_add_mob_lua(char* name,short m,short x,short y,short xs,short ys,short class_,int num,int d1,int d2,char* function)
+{
+	struct spawn_data mob, *data;
+	struct mob_db* db;
+	int i,j, mode;
+	
+	memset(&mob, 0, sizeof(struct spawn_data));
+	
+	//Start filling in spawn information
+	if ( m < 0 ) // Map doesn't exist on the server.
+		return 0;
+	else {
+		mob.m = m; // Set the map
+		if ( x < 0 || x >= map[mob.m].xs || y < 0 || y >= map[mob.m].ys )
+		{ //If the mob spawn coordinates are out of range
+			//Error message goes here
+			return 0;
+		}
+	}
+	
+	if ( mobdb_checkid(class_) == 0 ) //Does the monster ID exist?
+	{
+		//Error msg here
+		return 0;
+	}
+	
+	if ( num < 1 || num > 1000 ) //Are they trying to spawn way too many damn monsters?
+	{
+		//Error Msg
+		return 0;
+	}
+	
+	mob.num = (unsigned short)num;
+	mob.active = 0;
+	mob.class_ = class_;
+	mob.x = (unsigned short)x;
+	mob.y = (unsigned short)y;
+	mob.xs = (signed short)xs;
+	mob.ys = (signed short)ys;
+	strcpy(mob.function,function);
+	
+	if ( mob.num > 1 && battle_config.mob_count_rate != 100 ) {
+		if (( mob.num = mob.num * battle_config.mob_count_rate / 100) < 1 )
+			mob.num = 1;
+	}
+	
+	if (battle_config.force_random_spawn || (mob.x == 0 && mob.y == 0))
+	{	//Force a random spawn anywhere on the map.
+		mob.x = mob.y = 0;
+		mob.xs = mob.ys = -1;
+	}
+	
+	db = mob_db(class_);
+
+	//Apply the spawn delay fix [Skotlex]
+	mode = db->status.mode;
+	if (mode & MD_BOSS) {	//Bosses
+		if (battle_config.boss_spawn_delay != 100)
+		{	// Divide by 100 first to prevent overflows
+			//(precision loss is minimal as duration is in ms already)
+			mob.delay1 = mob.delay1/100*battle_config.boss_spawn_delay;
+			mob.delay2 = mob.delay2/100*battle_config.boss_spawn_delay;
+		}
+	} else if (mode&MD_PLANT) {	//Plants
+		if (battle_config.plant_spawn_delay != 100)
+		{
+			mob.delay1 = mob.delay1/100*battle_config.plant_spawn_delay;
+			mob.delay2 = mob.delay2/100*battle_config.plant_spawn_delay;
+		}
+	} else if (battle_config.mob_spawn_delay != 100)
+	{	//Normal mobs
+		mob.delay1 = mob.delay1/100*battle_config.mob_spawn_delay;
+		mob.delay2 = mob.delay2/100*battle_config.mob_spawn_delay;
+	}
+
+	if(mob.delay1>0xfffffff || mob.delay2>0xfffffff) {
+		//ShowError("npc_parse_mob: wrong monsters spawn delays : %s %s (file '%s', line '%d').\n", w3, w4, filepath, strline(buffer,start-buffer));
+		return 0;
+	}
+	
+	//Use db names instead of the spawn file ones.
+	if(battle_config.override_mob_names==1)
+		strcpy(mob.name,"--en--");
+	else if (battle_config.override_mob_names==2)
+		strcpy(mob.name,"--ja--");
+	else
+		strcpy(mob.name,name);
+		
+	//Verify dataset.
+	if( !mob_parse_dataset(&mob) )
+	{
+		//ShowError("npc_parse_mob: Invalid dataset : %s %s (file '%s', line '%d').\n", w3, w4, filepath, strline(buffer,start-buffer));
+		//return strchr(start,'\n');// skip and continue
+		return 0;
+	}
+
+	//Update mob spawn lookup database
+	for( i = 0; i < ARRAYLENGTH(db->spawn); ++i )
+	{
+		if (map[mob.m].index == db->spawn[i].mapindex)
+		{	//Update total
+			db->spawn[i].qty += mob.num;
+			//Re-sort list
+			for( j = i; j > 0 && db->spawn[j-1].qty < db->spawn[i].qty; --j );
+			if( j != i )
+			{
+				xs = db->spawn[i].mapindex;
+				ys = db->spawn[i].qty;
+				memmove(&db->spawn[j+1], &db->spawn[j], (i-j)*sizeof(db->spawn[0]));
+				db->spawn[j].mapindex = xs;
+				db->spawn[j].qty = ys;
+			}
+			break;
+		}
+		if (mob.num > db->spawn[i].qty)
+		{	//Insert into list
+			memmove(&db->spawn[i+1], &db->spawn[i], sizeof(db->spawn) -(i+1)*sizeof(db->spawn[0]));
+			db->spawn[i].mapindex = map[mob.m].index;
+			db->spawn[i].qty = mob.num;
+			break;
+		}
+	}
+	
+	//Now that all has been validated. We allocate the actual memory that the re-spawn data will use.
+	data = (struct spawn_data*)aMalloc(sizeof(struct spawn_data));
+	memcpy(data, &mob, sizeof(struct spawn_data));
+
+	// spawn / cache the new mobs
+	if( battle_config.dynamic_mobs && map_addmobtolist(data->m, data) >= 0 )
+	{
+		data->state.dynamic = true;
+		npc_cache_mob += data->num;
+
+		// check if target map has players
+		// (usually shouldn't occur when map server is just starting,
+		// but not the case when we do @reloadscript
+		if( map[data->m].users > 0 )
+			npc_parse_mob2(data);
+	}
+	else
+	{
+		data->state.dynamic = false;
+		npc_parse_mob2(data);
+		npc_delay_mob += data->num;
+	}
+
+	npc_mob++;
+	
+	return 0;
+}
+//----------------------------------------------------------------------------------------------
+// End Lua Functions 
+//----------------------------------------------------------------------------------------------
 
 /*==========================================
  * èIóπ

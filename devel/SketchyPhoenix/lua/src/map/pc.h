@@ -178,7 +178,12 @@ struct map_session_data {
 	int lua_script_state;
 	npc_menu_datas npc_menu_data;
 	lua_State *NL;
-	
+
+	struct { //Lua shop npc data
+		int nameid[40];
+		int value[40];
+		int n;
+	} shop_data;
 
 	struct{
 		int npc_id;

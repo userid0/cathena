@@ -22,7 +22,7 @@ require "script/core/core"
 -- Warps
 --require "script/warps/script_warps"
 -- Monster Spawn
---require "script/spawns/script_spawns"
+require "script/spawns/script_spawns"
 -- Shops/Merchants
 --require "script/merchants/script_merchants"
 -- Your NPCs go in this file!
