@@ -190,7 +190,7 @@ enum bl_type {
 //For common mapforeach calls. Since pets cannot be affected, they aren't included here yet.
 #define BL_CHAR (BL_PC|BL_MOB|BL_HOM|BL_MER)
 
-enum npc_subtype { WARP, SHOP, SCRIPT, CASHSHOP };
+enum npc_subtype { WARP, SHOP, SCRIPT, CASHSHOP, LUA };
 
 enum {
 	RC_FORMLESS=0,
@@ -258,6 +258,8 @@ struct spawn_data {
 	} state;
 	char name[NAME_LENGTH],eventname[50]; //Name/event
 	char function[50];
+	//equivalent to eventname for the lua scripts but calls a 
+	//function rather than event label is triggered on mob death
 };
 
 

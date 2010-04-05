@@ -232,6 +232,7 @@ int mob_spawn(struct mob_data *md);
 int mob_delayspawn(int tid, unsigned int tick, int id, intptr data);
 int mob_setdelayspawn(struct mob_data *md);
 int mob_parse_dataset(struct spawn_data *data);
+void mob_parse_dataset_sub(char *eventname, int i, struct spawn_data *data);
 void mob_log_damage(struct mob_data *md, struct block_list *src, int damage);
 void mob_damage(struct mob_data *md, struct block_list *src, int damage);
 int mob_dead(struct mob_data *md, struct block_list *src, int type);

@@ -67,8 +67,7 @@
 lua_State *L;
 static struct map_session_data* script_get_target(lua_State *NL,int idx);
 
-//TODO: merge this into e_script_state at some point
-extern enum { NRUN,CLOSE,NEXT,INPUT,MENU };
+extern enum { CLOSE, NRUN, NEXT, INPUT, MENU };
 	/*
 	NRUN // Script is ready
 	NEXT // Waiting for the player to click [Next]
@@ -14311,15 +14310,16 @@ BUILDIN_FUNC(deletepset);
 //-----------------------------------------------------------------------------
 // buildin functions for lua
 //
+#define LUA_FUNC(x) static int buildin_ ## x (lua_State *NL)
 
 //Exits the script
-static int buildin_scriptend(lua_State *NL)
+LUA_FUNC(scriptend)
 {
 	return lua_yield(NL, 0);
 }
 
 //Adds a standard NPC that triggers a function when clicked
-static int buildin_addnpc(lua_State *NL)
+LUA_FUNC(addnpc)
 {
 	char name[NAME_LENGTH],exname[NAME_LENGTH],map[16],function[50];
 	short m,x,y,dir,class_;
@@ -14341,7 +14341,7 @@ static int buildin_addnpc(lua_State *NL)
 
 // npcmes("Text",[id])
 // Print the text into the NPC dialog window of the player
-static int buildin_npcmes(lua_State *NL)
+LUA_FUNC(npcmes)
 {
 	struct map_session_data *sd;
 	char mes[512];
@@ -14356,7 +14356,7 @@ static int buildin_npcmes(lua_State *NL)
 
 //Display a [Next] button in the NPC dialog window
 //npcnext(id)
-static int buildin_npcnext(lua_State *NL)
+LUA_FUNC(npcnext)
 {
 	struct map_session_data *sd;
 
@@ -14370,7 +14370,7 @@ static int buildin_npcnext(lua_State *NL)
 
 // npcclose([id])
 // Display a [Close] button in the NPC dialog window of the player and pause the script until the button is clicked
-static int buildin_npcclose(lua_State *NL)
+LUA_FUNC(npcclose)
 {
 	struct map_session_data *sd;
 
@@ -14386,19 +14386,53 @@ static int buildin_npcclose(lua_State *NL)
 }
 
 //Add an invisible area that triggers a function when entered
-static int buildin_addareascript(lua_State *NL)
+//addareascript("Area script name","map.gat",x1,y1,x2,y2,"function")
+LUA_FUNC(addareascript)
 {
+	/*
+	char name[24],map[16],function[50];
+	short m,x1,y1,x2,y2;
+
+	sprintf(name,"%s",lua_tostring(NL,1));
+	sprintf(map,"%s",lua_tostring(NL,2));
+	m=map_mapname2mapid(map);
+	x1=(lua_tonumber(NL,5)>lua_tonumber(NL,3))?lua_tonumber(NL,3):lua_tonumber(NL,5);
+	y1=(lua_tonumber(NL,6)>lua_tonumber(NL,4))?lua_tonumber(NL,4):lua_tonumber(NL,6);
+	x2=(lua_tonumber(NL,5)>lua_tonumber(NL,3))?lua_tonumber(NL,5):lua_tonumber(NL,3);
+	y2=(lua_tonumber(NL,6)>lua_tonumber(NL,4))?lua_tonumber(NL,6):lua_tonumber(NL,4);
+	sprintf(function,"%s",lua_tostring(NL,7));
+
+	areascript_add(name,m,x1,y1,x2,y2,function);
+	*/
 	return 0;
 }
 
 //Add a warp that moves players somewhere else when entered
-static int buildin_addwarp(lua_State *NL)
+// addwarp("Warp name","map.gat",x,y,"destmap.gat",destx,desty,xradius,yradius)
+LUA_FUNC(addwarp)
 {
+	char name[24],map[16],destmap[16];
+	short m,x,y;
+	short destx,desty,xs,ys;
+	
+	sprintf(name,"%s",(char)lua_tostring(NL,1));
+	sprintf(map,"%s",(char)lua_tostring(NL,2));
+	m=map_mapname2mapid(map);
+	x=(short)lua_tonumber(NL,3);
+	y=(short)lua_tonumber(NL,4);
+	sprintf(destmap,"%s",(char)lua_tostring(NL,5));
+	destx=(short)lua_tonumber(NL,6);
+	desty=(short)lua_tonumber(NL,7);
+	xs=(short)lua_tonumber(NL,8);
+	ys=(short)lua_tonumber(NL,9);
+
+	npc_warp_add_lua(name,m,x,y,destmap,destx,desty,xs,ys);
+
 	return 0;
 }
 
 //Add a monster spawn
-static int buildin_addspawn(lua_State *NL)
+LUA_FUNC(addspawn)
 {
 	char name[24],map[16],function[50];
 	short m,x,y,xs,ys,class_,num,d1,d2;
@@ -14423,7 +14457,7 @@ static int buildin_addspawn(lua_State *NL)
 
 //Display a NPC input window asking the player for a value
 //npcinput(type,[id])
-static int buildin_npcinput(lua_State *NL)
+LUA_FUNC(npcinput)
 {
 	struct map_session_data *sd;
 	int type;
@@ -14447,7 +14481,7 @@ static int buildin_npcinput(lua_State *NL)
 
 //Display a NPC menu window asking the player for a value
 //npcmenu("menu_name1",return_value1,...)
-static int buildin_npcmenu(lua_State *NL)
+LUA_FUNC(npcmenu)
 {
 	struct map_session_data *sd;
 	struct StringBuf buf;
@@ -14455,6 +14489,13 @@ static int buildin_npcmenu(lua_State *NL)
 	int len=0, n, i;
 
 	sd = script_get_target(NL, 2);
+	
+	if ( sd->lua_script_state == INPUT || sd->lua_script_state == MENU ) {
+		//You shouldn't get another input/menu while already in an input/menu
+		lua_pushstring(NL, "Player received npc input request while already in one in function 'npcmenu'\n");
+		lua_error(NL);
+		return -1;
+	}
 
 	lua_pushliteral(NL, "n");
 	lua_rawget(NL, 1);
@@ -14501,14 +14542,14 @@ static int buildin_npcmenu(lua_State *NL)
 
 	clif_scriptmenu(sd,sd->npc_id,StringBuf_Value(&buf));
 	StringBuf_Destroy(&buf);
-
-	sd->lua_script_state = L_MENU;
+	
+	sd->lua_script_state = MENU;
 	return lua_yield(NL, 1);
 }
 
 //Start a npc shop
 //npcshop(item_id1,item_price1,...)
-static int buildin_npcshop(lua_State *NL)
+LUA_FUNC(npcshop)
 {
 	struct map_session_data *sd;
 	int n, i, j;
@@ -14554,7 +14595,7 @@ static int buildin_npcshop(lua_State *NL)
 
 //Display a cutin picture on the screen
 //npccutin(name,type,[id])
-static int buildin_npccutin(lua_State *NL)
+LUA_FUNC(npccutin)
 {
 	struct map_session_data *sd;
 	char name[50];
@@ -14571,7 +14612,7 @@ static int buildin_npccutin(lua_State *NL)
 
 //Heals the character by a set amount of HP and SP
 //npcheal(hp,sp,[id])
-static int buildin_npcheal(lua_State *NL)
+LUA_FUNC(npcheal)
 {
 	struct map_session_data *sd;
 	int hp, sp;
@@ -14587,7 +14628,7 @@ static int buildin_npcheal(lua_State *NL)
 
 //Heals the character by a percentage of their Max HP / SP
 //npcpercentheal(hp,sp,[id])
-static int buildin_npcpercentheal(lua_State *NL)
+LUA_FUNC(npcpercentheal)
 {
 	struct map_session_data *sd;
 	int hp, sp;
@@ -14603,7 +14644,7 @@ static int buildin_npcpercentheal(lua_State *NL)
 
 //Heal the character by an amount that increases with VIT/INT, skills, etc
 //npcitemheal(hp,sp,[id]);
-static int buildin_npcitemheal(lua_State *NL)
+LUA_FUNC(npcitemheal)
 {
 	struct map_session_data *sd;
 	int hp, sp;
@@ -14629,7 +14670,7 @@ static int buildin_npcitemheal(lua_State *NL)
 
 //Change the job of the character
 //npcjobchange(job_id,[id])
-static int buildin_npcjobchange(lua_State *NL)
+LUA_FUNC(npcjobchange)
 {
 	struct map_session_data *sd;
 	int job;
@@ -14644,7 +14685,7 @@ static int buildin_npcjobchange(lua_State *NL)
 
 //Change the look of the character
 //npcsetlook(type,val,[id])
-static int buildin_npcsetlook(lua_State *NL)
+LUA_FUNC(npcsetlook)
 {
 	struct map_session_data *sd;
 	int type,val;
@@ -14660,7 +14701,7 @@ static int buildin_npcsetlook(lua_State *NL)
 
 //Warp a player to a set location
 //warp("map",x,y,[id])
-static int buildin_npcwarp(lua_State *NL)
+LUA_FUNC(npcwarp)
 {
 	struct map_session_data *sd;
 	char str[16];
@@ -14684,6 +14725,197 @@ static int buildin_npcwarp(lua_State *NL)
 	return 0;
 }
 
+//returns the name of a given job using the msg_athena entries 550-650
+//jobname(job_number)
+LUA_FUNC(getjobname)
+{
+	int class_ = (short)lua_tonumber(NL,1); // receive job number from script
+	lua_pushstring(NL,job_name(class_)); // push job name to the stack
+	return 1;
+}
+
+//same as setlook but only client side
+//npcchangelook(type,val,[id])
+LUA_FUNC(npcchangelook)
+{
+	struct map_session_data *sd;
+	int type,val;
+
+	type = (int)lua_tonumber(NL, 1);
+	val = (int)lua_tonumber(NL, 2);
+	sd = script_get_target(NL, 3);
+
+	clif_changelook(&sd->bl,type,val);
+
+	return 0;
+}
+
+//returns the amount of item ID in a player's posession.
+//if it fails, the function returns nil
+//getitemcount(item_id,[char_id])
+LUA_FUNC(getitemcount)
+{
+	int nameid, i;
+	int count = 0;
+	struct map_session_data *sd;
+	
+	sd = script_get_target(NL,2);
+	
+	if (!sd) //Return nil if no player exists
+		return 0;
+	
+	nameid = (int)lua_tonumber(NL,1); //attempt to get the item by id
+	if ( !nameid ) //if it's null, it's not an integer. it's treated as a string now while the item is searched
+	{
+		const char* name = (const char*)lua_tostring(NL,1);
+		struct item_data* item_data;
+		if ( (item_data = itemdb_searchname(name)) != NULL )
+			nameid = item_data->nameid;
+		else
+			nameid = 0; //the string search failed too.
+	}
+	
+	if ( nameid < 500 ) {
+		ShowError("wrong item ID: countitem(%i)\n", nameid);
+		return 0;
+	}
+	
+	for(i = 0; i < MAX_INVENTORY; i++)
+		if(sd->status.inventory[i].nameid == nameid)
+				count += sd->status.inventory[i].amount;
+				
+	lua_pushnumber(NL,count);
+	return 1;
+}
+
+LUA_FUNC(getitemcount2)
+{
+	//countitem2
+	return 0;
+}
+
+
+LUA_FUNC(getweight)
+{
+	int nameid = 0, amount, i;
+	unsigned long weight;
+	const char *name;
+	struct map_session_data *sd;
+	
+	sd = script_get_target(NL,3);
+	
+	if ( sd == NULL )
+		return 0;
+	
+	name = (const char*)lua_tostring(NL,1);
+	
+	if ( atoi(name) == 0 )
+	{
+		struct item_data *item_data = itemdb_searchname(name);
+		if ( item_data )
+			nameid=item_data->nameid;
+	} else
+		nameid=(int)lua_tonumber(NL,1);
+		
+	amount = (int)lua_tonumber(NL,2);
+	if ( amount <= 0 || nameid < 500 )
+	{
+		ShowError("buildin_getweight: Wrong item ID or amount %d %d %s.\n", amount, nameid, name);
+		return 0;
+	}
+	
+	weight = itemdb_weight(nameid)*amount;
+	if ( amount > MAX_AMOUNT || weight + sd->weight > sd->max_weight )
+		lua_pushnumber(NL,0);
+		
+	else if ( itemdb_isstackable(nameid) )
+	{
+		if ( ( i = pc_search_inventory(sd,nameid)) >= 0 )
+			lua_pushnumber(NL,amount + sd->status.inventory[i].amount > MAX_AMOUNT ? 0 : 1);
+		else
+			lua_pushnumber(NL,pc_search_inventory(sd,0) >= 0 ? 1 : 0);
+	}
+	else
+	{
+		for( i = 0; i < MAX_INVENTORY && amount; ++i )
+			if ( sd->status.inventory[i].nameid == 0 )
+				amount--;
+		lua_pushnumber(NL,amount ? 0 : 1);
+	}
+	
+	return 1;
+}
+
+//giveitem(item id, amount[,character id];
+LUA_FUNC(giveitem)
+{
+	int nameid,amount,get_count,i,flag = 0;
+	const char *name;
+	struct item it;
+	TBL_PC *sd;
+	
+	sd = script_get_target(NL,3);
+
+	name = lua_tostring(NL,1);
+	if( atoi(name) == 0 )
+	{// "<item name>"
+		struct item_data *item_data = itemdb_searchname(name);
+		if( item_data == NULL ){
+			ShowError("buildin_giveitem: Nonexistant item %s requested.\n", name);
+			return 0; //No item created.
+		}
+		nameid=item_data->nameid;
+	} else
+	{// <item id>
+		nameid=(int)lua_tonumber(NL,1);
+		//Violet Box, Blue Box, etc - random item pick
+		if( nameid < 0 ) {
+			nameid=itemdb_searchrandomid(-nameid);
+			flag = 1;
+		}
+		if( nameid <= 0 || !itemdb_exists(nameid) ){
+			ShowError("buildin_giveitem: Nonexistant item %d requested.\n", nameid);
+			return 0; //No item created.
+		}
+	}
+
+	// <amount>
+	if( (amount=(int)lua_tonumber(NL,2)) <= 0)
+		return 0; //return if amount <=0, skip the useles iteration
+
+	memset(&it,0,sizeof(it));
+	it.nameid=nameid;
+	if(!flag)
+		it.identify=1;
+	else
+		it.identify=itemdb_isidentified(nameid);
+
+	//Check if it's stackable.
+	if (!itemdb_isstackable(nameid))
+		get_count = 1;
+	else
+		get_count = amount;
+
+	for (i = 0; i < amount; i += get_count)
+	{
+		// if not pet egg
+		if (!pet_create_egg(sd, nameid))
+		{
+			if ((flag = pc_additem(sd, &it, get_count)))
+			{
+				clif_additem(sd, 0, 0, flag);
+				if( pc_candrop(sd,&it) )
+					map_addflooritem(&it,get_count,sd->bl.m,sd->bl.x,sd->bl.y,0,0,0,0);
+			}
+                }
+        }
+
+	//Logs items, got from (N)PC scripts [Lupus]
+	if(log_config.enable_logs&LOG_SCRIPT_TRANSACTIONS)
+		log_pick_pc(sd, "N", nameid, amount, NULL);
+
+	return 1;
+}
 //-----------------------------------------------------------------------------
 // end of buildin functions
 //-----------------------------------------------------------------------------
@@ -15080,9 +15312,7 @@ struct script_function buildin_func[] = {
 
 // List of commands to build into Lua, format : {"function_name_in_lua", C_function_name}
 static struct LuaCommandInfo commands[] = {
-	// Basic functions
 	{"scriptend", buildin_scriptend},
-	// Object creation functions
 	{"addnpc", buildin_addnpc},
 	{"addareascript", buildin_addareascript},
 	{"addwarp", buildin_addwarp},
@@ -15091,7 +15321,6 @@ static struct LuaCommandInfo commands[] = {
 //	{"addtimer", buildin_addtimer},
 //  {"addclock", buildin_addclock},
 //	{"addevent", buildin_addevent},
-	// NPC dialog functions
 	{"npcmes", buildin_npcmes},
 	{"npcclose", buildin_npcclose},
 	{"npcnext", buildin_npcnext},
@@ -15099,13 +15328,18 @@ static struct LuaCommandInfo commands[] = {
 	{"npcmenu_", buildin_npcmenu},
 	{"npcshop_", buildin_npcshop},
 	{"npccutin", buildin_npccutin},
-	// Player related functions
 	{"npcheal", buildin_npcheal},
 	{"npcpercentheal", buildin_npcpercentheal},
 	{"npcitemheal", buildin_npcitemheal},
 	{"npcwarp", buildin_npcwarp},
 	{"npcjobchange", buildin_npcjobchange},
 	{"npcsetlook", buildin_npcsetlook},
+	{"npcchangelook", buildin_npcchangelook},
+	{"getjobname", buildin_getjobname},
+	{"getitemcount", buildin_getitemcount},
+	{"getitemcount2", buildin_getitemcount2},
+	{"getweight", buildin_getweight},
+	{"giveitem", buildin_giveitem},
 	// End of build-in functions list
 	{"-End of list-", NULL},
 };
@@ -15207,11 +15441,12 @@ void script_run_function(const char *name,int char_id,const char *format,...)
 
 	va_end(arg);
 
-	lua_resume(NL,n);
-	/*if (lua_resume(NL,n)!=0) { // Tell Lua to run the function
+	// Tell Lua to run the function
+	if ( lua_resume(NL,n)!=0 && lua_tostring(NL,-1) != NULL ) {
+		//If it fails, print to console the error that lua returned.
 		ShowError("Cannot run function %s : %s\n",name,lua_tostring(NL,-1));
 		return;
-	}*/
+	}
 
 	if(sd && sd->lua_script_state==L_NRUN) { // If the script has finished (not waiting answer from client)
 	    sd->NL=NULL; // Close the player's personal thread
@@ -15286,11 +15521,11 @@ void script_resume(struct map_session_data *sd,const char *format,...) {
 
     va_end(arg);
 
-	lua_resume(sd->NL,n);
-	/*if (lua_resume(sd->NL,n)!=0) { // Tell Lua to run the function
+	/*Attempt to run the function otherwise print the error to the console.*/
+	if ( lua_resume(sd->NL,n)!=0 && lua_tostring(sd->NL,-1) != NULL ) {
 		ShowError("Cannot resume script for player %d : %s\n",sd->status.char_id,lua_tostring(sd->NL,-1));
 		return;
-	}*/
+	}
 
 	if(sd->lua_script_state==L_NRUN) { // If the script has finished (not waiting answer from client)
 	    sd->NL=NULL; // Close the player's personal thread

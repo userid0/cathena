@@ -34,6 +34,7 @@ struct npc_data {
 	char name[NAME_LENGTH+1];// display name
 	char exname[NAME_LENGTH+1];// unique npc name
 	char function[50]; //Lua function to call when clicked.
+	//int is_lua : 1; //Identifier for lua NPCs used in certain functions
 	int chat_id;
 	int touching_id;
 	unsigned int next_walktime;
@@ -112,6 +113,7 @@ int npc_buysellsel(struct map_session_data* sd, int id, int type);
 int npc_buylist(struct map_session_data* sd,int n, unsigned short* item_list);
 int npc_selllist(struct map_session_data* sd, int n, unsigned short* item_list);
 void npc_parse_mob2(struct spawn_data* mob);
+void npc_parse_mob_common(struct spawn_data mob, struct mob_db* db);
 struct npc_data* npc_add_warp(short from_mapid, short from_x, short from_y, short xs, short ys, unsigned short to_mapindex, short to_x, short to_y);
 int npc_globalmessage(const char* name,const char* mes);
 
@@ -127,7 +129,8 @@ int npc_get_new_npc_id(void);
 
 void npc_addsrcfile(const char* name);
 void npc_delsrcfile(const char* name);
-void npc_parsesrcfile(const char* filepath);
+void npc_parsesrcfile_txt(const char* filepath);
+void npc_parsesrcfile_sub(const char* filepath);
 int do_final_npc(void);
 int do_init_npc(void);
 void npc_event_do_oninit(void);
@@ -156,7 +159,8 @@ extern struct npc_data* fake_nd;
 
 //Lua
 int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short class_,char *function);
-void npc_parsesrcfile_lua(const char *filepath);
 int npc_add_mob_lua(char* name,short m,short x,short y,short xs,short ys,short class_,int num,int d1,int d2,char* function);
+void npc_warp_add_lua(char* name, short m, short x, short y, const char* destmap, short destx, short desty, short xs, short ys);
+void npc_parsesrcfile_lua(const char* filepath);
 
 #endif /* _NPC_H_ */

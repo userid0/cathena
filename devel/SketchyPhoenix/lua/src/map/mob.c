@@ -158,6 +158,7 @@ struct view_data * mob_get_viewdata(int class_)
 int mob_parse_dataset(struct spawn_data *data)
 {
 	int i;
+	
 	//FIXME: This implementation is not stable, npc scripts will stop working once MAX_MOB_DB changes value! [Skotlex]
 	if(data->class_ > 2*MAX_MOB_DB){ // large/tiny mobs [Valaris]
 		data->state.size=2;
@@ -173,28 +174,15 @@ int mob_parse_dataset(struct spawn_data *data)
 	//better safe than sorry, current md->npc_event has a size of 50
 	if ((i=strlen(data->eventname)) >= 50)
 		return 0;
+	//do the same for the lua event
+	if ((i=strlen(data->function)) >= 50)
+		return 0;
 
-	if (data->eventname[0])
-	{
-		if(i <= 2)
-		{	//Portable monster big/small implementation. [Skotlex]
-			i = atoi(data->eventname);
-			if (i) {
-				if (i&2)
-					data->state.size=1;
-				else if (i&4)
-					data->state.size=2;
-				if (i&8)
-					data->state.ai=1;
-				data->eventname[0] = '\0'; //Clear event as it is not used.
-			}
-		} else {
-			if (data->eventname[i-1] == '"')
-				data->eventname[i-1] = '\0'; //Remove trailing quote.
-			if (data->eventname[0] == '"') //Strip leading quotes
-				memmove(data->eventname, data->eventname+1, i-1);
-		}
-	}
+	//Clean up the event data
+	if ( data->eventname ) // TXT eascript event
+		mob_parse_dataset_sub(data->eventname,i,data);
+	else if ( data->function ) // LUA event
+		mob_parse_dataset_sub(data->function,i,data);
 
 	if(strcmp(data->name,"--en--")==0)
 		strncpy(data->name,mob_db(data->class_)->name,NAME_LENGTH-1);
@@ -202,6 +190,34 @@ int mob_parse_dataset(struct spawn_data *data)
 		strncpy(data->name,mob_db(data->class_)->jname,NAME_LENGTH-1);
 
 	return 1;
+}
+
+//subroutine to perform the clean up to event data
+void mob_parse_dataset_sub(char *eventname, int i, struct spawn_data *data)
+{
+	if (eventname[0])
+	{
+		if(i <= 2)
+		{	//Portable monster big/small implementation. [Skotlex]
+			i = atoi(eventname);
+			if (i) {
+				if (i&2)
+					data->state.size=1;
+				else if (i&4)
+					data->state.size=2;
+				if (i&8)
+					data->state.ai=1;
+				eventname[0] = '\0'; //Clear event as it is not used.
+			}
+		} else {
+			if (eventname[i-1] == '"')
+				eventname[i-1] = '\0'; //Remove trailing quote.
+			if (eventname[0] == '"') //Strip leading quotes
+				memmove(eventname, eventname+1, i-1);
+		}
+	}
+	
+	return;
 }
 /*==========================================
  * Generates the basic mob data using the spawn_data provided.

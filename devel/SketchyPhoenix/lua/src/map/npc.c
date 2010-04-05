@@ -1074,8 +1074,10 @@ int npc_click(struct map_session_data* sd, struct npc_data* nd)
 		clif_cashshop_show(sd,nd);
 		break;
 	case SCRIPT:
+		run_script(nd->u.scr.script,0,sd->bl.id,nd->bl.id);
+		break;
+	case LUA:
 		script_run_function(nd->function,sd->status.char_id,"");
-		//run_script(nd->u.scr.script,0,sd->bl.id,nd->bl.id);
 		break;
 	}
 
@@ -2601,6 +2603,8 @@ static const char* npc_parse_function(char* w1, char* w2, char* w3, char* w4, co
 /*==========================================
  * Parse Mob 1 - Parse mob list into each map
  * Parse Mob 2 - Actually Spawns Mob
+ * Parse Mob Common - Common operations between
+ * txt / lua parses.
  * [Wizputer]
  *------------------------------------------*/
 void npc_parse_mob2(struct spawn_data* mob)
@@ -3043,20 +3047,48 @@ static const char* npc_parse_mapflag(char* w1, char* w2, char* w3, char* w4, con
 	return strchr(start,'\n');// continue
 }
 
+//checks for file format and directs
+//the flow to the parse subfunctions
+void npc_parsesrcfile_sub(const char* filepath)
+{
+	if ( strstr(filepath, ".lua") != NULL )
+	{ //If the file is lua, parse it using lua
+		npc_parsesrcfile_lua(filepath);
+		return;
+	}
+	else //otherwise it's a txt file. parse it using ea script engine
+		npc_parsesrcfile_txt(filepath);
+		
+	return;
+}
 
-void npc_parsesrcfile(const char* filepath)
+//loads the script into lua
+void npc_parsesrcfile_lua(const char *filepath)
+{
+	FILE *fp = fopen (filepath,"r");
+	if (fp == NULL) {
+		ShowError("File not found : %s\n",filepath);
+		exit(1);
+	}
+
+	if (luaL_loadfile(L,filepath))
+		ShowError("Cannot load script file %s : %s",filepath,lua_tostring(L,-1));
+	if (lua_pcall(L,0,0,0))
+		ShowError("Cannot run script file %s : %s",filepath,lua_tostring(L,-1));
+
+	fclose(fp);
+
+	return;
+}
+
+//loads txt files into ea script
+void npc_parsesrcfile_txt(const char* filepath)
 {
 	int m, lines = 0;
 	FILE* fp;
 	size_t len;
 	char* buffer;
 	const char* p;
-
-	if ( strstr(filepath, ".lua") != NULL )
-	{
-		npc_parsesrcfile_lua(filepath);
-		return;
-	}
 	
 	// read whole file to buffer
 	fp = fopen(filepath, "rb");
@@ -3320,7 +3352,7 @@ int npc_reload(void)
 	for (nsl = npc_src_files; nsl; nsl = nsl->next)
 	{
 		ShowStatus("Loading NPC file: %s"CL_CLL"\r", nsl->name);
-		npc_parsesrcfile(nsl->name);
+		npc_parsesrcfile_sub(nsl->name);
 	}
 
 	ShowInfo ("Done loading '"CL_WHITE"%d"CL_RESET"' NPCs:"CL_CLL"\n"
@@ -3369,13 +3401,10 @@ int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short 
 	nd->u.scr.guild_id=0;
 	nd->chat_id=0;
 
-	//nd->n=map_addnpc(m,nd);
-	//map_addblock(&nd->bl);
-	//clif_spawn(&nd->bl);
 	++npc_script;
 
 	nd->bl.type=BL_NPC;
-	nd->subtype = SCRIPT;
+	nd->subtype = LUA;
 	
 	if ( m >= 0 )
 	{
@@ -3400,23 +3429,42 @@ int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short 
 	return 0;
 }
 
-void npc_parsesrcfile_lua(const char *filepath)
+/*
+int areascript_add_lua (char *name,short m,short x1,short y1,short x2,short y2,char *function)
 {
-	FILE *fp = fopen (filepath,"r");
-	if (fp == NULL) {
-		ShowError("File not found : %s\n",filepath);
-		exit(1);
+	int i,j;
+	
+	struct npc_data *nd=(struct npc_data *)aCalloc(1, sizeof(struct npc_data));
+
+	nd->bl.prev=ad->bl.next=NULL;
+	nd->bl.m=m;
+	nd->bl.x=x1; // } Those x,y values are dummy anyway
+	nd->bl.y=y1; // }
+	nd->bl.id=npc_get_new_npc_id();
+	nd->bl.type=BL_AREASCRIPT;
+	strcpy(nd->name,name);
+	strcpy(nd->function,function);
+	nd->flag=0;
+	nd->x1=x1;
+	nd->y1=y1;
+	nd->x2=x2;
+	nd->y2=y2;
+
+	nd->n=map_addareascript(m,nd);
+	map_addblock(&nd->bl);
+	for (i=y1;i<=y2;i++) {
+		for (j=x1;j<=x2;j++) {
+			if (map_getcell(m,j,i,CELL_CHKPASS))
+				map_setcell(m,j,i,CELL_SETSCRIPT);
+		}
 	}
+	strdb_put(npcname_db,nd->name,nd);
+	areascript_num++;
 
-	if (luaL_loadfile(L,filepath))
-		ShowError("Cannot load script file %s : %s",filepath,lua_tostring(L,-1));
-	if (lua_pcall(L,0,0,0))
-		ShowError("Cannot run script file %s : %s",filepath,lua_tostring(L,-1));
-
-	fclose(fp);
-
-	return;
+	return 0;
+	
 }
+*/
 
 //Function to add a mob to the server
 int npc_add_mob_lua(char* name,short m,short x,short y,short xs,short ys,short class_,int num,int d1,int d2,char* function)
@@ -3569,6 +3617,53 @@ int npc_add_mob_lua(char* name,short m,short x,short y,short xs,short ys,short c
 	
 	return 0;
 }
+
+//Adds a warp portal for lua scripts
+void npc_warp_add_lua(char* name, short m, short x, short y, const char* destmap, short destx, short desty, short xs, short ys)
+{
+	unsigned short i;
+	struct npc_data *nd;
+
+	i = mapindex_name2id(destmap);
+	if( i == 0 )
+	{
+		ShowError("npc_warp_add_lua: Unknown destination map '%s'\n", destmap);
+		return;
+	}
+
+	CREATE(nd, struct npc_data, 1);
+
+	nd->bl.id = npc_get_new_npc_id();
+	map_addnpc(m, nd);
+	nd->bl.prev = nd->bl.next = NULL;
+	nd->bl.m = m;
+	nd->bl.x = x;
+	nd->bl.y = y;
+
+	if (!battle_config.warp_point_debug)
+		nd->class_ = WARP_CLASS;
+	else
+		nd->class_ = WARP_DEBUG_CLASS;
+	nd->speed = 200;
+
+	nd->u.warp.mapindex = i;
+	nd->u.warp.x = destx;
+	nd->u.warp.y = desty;
+	nd->u.warp.xs = xs;
+	nd->u.warp.ys = ys;
+	npc_warp++;
+	nd->bl.type = BL_NPC;
+	nd->subtype = WARP;
+	npc_setcells(nd);
+	map_addblock(&nd->bl);
+	status_set_viewdata(&nd->bl, nd->class_);
+	status_change_init(&nd->bl);
+	unit_dataset(&nd->bl);
+	clif_spawn(&nd->bl);
+	strdb_put(npcname_db, nd->name, nd);
+
+	return;
+}
 //----------------------------------------------------------------------------------------------
 // End Lua Functions 
 //----------------------------------------------------------------------------------------------
@@ -3658,7 +3753,7 @@ int do_init_npc(void)
 	for( file = npc_src_files; file != NULL; file = file->next )
 	{
 		ShowStatus("Loading NPC file: %s"CL_CLL"\r", file->name);
-		npc_parsesrcfile(file->name);
+		npc_parsesrcfile_sub(file->name);
 	}
 
 	ShowInfo ("Done loading '"CL_WHITE"%d"CL_RESET"' NPCs:"CL_CLL"\n"
