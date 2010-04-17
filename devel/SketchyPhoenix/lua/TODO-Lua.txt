@@ -5,8 +5,7 @@ TODO:
 		and decided to allow the server to load eascript and lua with the user
 		being able to use whatever they want.
 
-	*Cleaning up said code. Badly. It's all pretty much hacks and really sloppy.
-	-Ahh Trying to get this all to work > Making it look pretty. We'll do that later :V
+	*Cleaning up afterwards.
 
 	*Finish all these blasted buildin functions. There's like a million of these :(
 

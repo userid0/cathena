@@ -306,6 +306,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\map\luascript.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\map\luascript.h"
+				>
+			</File>
+			<File
 				RelativePath="..\src\map\mail.c"
 				>
 			</File>

@@ -27,6 +27,7 @@
 #include "unit.h"
 #include "npc.h"
 #include "chat.h"
+#include "luascript.h"
 
 #include <stdio.h>
 #include <stdlib.h>

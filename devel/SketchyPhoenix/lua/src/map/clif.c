@@ -39,6 +39,7 @@
 #include "clif.h"
 #include "mail.h"
 #include "quest.h"
+#include "luascript.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -4,8 +4,6 @@
 #ifndef _SCRIPT_H_
 #define _SCRIPT_H_
 
-#include <lua.h>
-
 struct map_session_data;
 
 extern int potion_flag; //For use on Alchemist improved potions/Potion Pitcher. [Skotlex]
@@ -171,32 +169,5 @@ int do_final_script(void);
 int add_str(const char* p);
 const char* get_str(int id);
 int script_reload(void);
-
-//Lua functions
-struct LuaCommandInfo {
-	const char *command;
-	lua_CFunction f;
-};
-
-lua_State *L;
-
-int do_init_script_lua(void);
-void script_buildin_commands_lua(void);
-void script_run_function(const char *name,int char_id,const char *format,...);
-void script_run_chunk(const char *chunk,int char_id);
-void script_resume(struct map_session_data *sd,const char *format,...);
-
-extern enum { L_NRUN,L_CLOSE,L_NEXT,L_INPUT,L_MENU };
-	/*
-	NRUN // Script is ready
-	NEXT // Waiting for the player to click [Next]
-	CLOSE // Waiting for the player to click [Close]
-	MENU // Waiting for the player to choose a menu option
-	INPUT // Waiting for the player to input a value
-	SHOP // Waiting for the player to choose [Buy] or [Sell]
-	BUY // Waiting for the player to choose items to buy
-	SELL // Waiting for the player to choose items to sell
-	*/
-
 
 #endif /* _SCRIPT_H_ */

@@ -42,6 +42,7 @@
 #include "mercenary.h"
 #include "atcommand.h"
 #include "log.h"
+#include "luascript.h"
 #ifndef TXT_ONLY
 #include "mail.h"
 #endif
@@ -3391,6 +3392,7 @@ void do_final(void)
 	do_final_status();
 	do_final_unit();
 	do_final_battleground();
+	do_final_luascript();
 	
 	map_db->destroy(map_db, map_db_final);
 	
