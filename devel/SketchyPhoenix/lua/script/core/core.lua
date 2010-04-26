@@ -70,10 +70,17 @@ JOB_SUPER_BABY = 4045
 
 
 -- Complements for buildin functions
-function npcmenu(...)
-	return npcmenu_(arg)
+function menu(...)
+	return npcmenu(arg)
 end
 
-function npcshop(...)
-	return npcshop_(arg)
+function shop(...)
+	return npcshop(arg)
+end
+
+-- Wrapper for skill()
+-- addtoskill() in eAS was the same as skill() but with a fixed arg.
+function addtoskill(...)
+	local va_list = {...}
+	return skill(va_list[1],va_list[2], 2)
 end

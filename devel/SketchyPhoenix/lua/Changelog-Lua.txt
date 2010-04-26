@@ -1,6 +1,13 @@
 Date	Added
 
-Running from Trunk (feb, 09, 2010)
+2010/04/25
+	* Updated to /trunk r14286
+	* More script commands converted.
+	- Areascripts finished
+	- Timer support
+	- Scripts report param errors.
+	* Removed memory leaks from areascripts
+	* Added Lua reload support to @reloadscript
 
 2010/04/04
 	* Added more script commands.
@@ -17,5 +24,6 @@ Running from Trunk (feb, 09, 2010)
 
 2010/03/27
 	* It's alive! [SketchyPhoenix]
-	- Using work from DracoRPG!
+	- Based off a previous work.
+	- see /devel/Kevin/ and /devel/DracoRPG 
 	* Updated to trunk r14270

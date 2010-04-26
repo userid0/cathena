@@ -29,6 +29,7 @@ struct item_data;
 //#define CIRCULAR_AREA
 
 #define MAX_NPC_PER_MAP 512
+#define MAX_AREASCRIPT_PER_MAP 128
 #define BLOCK_SIZE 8
 #define AREA_SIZE battle_config.area_size
 #define DAMAGELOG_SIZE 30
@@ -183,6 +184,7 @@ enum bl_type {
 	BL_SKILL = 0x040,
 	BL_NPC   = 0x080,
 	BL_CHAT  = 0x100,
+	BL_AREASCRIPT = 0x200,
 
 	BL_ALL   = 0xFFF,
 };
@@ -353,6 +355,7 @@ typedef enum {
 	CELL_WATER,
 
 	CELL_NPC,
+	CELL_SCRIPT,
 	CELL_BASILICA,
 	CELL_LANDPROTECTOR,
 	CELL_NOVENDING,
@@ -374,6 +377,7 @@ typedef enum {
 	CELL_CHKSTACK,		// whether cell is full (reached cell stacking limit) 
 
 	CELL_CHKNPC,
+	CELL_CHKSCRIPT, // lua areascript npcs
 	CELL_CHKBASILICA,
 	CELL_CHKLANDPROTECTOR,
 	CELL_CHKNOVENDING,
@@ -394,7 +398,8 @@ struct mapcell
 		basilica : 1,
 		landprotector : 1,
 		novending : 1,
-		nochat : 1;
+		nochat : 1,
+		script : 1; //lua areascript npcs
 
 #ifdef CELL_NOSTACK
 	unsigned char cell_bl; //Holds amount of bls in this cell.
@@ -418,6 +423,7 @@ struct map_data {
 	short bxs,bys; // map dimensions (in blocks)
 	short bgscore_lion, bgscore_eagle; // Battleground ScoreBoard
 	int npc_num;
+	int areascript_num;
 	int users;
 	int iwall_num; // Total of invisible walls in this map
 	struct map_flag {
@@ -473,6 +479,7 @@ struct map_data {
 	} flag;
 	struct point save;
 	struct npc_data *npc[MAX_NPC_PER_MAP];
+	struct areascript_data *areascript[MAX_AREASCRIPT_PER_MAP];
 	struct {
 		int drop_id;
 		int drop_type;
@@ -554,6 +561,7 @@ int map_search_freecell(struct block_list *src, int m, short *x, short *y, int r
 int map_quit(struct map_session_data *);
 // npc
 bool map_addnpc(int,struct npc_data *);
+int map_addareascript(int m,struct areascript_data *ad);
 
 // 床アイテム関連
 int map_clearflooritem_timer(int tid, unsigned int tick, int id, intptr data);

@@ -57,6 +57,7 @@ static int npc_script=0;
 static int npc_mob=0;
 static int npc_delay_mob=0;
 static int npc_cache_mob=0;
+static int npc_areascript=0;
 
 /// Returns a new npc id that isn't being used in id_db.
 /// Fatal error if nothing is available.
@@ -81,6 +82,7 @@ int npc_get_new_npc_id(void)
 
 static DBMap* ev_db; // const char* event_name -> struct event_data*
 DBMap* npcname_db; // const char* npc_name -> struct npc_data*
+DBMap* areascriptname_db;
 
 struct event_data {
 	struct npc_data *nd;
@@ -814,6 +816,29 @@ int npc_touchnext_areanpc(struct map_session_data* sd, bool leavemap)
 		nd->touching_id = sd->touching_id = 0;
 		snprintf(name, ARRAYLENGTH(name), "%s::%s", nd->exname, script_config.ontouch_name);
 		map_forcountinarea(npc_touch_areanpc_sub,nd->bl.m,nd->bl.m - xs,nd->bl.y - ys,nd->bl.x + xs,nd->bl.y + ys,1,BL_PC,sd->bl.id,nd->bl.id,name);
+	}
+	return 0;
+}
+
+/* ==================================================================
+	Triggered when a player walks into the area of a lua area script
+ =====================================================================*/
+int npc_touch_areascript(struct map_session_data *sd,int m,int x,int y)
+{
+	int i;
+
+	nullpo_retr(1, sd);
+
+	if(sd->areanpc_id)
+		return 0;
+
+	for(i=0;i<map[m].areascript_num;i++) { // Scan every areascript on the map
+		if (!map[m].areascript[i]->flag&1 && // Ignore hidden/disabled scripts
+			x >= map[m].areascript[i]->x1 && x <= map[m].areascript[i]->x2 &&
+			y >= map[m].areascript[i]->y1 && x <= map[m].areascript[i]->y2) {
+			sd->areanpc_id=map[m].areascript[i]->bl.id;
+			script_run_function(map[m].areascript[i]->function,sd->status.char_id,"");
+		}
 	}
 	return 0;
 }
@@ -2464,6 +2489,7 @@ void npc_setcells(struct npc_data* nd)
 	default:
 		return; // Other types doesn't have touch area
 	}
+	
 
 	if (m < 0 || xs < 0 || ys < 0)
 		return;
@@ -3345,9 +3371,11 @@ int npc_reload(void)
 	// clear npc-related data structures
 	ev_db->clear(ev_db,NULL);
 	npcname_db->clear(npcname_db,NULL);
-	npc_warp = npc_shop = npc_script = 0;
+	areascriptname_db->clear(areascriptname_db,NULL);
+	npc_warp = npc_shop = npc_script = npc_areascript = 0;
 	npc_mob = npc_cache_mob = npc_delay_mob = 0;
-
+	do_final_luascript(); 
+	do_init_luascript();
 	//TODO: the following code is copy-pasted from do_init_npc(); clean it up
 	// Reloading npcs now
 	for (nsl = npc_src_files; nsl; nsl = nsl->next)
@@ -3363,7 +3391,7 @@ int npc_reload(void)
 		"\t-'"CL_WHITE"%d"CL_RESET"' Spawn sets\n"
 		"\t-'"CL_WHITE"%d"CL_RESET"' Mobs Cached\n"
 		"\t-'"CL_WHITE"%d"CL_RESET"' Mobs Not Cached\n",
-		npc_id - npc_new_min, npc_warp, npc_shop, npc_script, npc_mob, npc_cache_mob, npc_delay_mob);
+		npc_id - npc_new_min, npc_warp, npc_shop, npc_script+npc_areascript, npc_mob, npc_cache_mob, npc_delay_mob);
 
 	for( i = 0; i < ARRAYLENGTH(instance); ++i )
 		instance_init(instance[i].instance_id);
@@ -3430,42 +3458,42 @@ int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short 
 	return 0;
 }
 
-/*
+
 int areascript_add_lua (char *name,short m,short x1,short y1,short x2,short y2,char *function)
 {
 	int i,j;
 	
-	struct npc_data *nd=(struct npc_data *)aCalloc(1, sizeof(struct npc_data));
+	struct areascript_data *ad = (struct areascript_data *)aCalloc(1, sizeof(struct areascript_data));
 
-	nd->bl.prev=ad->bl.next=NULL;
-	nd->bl.m=m;
-	nd->bl.x=x1; // } Those x,y values are dummy anyway
-	nd->bl.y=y1; // }
-	nd->bl.id=npc_get_new_npc_id();
-	nd->bl.type=BL_AREASCRIPT;
-	strcpy(nd->name,name);
-	strcpy(nd->function,function);
-	nd->flag=0;
-	nd->x1=x1;
-	nd->y1=y1;
-	nd->x2=x2;
-	nd->y2=y2;
+	ad->bl.prev=ad->bl.next=NULL;
+	ad->bl.m=m;
+	ad->bl.x=x1; // } Those x,y values are dummy anyway
+	ad->bl.y=y1; // }
+	ad->bl.id=npc_get_new_npc_id();
+	ad->bl.type=BL_AREASCRIPT;
+	strcpy(ad->name,name);
+	strcpy(ad->function,function);
+	ad->flag=0;
+	ad->x1=x1;
+	ad->y1=y1;
+	ad->x2=x2;
+	ad->y2=y2;
 
-	nd->n=map_addareascript(m,nd);
-	map_addblock(&nd->bl);
+	ad->n=map_addareascript(m,ad);
+	map_addblock(&ad->bl);
 	for (i=y1;i<=y2;i++) {
 		for (j=x1;j<=x2;j++) {
 			if (map_getcell(m,j,i,CELL_CHKPASS))
-				map_setcell(m,j,i,CELL_SETSCRIPT);
+				map_setcell(m,j,i,CELL_SCRIPT,true);
 		}
 	}
-	strdb_put(npcname_db,nd->name,nd);
-	areascript_num++;
+	strdb_put(areascriptname_db,ad->name,ad);
+	npc_areascript++;
 
 	return 0;
 	
 }
-*/
+
 
 //Function to add a mob to the server
 int npc_add_mob_lua(char* name,short m,short x,short y,short xs,short ys,short class_,int num,int d1,int d2,char* function)
@@ -3665,6 +3693,52 @@ void npc_warp_add_lua(char* name, short m, short x, short y, const char* destmap
 
 	return;
 }
+
+/* ----------------------------------------------------
+	AREA SCRIPT UNLOAD FUNCTIONS.
+*/
+int npc_areascript_unload (struct areascript_data *ad)
+{
+	nullpo_retr(1, ad);
+
+	if(ad->bl.prev == NULL)
+		return 1;
+	
+	npc_areascript_remove_map(ad);
+	map_deliddb(&ad->bl);
+	map_delblock(&ad->bl);
+	strdb_remove(areascriptname_db, ad->name);
+	
+	aFree(ad);
+
+	return 0;
+}
+
+int npc_areascript_remove_map(struct areascript_data *ad)
+{
+	int m,i,n,j;
+	nullpo_retr(1, ad);
+
+	if(ad->bl.prev == NULL || ad->bl.m < 0)
+		return 1; //Not assigned to a map.
+  	m = ad->bl.m;
+	clif_clearunit_area(&ad->bl,2);
+	for (n=ad->y1;n<=ad->y2;n++) { //clear out the trigger cells
+		for (j=ad->x1;j<=ad->x2;j++) {
+			if (map_getcell(m,j,n,CELL_CHKPASS))
+				map_setcell(m,j,n,CELL_SCRIPT,false);
+		}
+	}
+	map_delblock(&ad->bl);
+	//Remove npc from map[].npc list.
+	ARR_FIND( 0, map[m].areascript_num, i, map[m].areascript[i] == ad );
+	if( i == map[m].areascript_num ) return 2; //failed to find it?
+
+	map[m].areascript_num--;
+	map[m].areascript[i] = map[m].areascript[map[m].areascript_num];
+	map[m].areascript[map[m].areascript_num] = NULL;
+	return 0;
+}
 //----------------------------------------------------------------------------------------------
 // End Lua Functions 
 //----------------------------------------------------------------------------------------------
@@ -3679,8 +3753,14 @@ int do_final_npc(void)
 
 	for (i = START_NPC_NUM; i < npc_id; i++){
 		if ((bl = map_id2bl(i))){
-			if (bl->type == BL_NPC)
-				npc_unload((struct npc_data *)bl);
+			if (bl->type == BL_NPC) {
+				if ( ((struct npc_data *)bl)->subtype == LUA ) {
+					npc_areascript_unload((struct areascript_data *)bl);
+				}
+				else {
+					npc_unload((struct npc_data *)bl);
+				}
+			}
 			else if (bl->type&(BL_MOB|BL_PET|BL_HOM|BL_MER))
 				unit_free(bl, 0);
 		}
@@ -3690,6 +3770,7 @@ int do_final_npc(void)
 	//There is no free function for npcname_db because at this point there shouldn't be any npcs left!
 	//So if there is anything remaining, let the memory manager catch it and report it.
 	npcname_db->destroy(npcname_db, NULL);
+	areascriptname_db->destroy(areascriptname_db, NULL);
 	ers_destroy(timer_event_ers);
 	npc_clearsrcfile();
 
@@ -3746,6 +3827,7 @@ int do_init_npc(void)
 
 	ev_db = strdb_alloc((DBOptions)(DB_OPT_DUP_KEY|DB_OPT_RELEASE_DATA),2*NAME_LENGTH+2+1);
 	npcname_db = strdb_alloc(DB_OPT_BASE,NAME_LENGTH);
+	areascriptname_db = strdb_alloc(DB_OPT_BASE,NAME_LENGTH);
 
 	timer_event_ers = ers_new(sizeof(struct timer_event_data));
 
@@ -3764,7 +3846,7 @@ int do_init_npc(void)
 		"\t-'"CL_WHITE"%d"CL_RESET"' Spawn sets\n"
 		"\t-'"CL_WHITE"%d"CL_RESET"' Mobs Cached\n"
 		"\t-'"CL_WHITE"%d"CL_RESET"' Mobs Not Cached\n",
-		npc_id - START_NPC_NUM, npc_warp, npc_shop, npc_script, npc_mob, npc_cache_mob, npc_delay_mob);
+		npc_id - START_NPC_NUM, npc_warp, npc_shop, npc_script+npc_areascript, npc_mob, npc_cache_mob, npc_delay_mob);
 
 	// set up the events cache
 	memset(script_event, 0, sizeof(script_event));

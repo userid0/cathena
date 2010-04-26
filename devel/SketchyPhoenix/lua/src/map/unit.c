@@ -167,6 +167,9 @@ static int unit_walktoxy_timer(int tid, unsigned int tick, int id, intptr data)
 	if(sd) {
 		if( sd->touching_id )
 			npc_touchnext_areanpc(sd,false);
+		if(map_getcell(bl->m,x,y,CELL_CHKSCRIPT)) {
+			npc_touch_areascript(sd,bl->m,x,y);
+		}
 		if(map_getcell(bl->m,x,y,CELL_CHKNPC)) {
 			npc_touch_areanpc(sd,bl->m,x,y);
 			if (bl->prev == NULL) //Script could have warped char, abort remaining of the function.

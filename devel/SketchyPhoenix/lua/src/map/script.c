@@ -7513,7 +7513,7 @@ BUILDIN_FUNC(monster)
 		}
 	}
 
-	mob_once_spawn(sd,m,x,y,str,class_,amount,event);
+	mob_once_spawn(sd,m,x,y,str,class_,amount,event,0);
 	return 0;
 }
 /*==========================================
@@ -7593,7 +7593,7 @@ BUILDIN_FUNC(areamonster)
 		}
 	}
 	
-	mob_once_spawn_area(sd,m,x0,y0,x1,y1,str,class_,amount,event);
+	mob_once_spawn_area(sd,m,x0,y0,x1,y1,str,class_,amount,event,0);
 	return 0;
 }
 /*==========================================
@@ -7745,7 +7745,7 @@ BUILDIN_FUNC(clone)
 			master_id = 0;
 	}
 	if (sd) //Return ID of newly crafted clone.
-		script_pushint(st,mob_clone_spawn(sd, m, x, y, event, master_id, mode, flag, 1000*duration));
+		script_pushint(st,mob_clone_spawn(sd, m, x, y, event, master_id, mode, flag, 1000*duration,0));
 	else //Failed to create clone.
 		script_pushint(st,0);
 
@@ -11566,7 +11566,7 @@ BUILDIN_FUNC(summon)
 
 	clif_skill_poseffect(&sd->bl,AM_CALLHOMUN,1,sd->bl.x,sd->bl.y,tick);
 
-	md = mob_once_spawn_sub(&sd->bl, sd->bl.m, sd->bl.x, sd->bl.y, str, _class, event);
+	md = mob_once_spawn_sub(&sd->bl, sd->bl.m, sd->bl.x, sd->bl.y, str, _class, event,0);
 	if (md) {
 		md->master_id=sd->bl.id;
 		md->special_state.ai=1;

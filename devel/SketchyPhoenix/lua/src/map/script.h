@@ -162,6 +162,7 @@ void script_free_state(struct script_state* st);
 struct DBMap* script_get_label_db(void);
 struct DBMap* script_get_userfunc_db(void);
 void script_run_autobonus(const char *autobonus,int id, int pos);
+void script_add_autobonus(const char *autobonus);
 
 int script_config_read(char *cfgName);
 int do_init_script(void);

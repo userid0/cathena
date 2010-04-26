@@ -257,6 +257,18 @@ int add_timer(unsigned int tick, TimerFunc func, int id, intptr data)
 	return tid;
 }
 
+/// Flag a timer as being created by the lua engine
+void add_timer_lua(int tid)
+{
+	timer_data[tid].is_lua = 1;
+}
+
+/// Checks whether a player timer was created by the lua engine
+int get_timer_event_lua(int tid)
+{
+	return ((timer_data[tid].is_lua)?1:0);
+}
+
 /// Starts a new timer that automatically restarts itself (infinite loop until manually removed).
 /// Returns the timer's id, or INVALID_TIMER if it fails.
 int add_timer_interval(unsigned int tick, TimerFunc func, int id, intptr data, int interval)

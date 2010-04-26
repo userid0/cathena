@@ -151,6 +151,7 @@ struct mob_data {
 	short skillidx;
 	unsigned int skilldelay[MAX_MOBSKILL];
 	char npc_event[50];
+	char function[50];
 };
 
 
@@ -213,9 +214,9 @@ int mobdb_searchname_array(struct mob_db** data, int size, const char *str);
 int mobdb_checkid(const int id);
 struct view_data* mob_get_viewdata(int class_);
 struct mob_data *mob_once_spawn_sub(struct block_list *bl, int m,
-	short x, short y, const char *mobname, int class_, const char *event);
-int mob_once_spawn(struct map_session_data* sd,int m,short x,short y,const char* mobname,int class_,int amount,const char* event);
-int mob_once_spawn_area(struct map_session_data* sd,int m,int x0,int y0,int x1,int y1,const char* mobname,int class_,int amount,const char* event);
+	short x, short y, const char *mobname, int class_, const char *event, int is_lua);
+int mob_once_spawn(struct map_session_data* sd,int m,short x,short y,const char* mobname,int class_,int amount,const char* event,int is_lua);
+int mob_once_spawn_area(struct map_session_data* sd,int m,int x0,int y0,int x1,int y1,const char* mobname,int class_,int amount,const char* event,int is_lua);
 
 bool mob_ksprotected (struct block_list *src, struct block_list *target);
 
@@ -265,7 +266,7 @@ int mob_countslave(struct block_list *bl);
 
 int mob_is_clone(int class_);
 
-int mob_clone_spawn(struct map_session_data *sd, int m, int x, int y, const char *event, int master_id, int mode, int flag, unsigned int duration);
+int mob_clone_spawn(struct map_session_data *sd, int m, int x, int y, const char *event, int master_id, int mode, int flag, unsigned int duration, int is_lua);
 int mob_clone_delete(struct mob_data *md);
 
 void mob_reload(void);

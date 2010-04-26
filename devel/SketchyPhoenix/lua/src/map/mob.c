@@ -33,6 +33,7 @@
 #include "atcommand.h"
 #include "date.h"
 #include "quest.h"
+#include "luascript.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -379,7 +380,7 @@ bool mob_ksprotected (struct block_list *src, struct block_list *target)
 	return false;
 }
 
-struct mob_data *mob_once_spawn_sub(struct block_list *bl, int m, short x, short y, const char *mobname, int class_, const char *event)
+struct mob_data *mob_once_spawn_sub(struct block_list *bl, int m, short x, short y, const char *mobname, int class_, const char *event, int is_lua)
 {
 	struct spawn_data data;
 	
@@ -394,10 +395,12 @@ struct mob_data *mob_once_spawn_sub(struct block_list *bl, int m, short x, short
 		strcpy(data.name,"--en--");
 	else
 		strcpy(data.name,"--ja--");
-
-	if (event)
+	if(is_lua) {
+		safestrncpy(data.function, event, sizeof(data.function));
+	}
+	else if(event){
 		safestrncpy(data.eventname, event, sizeof(data.eventname));
-	
+	}
 	// Locate spot next to player.
 	if (bl && (x < 0 || y < 0))
 		map_search_freecell(bl, m, &x, &y, 1, 1, 0);
@@ -418,7 +421,7 @@ struct mob_data *mob_once_spawn_sub(struct block_list *bl, int m, short x, short
 /*==========================================
  * Spawn a single mob on the specified coordinates.
  *------------------------------------------*/
-int mob_once_spawn(struct map_session_data* sd, int m, short x, short y, const char* mobname, int class_, int amount, const char* event)
+int mob_once_spawn(struct map_session_data* sd, int m, short x, short y, const char* mobname, int class_, int amount, const char* event, int is_lua)
 {
 	struct mob_data* md = NULL;
 	int count, lv;
@@ -434,7 +437,7 @@ int mob_once_spawn(struct map_session_data* sd, int m, short x, short y, const c
 	for (count = 0; count < amount; count++)
 	{
 		int c = ( class_ >= 0 ) ? class_ : mob_get_random_id(-class_-1, battle_config.random_monster_checklv?3:1, lv);
-		md = mob_once_spawn_sub(sd?&sd->bl:NULL, m, x, y, mobname, c, event);
+		md = mob_once_spawn_sub(sd?&sd->bl:NULL, m, x, y, mobname, c, event,is_lua);
 
 		if (!md) continue;
 
@@ -470,7 +473,7 @@ int mob_once_spawn(struct map_session_data* sd, int m, short x, short y, const c
 /*==========================================
  * Spawn mobs in the specified area.
  *------------------------------------------*/
-int mob_once_spawn_area(struct map_session_data* sd,int m,int x0,int y0,int x1,int y1,const char* mobname,int class_,int amount,const char* event)
+int mob_once_spawn_area(struct map_session_data* sd,int m,int x0,int y0,int x1,int y1,const char* mobname,int class_,int amount,const char* event, int is_lua)
 {
 	int i,max,id=0;
 	int lx=-1,ly=-1;
@@ -514,7 +517,7 @@ int mob_once_spawn_area(struct map_session_data* sd,int m,int x0,int y0,int x1,i
 		lx = x;
 		ly = y;
 
-		id = mob_once_spawn(sd,m,x,y,mobname,class_,1,event);
+		id = mob_once_spawn(sd,m,x,y,mobname,class_,1,event,is_lua);
 	}
 
 	return id; // id of last spawned mob
@@ -2412,7 +2415,7 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 
 		if( sd && sd->md && src && src->type != BL_HOM && mob_db(md->class_)->lv > sd->status.base_level/2 )
 			mercenary_kills(sd->md);
-
+		
 		if( md->npc_event[0] && !md->state.npc_killmonster )
 		{
 			if( sd && battle_config.mob_npc_event_type )
@@ -2433,7 +2436,28 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 			pc_setglobalreg(mvp_sd,"killedrid",md->class_);
 			npc_script_event(mvp_sd, NPCE_KILLNPC); // PCKillNPC [Lance]
 		}
-		
+		//Lua Engine: Run function event from mob death
+		if(md->function[0] && !md->state.npc_killmonster)
+		{
+			if(sd && battle_config.mob_npc_event_type)
+			{
+				pc_setglobalreg(sd,"killerrid",sd->bl.id);
+				script_run_function(md->function,sd->status.char_id,"");
+			}
+			else if (mvp_sd)
+			{
+				pc_setglobalreg(mvp_sd,"killerrid",sd?sd->bl.id:0);
+				script_run_function(md->function,mvp_sd->status.char_id,"");
+			}
+			else {
+				script_run_function(md->function,0,"");
+			}
+		}
+		else if(mvp_sd && !md->state.npc_killmonster)
+		{
+			pc_setglobalreg(mvp_sd,"killedrid",md->class_);
+			script_run_function("OnNPCKillEvent",mvp_sd->status.char_id,"");
+		}
 		md->status.hp = 1;
 	}
 
@@ -3154,7 +3178,7 @@ int mob_is_clone(int class_)
 //If mode is not passed, a default aggressive mode is used.
 //If master_id is passed, clone is attached to him.
 //Returns: ID of newly crafted copy.
-int mob_clone_spawn(struct map_session_data *sd, int m, int x, int y, const char *event, int master_id, int mode, int flag, unsigned int duration)
+int mob_clone_spawn(struct map_session_data *sd, int m, int x, int y, const char *event, int master_id, int mode, int flag, unsigned int duration, int is_lua)
 {
 	int class_;
 	int i,j,inf,skill_id;
@@ -3306,7 +3330,7 @@ int mob_clone_spawn(struct map_session_data *sd, int m, int x, int y, const char
 		db->maxskill = ++i;
 	}
 	//Finally, spawn it.
-	md = mob_once_spawn_sub(&sd->bl, m, x, y, "--en--",class_,event);
+	md = mob_once_spawn_sub(&sd->bl, m, x, y, "--en--",class_,event,is_lua);
 	if (!md) return 0; //Failed?
 	
 	if (master_id || flag || duration) { //Further manipulate crafted char.

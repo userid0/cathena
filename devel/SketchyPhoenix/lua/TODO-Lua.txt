@@ -1,15 +1,10 @@
 TODO:
-	*Merge the special lua functions into their counterpart functions.
-		I started with different functions thinking that I would eventually
-		remove the old script engine piece by piece. I later changed my mind
-		and decided to allow the server to load eascript and lua with the user
-		being able to use whatever they want.
+	*Finish coverting all needed script commands to lua. Not all of them will make it over
+		since the functionality may be covered already, such as attachrid or some variable scopes from eAS
 
-	*Cleaning up afterwards.
+	*Code Cleanup.
 
-	*Finish all these blasted buildin functions. There's like a million of these :(
-
-	*SCRIPT DOCUMENTATION!
+	*DOCUMENT SCRIPT COMMANDS*
 
 
 	

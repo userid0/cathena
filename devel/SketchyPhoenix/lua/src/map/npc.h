@@ -34,7 +34,6 @@ struct npc_data {
 	char name[NAME_LENGTH+1];// display name
 	char exname[NAME_LENGTH+1];// unique npc name
 	char function[50]; //Lua function to call when clicked.
-	//int is_lua : 1; //Identifier for lua NPCs used in certain functions
 	int chat_id;
 	int touching_id;
 	unsigned int next_walktime;
@@ -68,6 +67,14 @@ struct npc_data {
 	} u;
 };
 
+struct areascript_data {
+	struct block_list bl;
+	short n; //Index of npc on the map
+	char name[NAME_LENGTH];
+	short flag; //hidden/disabled flag
+	char function[50]; //lua function to call when entered
+	short x1,y1,x2,y2; //2 corners of the square trigger area
+};
 
 
 #define START_NPC_NUM 110000000
@@ -162,5 +169,10 @@ int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short 
 int npc_add_mob_lua(char* name,short m,short x,short y,short xs,short ys,short class_,int num,int d1,int d2,char* function);
 void npc_warp_add_lua(char* name, short m, short x, short y, const char* destmap, short destx, short desty, short xs, short ys);
 void npc_parsesrcfile_lua(const char* filepath);
+int areascript_add_lua (char *name,short m,short x1,short y1,short x2,short y2,char *function);
+int npc_areascript_unload (struct areascript_data *ad);
+int npc_touch_areascript(struct map_session_data *sd,int m,int x,int y);
+int npc_areascript_remove_map(struct areascript_data *ad);
+int npc_areascript_unload (struct areascript_data *ad);
 
 #endif /* _NPC_H_ */

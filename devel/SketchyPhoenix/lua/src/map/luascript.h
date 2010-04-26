@@ -14,7 +14,7 @@ struct LuaCommandInfo {
 
 lua_State *L;
 
-int do_init_script_lua(void);
+int do_init_luascript(void);
 void script_buildin_commands_lua(void);
 void script_run_function(const char *name,int char_id,const char *format,...);
 void script_run_chunk(const char *chunk,int char_id);

@@ -27,7 +27,7 @@ struct TimerData {
 	int type;
 	int interval;
 	int heap_pos;
-
+	int is_lua : 1;
 	// general-purpose storage
 	int id; 
 	intptr data;
@@ -39,6 +39,8 @@ unsigned int gettick(void);
 unsigned int gettick_nocache(void);
 
 int add_timer(unsigned int tick, TimerFunc func, int id, intptr data);
+void add_timer_lua(int tid);
+int get_timer_event_lua(int tid);
 int add_timer_interval(unsigned int tick, TimerFunc func, int id, intptr data, int interval);
 const struct TimerData* get_timer(int tid);
 int delete_timer(int tid, TimerFunc func);

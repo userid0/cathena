@@ -37,6 +37,7 @@
 #include "status.h" // struct status_data
 #include "pc.h"
 #include "quest.h"
+#include "luascript.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -6751,7 +6752,12 @@ static int pc_eventtimer(int tid, unsigned int tick, int id, intptr data)
 	{
 		sd->eventtimer[i] = -1;
 		sd->eventcount--;
-		npc_event(sd,p,0);
+		if(get_timer_event_lua(tid)){
+			script_run_function(p,sd->status.char_id,"");
+		}
+		else {
+			npc_event(sd,p,0);
+		}
 	}
 	else
 		ShowError("pc_eventtimer: no such event timer\n");

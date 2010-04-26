@@ -2089,6 +2089,35 @@ bool map_addnpc(int m,struct npc_data *nd)
 	return true;
 }
 
+/* ==============================
+	Add an area script to the map
+   ============================== */ 
+int map_addareascript(int m,struct areascript_data *ad) {
+
+	int i;
+	
+	if( m < 0 || m >= map_num)
+		return -1;
+	for( i = 0; i < map[m].areascript_num && i < MAX_AREASCRIPT_PER_MAP; i++)
+		if( map[m].areascript[i] == NULL )
+			break;
+	if( i == MAX_AREASCRIPT_PER_MAP ){
+		printf("too many area scripts in one map %s\n",map[m].name);
+		return -1;
+	}
+	if( i == map[m].areascript_num ){
+		map[m].areascript_num++;
+	}
+
+	nullpo_retr(0, ad);
+
+	map[m].areascript[i]=ad;
+	ad->n = i;
+	idb_put(id_db,ad->bl.id,ad);
+
+	return i;
+}
+
 /*=========================================
  * Dynamic Mobs [Wizputer]
  *-----------------------------------------*/
@@ -2405,6 +2434,8 @@ int map_getcellp(struct map_data* m,int x,int y,cell_chk cellchk)
 		// base cell type checks
 		case CELL_CHKNPC:
 			return (cell.npc);
+		case CELL_CHKSCRIPT:
+			return (cell.script);
 		case CELL_CHKBASILICA:
 			return (cell.basilica);
 		case CELL_CHKLANDPROTECTOR:
@@ -2461,6 +2492,7 @@ void map_setcell(int m, int x, int y, cell_t cell, bool flag)
 		case CELL_WATER:         map[m].cell[j].water = flag;         break;
 
 		case CELL_NPC:           map[m].cell[j].npc = flag;           break;
+		case CELL_SCRIPT:        map[m].cell[j].script = flag;        break;
 		case CELL_BASILICA:      map[m].cell[j].basilica = flag;      break;
 		case CELL_LANDPROTECTOR: map[m].cell[j].landprotector = flag; break;
 		case CELL_NOVENDING:     map[m].cell[j].novending = flag;     break;
@@ -3325,6 +3357,9 @@ int cleanup_sub(struct block_list *bl, va_list ap)
 		case BL_NPC:
 			npc_unload((struct npc_data *)bl);
 			break;
+		case BL_AREASCRIPT:
+			npc_areascript_unload((struct areascript_data *)bl);
+			break;
 		case BL_MOB:
 			unit_free(bl,0);
 			break;
@@ -3615,7 +3650,7 @@ int do_init(int argc, char *argv[])
 	do_init_chrif();
 	do_init_clif();
 	do_init_script();
-	do_init_script_lua();
+	do_init_luascript();
 	do_init_itemdb();
 	do_init_skill();
 	do_init_mob();
