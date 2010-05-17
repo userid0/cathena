@@ -174,5 +174,8 @@ int npc_areascript_unload (struct areascript_data *ad);
 int npc_touch_areascript(struct map_session_data *sd,int m,int x,int y);
 int npc_areascript_remove_map(struct areascript_data *ad);
 int npc_areascript_unload (struct areascript_data *ad);
+int npc_add_lua_timer(int tick,const char *name);
+int npc_del_lua_eventtimer(const char *name);
+int npc_addluaeventtimercount(const char *name,int tick);
 
 #endif /* _NPC_H_ */

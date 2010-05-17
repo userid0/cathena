@@ -3455,7 +3455,7 @@ int npc_add_lua(char *name,char *exname,short m,short x,short y,short dir,short 
 	}
 	strdb_put(npcname_db,nd->exname,nd);	
 
-	return 0;
+	return nd->bl.id;
 }
 
 
@@ -3739,6 +3739,79 @@ int npc_areascript_remove_map(struct areascript_data *ad)
 	map[m].areascript[map[m].areascript_num] = NULL;
 	return 0;
 }
+
+static int npc_lua_eventtimer(int tid, unsigned int tick, int id, intptr data)
+{
+	char *p = (char *)data;
+	int i;
+
+	ARR_FIND( 0, MAX_EVENTTIMER, i, lua_eventtimer[i] == tid );
+	if( i < MAX_EVENTTIMER )
+	{
+		lua_eventtimer[i] = -1;
+		lua_eventcount--;
+		script_run_function(p,0,"");
+	}
+	else
+		ShowError("npc_lua_eventtimer: no such event timer\n");
+
+	if (p) aFree(p);
+	return 0;
+}
+
+int npc_add_lua_timer(int tick,const char *name)
+{
+	int i;
+
+	ARR_FIND( 0, MAX_EVENTTIMER, i, lua_eventtimer[i] == -1 );
+	if( i == MAX_EVENTTIMER )
+		return 0;
+
+	lua_eventtimer[i] = add_timer(gettick()+tick, npc_lua_eventtimer, 0, (intptr)aStrdup(name));
+	lua_eventcount++;
+
+	return 1;
+}
+
+int npc_del_lua_eventtimer(const char *name)
+{
+	char* p = NULL;
+	int i;
+
+	if (lua_eventcount <= 0)
+		return 0;
+
+	// find the named event timer
+	ARR_FIND( 0, MAX_EVENTTIMER, i,
+		lua_eventtimer[i] != -1 &&
+		(p = (char *)(get_timer(lua_eventtimer[i])->data)) != NULL &&
+		strcmp(p, name) == 0
+	);
+	if( i == MAX_EVENTTIMER )
+		return 0; // not found
+
+	delete_timer(lua_eventtimer[i],npc_lua_eventtimer);
+	lua_eventtimer[i]=-1;
+	lua_eventcount--;
+	aFree(p);
+
+	return 1;
+}
+
+int npc_addluaeventtimercount(const char *name,int tick)
+{
+	int i;
+
+	for(i=0;i<MAX_EVENTTIMER;i++)
+		if( lua_eventtimer[i]!=-1 && strcmp(
+			(char *)(get_timer(lua_eventtimer[i])->data), name)==0 ){
+				addtick_timer(lua_eventtimer[i],tick);
+				break;
+		}
+
+	return 0;
+}
+
 //----------------------------------------------------------------------------------------------
 // End Lua Functions 
 //----------------------------------------------------------------------------------------------

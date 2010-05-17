@@ -9226,7 +9226,7 @@ void clif_parse_DropItem(int fd, struct map_session_data *sd)
 void clif_parse_UseItem(int fd, struct map_session_data *sd)
 {
 	int n;
-
+	
 	if (pc_isdead(sd)) {
 		clif_clearunit_area(&sd->bl, 1);
 		return;

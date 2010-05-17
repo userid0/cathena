@@ -6736,9 +6736,6 @@ int pc_setregistry_str(struct map_session_data *sd,const char *reg,const char *v
 	return 0;
 }
 
-/*==========================================
- * イベントタイマ??理
- *------------------------------------------*/
 static int pc_eventtimer(int tid, unsigned int tick, int id, intptr data)
 {
 	struct map_session_data *sd=map_id2sd(id);
@@ -6766,9 +6763,6 @@ static int pc_eventtimer(int tid, unsigned int tick, int id, intptr data)
 	return 0;
 }
 
-/*==========================================
- * イベントタイマ?追加
- *------------------------------------------*/
 int pc_addeventtimer(struct map_session_data *sd,int tick,const char *name)
 {
 	int i;
@@ -6784,9 +6778,6 @@ int pc_addeventtimer(struct map_session_data *sd,int tick,const char *name)
 	return 1;
 }
 
-/*==========================================
- * イベントタイマ?削除
- *------------------------------------------*/
 int pc_deleventtimer(struct map_session_data *sd,const char *name)
 {
 	char* p = NULL;

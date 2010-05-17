@@ -96,11 +96,10 @@ LUA_FUNC(scriptend)
 }
 
 //Adds a standard NPC that triggers a function when clicked
-LUA_FUNC(addnpc)
+LUA_FUNC(_addnpc)
 {
 	char name[NAME_LENGTH],exname[NAME_LENGTH],map[16],function[50];
 	short m,x,y,dir,class_;
-	
 	sprintf(name, "%s", luaL_checkstring(NL,1));
 	sprintf(exname, "%s", luaL_checkstring(NL,2));
 	sprintf(map, "%s", luaL_checkstring(NL,3));
@@ -110,10 +109,7 @@ LUA_FUNC(addnpc)
 	dir=luaL_checkint(NL,6);
 	class_=luaL_checkint(NL,7);
 	sprintf(function, "%s", luaL_checkstring(NL,8));
-	
-	npc_add_lua(name,exname,m,x,y,dir,class_,function);
-
-	return 0;
+	return npc_add_lua(name,exname,m,x,y,dir,class_,function);
 }
 
 // npcmes("Text",[id])
@@ -556,15 +552,13 @@ LUA_FUNC(getweight)
 {
 	int nameid = 0, amount, i;
 	unsigned long weight;
-	const char *name;
-	LUA_GET_TARGET(3);
-	
-	if ( sd == NULL )
+	LUA_GET_TARGET(3);	
+	if ( sd == NULL ) {
 		return 0;
-	
-	name = (const char*)lua_tostring(NL,1);
-	if ( script_getstring(name) )
+	}
+	if ( lua_isstring(NL,1) )
 	{
+		const char *name = luaL_checkstring(NL,1);
 		struct item_data *item_data = itemdb_searchname(name);
 		if ( item_data )
 			nameid = item_data->nameid;
@@ -602,14 +596,11 @@ LUA_FUNC(getweight)
 LUA_FUNC(giveitem)
 {
 	int nameid,amount,get_count,i,flag = 0;
-	const char *name;
 	struct item it;
 	LUA_GET_TARGET(3);
-
-	name = lua_tostring(NL,1);
-	
-	if( script_getstring(name) )
+	if( lua_isstring(NL,1) )
 	{
+		const char *name = luaL_checkstring(NL,1);
 		struct item_data *item_data = itemdb_searchname(name);
 		if ( item_data == NULL )
 		{
@@ -628,24 +619,25 @@ LUA_FUNC(giveitem)
 			return 0;
 		}
 	}
-
 	// <amount>
-	if( (amount=luaL_checkint(NL,2)) <= 0)
+	if( (amount=luaL_checkint(NL,2)) <= 0) {
 		return 0; //return if amount <=0, skip the useles iteration
-
+	}
 	memset(&it,0,sizeof(it));
 	it.nameid=nameid;
-	if(!flag)
+	if(!flag) {
 		it.identify=1;
-	else
+	}
+	else {
 		it.identify=itemdb_isidentified(nameid);
-
+	}
 	//Check if it's stackable.
-	if (!itemdb_isstackable(nameid))
+	if (!itemdb_isstackable(nameid)) {
 		get_count = 1;
-	else
+	}
+	else {
 		get_count = amount;
-
+	}
 	for (i = 0; i < amount; i += get_count)
 	{
 		// if not pet egg
@@ -659,11 +651,10 @@ LUA_FUNC(giveitem)
 			}
                 }
         }
-
 	//Logs items, got from (N)PC scripts [Lupus]
-	if(log_config.enable_logs&LOG_SCRIPT_TRANSACTIONS)
+	if(log_config.enable_logs&LOG_SCRIPT_TRANSACTIONS) {
 		log_pick_pc(sd, "N", nameid, amount, NULL);
-
+	}
 	lua_pushinteger(NL,1);
 	return 1;
 }
@@ -697,9 +688,9 @@ LUA_FUNC(getrentalitem)
 	if( sd == NULL )
 		return 0;
 
-	if( script_getstring((const char*)lua_tostring(NL,1)) )
+	if( lua_isstring(NL,1) )
 	{
-		const char *name = lua_tostring(NL,1);
+		const char *name = luaL_checkstring(NL,1);
 		struct item_data *itd = itemdb_searchname(name);
 		if( itd == NULL )
 		{
@@ -891,9 +882,9 @@ LUA_FUNC(givenameditem)
 	LUA_GET_TARGET(3);
 	struct map_session_data *tsd;
 	
-	if( script_getstring((const char*)lua_tostring(NL,1)) )
+	if( lua_isstring(NL,1) )
 	{
-		const char *name = (const char*)lua_tostring(NL,1);
+		const char *name = (const char*)luaL_checkstring(NL,1);
 		struct item_data *item_data = itemdb_searchname(name);
 		if( item_data == NULL)
 		{	//Failed
@@ -908,9 +899,9 @@ LUA_FUNC(givenameditem)
 		return 0;
 	}
 		
-	if ( script_getstring((const char*)lua_tostring(NL,2)) )
+	if ( lua_isstring(NL,2) )
 	{
-		tsd = map_nick2sd((const char*)lua_tostring(NL,2));
+		tsd = map_nick2sd(luaL_checkstring(NL,2));
 	}
 	else
 		tsd = map_charid2sd(luaL_checkint(NL,2));
@@ -952,9 +943,9 @@ LUA_FUNC(additem)
 	const char *mapname;
 	struct item item_tmp;
 
-	if( script_getstring((const char*)lua_tostring(NL,1)) )
+	if( lua_isstring(NL,1) )
 	{
-		const char *name = (const char*)lua_tostring(NL,1);
+		const char *name = luaL_checkstring(NL,1);
 		struct item_data *item_data = itemdb_searchname(name);
 		if( item_data )
 			nameid = item_data->nameid;
@@ -1006,9 +997,9 @@ LUA_FUNC(deleteitem)
 		return 0;
 	}
 	
-	if( script_getstring((const char*)lua_tostring(NL,1)) )
+	if( lua_isstring(NL,1) )
 	{
-		const char* item_name = (const char*)lua_tostring(NL,1);
+		const char* item_name = luaL_checkstring(NL,1);
 		struct item_data* id = itemdb_searchname(item_name);
 		if( id == NULL )
 		{
@@ -1112,9 +1103,9 @@ LUA_FUNC(deleteitem2)
 	if ( sd == NULL )
 		return 0;
 
-	if( script_getstring((const char*)lua_tostring(NL,1)) )
+	if( lua_isstring(NL,1) )
 	{
-		const char* item_name = (const char*)lua_tostring(NL,1);
+		const char* item_name = luaL_checkstring(NL,1);
 		struct item_data* id = itemdb_searchname(item_name);
 		if( id == NULL )
 		{
@@ -1321,12 +1312,12 @@ LUA_FUNC(strcharinfo)
 
 LUA_FUNC(strnpcinfo)
 {
-	LUA_GET_TARGET(2);
 	TBL_NPC* nd;
 	int num;
+	int oid = luaL_checkint(NL,2);
 	char *name=NULL;
 
-	nd = map_id2nd(sd->npc_id);
+	nd = map_id2nd(oid);
 	
 	if (!nd)
 		return 0;
@@ -1620,7 +1611,7 @@ LUA_FUNC(bonus)
 	case SP_CASTRATE:
 	case SP_ADDEFF_ONSKILL:
 		// these bonuses support skill names
-		val1=( script_getstring(lua_tostring(NL,2)) ? skill_name2id(luaL_checkstring(NL,2)) : luaL_checkint(NL,2) );
+		val1=( lua_isstring(NL,2) ? skill_name2id(luaL_checkstring(NL,2)) : luaL_checkint(NL,2) );
 		break;
 	default:
 		val1=luaL_checkint(NL,2);
@@ -1641,7 +1632,7 @@ LUA_FUNC(bonus)
 		pc_bonus3(sd, type, val1, val2, val3);
 		break;
 	case 4:
-		if( type == SP_AUTOSPELL_ONSKILL && script_getstring(lua_tostring(NL,3)) )
+		if( type == SP_AUTOSPELL_ONSKILL && lua_isstring(NL,3) )
 			val2 = skill_name2id(luaL_checkstring(NL,3)); // 2nd value can be skill name
 		else
 			val2 = luaL_checkint(NL,3);
@@ -1650,7 +1641,7 @@ LUA_FUNC(bonus)
 		pc_bonus4(sd, type, val1, val2, val3, val4);
 		break;
 	case 5:
-		if( type == SP_AUTOSPELL_ONSKILL && script_getstring(lua_tostring(NL,3)) )
+		if( type == SP_AUTOSPELL_ONSKILL && lua_isstring(NL,3) )
 			val2 = skill_name2id(luaL_checkstring(NL,3)); // 2nd value can be skill name
 		else
 			val2 = luaL_checkint(NL,3);
@@ -1731,12 +1722,12 @@ LUA_FUNC(autobonus3)
 	}
 	rate = luaL_checkint(NL,2);
 	dur = luaL_checkint(NL,3);
-	atk_type = ( script_getstring(lua_tostring(NL,4)) ? skill_name2id(luaL_checkstring(NL,4)) : luaL_checkint(NL,4) );
+	atk_type = ( lua_isstring(NL,4) ? skill_name2id(luaL_checkstring(NL,4)) : luaL_checkint(NL,4) );
 	bonus_script = luaL_checkstring(NL,1);
 	if( !rate || !dur || !atk_type || !bonus_script ) {
 		return 0;
 	}
-	if( script_getstring(lua_tostring(NL,5)) ) {
+	if( lua_isstring(NL,5) ) {
 		other_script = luaL_checkstring(NL,5);
 	}
 	if( pc_addautobonus(sd->autobonus3,ARRAYLENGTH(sd->autobonus3),bonus_script,rate,dur,atk_type,other_script,sd->status.inventory[current_equip_item_index].equip,true) )
@@ -1756,7 +1747,7 @@ LUA_FUNC(skill)
 	int level;
 	int flag = 1;
 	LUA_GET_TARGET(4);
-	id = ( script_getstring(lua_tostring(NL,1)) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
+	id = ( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
 	level = luaL_checkint(NL,2);
 	if( lua_tointeger(NL,3) )
 		flag = luaL_checkint(NL,3);
@@ -1771,7 +1762,7 @@ LUA_FUNC(guildskill)
 	int level;
 	int i;
 	LUA_GET_TARGET(3);
-	id = ( script_getstring(lua_tostring(NL,1)) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
+	id = ( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
 	level = luaL_checkint(NL,2);
 	for( i=0; i < level; i++ )
 	{
@@ -1784,7 +1775,7 @@ LUA_FUNC(getskilllv)
 {
 	int id;
 	LUA_GET_TARGET(2);
-	id = ( script_getstring(lua_tostring(NL,1)) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,2) );
+	id = ( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,2) );
 	lua_pushinteger(NL, pc_checkskill(sd,id));
 	return 1;
 }
@@ -1795,7 +1786,7 @@ LUA_FUNC(getgdskilllv)
 	int skill_id;
 	struct guild* g;
 	guild_id = luaL_checkint(NL,1);
-	skill_id = ( script_getstring(lua_tostring(NL,2)) ? skill_name2id(luaL_checkstring(NL,2)) : luaL_checkint(NL,2) );
+	skill_id = ( lua_isstring(NL,2) ? skill_name2id(luaL_checkstring(NL,2)) : luaL_checkint(NL,2) );
 	g = guild_search(guild_id);
 	if( g == NULL ) {
 		return 0;
@@ -2048,7 +2039,7 @@ LUA_FUNC(itemskill)
 	if( sd->ud.skilltimer != INVALID_TIMER ) {
 		return 0;
 	}
-	id = ( script_getstring(lua_tostring(NL,1)) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
+	id = ( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
 	lv = luaL_checkint(NL,2);
 	sd->skillitem=id;
 	sd->skillitemlv=lv;
@@ -2392,7 +2383,8 @@ LUA_FUNC(addtimer)
 	int tick = luaL_checkint(NL,1);
 	const char* function = luaL_checkstring(NL,2);
 	add_timer_lua(pc_addeventtimer(sd,tick,function));
-	return 0;
+	lua_pushinteger(NL,tick);
+	return 1;
 }
 
 LUA_FUNC(deltimer)
@@ -2415,19 +2407,1485 @@ LUA_FUNC(addtimercount)
 	return 0;
 }
 
+LUA_FUNC(addnpctimer)
+{
+	int tick = luaL_checkint(NL,1);
+	const char* function = luaL_checkstring(NL,2);
+	npc_add_lua_timer(tick,function);
+	lua_pushinteger(NL,tick);
+	return 1;
+}
+
+LUA_FUNC(delnpctimer)
+{
+	const char *function = luaL_checkstring(NL,1);
+	npc_del_lua_eventtimer(function);
+	return 0;
+}
+
+LUA_FUNC(addnpctimercount)
+{
+	const char *function = luaL_checkstring(NL,1);
+	int tick = luaL_checkint(NL,2);
+	npc_addluaeventtimercount(function,tick);
+	lua_pushinteger(NL,tick);
+	return 1;
+}
+
+static int buildin_announce_sub(struct block_list *bl, va_list ap)
+{
+	char *mes       = va_arg(ap, char *);
+	int   len       = va_arg(ap, int);
+	int   type      = va_arg(ap, int);
+	char *fontColor = va_arg(ap, char *);
+	short fontType  = (short)va_arg(ap, int);
+	short fontSize  = (short)va_arg(ap, int);
+	short fontAlign = (short)va_arg(ap, int);
+	short fontY     = (short)va_arg(ap, int);
+	if (fontColor)
+		clif_broadcast2(bl, mes, len, strtol(fontColor, (char **)NULL, 0), fontType, fontSize, fontAlign, fontY, SELF);
+	else
+		clif_broadcast(bl, mes, len, type, SELF);
+	return 0;
+}
+
+LUA_FUNC(announce)
+{
+	const char *mes=luaL_checkstring(NL,1);
+	int flag=luaL_checkint(NL,2);
+	const char *fontColor=lua_isstring(NL,3) ? luaL_checkstring(NL,4) : NULL;
+	int fontType=lua_isnumber(NL,4) ? luaL_checkint(NL,4) : 0x190;
+	int fontSize=lua_isnumber(NL,5) ? luaL_checkint(NL,5) : 12;
+	int fontAlign = lua_isnumber(NL,6) ? luaL_checkint(NL,6) : 0;
+	int fontY = lua_isnumber(NL,7) ? luaL_checkint(NL,7) : 0;
+	int npcid = lua_isnumber(NL,8) ? luaL_checkint(NL,8) : 0;
+	if (flag&0x0f) // Broadcast source or broadcast region defined
+	{
+		send_target target;
+		struct block_list *bl = (flag&0x08) ? map_id2bl(npcid) : (struct block_list *)script_get_target(NL,9); // If bc_npc flag is set, use NPC as broadcast source
+		if (bl == NULL) {
+			return 0;
+		}
+		flag &= 0x07;
+		target = (flag == 1) ? ALL_SAMEMAP :
+		         (flag == 2) ? AREA :
+		         (flag == 3) ? SELF :
+		                       ALL_CLIENT;
+		if (fontColor)
+			clif_broadcast2(bl, mes, (int)strlen(mes)+1, strtol(fontColor, (char **)NULL, 0), fontType, fontSize, fontAlign, fontY, target);
+		else
+			clif_broadcast(bl, mes, (int)strlen(mes)+1, flag&0xf0, target);
+	}
+	else
+	{
+		if (fontColor)
+			intif_broadcast2(mes, (int)strlen(mes)+1, strtol(fontColor, (char **)NULL, 0), fontType, fontSize, fontAlign, fontY);
+		else
+			intif_broadcast(mes, (int)strlen(mes)+1, flag&0xf0);
+	}
+	return 0;
+}
+
+LUA_FUNC(mapannounce)
+{
+	const char *mapname   = luaL_checkstring(NL,1);
+	const char *mes       = luaL_checkstring(NL,2);
+	int         flag      = luaL_checkint(NL,3);
+	const char *fontColor = lua_isstring(NL,4) ? luaL_checkstring(NL,4) : NULL;
+	int         fontType  = lua_isnumber(NL,5) ? luaL_checkint(NL,5) : 0x190; // default fontType (FW_NORMAL)
+	int         fontSize  = lua_isnumber(NL,6) ? luaL_checkint(NL,6)	: 12;    // default fontSize
+	int         fontAlign = lua_isnumber(NL,7) ? luaL_checkint(NL,7) : 0;     // default fontAlign
+	int         fontY     = lua_isnumber(NL,8) ? luaL_checkint(NL,8) : 0;     // default fontY
+	int m;
+	if ((m = map_mapname2mapid(mapname)) < 0) {
+		return 0;
+	}
+	map_foreachinmap(buildin_announce_sub, m, BL_PC,
+			mes, strlen(mes)+1, flag&0xf0, fontColor, fontType, fontSize, fontAlign, fontY);
+	return 0;
+}
+
+LUA_FUNC(areaannounce)
+{
+	const char *mapname   = luaL_checkstring(NL,1);
+	int         x0        = luaL_checkint(NL,2);
+	int         y0        = luaL_checkint(NL,3);
+	int         x1        = luaL_checkint(NL,4);
+	int         y1        = luaL_checkint(NL,5);
+	const char *mes       = luaL_checkstring(NL,6);
+	int         flag      = luaL_checkint(NL,7);
+	const char *fontColor = lua_isstring(NL,8) ? luaL_checkstring(NL,8) : NULL;
+	int         fontType  = lua_isnumber(NL,9) ? luaL_checkint(NL,9) : 0x190; // default fontType (FW_NORMAL)
+	int         fontSize  = lua_isnumber(NL,10) ? luaL_checkint(NL,10) : 12;    // default fontSize
+	int         fontAlign = lua_isnumber(NL,11) ? luaL_checkint(NL,11) : 0;     // default fontAlign
+	int         fontY     = lua_isnumber(NL,12) ? luaL_checkint(NL,12) : 0;     // default fontY
+	int m;
+	if ((m = map_mapname2mapid(mapname)) < 0) {
+		return 0;
+	}
+	map_foreachinarea(buildin_announce_sub, m, x0, y0, x1, y1, BL_PC,
+		mes, strlen(mes)+1, flag&0xf0, fontColor, fontType, fontSize, fontAlign, fontY);
+	return 0;
+}
+
+LUA_FUNC(getusers)
+{
+	LUA_GET_TARGET(3);
+	int flag=luaL_checkint(NL,1);
+	int npcid=luaL_checkint(NL,2);
+	struct block_list *bl=map_id2bl((flag&0x08)?npcid:sd->status.account_id);
+	int val=0;
+	switch(flag&0x07){
+	case 0: val=map[bl->m].users; break;
+	case 1: val=map_getusers(); break;
+	}
+	lua_pushinteger(NL,val);
+	return 1;
+}
+
+LUA_FUNC(getusersname)
+{
+	LUA_GET_TARGET(1);
+	TBL_PC *pl_sd;
+	int disp_num=1;
+	struct s_mapiterator* iter;
+	iter = mapit_getallusers();
+	for( pl_sd = (TBL_PC*)mapit_first(iter); mapit_exists(iter); pl_sd = (TBL_PC*)mapit_next(iter) )
+	{
+		if( battle_config.hide_GM_session && pc_isGM(pl_sd) ) {
+			continue; // skip hidden GMs
+		}
+		if((disp_num++)%10==0) {
+			clif_scriptnext(sd,sd->npc_id);
+		}
+		clif_scriptmes(sd,sd->npc_id,pl_sd->status.name);
+	}
+	mapit_free(iter);
+	return 0;
+}
+
+LUA_FUNC(getmapguildusers)
+{
+	const char *str;
+	int m, gid;
+	int i=0,c=0;
+	struct guild *g = NULL;
+	str=luaL_checkstring(NL,1);
+	gid=luaL_checkint(NL,2);
+	if ((m = map_mapname2mapid(str)) < 0) {
+		return 0; //not on this map-server
+	}
+	g = guild_search(gid);
+	if (g){
+		for(i = 0; i < g->max_member; i++)
+		{
+			if (g->member[i].sd && g->member[i].sd->bl.m == m)
+				c++;
+		}
+	}
+	lua_pushinteger(NL,c);
+	return 1;
+}
+
+LUA_FUNC(getmapusers)
+{
+	const char *str;
+	int m;
+	str=luaL_checkstring(NL,1);
+	if( (m=map_mapname2mapid(str))< 0){
+		return 0;
+	}
+	lua_pushinteger(NL,map[m].users);
+	return 0;
+}
+
+static int buildin_getareausers_sub(struct block_list *bl,va_list ap)
+{
+	int *users=va_arg(ap,int *);
+	(*users)++;
+	return 0;
+}
+
+LUA_FUNC(getareausers)
+{
+	const char *str;
+	int m,x0,y0,x1,y1,users=0;
+	str=luaL_checkstring(NL,1);
+	x0=luaL_checkint(NL,2);
+	y0=luaL_checkint(NL,3);
+	x1=luaL_checkint(NL,4);
+	y1=luaL_checkint(NL,5);
+	if( (m=map_mapname2mapid(str))< 0){
+		return 0;
+	}
+	map_foreachinarea(buildin_getareausers_sub,
+		m,x0,y0,x1,y1,BL_PC,&users);
+	lua_pushinteger(NL,users);
+	return 0;
+}
+
+static int buildin_getareadropitem_sub(struct block_list *bl,va_list ap)
+{
+	int item=va_arg(ap,int);
+	int *amount=va_arg(ap,int *);
+	struct flooritem_data *drop=(struct flooritem_data *)bl;
+
+	if(drop->item_data.nameid==item)
+		(*amount)+=drop->item_data.amount;
+
+	return 0;
+}
+
+LUA_FUNC(getareadropitem)
+{
+	const char *str;
+	int m,x0,y0,x1,y1,item,amount=0;
+	str = luaL_checkstring(NL,1);
+	x0 = luaL_checkint(NL,2);
+	y0 = luaL_checkint(NL,3);
+	x1 = luaL_checkint(NL,4);
+	y1 = luaL_checkint(NL,5);
+	if( lua_isstring(NL,6) ){
+		const char *name=luaL_checkstring(NL,6);
+		struct item_data *item_data = itemdb_searchname(name);
+		item=UNKNOWN_ITEM_ID;
+		if( item_data )
+			item=item_data->nameid;
+	}else {
+		item=luaL_checkint(NL,6);
+	}
+	if( (m=map_mapname2mapid(str))< 0){
+		return 0;
+	}
+	map_foreachinarea(buildin_getareadropitem_sub,
+		m,x0,y0,x1,y1,BL_ITEM,item,&amount);
+	lua_pushinteger(NL,amount);
+	return 0;
+}
+
+LUA_FUNC(npc_enable)
+{
+	const char *str = luaL_checkstring(NL,1);
+	int flag = luaL_checkint(NL,2);
+	npc_enable(str,flag);
+	return 0;
+}
+
+LUA_FUNC(sc_start)
+{
+	struct block_list* bl;
+	enum sc_type type;
+	int tick;
+	int val1;
+	LUA_GET_TARGET(5);
+	int val4 = 0;
+	type = (sc_type)luaL_checkint(NL,1);
+	tick = luaL_checkint(NL,2);
+	val1 = luaL_checkint(NL,3);
+	if( lua_isnumber(NL,4) ) {
+		bl = map_id2bl(luaL_checkint(NL,4));
+	}
+	else {
+		bl = map_id2bl(sd->status.account_id);
+	}
+	if( tick == 0 && val1 > 0 && type > SC_NONE && type < SC_MAX && status_sc2skill(type) != 0 )
+	{// When there isn't a duration specified, try to get it from the skill_db
+		tick = skill_get_time(status_sc2skill(type), val1);
+	}
+	if( potion_flag == 1 && potion_target )
+	{	//skill.c set the flags before running the script, this must be a potion-pitched effect.
+		bl = map_id2bl(potion_target);
+		tick /= 2;// Thrown potions only last half.
+		val4 = 1;// Mark that this was a thrown sc_effect
+	}
+	if( bl )
+		status_change_start(bl, type, 10000, val1, 0, 0, val4, tick, 2);
+	return 0;
+}
+
+LUA_FUNC(sc_start2)
+{
+	LUA_GET_TARGET(5);
+	struct block_list* bl;
+	enum sc_type type;
+	int tick;
+	int val1;
+	int val4 = 0;
+	int rate;	
+	type = (sc_type)luaL_checkint(NL,1);
+	tick = luaL_checkint(NL,2);
+	val1 = luaL_checkint(NL,3);
+	rate = luaL_checkint(NL,4);
+	if (sd == NULL)
+		bl = map_id2bl(luaL_checkint(NL,5));
+	else
+		bl = &sd->bl;
+	if( tick == 0 && val1 > 0 && type > SC_NONE && type < SC_MAX && status_sc2skill(type) != 0 )
+	{// When there isn't a duration specified, try to get it from the skill_db
+		tick = skill_get_time(status_sc2skill(type), val1);
+	}
+
+	if( potion_flag == 1 && potion_target )
+	{	//skill.c set the flags before running the script, this must be a potion-pitched effect.
+		bl = map_id2bl(potion_target);
+		tick /= 2;// Thrown potions only last half.
+		val4 = 1;// Mark that this was a thrown sc_effect
+	}
+
+	if( bl )
+		status_change_start(bl, type, rate, val1, 0, 0, val4, tick, 2);
+
+	return 0;
+}
+
+LUA_FUNC(sc_start4)
+{
+	LUA_GET_TARGET(7);
+	struct block_list* bl;
+	enum sc_type type;
+	int tick;
+	int val1;
+	int val2;
+	int val3;
+	int val4;
+	type = (sc_type)luaL_checkint(NL,1);
+	tick = luaL_checkint(NL,2);
+	val1 = luaL_checkint(NL,3);
+	val2 = luaL_checkint(NL,4);
+	val3 = luaL_checkint(NL,5);
+	val4 = luaL_checkint(NL,6);
+	if (!sd)
+		bl = map_id2bl(luaL_checkint(NL,7));
+	else
+		bl = &sd->bl;
+
+	if( tick == 0 && val1 > 0 && type > SC_NONE && type < SC_MAX && status_sc2skill(type) != 0 )
+	{// When there isn't a duration specified, try to get it from the skill_db
+		tick = skill_get_time(status_sc2skill(type), val1);
+	}
+
+	if( potion_flag == 1 && potion_target )
+	{	//skill.c set the flags before running the script, this must be a potion-pitched effect.
+		bl = map_id2bl(potion_target);
+		tick /= 2;// Thrown potions only last half.
+	}
+
+	if( bl )
+		status_change_start(bl, type, 10000, val1, val2, val3, val4, tick, 2);
+
+	return 0;
+}
+
+LUA_FUNC(sc_end)
+{
+	LUA_GET_TARGET(2);
+	struct block_list* bl;
+	int type = luaL_checkint(NL,1);
+	if(!sd)
+		bl = map_id2bl(luaL_checkint(NL,2));
+	else
+		bl = &sd->bl;
+	
+	if( potion_flag==1 && potion_target )
+	{//##TODO how does this work [FlavioJS]
+		bl = map_id2bl(potion_target);
+	}
+
+	if( !bl ) return 0;
+
+	if( type >= 0 && type < SC_MAX )
+	{
+		struct status_change *sc = status_get_sc(bl);
+		struct status_change_entry *sce = sc?sc->data[type]:NULL;
+		if (!sce) return 0;
+		//This should help status_change_end force disabling the SC in case it has no limit.
+		sce->val1 = sce->val2 = sce->val3 = sce->val4 = 0;
+		status_change_end(bl, (sc_type)type, INVALID_TIMER);
+	} else
+		status_change_clear(bl, 2);// remove all effects
+	return 0;
+}
+
+LUA_FUNC(getscrate)
+{
+	LUA_GET_TARGET(4);
+	struct block_list *bl;
+	int type,rate;
+	type=luaL_checkint(NL,1);
+	rate=luaL_checkint(NL,2);
+	if( lua_isnumber(NL,3) ) //指定したキャラの耐性を計算する
+		bl = map_id2bl(luaL_checkint(NL,3));
+	else
+		bl = map_id2bl(sd->status.account_id);
+	if (bl)
+		rate = status_get_sc_def(bl, (sc_type)type, 10000, 10000, 0);
+	lua_pushinteger(NL,rate);
+	return 1;
+}
+
+LUA_FUNC(catchpet)
+{
+	int pet_id;
+	LUA_GET_TARGET(2);
+	pet_id=luaL_checkint(NL,1);
+	pet_catch_process1(sd,pet_id);
+	return 0;
+}
+
+LUA_FUNC(homunculus_evolution)
+{
+	LUA_GET_TARGET(1);
+	if(merc_is_hom_active(sd->hd))
+	{
+		if (sd->hd->homunculus.intimacy > 91000)
+			merc_hom_evolution(sd->hd);
+		else
+			clif_emotion(&sd->hd->bl, 4) ;	//swt
+	}
+	return 0;
+}
+
+LUA_FUNC(homunculus_shuffle)
+{
+	LUA_GET_TARGET(1);
+	if(merc_is_hom_active(sd->hd))
+		merc_hom_shuffle(sd->hd);
+	return 0;
+}
+
+LUA_FUNC(eaclass)
+{
+	LUA_GET_TARGET(2);
+	int class_;
+	if( lua_isnumber(NL,1) )
+		class_ = luaL_checkint(NL,1);
+	else {
+		if (!sd) 
+			return 0;
+
+		class_ = sd->status.class_;
+	}
+	lua_pushinteger(NL,pc_jobid2mapid(class_));
+	return 1;
+}
+
+LUA_FUNC(roclass)
+{
+	LUA_GET_TARGET(3);
+	int class_ =luaL_checkint(NL,1);
+	int sex;
+	if( lua_isnumber(NL,2) )
+		sex = luaL_checkint(NL,2);
+	else {
+		if (sd->status.account_id)
+			sex = sd->status.sex;
+		else
+			sex = 1; //Just use male when not found.
+	}
+	lua_pushnumber(NL,pc_mapid2jobid(class_, sex));
+	return 1;
+}
+
+LUA_FUNC(birthpet)
+{
+	LUA_GET_TARGET(1);
+	clif_sendegg(sd);
+	return 0;
+}
+
+LUA_FUNC(resetlvl)
+{
+	LUA_GET_TARGET(2);
+	int type=luaL_checkint(NL,1);
+	pc_resetlvl(sd,type);
+	return 0;
+}
+
+LUA_FUNC(resetstatus)
+{
+	LUA_GET_TARGET(1);
+	pc_resetstate(sd);
+	return 0;
+}
+
+LUA_FUNC(resetskill)
+{
+	LUA_GET_TARGET(1);
+	pc_resetskill(sd,1);
+	return 0;
+}
+
+LUA_FUNC(skillpointcount)
+{
+	LUA_GET_TARGET(1);
+	lua_pushinteger(NL,sd->status.skill_point + pc_resetskill(sd,2));
+	return 0;
+}
+
+LUA_FUNC(changebase)
+{
+	LUA_GET_TARGET(2);
+	int vclass;
+	vclass = luaL_checkint(NL,1);
+	if(vclass == JOB_WEDDING)
+	{
+		if (!battle_config.wedding_modifydisplay || //Do not show the wedding sprites
+			sd->class_&JOBL_BABY //Baby classes screw up when showing wedding sprites.
+			) 
+		return 0;
+	}
+	if(!sd->disguise && vclass != sd->vd.class_) {
+		status_set_viewdata(&sd->bl, vclass);
+		//Updated client view. Base, Weapon and Cloth Colors.
+		clif_changelook(&sd->bl,LOOK_BASE,sd->vd.class_);
+		clif_changelook(&sd->bl,LOOK_WEAPON,sd->status.weapon);
+		if (sd->vd.cloth_color)
+			clif_changelook(&sd->bl,LOOK_CLOTHES_COLOR,sd->vd.cloth_color);
+		clif_skillinfoblock(sd);
+	}
+	return 0;
+}
+
+LUA_FUNC(changesex)
+{
+	LUA_GET_TARGET(1);
+	chrif_changesex(sd);
+	return 0;
+}
+
+LUA_FUNC(globalmes)
+{
+	const char *name=NULL, *mes;
+	mes=luaL_checkstring(NL,1);
+	if( lua_isstring(NL,2) ) {
+		name = luaL_checkstring(NL,2);
+	} else {
+		name = "";
+	}
+	npc_globalmessage(name,mes);
+	return 0;
+}
+
+
+LUA_FUNC(waitingroom)
+{
+	struct npc_data* nd;
+	const char* title;
+	const char* ev = "";
+	int limit;
+	int trigger = 0;
+	int pub = 1;
+	int npc_id = luaL_checkint(NL,3);
+	title = luaL_checkstring(NL,1);
+	limit = luaL_checkint(NL,2);
+	if( lua_isstring(NL,4) ) {
+		trigger = luaL_checkint(NL,5);
+		ev = luaL_checkstring(NL,4);
+	}
+	nd = (struct npc_data *)map_id2bl(npc_id);
+	if( nd != NULL )
+		chat_createnpcchat(nd, title, limit, pub, trigger, ev);
+	return 0;
+}
+
+LUA_FUNC(delwaitingroom)
+{
+	struct npc_data* nd;
+	const char *name = luaL_checkstring(NL,1);
+	nd = npc_name2id(name);
+	if( nd != NULL )
+		chat_deletenpcchat(nd);
+	return 0;
+}
+
+LUA_FUNC(waitingroomkickall)
+{
+	struct chat_data* cd;
+	struct npc_data* nd = npc_name2id(luaL_checkstring(NL,1));
+	if( nd != NULL && (cd=(struct chat_data *)map_id2bl(nd->chat_id)) != NULL )
+		chat_npckickall(cd);
+	return 0;
+}
+
+LUA_FUNC(enablewaitingroomevent)
+{
+	struct chat_data* cd;
+	struct npc_data* nd = npc_name2id(luaL_checkstring(NL,1));
+	if( nd != NULL && (cd=(struct chat_data *)map_id2bl(nd->chat_id)) != NULL )
+		chat_enableevent(cd);
+	return 0;
+}
+
+LUA_FUNC(disablewaitingroomevent)
+{
+	struct chat_data *cd;
+	struct npc_data *nd = npc_name2id(luaL_checkstring(NL,1));
+	if( nd != NULL && (cd=(struct chat_data *)map_id2bl(nd->chat_id)) != NULL )
+		chat_disableevent(cd);
+	return 0;
+}
+
+LUA_FUNC(getwaitingroomstate)
+{
+	struct chat_data *cd;
+	int type = luaL_checkint(NL,1);
+	struct npc_data *nd = npc_name2id(luaL_checkstring(NL,2));
+	if( nd == NULL || (cd=(struct chat_data *)map_id2bl(nd->chat_id)) == NULL )
+	{
+		return 0;
+	}
+	switch(type)
+	{
+	case 0:  lua_pushinteger(NL, cd->users); break;
+	case 1:  lua_pushinteger(NL, cd->limit); break;
+	case 2:  lua_pushinteger(NL, cd->trigger&0x7f); break;
+	case 3:  lua_pushinteger(NL, ((cd->trigger&0x80)!=0)); break;
+	case 4:  lua_pushstring(NL, cd->title); break;
+	case 5:  lua_pushstring(NL, cd->pass); break;
+	case 16: lua_pushstring(NL, cd->npc_event);break;
+	case 32: lua_pushinteger(NL, (cd->users >= cd->limit)); break;
+	case 33: lua_pushinteger(NL, (cd->users >= cd->trigger)); break;
+	default: return 0;
+	}
+	return 1;
+}
+
+LUA_FUNC(warpwaitingpc)
+{
+	int x, y, i, n;
+	const char* map_name;
+	struct npc_data* nd;
+	struct chat_data* cd;
+	TBL_PC* sd;
+	int npc_id = luaL_checkint(NL,1);
+	nd = (struct npc_data *)map_id2bl(npc_id);
+	if( nd == NULL || (cd=(struct chat_data *)map_id2bl(nd->chat_id)) == NULL ) {
+		return 0;
+	}
+	map_name = luaL_checkstring(NL,2);
+	x = luaL_checkint(NL,3);
+	y = luaL_checkint(NL,4);
+	n = cd->trigger&0x7f;
+	if( lua_isnumber(NL,5) ) {
+		n = luaL_checkint(NL,5);
+	}
+	lua_newtable(NL);
+	for( i = 0; i < n && cd->users > 0; i++ )
+	{
+		sd = cd->usersd[0];
+		if( sd == NULL )
+		{
+			ShowDebug("script:warpwaitingpc: no user in chat room position 0 (cd->users=%d,%d/%d)\n", cd->users, i, n);
+			continue;// Broken npc chat room?
+		}
+		lua_pushinteger(NL,sd->bl.id);
+		lua_rawseti(NL,-2,i + 1);
+		if( strcmp(map_name,"Random") == 0 )
+			pc_randomwarp(sd,3);
+		else if( strcmp(map_name,"SavePoint") == 0 )
+		{
+			if( map[sd->bl.m].flag.noteleport )
+				return 0;// can't teleport on this map
+
+			pc_setpos(sd, sd->status.save_point.map, sd->status.save_point.x, sd->status.save_point.y, 3);
+		}
+		else
+			pc_setpos(sd, mapindex_name2id(map_name), x, y, 0);
+	}
+	return 1;
+}
+
+
+LUA_FUNC(isloggedin)
+{
+	LUA_GET_TARGET(1);
+	int id = luaL_checkint(NL,1);
+	TBL_PC* fsd = map_id2sd(id);
+	if (!fsd) {
+		return 0;
+	}
+	if (!sd || sd->status.char_id != id) {
+		return 0;
+	}
+	lua_pushinteger(NL,1);
+	return 1;
+}
+
+LUA_FUNC(setmapflagnosave)
+{
+	int m,x,y;
+	unsigned short mapindex;
+	const char *str,*str2;
+	str=luaL_checkstring(NL,1);
+	str2=luaL_checkstring(NL,2);
+	x=luaL_checkint(NL,3);
+	y=luaL_checkint(NL,4);
+	m = map_mapname2mapid(str);
+	mapindex = mapindex_name2id(str2);
+	if(m >= 0 && mapindex) {
+		map[m].flag.nosave=1;
+		map[m].save.map=mapindex;
+		map[m].save.x=x;
+		map[m].save.y=y;
+	}
+	return 0;
+}
+
+LUA_FUNC(getmapflag)
+{
+	int m,i;
+	const char *str;
+	str=luaL_checkstring(NL,1);
+	i=luaL_checkint(NL,2);
+	m = map_mapname2mapid(str);
+	if(m >= 0) {
+		switch(i) {
+			case MF_NOMEMO:			lua_pushinteger(NL,map[m].flag.nomemo); break;
+			case MF_NOTELEPORT:		lua_pushinteger(NL,map[m].flag.noteleport); break;
+			case MF_NOBRANCH:		lua_pushinteger(NL,map[m].flag.nobranch); break;
+			case MF_NOPENALTY:		lua_pushinteger(NL,map[m].flag.noexppenalty); break;
+			case MF_NOZENYPENALTY:	lua_pushinteger(NL,map[m].flag.nozenypenalty); break;
+			case MF_PVP:			lua_pushinteger(NL,map[m].flag.pvp); break;
+			case MF_PVP_NOPARTY:	lua_pushinteger(NL,map[m].flag.pvp_noparty); break;
+			case MF_PVP_NOGUILD:	lua_pushinteger(NL,map[m].flag.pvp_noguild); break;
+			case MF_GVG:			lua_pushinteger(NL,map[m].flag.gvg); break;
+			case MF_GVG_NOPARTY:	lua_pushinteger(NL,map[m].flag.gvg_noparty); break;
+			case MF_GVG_DUNGEON:	lua_pushinteger(NL,map[m].flag.gvg_dungeon); break;
+			case MF_GVG_CASTLE:		lua_pushinteger(NL,map[m].flag.gvg_castle); break;
+			case MF_NOTRADE:		lua_pushinteger(NL,map[m].flag.notrade); break;
+			case MF_NODROP:			lua_pushinteger(NL,map[m].flag.nodrop); break;
+			case MF_NOSKILL:		lua_pushinteger(NL,map[m].flag.noskill); break;
+			case MF_NOWARP:			lua_pushinteger(NL,map[m].flag.nowarp); break;
+			case MF_NOICEWALL:		lua_pushinteger(NL,map[m].flag.noicewall); break;
+			case MF_SNOW:			lua_pushinteger(NL,map[m].flag.snow); break;
+			case MF_CLOUDS:			lua_pushinteger(NL,map[m].flag.clouds); break;
+			case MF_CLOUDS2:		lua_pushinteger(NL,map[m].flag.clouds2); break;
+			case MF_FOG:			lua_pushinteger(NL,map[m].flag.fog); break;
+			case MF_FIREWORKS:		lua_pushinteger(NL,map[m].flag.fireworks); break;
+			case MF_SAKURA:			lua_pushinteger(NL,map[m].flag.sakura); break;
+			case MF_LEAVES:			lua_pushinteger(NL,map[m].flag.leaves); break;
+			case MF_RAIN:			lua_pushinteger(NL,map[m].flag.rain); break;
+			case MF_INDOORS:		lua_pushinteger(NL,map[m].flag.indoors); break;
+			case MF_NIGHTENABLED:	lua_pushinteger(NL,map[m].flag.nightenabled); break;
+			case MF_NOGO:			lua_pushinteger(NL,map[m].flag.nogo); break;
+			case MF_NOBASEEXP:		lua_pushinteger(NL,map[m].flag.nobaseexp); break;
+			case MF_NOJOBEXP:		lua_pushinteger(NL,map[m].flag.nojobexp); break;
+			case MF_NOMOBLOOT:		lua_pushinteger(NL,map[m].flag.nomobloot); break;
+			case MF_NOMVPLOOT:		lua_pushinteger(NL,map[m].flag.nomvploot); break;
+			case MF_NORETURN:		lua_pushinteger(NL,map[m].flag.noreturn); break;
+			case MF_NOWARPTO:		lua_pushinteger(NL,map[m].flag.nowarpto); break;
+			case MF_NIGHTMAREDROP:	lua_pushinteger(NL,map[m].flag.pvp_nightmaredrop); break;
+			case MF_RESTRICTED:		lua_pushinteger(NL,map[m].flag.restricted); break;
+			case MF_NOCOMMAND:		lua_pushinteger(NL,map[m].nocommand); break;
+			case MF_JEXP:			lua_pushinteger(NL,map[m].jexp); break;
+			case MF_BEXP:			lua_pushinteger(NL,map[m].bexp); break;
+			case MF_NOVENDING:		lua_pushinteger(NL,map[m].flag.novending); break;
+			case MF_LOADEVENT:		lua_pushinteger(NL,map[m].flag.loadevent); break;
+			case MF_NOCHAT:			lua_pushinteger(NL,map[m].flag.nochat); break;
+			case MF_PARTYLOCK:		lua_pushinteger(NL,map[m].flag.partylock); break;
+			case MF_GUILDLOCK:		lua_pushinteger(NL,map[m].flag.guildlock); break;
+		}
+	}
+
+	return 0;
+}
+
+LUA_FUNC(editmapflag)
+{
+	int m,i,flag;
+	const char *str;
+	const char *val=NULL;
+	str=luaL_checkstring(NL,1);
+	i=luaL_checkint(NL,2);
+	flag=luaL_checkint(NL,3);
+	if(lua_isnumber(NL,4)){
+		val=luaL_checkstring(NL,4);
+	}
+	m = map_mapname2mapid(str);
+	if(m >= 0) {
+		switch(i) {
+			case MF_NOMEMO:        map[m].flag.nomemo=flag; break;
+			case MF_NOTELEPORT:    map[m].flag.noteleport=flag; break;
+			case MF_NOBRANCH:      map[m].flag.nobranch=flag; break;
+			case MF_NOPENALTY:     map[m].flag.noexppenalty=flag; map[m].flag.nozenypenalty=flag; break;
+			case MF_NOZENYPENALTY: map[m].flag.nozenypenalty=flag; break;
+			case MF_PVP:           map[m].flag.pvp=flag; break;
+			case MF_PVP_NOPARTY:   map[m].flag.pvp_noparty=flag; break;
+			case MF_PVP_NOGUILD:   map[m].flag.pvp_noguild=flag; break;
+			case MF_GVG:           map[m].flag.gvg=flag; break;
+			case MF_GVG_NOPARTY:   map[m].flag.gvg_noparty=flag; break;
+			case MF_GVG_DUNGEON:   map[m].flag.gvg_dungeon=flag; break;
+			case MF_GVG_CASTLE:    map[m].flag.gvg_castle=flag; break;
+			case MF_NOTRADE:       map[m].flag.notrade=flag; break;
+			case MF_NODROP:        map[m].flag.nodrop=flag; break;
+			case MF_NOSKILL:       map[m].flag.noskill=flag; break;
+			case MF_NOWARP:        map[m].flag.nowarp=flag; break;
+			case MF_NOICEWALL:     map[m].flag.noicewall=flag; break;
+			case MF_SNOW:          map[m].flag.snow=flag; break;
+			case MF_CLOUDS:        map[m].flag.clouds=flag; break;
+			case MF_CLOUDS2:       map[m].flag.clouds2=flag; break;
+			case MF_FOG:           map[m].flag.fog=flag; break;
+			case MF_FIREWORKS:     map[m].flag.fireworks=flag; break;
+			case MF_SAKURA:        map[m].flag.sakura=flag; break;
+			case MF_LEAVES:        map[m].flag.leaves=flag; break;
+			case MF_RAIN:          map[m].flag.rain=flag; break;
+			case MF_INDOORS:       map[m].flag.indoors=flag; break;
+			case MF_NIGHTENABLED:  map[m].flag.nightenabled=flag; break;
+			case MF_NOGO:          map[m].flag.nogo=flag; break;
+			case MF_NOBASEEXP:     map[m].flag.nobaseexp=flag; break;
+			case MF_NOJOBEXP:      map[m].flag.nojobexp=flag; break;
+			case MF_NOMOBLOOT:     map[m].flag.nomobloot=flag; break;
+			case MF_NOMVPLOOT:     map[m].flag.nomvploot=flag; break;
+			case MF_NORETURN:      map[m].flag.noreturn=flag; break;
+			case MF_NOWARPTO:      map[m].flag.nowarpto=flag; break;
+			case MF_NIGHTMAREDROP: map[m].flag.pvp_nightmaredrop=flag; break;
+			case MF_RESTRICTED:    map[m].flag.restricted=flag; break;
+			case MF_NOCOMMAND:     map[m].nocommand = (!val || atoi(val) <= 0) ? 100 : atoi(val); break;
+			case MF_JEXP:          map[m].jexp = (!val || atoi(val) < 0) ? 100 : atoi(val); break;
+			case MF_BEXP:          map[m].bexp = (!val || atoi(val) < 0) ? 100 : atoi(val); break;
+			case MF_NOVENDING:     map[m].flag.novending=flag; break;
+			case MF_LOADEVENT:     map[m].flag.loadevent=flag; break;
+			case MF_NOCHAT:        map[m].flag.nochat=flag; break;
+			case MF_PARTYLOCK:     map[m].flag.partylock=flag; break;
+			case MF_GUILDLOCK:     map[m].flag.guildlock=flag; break;
+		}
+	}
+
+	return 0;
+}
+
+LUA_FUNC(pvpon)
+{
+	int m;
+	const char *str;
+	TBL_PC* sd = NULL;
+	struct s_mapiterator* iter;
+	str = luaL_checkstring(NL,1);
+	m = map_mapname2mapid(str);
+	if( m < 0 || map[m].flag.pvp )
+		return 0; // nothing to do
+	map[m].flag.pvp = 1;
+	clif_send0199(m,1);
+	if(battle_config.pk_mode) // disable ranking functions if pk_mode is on [Valaris]
+		return 0;
+	iter = mapit_getallusers();
+	for( sd = (TBL_PC*)mapit_first(iter); mapit_exists(iter); sd = (TBL_PC*)mapit_next(iter) )
+	{
+		if( sd->bl.m != m || sd->pvp_timer != -1 )
+			continue; // not applicable
+
+		sd->pvp_timer = add_timer(gettick()+200,pc_calc_pvprank_timer,sd->bl.id,0);
+		sd->pvp_rank = 0;
+		sd->pvp_lastusers = 0;
+		sd->pvp_point = 5;
+		sd->pvp_won = 0;
+		sd->pvp_lost = 0;
+	}
+	mapit_free(iter);
+	return 0;
+}
+
+static int buildin_pvpoff_sub(struct block_list *bl,va_list ap)
+{
+	TBL_PC* sd = (TBL_PC*)bl;
+	clif_pvpset(sd, 0, 0, 2);
+	if (sd->pvp_timer != -1) {
+		delete_timer(sd->pvp_timer, pc_calc_pvprank_timer);
+		sd->pvp_timer = INVALID_TIMER;
+	}
+	return 0;
+}
+
+LUA_FUNC(pvpoff)
+{
+	int m;
+	const char *str;
+	str=luaL_checkstring(NL,1);
+	m = map_mapname2mapid(str);
+	if(m < 0 || !map[m].flag.pvp)
+		return 0;
+	map[m].flag.pvp = 0;
+	clif_send0199(m,0);
+	if(battle_config.pk_mode) // disable ranking options if pk_mode is on
+		return 0;
+	map_foreachinmap(buildin_pvpoff_sub, m, BL_PC);
+	return 0;
+}
+
+LUA_FUNC(gvgon)
+{
+	int m;
+	const char *str;
+	str=luaL_checkstring(NL,1);
+	m = map_mapname2mapid(str);
+	if(m >= 0 && !map[m].flag.gvg) {
+		map[m].flag.gvg = 1;
+		clif_send0199(m,3);
+	}
+	return 0;
+}
+LUA_FUNC(gvgoff)
+{
+	int m;
+	const char *str;
+	str=luaL_checkstring(NL,1);
+	m = map_mapname2mapid(str);
+	if(m >= 0 && map[m].flag.gvg) {
+		map[m].flag.gvg = 0;
+		clif_send0199(m,0);
+	}
+	return 0;
+}
+
+LUA_FUNC(emotion)
+{
+	struct map_session_data *sd;
+	int type;
+	int obj;
+	type=luaL_checkint(NL,1);
+	obj=luaL_checkint(NL,2);
+	if(type < 0 || type > 100)
+		return 0;
+	if ( (sd = map_charid2sd(obj)) != NULL) {
+		clif_emotion(&sd->bl,type);
+	}
+	else
+		clif_emotion(map_id2bl(obj),type);
+	return 0;
+}
+
+static int buildin_maprespawnguildid_sub_pc(struct map_session_data* sd, va_list ap)
+{
+	int m=va_arg(ap,int);
+	int g_id=va_arg(ap,int);
+	int flag=va_arg(ap,int);
+
+	if(!sd || sd->bl.m != m)
+		return 0;
+	if(
+		(sd->status.guild_id == g_id && flag&1) || //Warp out owners
+		(sd->status.guild_id != g_id && flag&2) || //Warp out outsiders
+		(sd->status.guild_id == 0)	// Warp out players not in guild [Valaris]
+	)
+		pc_setpos(sd,sd->status.save_point.map,sd->status.save_point.x,sd->status.save_point.y,3);
+	return 1;
+}
+
+static int buildin_maprespawnguildid_sub_mob(struct block_list *bl,va_list ap)
+{
+	struct mob_data *md=(struct mob_data *)bl;
+
+	if(!md->guardian_data && md->class_ != MOBID_EMPERIUM)
+		status_kill(bl);
+
+	return 0;
+}
+
+LUA_FUNC(maprespawnguildid)
+{
+	const char *mapname=luaL_checkstring(NL,1);
+	int g_id=luaL_checkint(NL,2);
+	int flag=luaL_checkint(NL,3);
+	int m=map_mapname2mapid(mapname);
+	if(m == -1)
+		return 0;
+	//Catch ALL players (in case some are 'between maps' on execution time)
+	map_foreachpc(buildin_maprespawnguildid_sub_pc,m,g_id,flag);
+	if (flag&4) //Remove script mobs.
+		map_foreachinmap(buildin_maprespawnguildid_sub_mob,m,BL_MOB);
+	return 0;
+}
+
+LUA_FUNC(agitstart)
+{
+	if(agit_flag==1) return 0;      // Agit already Start.
+	agit_flag=1;
+	guild_agit_start();
+	return 0;
+}
+
+LUA_FUNC(agitend)
+{
+	if(agit_flag==0) return 0;      // Agit already End.
+	agit_flag=0;
+	guild_agit_end();
+	return 0;
+}
+
+LUA_FUNC(agitstart2)
+{
+	if(agit2_flag==1) return 0;      // Agit2 already Start.
+	agit2_flag=1;
+	guild_agit2_start();
+	return 0;
+}
+
+LUA_FUNC(agitend2)
+{
+	if(agit2_flag==0) return 0;      // Agit2 already End.
+	agit2_flag=0;
+	guild_agit2_end();
+	return 0;
+}
+
+LUA_FUNC(agitcheck)
+{
+	lua_pushinteger(NL,agit_flag);
+	return 1;
+}
+
+LUA_FUNC(agitcheck2)
+{
+	lua_pushinteger(NL,agit2_flag);
+	return 1;
+}
+
+LUA_FUNC(flagemblem)
+{
+	TBL_NPC* nd;
+	int g_id=luaL_checkint(NL,1);
+	int obj=luaL_checkint(NL,2);
+	if(g_id < 0) return 0;
+	nd = (TBL_NPC*)map_id2nd(obj);
+	if( nd == NULL )
+	{
+		ShowError("script:flagemblem: npc %d not found\n", obj);
+	}
+	else
+	{
+		nd->u.scr.guild_id = g_id;
+		clif_guild_emblem_area(&nd->bl);
+	}
+	return 0;
+}
+
+LUA_FUNC(getcastlename)
+{
+	const char* mapname = mapindex_getmapname(luaL_checkstring(NL,1),NULL);
+	struct guild_castle* gc = guild_mapname2gc(mapname);
+	const char* name = (gc) ? gc->castle_name : "";
+	lua_pushstring(NL,name);
+	return 1;
+}
+
+LUA_FUNC(getcastledata)
+{
+	const char* mapname = mapindex_getmapname(luaL_checkstring(NL,1),NULL);
+	int index = luaL_checkint(NL,2);
+
+	struct guild_castle* gc = guild_mapname2gc(mapname);
+
+	if ( lua_isstring(NL,3) )
+	{
+		const char* event = luaL_checkstring(NL,3);
+		guild_addcastleinfoevent(gc->castle_id,17,event);
+	}
+
+	if(gc){
+		switch(index){
+			case 0: {
+				int i;
+				for(i=1;i<18;i++) // Initialize[AgitInit]
+					guild_castledataload(gc->castle_id,i);
+				} break;
+			case 1:
+				lua_pushinteger(NL,gc->guild_id); break;
+			case 2:
+				lua_pushinteger(NL,gc->economy); break;
+			case 3:
+				lua_pushinteger(NL,gc->defense); break;
+			case 4:
+				lua_pushinteger(NL,gc->triggerE); break;
+			case 5:
+				lua_pushinteger(NL,gc->triggerD); break;
+			case 6:
+				lua_pushinteger(NL,gc->nextTime); break;
+			case 7:
+				lua_pushinteger(NL,gc->payTime); break;
+			case 8:
+				lua_pushinteger(NL,gc->createTime); break;
+			case 9:
+				lua_pushinteger(NL,gc->visibleC); break;
+			case 10:
+			case 11:
+			case 12:
+			case 13:
+			case 14:
+			case 15:
+			case 16:
+			case 17:
+				lua_pushinteger(NL,gc->guardian[index-10].visible); break;
+			default:
+				return 0;
+		}
+		return 1;
+	}
+	return 0;
+}
+
+LUA_FUNC(setcastledata)
+{
+	const char* mapname = mapindex_getmapname(luaL_checkstring(NL,1),NULL);
+	int index = luaL_checkint(NL,2);
+	int value = luaL_checkint(NL,3);
+
+	struct guild_castle* gc = guild_mapname2gc(mapname);
+
+	if(gc) {
+		// Save Data byself First
+		switch(index){
+			case 1:
+				gc->guild_id = value; break;
+			case 2:
+				gc->economy = value; break;
+			case 3:
+				gc->defense = value; break;
+			case 4:
+				gc->triggerE = value; break;
+			case 5:
+				gc->triggerD = value; break;
+			case 6:
+				gc->nextTime = value; break;
+			case 7:
+				gc->payTime = value; break;
+			case 8:
+				gc->createTime = value; break;
+			case 9:
+				gc->visibleC = value; break;
+			case 10:
+			case 11:
+			case 12:
+			case 13:
+			case 14:
+			case 15:
+			case 16:
+			case 17:
+				gc->guardian[index-10].visible = value; break;
+			default:
+				return 0;
+		}
+		guild_castledatasave(gc->castle_id,index,value);
+	}
+	return 0;
+}
+
+LUA_FUNC(requestguildinfo)
+{
+	int guild_id=luaL_checkint(NL,1);
+	const char *event=NULL;
+
+	if( lua_isstring(NL,2) )
+	{
+		event = luaL_checkstring(NL,2);
+	}
+
+	if(guild_id>0)
+		guild_npc_request_info(guild_id,event);
+	return 0;
+}
+
+LUA_FUNC(getequipcardcnt)
+{
+	LUA_GET_TARGET(2);
+	int i=-1,j,num;
+	int count;
+
+	num=luaL_checkint(NL,1);
+	if (num > 0 && num <= ARRAYLENGTH(equip))
+		i=pc_checkequip(sd,equip[num-1]);
+
+	if (i < 0 || !sd->inventory_data[i]) {
+		return 0;
+	}
+
+	if(itemdb_isspecial(sd->status.inventory[i].card[0]))
+	{
+		return 0;
+	}
+
+	count = 0;
+	for( j = 0; j < sd->inventory_data[i]->slot; j++ )
+		if( sd->status.inventory[i].card[j] && itemdb_type(sd->status.inventory[i].card[j]) == IT_CARD )
+			count++;
+
+	lua_pushinteger(NL,count);
+	return 0;
+}
+
+LUA_FUNC(successremovecards)
+{
+	LUA_GET_TARGET(2);
+	int i=-1,j,c,cardflag=0;
+	int num = luaL_checkint(NL,1);
+
+	if (num > 0 && num <= ARRAYLENGTH(equip))
+		i=pc_checkequip(sd,equip[num-1]);
+
+	if (i < 0 || !sd->inventory_data[i]) {
+		return 0;
+	}
+
+	if(itemdb_isspecial(sd->status.inventory[i].card[0])) 
+		return 0;
+
+	for( c = sd->inventory_data[i]->slot - 1; c >= 0; --c )
+	{
+		if( sd->status.inventory[i].card[c] && itemdb_type(sd->status.inventory[i].card[c]) == IT_CARD )
+		{// extract this card from the item
+			int flag;
+			struct item item_tmp;
+			cardflag = 1;
+			item_tmp.id=0,item_tmp.nameid=sd->status.inventory[i].card[c];
+			item_tmp.equip=0,item_tmp.identify=1,item_tmp.refine=0;
+			item_tmp.attribute=0,item_tmp.expire_time=0;
+			for (j = 0; j < MAX_SLOTS; j++)
+				item_tmp.card[j]=0;
+
+			//Logs items, got from (N)PC scripts [Lupus]
+			if(log_config.enable_logs&0x40)
+				log_pick_pc(sd, "N", item_tmp.nameid, 1, NULL);
+
+			if((flag=pc_additem(sd,&item_tmp,1))){
+				clif_additem(sd,0,0,flag);
+				map_addflooritem(&item_tmp,1,sd->bl.m,sd->bl.x,sd->bl.y,0,0,0,0);
+			}
+		}
+	}
+
+	if(cardflag == 1)
+	{	
+		int flag;
+		struct item item_tmp;
+		item_tmp.id=0,item_tmp.nameid=sd->status.inventory[i].nameid;
+		item_tmp.equip=0,item_tmp.identify=1,item_tmp.refine=sd->status.inventory[i].refine;
+		item_tmp.attribute=sd->status.inventory[i].attribute,item_tmp.expire_time=sd->status.inventory[i].expire_time;
+		for (j = 0; j < sd->inventory_data[i]->slot; j++)
+			item_tmp.card[j]=0;
+		for (j = sd->inventory_data[i]->slot; j < MAX_SLOTS; j++)
+			item_tmp.card[j]=sd->status.inventory[i].card[j];
+
+		//Logs items, got from (N)PC scripts [Lupus]
+		if(log_config.enable_logs&0x40)
+			log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -1, &sd->status.inventory[i]);
+
+		pc_delitem(sd,i,1,0);
+
+		//Logs items, got from (N)PC scripts [Lupus]
+		if(log_config.enable_logs&0x40)
+			log_pick_pc(sd, "N", item_tmp.nameid, 1, &item_tmp);
+
+		if((flag=pc_additem(sd,&item_tmp,1))){	// もてないならドロップ
+			clif_additem(sd,0,0,flag);
+			map_addflooritem(&item_tmp,1,sd->bl.m,sd->bl.x,sd->bl.y,0,0,0,0);
+		}
+
+		clif_misceffect(&sd->bl,3);
+	}
+	return 0;
+}
+
+LUA_FUNC(failedremovecards)
+{
+	LUA_GET_TARGET(3);
+	int i=-1,j,c,cardflag=0;
+	int num = luaL_checkint(NL,1);
+	int typefail = luaL_checkint(NL,2);
+
+	if (num > 0 && num <= ARRAYLENGTH(equip))
+		i=pc_checkequip(sd,equip[num-1]);
+
+	if (i < 0 || !sd->inventory_data[i])
+		return 0;
+
+	if(itemdb_isspecial(sd->status.inventory[i].card[0]))
+		return 0;
+
+	for( c = sd->inventory_data[i]->slot - 1; c >= 0; --c )
+	{
+		if( sd->status.inventory[i].card[c] && itemdb_type(sd->status.inventory[i].card[c]) == IT_CARD )
+		{
+			cardflag = 1;
+
+			if(typefail == 2)
+			{// add cards to inventory, clear 
+				int flag;
+				struct item item_tmp;
+				item_tmp.id=0,item_tmp.nameid=sd->status.inventory[i].card[c];
+				item_tmp.equip=0,item_tmp.identify=1,item_tmp.refine=0;
+				item_tmp.attribute=0,item_tmp.expire_time=0;
+				for (j = 0; j < MAX_SLOTS; j++)
+					item_tmp.card[j]=0;
+
+				//Logs items, got from (N)PC scripts [Lupus]
+				if(log_config.enable_logs&0x40)
+					log_pick_pc(sd, "N", item_tmp.nameid, 1, NULL);
+
+				if((flag=pc_additem(sd,&item_tmp,1))){
+					clif_additem(sd,0,0,flag);
+					map_addflooritem(&item_tmp,1,sd->bl.m,sd->bl.x,sd->bl.y,0,0,0,0);
+				}
+			}
+		}
+	}
+
+	if(cardflag == 1)
+	{
+		if(typefail == 0 || typefail == 2){	// 武具損失
+			//Logs items, got from (N)PC scripts [Lupus]
+			if(log_config.enable_logs&0x40)
+				log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -1, &sd->status.inventory[i]);
+
+			pc_delitem(sd,i,1,0);
+		}
+		if(typefail == 1){	// カードのみ損失（武具を返す）
+			int flag;
+			struct item item_tmp;
+			item_tmp.id=0,item_tmp.nameid=sd->status.inventory[i].nameid;
+			item_tmp.equip=0,item_tmp.identify=1,item_tmp.refine=sd->status.inventory[i].refine;
+			item_tmp.attribute=sd->status.inventory[i].attribute,item_tmp.expire_time=sd->status.inventory[i].expire_time;
+
+			//Logs items, got from (N)PC scripts [Lupus]
+			if(log_config.enable_logs&0x40)
+				log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -1, &sd->status.inventory[i]);
+
+			for (j = 0; j < sd->inventory_data[i]->slot; j++)
+				item_tmp.card[j]=0;
+			for (j = sd->inventory_data[i]->slot; j < MAX_SLOTS; j++)
+				item_tmp.card[j]=sd->status.inventory[i].card[j];
+			pc_delitem(sd,i,1,0);
+
+			//Logs items, got from (N)PC scripts [Lupus]
+			if(log_config.enable_logs&0x40)
+				log_pick_pc(sd, "N", item_tmp.nameid, 1, &item_tmp);
+
+			if((flag=pc_additem(sd,&item_tmp,1))){
+				clif_additem(sd,0,0,flag);
+				map_addflooritem(&item_tmp,1,sd->bl.m,sd->bl.x,sd->bl.y,0,0,0,0);
+			}
+		}
+		clif_misceffect(&sd->bl,2);
+	}
+
+	return 0;
+}
+
+static int buildin_areawarp_sub(struct block_list *bl,va_list ap)
+{
+	int x,y;
+	unsigned int map;
+	map=va_arg(ap, unsigned int);
+	x=va_arg(ap,int);
+	y=va_arg(ap,int);
+	if(map == 0)
+		pc_randomwarp((TBL_PC *)bl,3);
+	else
+		pc_setpos((TBL_PC *)bl,map,x,y,0);
+	return 0;
+}
+
+LUA_FUNC(mapwarp)
+{
+	int x,y,m,check_val=0,check_ID=0,i=0;
+	struct guild *g = NULL;
+	struct party_data *p = NULL;
+	const char *str;
+	const char *mapname;
+	unsigned int index;
+	mapname=luaL_checkstring(NL,1);
+	str=luaL_checkstring(NL,2);
+	x=luaL_checkint(NL,3);
+	y=luaL_checkint(NL,4);
+	
+	if( lua_isnumber(NL,5) ) {
+		check_val = luaL_checkint(NL,5);
+		check_ID = luaL_checkint(NL,6);
+	}
+
+	if((m=map_mapname2mapid(mapname))< 0)
+		return 0;
+
+	if(!(index=mapindex_name2id(str)))
+		return 0;
+
+	switch(check_val){
+		case 1:
+			g = guild_search(check_ID);
+			if (g){
+				for( i=0; i < g->max_member; i++)
+				{
+					if(g->member[i].sd && g->member[i].sd->bl.m==m){
+						pc_setpos(g->member[i].sd,index,x,y,3);
+					}
+				}
+			}
+			break;
+		case 2:
+			p = party_search(check_ID);
+			if(p){
+				for(i=0;i<MAX_PARTY; i++){
+					if(p->data[i].sd && p->data[i].sd->bl.m == m){
+						pc_setpos(p->data[i].sd,index,x,y,3);
+					}
+				}
+			}
+			break;
+		default:
+			map_foreachinmap(buildin_areawarp_sub,m,BL_PC,index,x,y);
+			break;
+	}
+
+	return 0;
+}
+
+static int buildin_mobcount_sub(struct block_list *bl,va_list ap)
+{
+	char *event=va_arg(ap,char *);
+	struct mob_data *md = ((struct mob_data *)bl);
+	if(strcmp(event,md->function)==0 && md->status.hp > 0)
+		return 1;
+	return 0;
+}
+
+LUA_FUNC(mobcount)
+{
+	const char *mapname,*event;
+	int m;
+	mapname=luaL_checkstring(NL,1);
+	event=luaL_checkstring(NL,2);
+
+	if( (m = map_mapname2mapid(mapname)) < 0 ) {
+		return 0;
+	}
+	/* TODO ## Instance Support
+	if( map[m].flag.src4instance && map[m].instance_id == 0 && st->instance_id && (m = instance_mapid2imapid(m, st->instance_id)) < 0 )
+	{
+		return 0;
+	}
+	*/
+	lua_pushinteger(NL,map_foreachinmap(buildin_mobcount_sub, m, BL_MOB, event));
+	return 0;
+}
+
+LUA_FUNC(marriage)
+{
+	LUA_GET_TARGET(1);
+	const char *partner=luaL_checkstring(NL,2);
+	TBL_PC *p_sd=map_nick2sd(partner);
+	if(sd==NULL || p_sd==NULL || pc_marriage(sd,p_sd) < 0){
+		return 0;
+	}
+	lua_pushinteger(NL,1);
+	return 1;
+}
 // List of commands to build into Lua, format : {"function_name_in_lua", C_function_name}
 #define LUA_DEF(x) {#x, buildin_ ##x}
 static struct LuaCommandInfo commands[] = {
 	LUA_DEF(scriptend),
-	LUA_DEF(addnpc),
+	LUA_DEF(_addnpc),
 	LUA_DEF(addareascript),
 	LUA_DEF(addwarp),
 	LUA_DEF(addspawn),
-	//LUA_DEF(addgmcommand),
-	//LUA_DEF(addclock),
-	//LUA_DEF(addevent),
 	LUA_DEF(mes),
-	LUA_DEF(npcmenu),
 	LUA_DEF(npcmenu),
 	LUA_DEF(close),
 	LUA_DEF(npcnext),
@@ -2517,6 +3975,67 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(addtimer),
 	LUA_DEF(deltimer),
 	LUA_DEF(addtimercount),
+	LUA_DEF(addnpctimer),
+	LUA_DEF(announce),
+	LUA_DEF(mapannounce),
+	LUA_DEF(areaannounce),
+	LUA_DEF(getusers),
+	LUA_DEF(getusersname),
+	LUA_DEF(getmapguildusers),
+	LUA_DEF(getmapusers),
+	LUA_DEF(getareausers),
+	LUA_DEF(getareadropitem),
+	LUA_DEF(npc_enable),
+	LUA_DEF(sc_start),
+	LUA_DEF(sc_start2),
+	LUA_DEF(sc_start4),
+	LUA_DEF(sc_end),
+	LUA_DEF(getscrate),
+	LUA_DEF(catchpet),
+	LUA_DEF(homunculus_evolution),
+	LUA_DEF(homunculus_shuffle),
+	LUA_DEF(eaclass),
+	LUA_DEF(roclass),
+	LUA_DEF(birthpet),
+	LUA_DEF(resetlvl),
+	LUA_DEF(resetstatus),
+	LUA_DEF(resetskill),
+	LUA_DEF(skillpointcount),
+	LUA_DEF(changebase),
+	LUA_DEF(changesex),
+	LUA_DEF(waitingroom),
+	LUA_DEF(delwaitingroom),
+	LUA_DEF(waitingroomkickall),
+	LUA_DEF(enablewaitingroomevent),
+	LUA_DEF(disablewaitingroomevent),
+	LUA_DEF(getwaitingroomstate),
+	LUA_DEF(warpwaitingpc),
+	LUA_DEF(isloggedin),
+	LUA_DEF(setmapflagnosave),
+	LUA_DEF(getmapflag),
+	LUA_DEF(editmapflag),
+	LUA_DEF(pvpon),
+	LUA_DEF(pvpoff),
+	LUA_DEF(gvgon),
+	LUA_DEF(gvgoff),
+	LUA_DEF(emotion),
+	LUA_DEF(maprespawnguildid),
+	LUA_DEF(agitstart),
+	LUA_DEF(agitend),
+	LUA_DEF(agitstart2),
+	LUA_DEF(agitend2),
+	LUA_DEF(agitcheck),
+	LUA_DEF(flagemblem),
+	LUA_DEF(getcastlename),
+	LUA_DEF(getcastledata),
+	LUA_DEF(setcastledata),
+	LUA_DEF(requestguildinfo),
+	LUA_DEF(getequipcardcnt),
+	LUA_DEF(successremovecards),
+	LUA_DEF(failedremovecards),
+	LUA_DEF(mapwarp),
+	LUA_DEF(mobcount),
+	LUA_DEF(marriage),
 	// End of build-in functions list
 	{"-End of list-", NULL},
 };
@@ -2712,21 +4231,4 @@ void script_resume(struct map_session_data *sd,const char *format,...) {
 	    sd->NL=NULL; // Close the player's personal thread
 		sd->npc_id=0; // Set the player's current NPC to 'none'
 	}
-}
-
-/*
-	Used to determine whether a lua argument passed
-	is a string.
-*/
-int script_getstring(const char *name)
-{
-	while(*name != '\0')
-	{
-		if(isalpha(*name))
-			return 1;
-		else
-			*name++;
-	}
-
-	return 0;
 }
