@@ -5873,36 +5873,36 @@ ACMD_FUNC(changelook)
 }
 
 /*==========================================
- * @autotrade by durf (changed by Lupus)
+ * @autotrade by durf [Lupus] [Paradox924X]
  * Turns on/off Autotrade for a specific player
  *------------------------------------------*/
 ACMD_FUNC(autotrade)
 {
 	nullpo_retr(-1, sd);
-	if( sd->vender_id ) //check if player's vending
-	{
-		if( pc_isdead(sd) )
-		{
-			clif_displaymessage(fd, "Cannot Autotrade if you are dead.");
-			return -1;
-		}
-
-		if( map[sd->bl.m].flag.autotrade == battle_config.autotrade_mapflag )
-		{
-			sd->state.autotrade = 1;
-			if( battle_config.at_timeout )
-			{
-				int timeout = atoi(message);
-				status_change_start(&sd->bl, SC_AUTOTRADE, 10000, 0, 0, 0, 0, ((timeout > 0) ? min(timeout,battle_config.at_timeout) : battle_config.at_timeout) * 60000, 0);
-			}
-
-			clif_authfail_fd(fd, 15);
-		} else
-			clif_displaymessage(fd, "Autotrade is not allowed on this map.");
+	
+	if( map[sd->bl.m].flag.autotrade != battle_config.autotrade_mapflag ) {
+		clif_displaymessage(fd, "Autotrade is not allowed on this map.");
+		return -1;
 	}
-	else
-		clif_displaymessage(fd, msg_txt(549)); // You should be vending to use @Autotrade.
 
+	if( pc_isdead(sd) ) {
+		clif_displaymessage(fd, "Cannot Autotrade if you are dead.");
+		return -1;
+	}
+	
+	if( !sd->vender_id ) { //check if player is vending
+		clif_displaymessage(fd, msg_txt(549)); // You should be vending to use @Autotrade.
+		return -1;
+	}
+	
+	sd->state.autotrade = 1;
+	if( battle_config.at_timeout )
+	{
+		int timeout = atoi(message);
+		status_change_start(&sd->bl, SC_AUTOTRADE, 10000, 0, 0, 0, 0, ((timeout > 0) ? min(timeout,battle_config.at_timeout) : battle_config.at_timeout) * 60000, 0);
+	}
+	clif_authfail_fd(fd, 15);
+		
 	return 0;
 }
 
@@ -8745,7 +8745,7 @@ AtCommandInfo atcommand_info[] = {
 	{ "mobsearch",         10,10,     atcommand_mobsearch },
 	{ "cleanmap",          40,40,     atcommand_cleanmap },
 	{ "npctalk",           20,20,     atcommand_npctalk },
-	{ "npctalkc",           20,20,     atcommand_npctalk },
+	{ "npctalkc",          20,20,     atcommand_npctalk },
 	{ "pettalk",           10,10,     atcommand_pettalk },
 	{ "users",             40,40,     atcommand_users },
 	{ "reset",             40,40,     atcommand_reset },

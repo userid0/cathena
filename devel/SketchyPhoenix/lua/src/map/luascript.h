@@ -6,15 +6,10 @@
 
 #include <lua.h>
 
-#define LUA_USERSTATE NPC_State ns;
 //Lua functions
 struct LuaCommandInfo {
 	const char *command;
 	lua_CFunction f;
-};
-
-struct NPC_State {
-	int id;
 };
 
 int lua_eventtimer[MAX_EVENTTIMER];

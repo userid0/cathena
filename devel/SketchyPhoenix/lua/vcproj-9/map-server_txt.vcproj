@@ -157,7 +157,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libcmt.lib oldnames.lib ws2_32.lib zdll.lib pcre.lib lua5.1lib"
+				AdditionalDependencies="libcmt.lib oldnames.lib ws2_32.lib zdll.lib pcre.lib lua5.1.lib"
 				OutputFile="$(OutDir)\map-server.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="..\3rdparty\lua\lib;..\3rdparty\zlib\lib;..\3rdparty\pcre\lib"

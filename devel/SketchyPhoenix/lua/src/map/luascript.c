@@ -65,7 +65,6 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
-lua_State *L;
 static struct map_session_data* script_get_target(lua_State *NL,int idx);
 
 static int buildin_killmonster_sub(struct block_list *bl,va_list ap);
@@ -82,12 +81,12 @@ extern enum { CLOSE, NRUN, NEXT, INPUT, MENU };
  from 1. In other words, they're the arguments passed when a script command is used.
  
  Reminder: All lua script commands set the player that called the function as the target.
- LUA_GET_TARGET is used to do this. If a value is passed in the script for a char id,
- LUA_GET_TARGET will execute that command under the specified target. If no target
+ lua_get_target is used to do this. If a value is passed in the script for a char id,
+ lua_get_target will execute that command under the specified target. If no target
  is supplied, it is executed under the caller of the script.
 */
 #define LUA_FUNC(x) static int buildin_ ## x (lua_State *NL)
-#define LUA_GET_TARGET(x) struct map_session_data *sd = script_get_target(NL,x)
+#define lua_get_target(x) struct map_session_data *sd = script_get_target(NL,x)
 
 //Exits the script
 LUA_FUNC(scriptend)
@@ -117,7 +116,7 @@ LUA_FUNC(_addnpc)
 LUA_FUNC(mes)
 {
 	char mes[512];
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 
 	sprintf(mes,"%s",luaL_checkstring(NL, 1));
 
@@ -134,7 +133,7 @@ LUA_FUNC(npcmenu)
 	char *menu;
 	int len=0, n, i;
 
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	
 	if ( sd->lua_script_state == INPUT || sd->lua_script_state == MENU ) {
 		//You shouldn't get another input/menu while already in an input/menu
@@ -197,7 +196,7 @@ LUA_FUNC(npcmenu)
 //npcnext(id)
 LUA_FUNC(npcnext)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 
 	clif_scriptnext(sd,sd->npc_id);
 
@@ -209,7 +208,7 @@ LUA_FUNC(npcnext)
 // Display a [Close] button in the NPC dialog window of the player and pause the script until the button is clicked
 LUA_FUNC(close)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	
 	if (sd == NULL)
 		return 0;
@@ -292,7 +291,7 @@ LUA_FUNC(addspawn)
 //npcinput(type,[id])
 LUA_FUNC(input)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int type;
 
 	type = luaL_checkint(NL,1);
@@ -317,7 +316,7 @@ LUA_FUNC(npcshop)
 {
 	int n, i, j;
 
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 
 	lua_pushliteral(NL, "n");
 	lua_rawget(NL, 1);
@@ -360,7 +359,7 @@ LUA_FUNC(npcshop)
 //npccutin(name,type,[id])
 LUA_FUNC(cutin)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	char name[50];
 	int type;
 
@@ -376,7 +375,7 @@ LUA_FUNC(cutin)
 //npcheal(hp,sp,[id])
 LUA_FUNC(heal)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int hp, sp;
 
 	hp = luaL_checkint(NL, 1);
@@ -391,7 +390,7 @@ LUA_FUNC(heal)
 //npcpercentheal(hp,sp,[id])
 LUA_FUNC(percentheal)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int hp, sp;
 
 	hp = luaL_checkint(NL, 1);
@@ -406,7 +405,7 @@ LUA_FUNC(percentheal)
 //npcitemheal(hp,sp,[id]);
 LUA_FUNC(itemheal)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int hp, sp;
 
 	hp = luaL_checkint(NL, 1);
@@ -431,7 +430,7 @@ LUA_FUNC(itemheal)
 //npcjobchange(job_id,[id])
 LUA_FUNC(jobchange)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int job;
 
 	job = luaL_checkint(NL, 1);
@@ -445,7 +444,7 @@ LUA_FUNC(jobchange)
 //npcsetlook(type,val,[id])
 LUA_FUNC(setlook)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int type,val;
 
 	type = luaL_checkint(NL, 1);
@@ -460,7 +459,7 @@ LUA_FUNC(setlook)
 //warp("map",x,y,[id])
 LUA_FUNC(warp)
 {
-	LUA_GET_TARGET(4);
+	lua_get_target(4);
 	char str[16];
 	int x, y;
 
@@ -494,7 +493,7 @@ LUA_FUNC(getjobname)
 //npcchangelook(type,val,[id])
 LUA_FUNC(changelook)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int type,val;
 
 	type = luaL_checkint(NL, 1);
@@ -512,7 +511,7 @@ LUA_FUNC(getitemcount)
 {
 	int nameid, i;
 	int count = 0;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	
 	if (!sd) //Return nil if no player exists
 		return 0;
@@ -552,7 +551,7 @@ LUA_FUNC(getweight)
 {
 	int nameid = 0, amount, i;
 	unsigned long weight;
-	LUA_GET_TARGET(3);	
+	lua_get_target(3);	
 	if ( sd == NULL ) {
 		return 0;
 	}
@@ -597,7 +596,7 @@ LUA_FUNC(giveitem)
 {
 	int nameid,amount,get_count,i,flag = 0;
 	struct item it;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	if( lua_isstring(NL,1) )
 	{
 		const char *name = luaL_checkstring(NL,1);
@@ -667,7 +666,7 @@ LUA_FUNC(giveitem2)
 LUA_FUNC(getparam)
 {
 	int type;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	
 	type = luaL_checkint(NL,1);
 	
@@ -680,7 +679,7 @@ LUA_FUNC(getparam)
 
 LUA_FUNC(getrentalitem)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	struct item it;
 	int seconds;
 	int nameid = 0, flag;
@@ -789,7 +788,7 @@ LUA_FUNC(getpartyname)
 {
 	char *name;
 	int party_id;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	
 	party_id = luaL_checkint(NL,1);
 	
@@ -850,7 +849,7 @@ LUA_FUNC(getpartymember)
 
 LUA_FUNC(itemuseenable)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	
 	if ( sd ) {
 		sd->npc_item_flag = sd->npc_id;
@@ -863,7 +862,7 @@ LUA_FUNC(itemuseenable)
 
 LUA_FUNC(itemusedisable)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	
 	if ( sd )
 	{
@@ -879,7 +878,7 @@ LUA_FUNC(givenameditem)
 {
 	int nameid;
 	struct item item_tmp;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	struct map_session_data *tsd;
 	
 	if( lua_isstring(NL,1) )
@@ -961,7 +960,7 @@ LUA_FUNC(additem)
 
 	if(strcmp(mapname,"this")==0)
 	{
-		LUA_GET_TARGET(6);
+		lua_get_target(6);
 		if (!sd) return 0; //Failed...
 		m=sd->bl.m;
 	} else
@@ -990,7 +989,7 @@ LUA_FUNC(additem)
 LUA_FUNC(deleteitem)
 {
 	int nameid=0,amount,i,important_item=0;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 
 	if( sd == NULL )
 	{
@@ -1098,7 +1097,7 @@ LUA_FUNC(deleteitem2)
 {
 	int nameid=0,amount,i=0;
 	int iden,ref,attr,c1,c2,c3,c4;
-	LUA_GET_TARGET(10);
+	lua_get_target(10);
 
 	if ( sd == NULL )
 		return 0;
@@ -1274,7 +1273,7 @@ LUA_FUNC(getguildmasterid)
 
 LUA_FUNC(strcharinfo)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int num;
 	char *buf;
 
@@ -1347,7 +1346,7 @@ static unsigned int equip[] = {EQP_HEAD_TOP,EQP_ARMOR,EQP_HAND_L,EQP_HAND_R,EQP_
 LUA_FUNC(getequipid)
 {
 	int i, num;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	struct item_data* item;
 
 	num = luaL_checkint(NL,1) - 1;
@@ -1370,7 +1369,7 @@ LUA_FUNC(getequipid)
 LUA_FUNC(getequipname)
 {
 	int i, num;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	struct item_data* item;
 	
 	num = luaL_checkint(NL,1) - 1;
@@ -1395,7 +1394,7 @@ LUA_FUNC(getequipname)
 LUA_FUNC(getbrokenid)
 {
 	int i,num;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int id=0;
 	int brokencounter=0;
 
@@ -1419,7 +1418,7 @@ LUA_FUNC(repair)
 {
 	int i,num;
 	int repaircounter=0;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 
 	num=luaL_checkint(NL,1);
 	for(i=0; i<MAX_INVENTORY; i++) {
@@ -1441,7 +1440,7 @@ LUA_FUNC(repair)
 LUA_FUNC(getequipisenableref)
 {
 	int i=-1,num;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 
 	num=luaL_checkint(NL,1);
 
@@ -1458,7 +1457,7 @@ LUA_FUNC(getequipisenableref)
 LUA_FUNC(getequiprefinerycnt)
 {
 	int i=-1,num;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 
 	num=luaL_checkint(NL,1);
 
@@ -1475,7 +1474,7 @@ LUA_FUNC(getequiprefinerycnt)
 LUA_FUNC(getequipweaponlv)
 {
 	int i=-1,num;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	num=luaL_checkint(NL,1);
 	if (num > 0 && num <= ARRAYLENGTH(equip)) {
 		i=pc_checkequip(sd,equip[num-1]);
@@ -1490,7 +1489,7 @@ LUA_FUNC(getequipweaponlv)
 LUA_FUNC(getequippercentrefinery)
 {
 	int i=-1,num;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	num=luaL_checkint(NL,1);
 	if (num > 0 && num <= ARRAYLENGTH(equip)) {
 		i=pc_checkequip(sd,equip[num-1]);
@@ -1506,7 +1505,7 @@ LUA_FUNC(getequippercentrefinery)
 LUA_FUNC(successrefitem)
 {
 	int i=-1,num,ep;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	num=luaL_checkint(NL,1);
 	if (num > 0 && num <= ARRAYLENGTH(equip))
 		i=pc_checkequip(sd,equip[num-1]);
@@ -1551,7 +1550,7 @@ LUA_FUNC(successrefitem)
 LUA_FUNC(failedrefitem)
 {
 	int i=-1,num;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	num=luaL_checkint(NL,1);
 	if (num > 0 && num <= ARRAYLENGTH(equip))
 		i=pc_checkequip(sd,equip[num-1]);
@@ -1573,7 +1572,7 @@ LUA_FUNC(failedrefitem)
 LUA_FUNC(statusup)
 {
 	int type;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	type=luaL_checkint(NL,1);
 	pc_statusup(sd,type);
 	return 0;
@@ -1582,7 +1581,7 @@ LUA_FUNC(statusup)
 LUA_FUNC(statusup2)
 {
 	int type,val;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	type=luaL_checkint(NL,1);
 	val=luaL_checkint(NL,2);
 	pc_statusup2(sd,type,val);
@@ -1597,7 +1596,7 @@ LUA_FUNC(bonus)
 	int val3 = 0;
 	int val4 = 0;
 	int val5 = 0;
-	LUA_GET_TARGET(7);
+	lua_get_target(7);
 	type=luaL_checkint(NL,1);
 	switch( type )
 	{
@@ -1661,7 +1660,7 @@ LUA_FUNC(autobonus)
 	unsigned int dur;
 	short rate;
 	short atk_type = 0;
-	LUA_GET_TARGET(6);
+	lua_get_target(6);
 	const char *bonus_script, *other_script = NULL;
 	if( sd->state.autobonus&sd->status.inventory[current_equip_item_index].equip )
 		return 0;
@@ -1688,7 +1687,7 @@ LUA_FUNC(autobonus2)
 	unsigned int dur;
 	short rate;
 	short atk_type = 0;
-	LUA_GET_TARGET(6);
+	lua_get_target(6);
 	const char *bonus_script, *other_script = NULL;
 	if( sd->state.autobonus&sd->status.inventory[current_equip_item_index].equip )
 		return 0;
@@ -1715,7 +1714,7 @@ LUA_FUNC(autobonus3)
 {
 	unsigned int dur;
 	short rate,atk_type;
-	LUA_GET_TARGET(6);
+	lua_get_target(6);
 	const char *bonus_script, *other_script = NULL;
 	if( sd->state.autobonus&sd->status.inventory[current_equip_item_index].equip ) {
 		return 0;
@@ -1746,7 +1745,7 @@ LUA_FUNC(skill)
 	int id;
 	int level;
 	int flag = 1;
-	LUA_GET_TARGET(4);
+	lua_get_target(4);
 	id = ( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
 	level = luaL_checkint(NL,2);
 	if( lua_tointeger(NL,3) )
@@ -1761,7 +1760,7 @@ LUA_FUNC(guildskill)
 	int id;
 	int level;
 	int i;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	id = ( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
 	level = luaL_checkint(NL,2);
 	for( i=0; i < level; i++ )
@@ -1774,7 +1773,7 @@ LUA_FUNC(guildskill)
 LUA_FUNC(getskilllv)
 {
 	int id;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	id = ( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,2) );
 	lua_pushinteger(NL, pc_checkskill(sd,id));
 	return 1;
@@ -1805,7 +1804,7 @@ LUA_FUNC(basicskillcheck)
 
 LUA_FUNC(getgmlevel)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	lua_pushinteger(NL, pc_isGM(sd));
 	return 1;
 }
@@ -1813,7 +1812,7 @@ LUA_FUNC(getgmlevel)
 LUA_FUNC(checkoption)
 {
 	int option;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	option = luaL_checkint(NL,1);
 	if( sd->sc.option&option ) {
 		lua_pushinteger(NL, 1);
@@ -1825,7 +1824,7 @@ LUA_FUNC(checkoption)
 LUA_FUNC(checkoption1)
 {
 	int opt1;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	opt1 = luaL_checkint(NL,1);
 	if( sd->sc.opt1 == opt1 ) {
 		lua_pushinteger(NL, 1);
@@ -1837,7 +1836,7 @@ LUA_FUNC(checkoption1)
 LUA_FUNC(checkoption2)
 {
 	int opt2;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	opt2 = luaL_checkint(NL,1);
 	if( sd->sc.opt2&opt2 ) {
 		lua_pushinteger(NL, 1);
@@ -1850,7 +1849,7 @@ LUA_FUNC(setoption)
 {
 	int option;
 	int flag = 1;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	option = luaL_checkint(NL,1);
 	if( lua_tonumber(NL,2) )
 		flag = luaL_checkint(NL,2);
@@ -1869,7 +1868,7 @@ LUA_FUNC(setoption)
 
 LUA_FUNC(checkcart)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	if( pc_iscarton(sd) ) {
 		lua_pushinteger(NL, 1);
 		return 1;
@@ -1880,14 +1879,14 @@ LUA_FUNC(checkcart)
 LUA_FUNC(setcart)
 {
 	int type=luaL_checkint(NL,1);
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	pc_setcart(sd,type);
 	return 0;
 }
 
 LUA_FUNC(checkfalcon)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	if( pc_isfalcon(sd) ) {
 		lua_pushinteger(NL,1);
 		return 1;
@@ -1898,14 +1897,14 @@ LUA_FUNC(checkfalcon)
 LUA_FUNC(setfalcon)
 {
 	int flag = luaL_checkint(NL,1);
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	pc_setfalcon(sd, flag);
 	return 0;
 }
 
 LUA_FUNC(checkriding)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	if( pc_isriding(sd) ) {
 		lua_pushinteger(NL, 1);
 		return 1;
@@ -1916,7 +1915,7 @@ LUA_FUNC(checkriding)
 LUA_FUNC(setriding)
 {
 	int flag = luaL_checkint(NL,1);
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	pc_setriding(sd, flag);
 	return 0;
 }
@@ -1927,7 +1926,7 @@ LUA_FUNC(savepoint)
 	int y;
 	short map;
 	const char* str;
-	LUA_GET_TARGET(4);
+	lua_get_target(4);
 	str = luaL_checkstring(NL,1);
 	x   = luaL_checkint(NL,2);
 	y   = luaL_checkint(NL,3);
@@ -2017,14 +2016,14 @@ LUA_FUNC(gettimestr)
 
 LUA_FUNC(openstorage)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	storage_storageopen(sd);
 	return 0;
 }
 
 LUA_FUNC(guildopenstorage)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	int ret;
 	ret = storage_guild_storageopen(sd);
 	lua_pushinteger(NL,ret);
@@ -2035,7 +2034,7 @@ LUA_FUNC(itemskill)
 {
 	int id;
 	int lv;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	if( sd->ud.skilltimer != INVALID_TIMER ) {
 		return 0;
 	}
@@ -2050,7 +2049,7 @@ LUA_FUNC(itemskill)
 LUA_FUNC(produce)
 {
 	int trigger;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	trigger=luaL_checkint(NL,1);
 	clif_skill_produce_mix_list(sd, trigger);
 	return 0;
@@ -2059,7 +2058,7 @@ LUA_FUNC(produce)
 LUA_FUNC(cooking)
 {
 	int trigger;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	trigger=luaL_checkint(NL,1);
 	clif_cooking_list(sd, trigger);
 	return 0;
@@ -2068,7 +2067,7 @@ LUA_FUNC(cooking)
 LUA_FUNC(makepet)
 {
 	int id,pet_id;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	id=luaL_checkint(NL,1);
 	pet_id = search_petDB_index(id, PET_CLASS);
 	if (pet_id < 0) {
@@ -2089,7 +2088,7 @@ LUA_FUNC(getexp)
 {
 	int base=0,job=0;
 	double bonus;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	base=luaL_checkint(NL,1);
 	job=luaL_checkint(NL,2);
 	if(base<0 || job<0) {
@@ -2105,7 +2104,7 @@ LUA_FUNC(getexp)
 
 LUA_FUNC(guildgetexp)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int exp;
 	exp=luaL_checkint(NL,1);
 	if(exp < 0) {
@@ -2119,7 +2118,7 @@ LUA_FUNC(guildgetexp)
 
 LUA_FUNC(guildchangegm)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int guild_id;
 	const char *name;
 	guild_id=luaL_checkint(NL,1);
@@ -2136,7 +2135,7 @@ LUA_FUNC(guildchangegm)
 
 LUA_FUNC(monster)
 {
-	LUA_GET_TARGET(8);
+	lua_get_target(8);
 	int m;
 	char function[50];
 	const char* mapn  = luaL_checkstring(NL,1);
@@ -2201,7 +2200,7 @@ LUA_FUNC(getmobdrops)
 
 LUA_FUNC(areamonster)
 {
-	LUA_GET_TARGET(10);
+	lua_get_target(10);
 	int m;
 	char function[50];
 	const char* mapn  = luaL_checkstring(NL,1);
@@ -2379,7 +2378,7 @@ LUA_FUNC(clone)
 
 LUA_FUNC(addtimer)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int tick = luaL_checkint(NL,1);
 	const char* function = luaL_checkstring(NL,2);
 	add_timer_lua(pc_addeventtimer(sd,tick,function));
@@ -2390,7 +2389,7 @@ LUA_FUNC(addtimer)
 LUA_FUNC(deltimer)
 {
 	const char *function;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	function=luaL_checkstring(NL,1);
 	pc_deleventtimer(sd,function);
 	return 0;
@@ -2400,7 +2399,7 @@ LUA_FUNC(addtimercount)
 {
 	const char *function;
 	int tick;
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	function=luaL_checkstring(NL,1);
 	tick=luaL_checkint(NL,2);
 	pc_addeventtimercount(sd,function,tick);
@@ -2530,7 +2529,7 @@ LUA_FUNC(areaannounce)
 
 LUA_FUNC(getusers)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int flag=luaL_checkint(NL,1);
 	int npcid=luaL_checkint(NL,2);
 	struct block_list *bl=map_id2bl((flag&0x08)?npcid:sd->status.account_id);
@@ -2545,7 +2544,7 @@ LUA_FUNC(getusers)
 
 LUA_FUNC(getusersname)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	TBL_PC *pl_sd;
 	int disp_num=1;
 	struct s_mapiterator* iter;
@@ -2677,7 +2676,7 @@ LUA_FUNC(sc_start)
 	enum sc_type type;
 	int tick;
 	int val1;
-	LUA_GET_TARGET(5);
+	lua_get_target(5);
 	int val4 = 0;
 	type = (sc_type)luaL_checkint(NL,1);
 	tick = luaL_checkint(NL,2);
@@ -2705,7 +2704,7 @@ LUA_FUNC(sc_start)
 
 LUA_FUNC(sc_start2)
 {
-	LUA_GET_TARGET(5);
+	lua_get_target(6);
 	struct block_list* bl;
 	enum sc_type type;
 	int tick;
@@ -2740,7 +2739,7 @@ LUA_FUNC(sc_start2)
 
 LUA_FUNC(sc_start4)
 {
-	LUA_GET_TARGET(7);
+	lua_get_target(8);
 	struct block_list* bl;
 	enum sc_type type;
 	int tick;
@@ -2778,7 +2777,7 @@ LUA_FUNC(sc_start4)
 
 LUA_FUNC(sc_end)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(3);
 	struct block_list* bl;
 	int type = luaL_checkint(NL,1);
 	if(!sd)
@@ -2808,12 +2807,12 @@ LUA_FUNC(sc_end)
 
 LUA_FUNC(getscrate)
 {
-	LUA_GET_TARGET(4);
+	lua_get_target(4);
 	struct block_list *bl;
 	int type,rate;
 	type=luaL_checkint(NL,1);
 	rate=luaL_checkint(NL,2);
-	if( lua_isnumber(NL,3) ) //Žw’è‚µ‚½ƒLƒƒƒ‰‚Ì‘Ï«‚ðŒvŽZ‚·‚é
+	if( lua_isnumber(NL,3) )
 		bl = map_id2bl(luaL_checkint(NL,3));
 	else
 		bl = map_id2bl(sd->status.account_id);
@@ -2826,7 +2825,7 @@ LUA_FUNC(getscrate)
 LUA_FUNC(catchpet)
 {
 	int pet_id;
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	pet_id=luaL_checkint(NL,1);
 	pet_catch_process1(sd,pet_id);
 	return 0;
@@ -2834,7 +2833,7 @@ LUA_FUNC(catchpet)
 
 LUA_FUNC(homunculus_evolution)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	if(merc_is_hom_active(sd->hd))
 	{
 		if (sd->hd->homunculus.intimacy > 91000)
@@ -2847,7 +2846,7 @@ LUA_FUNC(homunculus_evolution)
 
 LUA_FUNC(homunculus_shuffle)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	if(merc_is_hom_active(sd->hd))
 		merc_hom_shuffle(sd->hd);
 	return 0;
@@ -2855,7 +2854,7 @@ LUA_FUNC(homunculus_shuffle)
 
 LUA_FUNC(eaclass)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int class_;
 	if( lua_isnumber(NL,1) )
 		class_ = luaL_checkint(NL,1);
@@ -2871,7 +2870,7 @@ LUA_FUNC(eaclass)
 
 LUA_FUNC(roclass)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int class_ =luaL_checkint(NL,1);
 	int sex;
 	if( lua_isnumber(NL,2) )
@@ -2888,14 +2887,14 @@ LUA_FUNC(roclass)
 
 LUA_FUNC(birthpet)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	clif_sendegg(sd);
 	return 0;
 }
 
 LUA_FUNC(resetlvl)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int type=luaL_checkint(NL,1);
 	pc_resetlvl(sd,type);
 	return 0;
@@ -2903,28 +2902,28 @@ LUA_FUNC(resetlvl)
 
 LUA_FUNC(resetstatus)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	pc_resetstate(sd);
 	return 0;
 }
 
 LUA_FUNC(resetskill)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	pc_resetskill(sd,1);
 	return 0;
 }
 
 LUA_FUNC(skillpointcount)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	lua_pushinteger(NL,sd->status.skill_point + pc_resetskill(sd,2));
 	return 0;
 }
 
 LUA_FUNC(changebase)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int vclass;
 	vclass = luaL_checkint(NL,1);
 	if(vclass == JOB_WEDDING)
@@ -2948,7 +2947,7 @@ LUA_FUNC(changebase)
 
 LUA_FUNC(changesex)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	chrif_changesex(sd);
 	return 0;
 }
@@ -2966,7 +2965,7 @@ LUA_FUNC(globalmes)
 	return 0;
 }
 
-
+//##TODO waiting room events
 LUA_FUNC(waitingroom)
 {
 	struct npc_data* nd;
@@ -3098,7 +3097,7 @@ LUA_FUNC(warpwaitingpc)
 
 LUA_FUNC(isloggedin)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	int id = luaL_checkint(NL,1);
 	TBL_PC* fsd = map_id2sd(id);
 	if (!fsd) {
@@ -3586,7 +3585,7 @@ LUA_FUNC(requestguildinfo)
 
 LUA_FUNC(getequipcardcnt)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int i=-1,j,num;
 	int count;
 
@@ -3614,7 +3613,7 @@ LUA_FUNC(getequipcardcnt)
 
 LUA_FUNC(successremovecards)
 {
-	LUA_GET_TARGET(2);
+	lua_get_target(2);
 	int i=-1,j,c,cardflag=0;
 	int num = luaL_checkint(NL,1);
 
@@ -3686,7 +3685,7 @@ LUA_FUNC(successremovecards)
 
 LUA_FUNC(failedremovecards)
 {
-	LUA_GET_TARGET(3);
+	lua_get_target(3);
 	int i=-1,j,c,cardflag=0;
 	int num = luaL_checkint(NL,1);
 	int typefail = luaL_checkint(NL,2);
@@ -3868,7 +3867,7 @@ LUA_FUNC(mobcount)
 
 LUA_FUNC(marriage)
 {
-	LUA_GET_TARGET(1);
+	lua_get_target(1);
 	const char *partner=luaL_checkstring(NL,2);
 	TBL_PC *p_sd=map_nick2sd(partner);
 	if(sd==NULL || p_sd==NULL || pc_marriage(sd,p_sd) < 0){
@@ -3877,6 +3876,787 @@ LUA_FUNC(marriage)
 	lua_pushinteger(NL,1);
 	return 1;
 }
+
+LUA_FUNC(wedding_effect)
+{
+	lua_get_target(2);
+	struct block_list *bl;
+	if(sd==NULL) {
+		bl=map_id2bl(luaL_checkint(NL,1));
+	} else
+		bl=&sd->bl;
+	clif_wedding_effect(bl);
+	return 0;
+}
+
+LUA_FUNC(divorce)
+{
+	lua_get_target(1);
+	if(sd==NULL || pc_divorce(sd) < 0){
+		return 0;
+	}
+	lua_pushinteger(NL,1);
+	return 1;
+}
+
+LUA_FUNC(ispartneron)
+{
+	lua_get_target(1);
+	TBL_PC *p_sd=NULL;
+	if(sd==NULL || !pc_ismarried(sd) ||
+            (p_sd=map_charid2sd(sd->status.partner_id)) == NULL) {
+		return 0;
+	}
+	lua_pushinteger(NL,1);
+	return 1;
+}
+
+LUA_FUNC(getpartnerid)
+{
+    lua_get_target(1);
+    if (sd == NULL) {
+        return 0;
+    }
+    lua_pushinteger(NL,sd->status.partner_id);
+    return 0;
+}
+
+LUA_FUNC(getchildid)
+{
+    lua_get_target(1);
+    if (sd == NULL) {
+        return 0;
+    }
+    lua_pushinteger(NL,sd->status.child);
+    return 0;
+}
+
+LUA_FUNC(getmotherid)
+{
+    lua_get_target(1);
+    if (sd == NULL) {
+        return 0;
+    }
+    lua_pushinteger(NL,sd->status.mother);
+    return 0;
+}
+
+LUA_FUNC(getfatherid)
+{
+    lua_get_target(1);
+    if (sd == NULL) {
+        return 0;
+    }
+	lua_pushinteger(NL,sd->status.father);
+    return 0;
+}
+
+LUA_FUNC(warppartner)
+{
+	int x,y;
+	unsigned short mapindex;
+	const char *str;
+	lua_get_target(4);
+	TBL_PC *p_sd=NULL;
+	if(sd==NULL || !pc_ismarried(sd) ||
+   	(p_sd=map_charid2sd(sd->status.partner_id)) == NULL) {
+		return 0;
+	}
+	str=luaL_checkstring(NL,1);
+	x=luaL_checkint(NL,2);
+	y=luaL_checkint(NL,3);
+	mapindex = mapindex_name2id(str);
+	if (mapindex) {
+		pc_setpos(p_sd,mapindex,x,y,0);
+		lua_pushinteger(NL,1);
+		return 1;
+	}
+	return 0;
+}
+
+LUA_FUNC(strmobinfo)
+{
+	int num=luaL_checkint(NL,1);
+	int class_=luaL_checkint(NL,2);
+	if(!mobdb_checkid(class_))
+		return 0;
+	switch (num) {
+	case 1: lua_pushstring(NL,mob_db(class_)->name); break;
+	case 2: lua_pushstring(NL,mob_db(class_)->jname); break;
+	case 3: lua_pushinteger(NL,mob_db(class_)->lv); break;
+	case 4: lua_pushinteger(NL,mob_db(class_)->status.max_hp); break;
+	case 5: lua_pushinteger(NL,mob_db(class_)->status.max_sp); break;
+	case 6: lua_pushinteger(NL,mob_db(class_)->base_exp); break;
+	case 7: lua_pushinteger(NL,mob_db(class_)->job_exp); break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+LUA_FUNC(guardian)
+{
+	int class_=0,x=0,y=0,guardian=0;
+	const char *str,*map,*evt="";
+	bool has_index = false;
+	map	  =luaL_checkstring(NL,1);
+	x	  =luaL_checkint(NL,2);
+	y	  =luaL_checkint(NL,3);
+	str	  =luaL_checkstring(NL,4);
+	class_=luaL_checkint(NL,5);
+	if( lua_isnumber(NL,6) )
+	{// "<event label>",<guardian index>
+		guardian=luaL_checkint(NL,6);
+		has_index = true;
+		if( lua_isstring(NL,7) )
+		{
+			evt=luaL_checkstring(NL,7);
+		}
+	}
+	lua_pushinteger(NL, mob_spawn_guardian(map,x,y,str,class_,evt,guardian,has_index));
+	return 1;
+}
+
+LUA_FUNC(setwall)
+{
+	const char *map, *name;
+	int x, y, m, size, dir;
+	bool shootable;
+	
+	map = luaL_checkstring(NL,1);
+	x = luaL_checkint(NL,2);
+	y = luaL_checkint(NL,3);
+	size = luaL_checkint(NL,4);
+	dir = luaL_checkint(NL,5);
+	shootable = luaL_checkint(NL,6);
+	name = luaL_checkstring(NL,7);
+
+	if( (m = map_mapname2mapid(map)) < 0 )
+		return 0; // Invalid Map
+
+	map_iwall_set(m, x, y, size, dir, shootable, name);
+	return 0;
+}
+
+LUA_FUNC(delwall)
+{
+	const char *name = luaL_checkstring(NL,1);
+	map_iwall_remove(name);
+	return 0;
+}
+
+LUA_FUNC(guardianinfo)
+{
+	const char* mapname = mapindex_getmapname(luaL_checkstring(NL,1),NULL);
+	int id = luaL_checkint(NL,2);
+	int type = luaL_checkint(NL,3);
+
+	struct guild_castle* gc = guild_mapname2gc(mapname);
+	struct mob_data* gd;
+
+	if( gc == NULL || id < 0 || id >= MAX_GUARDIANS )
+	{
+		return 0;
+	}
+
+	if( type == 0 )
+		return 0;
+	else
+	if( !gc->guardian[id].visible )
+		return 0;
+	else
+	if( (gd = map_id2md(gc->guardian[id].id)) == NULL )
+		return 0;
+	else
+	{
+		if     ( type == 1 ) lua_pushinteger(NL,gd->status.max_hp);
+		else if( type == 2 ) lua_pushinteger(NL,gd->status.hp);
+		else
+			return 0;
+	}
+
+	return 1;
+}
+
+LUA_FUNC(getitemname)
+{
+	struct item_data *i_data;
+	char *item_name;
+	int item_id = luaL_checkint(NL,1);
+	i_data = itemdb_exists(item_id);
+	if (i_data == NULL)
+		return 0;
+	item_name=(char *)aMallocA(ITEM_NAME_LENGTH*sizeof(char));
+	memcpy(item_name, i_data->jname, ITEM_NAME_LENGTH);
+	lua_pushstring(NL,item_name);
+	return 0;
+}
+
+LUA_FUNC(getitemslots)
+{
+	struct item_data *i_data;
+	int item_id=luaL_checkint(NL,1);
+	i_data = itemdb_exists(item_id);
+	if (i_data)
+		lua_pushnumber(NL,i_data->slot);
+	else
+		return 0;
+	return 1;
+}
+
+LUA_FUNC(iteminfo)
+{
+	int item_id,n,flag;
+	int *item_arr;
+	struct item_data *i_data;
+	item_id	= luaL_checkint(NL,1);
+	n = luaL_checkint(NL,2);
+	flag = luaL_checkint(NL,3); // 0 = get item info , 1 = set item info
+	i_data = itemdb_exists(item_id);
+	if (i_data && n>=0 && n<=14) {
+		item_arr = (int*)&i_data->value_buy;
+		if (flag) {
+			item_arr[n] = luaL_checkint(NL,4);
+			lua_pushinteger(NL,item_arr[n]);
+		}
+		else
+			lua_pushinteger(NL,item_arr[n]);
+	} else
+		lua_pushnil(NL);
+	return 1;
+}
+
+LUA_FUNC(getequipcardid)
+{
+	int i=-1,num,slot;
+	lua_get_target(3);
+	num=luaL_checkint(NL,1);
+	slot=luaL_checkint(NL,2);
+	if (num > 0 && num <= ARRAYLENGTH(equip))
+		i=pc_checkequip(sd,equip[num-1]);
+		
+	if(i >= 0 && slot>=0 && slot<4)
+		lua_pushinteger(NL,sd->status.inventory[i].card[slot]);
+	else
+		lua_pushnil(NL);
+
+	return 1;
+}
+
+LUA_FUNC(petskillbonus)
+{
+	struct pet_data *pd;
+	
+	lua_get_target(1);
+	nullpo_retr(0,sd);
+
+	pd=sd->pd;
+	if (pd->bonus)
+	{ //Clear previous bonus
+		if (pd->bonus->timer != -1)
+			delete_timer(pd->bonus->timer, pet_skill_bonus_timer);
+	} else //init
+		pd->bonus = (struct pet_bonus *) aMalloc(sizeof(struct pet_bonus));
+
+	pd->bonus->type=luaL_checkint(NL,1);
+	pd->bonus->val=luaL_checkint(NL,2);
+	pd->bonus->duration=luaL_checkint(NL,3);
+	pd->bonus->delay=luaL_checkint(NL,4);
+
+	if (pd->state.skillbonus == 1)
+		pd->state.skillbonus=0;	// waiting state
+
+	// wait for timer to start
+	if (battle_config.pet_equip_required && pd->pet.equip == 0)
+		pd->bonus->timer = INVALID_TIMER;
+	else
+		pd->bonus->timer = add_timer(gettick()+pd->bonus->delay*1000, pet_skill_bonus_timer, sd->bl.id, 0);
+
+	return 0;
+}
+
+LUA_FUNC(petloot)
+{
+	int max;
+	struct pet_data *pd;
+	lua_get_target(2);
+	max=luaL_checkint(NL,1);
+
+	if(max < 1)
+		max = 1;	//Let'em loot at least 1 item.
+	else if (max > MAX_PETLOOT_SIZE)
+		max = MAX_PETLOOT_SIZE;
+	
+	pd = sd->pd;
+	if (pd->loot != NULL)
+	{	//Release whatever was there already and reallocate memory
+		pet_lootitem_drop(pd, pd->msd);
+		aFree(pd->loot->item);
+	}
+	else
+		pd->loot = (struct pet_loot *)aMalloc(sizeof(struct pet_loot));
+
+	pd->loot->item = (struct item *)aCalloc(max,sizeof(struct item));
+	
+	pd->loot->max=max;
+	pd->loot->count = 0;
+	pd->loot->weight = 0;
+
+	return 0;
+}
+
+LUA_FUNC(_getinventorylist)
+{
+	lua_get_target(2);
+	int i,j=0,k,val;
+	nullpo_retr(0,sd);
+
+	val=luaL_checkint(NL,1);
+	lua_newtable(NL);
+	for(i=0;i<MAX_INVENTORY;i++){
+		if(sd->status.inventory[i].nameid > 0 && sd->status.inventory[i].amount > 0){
+			switch(val)
+			{
+				case 1:
+					lua_pushinteger(NL,sd->status.inventory[i].nameid);
+					lua_rawseti(NL,-2,i+1);
+					break;
+				case 2:
+					lua_pushinteger(NL,sd->status.inventory[i].amount);
+					lua_rawseti(NL,-2,i+1);
+					break;
+				case 3:
+					lua_pushinteger(NL,sd->status.inventory[i].equip);
+					lua_rawseti(NL,-2,i+1);
+					break;
+				case 4:
+					lua_pushinteger(NL,sd->status.inventory[i].refine);
+					lua_rawseti(NL,-2,i+1);
+					break;
+				case 5:
+					lua_pushinteger(NL,sd->status.inventory[i].identify);
+					lua_rawseti(NL,-2,i+1);
+					break;
+				case 6:
+					lua_pushinteger(NL,sd->status.inventory[i].attribute);
+					lua_rawseti(NL,-2,i+1);
+					break;
+				default:
+					break;
+			}
+			for (k = 0; k < MAX_SLOTS; k++)
+			{
+				switch(val)
+				{
+					case 7:
+						lua_pushinteger(NL,sd->status.inventory[i].card[k]);
+						lua_rawseti(NL,-2,i+1);
+					default:
+						break;
+				}
+			}
+			switch(val)
+			{
+				case 9:
+					lua_pushinteger(NL,sd->status.inventory[i].expire_time);
+					lua_rawseti(NL,-2,i+1);
+				default:
+					break;
+			}
+			j++;
+		}
+	}
+	switch(val)
+	{
+		case 10:
+			lua_pushinteger(NL,j);
+		default:
+			break;
+	}
+	return 1;
+}
+
+LUA_FUNC(_getskilllist)
+{
+	lua_get_target(2);
+	int i,j=0;
+	int val=luaL_checkint(NL,1);
+	nullpo_retr(0,sd);
+	lua_newtable(NL);
+	for(i=0;i<MAX_SKILL;i++){
+		if(sd->status.skill[i].id > 0 && sd->status.skill[i].lv > 0){
+			switch(val)
+			{
+				case 1:
+					lua_pushinteger(NL,sd->status.skill[i].id);
+					lua_rawseti(NL,-2,i+1);
+					break;
+				case 2:
+					lua_pushinteger(NL,sd->status.skill[i].lv);
+					lua_rawseti(NL,-2,i+1);
+					break;
+				case 3:
+					lua_pushinteger(NL,sd->status.skill[i].flag);
+					lua_rawseti(NL,-2,i+1);
+				default:
+					break;
+			}
+			j++;
+		}
+	}
+	switch(val)
+	{
+		case 4:
+			lua_pushinteger(NL,j);
+			lua_rawseti(NL,-2,i+1);
+			break;
+		default:
+			break;
+	}
+	return 1;
+}
+
+LUA_FUNC(clearitem)
+{
+	lua_get_target(1);
+	int i;
+	nullpo_retr(0,sd);
+	for (i=0; i<MAX_INVENTORY; i++) {
+		if (sd->status.inventory[i].amount) {
+
+			//Logs items, got from (N)PC scripts
+			if(log_config.enable_logs&0x40)
+				log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -sd->status.inventory[i].amount, &sd->status.inventory[i]);
+
+			pc_delitem(sd, i, sd->status.inventory[i].amount, 0);
+		}
+	}
+	return 0;
+}
+
+LUA_FUNC(_disguise)
+{
+	int id,val;
+	lua_get_target(3);
+	nullpo_retr(0,sd);
+	id = luaL_checkint(NL,1);
+	val = luaL_checkint(NL,2);
+	if (mobdb_checkid(id) || npcdb_checkid(id)) {
+		if (val) {
+			pc_disguise(sd, 0);
+			lua_pushinteger(NL,id);
+		}
+		else {
+			pc_disguise(sd, id);
+			lua_pushinteger(NL,id);
+		}
+	} else
+		lua_pushnil(NL);
+
+	return 1;
+}
+
+LUA_FUNC(misceffect)
+{
+	int type;
+	int obj;
+	obj=luaL_checkint(NL,1);
+	type=luaL_checkint(NL,2);
+	if(obj && obj != fake_nd->bl.id) {
+		struct block_list *bl = map_id2bl(obj);
+		if (bl)
+			clif_misceffect2(bl,type);
+	} else{
+		lua_get_target(3);
+		if(sd)
+			clif_misceffect2(&sd->bl,type);
+	}
+	return 0;
+}
+
+LUA_FUNC(soundeffect)
+{
+	const char* name = luaL_checkstring(NL,1);
+	int type = luaL_checkint(NL,2);
+	int obj = luaL_checkint(NL,3);
+
+	struct map_session_data *sd = map_charid2sd(obj);
+	if(sd)
+	{
+		if(!sd->status.account_id)
+			clif_soundeffect(sd,map_id2bl(obj),name,type);
+		else
+			clif_soundeffect(sd,&sd->bl,name,type);
+	}
+	return 0;
+}
+
+static int soundeffect_sub(struct block_list* bl,va_list ap)
+{
+	char* name = va_arg(ap,char*);
+	int type = va_arg(ap,int);
+
+	clif_soundeffect((TBL_PC *)bl, bl, name, type);
+
+    return 0;	
+}
+
+LUA_FUNC(petrecovery)
+{
+	struct pet_data *pd;
+	lua_get_target(3);
+	
+	nullpo_retr(0,sd);
+	pd=sd->pd;
+	
+	if (pd->recovery)
+	{ //Halt previous bonus
+		if (pd->recovery->timer != -1)
+			delete_timer(pd->recovery->timer, pet_recovery_timer);
+	} else //Init
+		pd->recovery = (struct pet_recovery *)aMalloc(sizeof(struct pet_recovery));
+		
+	pd->recovery->type = (sc_type)luaL_checkint(NL,1);
+	pd->recovery->delay = luaL_checkint(NL,2);
+	pd->recovery->timer = INVALID_TIMER;
+
+	return 0;
+}
+
+LUA_FUNC(petheal)
+{
+	struct pet_data *pd;
+	lua_get_target(5);
+	nullpo_retr(0,sd);
+	pd=sd->pd;
+	nullpo_retr(0,pd);
+	if (pd->s_skill)
+	{ //Clear previous skill
+		if (pd->s_skill->timer != -1)
+		{
+			if (pd->s_skill->id)
+				delete_timer(pd->s_skill->timer, pet_skill_support_timer);
+			else
+				delete_timer(pd->s_skill->timer, pet_heal_timer);
+		}
+	} else //init memory
+		pd->s_skill = (struct pet_skill_support *) aMalloc(sizeof(struct pet_skill_support)); 
+	
+	pd->s_skill->id=0; //This id identifies that it IS petheal rather than pet_skillsupport
+	//Use the lv as the amount to heal
+	pd->s_skill->lv=luaL_checkint(NL,1);
+	pd->s_skill->delay=luaL_checkint(NL,2);
+	pd->s_skill->hp=luaL_checkint(NL,3);
+	pd->s_skill->sp=luaL_checkint(NL,4);
+
+	//Use delay as initial offset to avoid skill/heal exploits
+	if (battle_config.pet_equip_required && pd->pet.equip == 0)
+		pd->s_skill->timer = INVALID_TIMER;
+	else
+		pd->s_skill->timer = add_timer(gettick()+pd->s_skill->delay*1000,pet_heal_timer,sd->bl.id,0);
+
+	return 0;
+}
+
+LUA_FUNC(petskillattack)
+{
+	struct pet_data *pd;
+	lua_get_target(5);
+	pd=sd->pd;
+	nullpo_retr(0,sd);
+	nullpo_retr(0,pd);
+	if (pd->a_skill == NULL)
+		pd->a_skill = (struct pet_skill_attack *)aMalloc(sizeof(struct pet_skill_attack));
+				
+	pd->a_skill->id=( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
+	pd->a_skill->lv=luaL_checkint(NL,2);
+	pd->a_skill->div_ = luaL_checkint(NL,3);
+	pd->a_skill->rate=luaL_checkint(NL,4);
+	pd->a_skill->bonusrate=luaL_checkint(NL,5);
+
+	return 0;
+}
+
+LUA_FUNC(petskillsupport)
+{
+	struct pet_data *pd;
+	lua_get_target(6);
+	nullpo_retr(0,sd);
+	pd=sd->pd;
+	nullpo_retr(0,pd);
+	if (pd->s_skill)
+	{ //Clear previous skill
+		if (pd->s_skill->timer != -1)
+		{
+			if (pd->s_skill->id)
+				delete_timer(pd->s_skill->timer, pet_skill_support_timer);
+			else
+				delete_timer(pd->s_skill->timer, pet_heal_timer);
+		}
+	} else //init memory
+		pd->s_skill = (struct pet_skill_support *) aMalloc(sizeof(struct pet_skill_support)); 
+	
+	pd->s_skill->id=( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
+	pd->s_skill->lv=luaL_checkint(NL,2);
+	pd->s_skill->delay=luaL_checkint(NL,3);
+	pd->s_skill->hp=luaL_checkint(NL,4);
+	pd->s_skill->sp=luaL_checkint(NL,5);
+
+	//Use delay as initial offset to avoid skill/heal exploits
+	if (battle_config.pet_equip_required && pd->pet.equip == 0)
+		pd->s_skill->timer = INVALID_TIMER;
+	else
+		pd->s_skill->timer = add_timer(gettick()+pd->s_skill->delay*1000,pet_skill_support_timer,sd->bl.id,0);
+
+	return 0;
+}
+
+LUA_FUNC(skilleffect)
+{
+	int skillid,skilllv;
+	lua_get_target(3);
+	skillid=( lua_isstring(NL,1) ? skill_name2id(luaL_checkstring(NL,1)) : luaL_checkint(NL,1) );
+	skilllv=luaL_checkint(NL,2);
+	clif_skill_nodamage(&sd->bl,&sd->bl,skillid,skilllv,1);
+	return 0;
+}
+
+LUA_FUNC(npcskilleffect)
+{
+	int skillid,skilllv,x,y;
+	struct block_list *bl= map_id2bl(luaL_checkint(NL,1));
+	nullpo_retr(0,bl);
+	skillid=( lua_isstring(NL,2) ? skill_name2id(luaL_checkstring(NL,2)) : luaL_checkint(NL,2) );
+	skilllv=luaL_checkint(NL,3);
+	x=luaL_checkint(NL,4);
+	y=luaL_checkint(NL,5);
+
+	if (bl)
+		clif_skill_poseffect(bl,skillid,skilllv,x,y,gettick());
+
+	return 0;
+}
+
+LUA_FUNC(specialeffect)
+{
+	struct block_list *bl=map_id2bl(luaL_checkint(NL,1));
+	int type = luaL_checkint(NL,2);
+	int val = luaL_checkint(NL,3);
+	enum send_target target = val;
+	
+	if (!val)
+		target = AREA;
+	
+	nullpo_retr(0,bl);
+	clif_specialeffect(bl, type, target);
+	return 0;
+}
+
+LUA_FUNC(nude)
+{
+	lua_get_target(1);
+	int i,calcflag=0;
+	nullpo_retr(0,sd);
+	for(i=0;i<11;i++)
+		if(sd->equip_index[i] >= 0) {
+			if(!calcflag)
+				calcflag=1;
+			pc_unequipitem(sd,sd->equip_index[i],2);
+		}
+	if(calcflag)
+		status_calc_pc(sd,0);
+	return 0;
+}
+
+LUA_FUNC(gmcommand)
+{
+	TBL_PC dummy_sd;
+	TBL_PC* sd;
+	struct block_list* bl;
+	int fd,obj;
+	const char* cmd;
+	cmd = luaL_checkstring(NL,2);
+	obj = luaL_checkint(NL,1);
+	sd = map_id2sd(obj);
+	if (sd) {
+		fd = sd->fd;
+	} else { //Use a dummy character.
+		sd = &dummy_sd;
+		fd = 0;
+		memset(&dummy_sd, 0, sizeof(TBL_PC));
+		bl = map_id2bl(obj);
+		if (bl)
+		{
+			memcpy(&dummy_sd.bl, bl, sizeof(struct block_list));
+			if (bl->type == BL_NPC)
+				safestrncpy(dummy_sd.status.name, ((TBL_NPC*)bl)->name, NAME_LENGTH);
+		}
+	}
+
+	// compatibility with previous implementation (deprecated!)
+	if(cmd[0] != atcommand_symbol)
+	{
+		cmd += strlen(sd->status.name);
+		while(*cmd != atcommand_symbol && *cmd != 0)
+			cmd++;
+	}
+
+	is_atcommand(fd, sd, cmd, 0);
+	return 0;
+}
+
+LUA_FUNC(disp)
+{
+	lua_get_target(2);
+	const char *message;
+	message=luaL_checkstring(NL,1);
+	if(sd)
+		clif_disp_onlyself(sd,message,(int)strlen(message));
+	return 0;
+}
+
+LUA_FUNC(recovery)
+{
+	lua_get_target(1);
+	struct s_mapiterator* iter;
+	nullpo_retr(0,sd);
+	iter = mapit_getallusers();
+	for( sd = (TBL_PC*)mapit_first(iter); mapit_exists(iter); sd = (TBL_PC*)mapit_next(iter) )
+	{
+		if(pc_isdead(sd))
+			status_revive(&sd->bl, 100, 100);
+		else
+			status_percent_heal(&sd->bl, 100, 100);
+		clif_displaymessage(sd->fd,"You have been recovered!");
+	}
+	mapit_free(iter);
+	return 0;
+}
+
+LUA_FUNC(getpetinfo)
+{
+	lua_get_target(2);
+	TBL_PET *pd;
+	int type=luaL_checkint(NL,1);
+	nullpo_retr(0,sd);
+	nullpo_retr(0,sd->pd);
+	pd = sd->pd;
+	switch(type){
+		case 0: lua_pushinteger(NL,pd->pet.pet_id); break;
+		case 1: lua_pushinteger(NL,pd->pet.class_); break;
+		case 2: lua_pushstring(NL,pd->pet.name); break;
+		case 3: lua_pushinteger(NL,pd->pet.intimate); break;
+		case 4: lua_pushinteger(NL,pd->pet.hungry); break;
+		case 5: lua_pushinteger(NL,pd->pet.rename_flag); break;
+		default:
+			lua_pushnil(NL);
+			break;
+	}
+	return 1;
+}
+
+
+
 // List of commands to build into Lua, format : {"function_name_in_lua", C_function_name}
 #define LUA_DEF(x) {#x, buildin_ ##x}
 static struct LuaCommandInfo commands[] = {
@@ -4036,6 +4816,46 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(mapwarp),
 	LUA_DEF(mobcount),
 	LUA_DEF(marriage),
+	LUA_DEF(wedding_effect),
+	LUA_DEF(divorce),
+	LUA_DEF(ispartneron),
+	LUA_DEF(getpartnerid),
+	LUA_DEF(getchildid),
+	LUA_DEF(getmotherid),
+	LUA_DEF(getfatherid),
+	LUA_DEF(warppartner),
+	LUA_DEF(strmobinfo),
+	LUA_DEF(guardian),
+	LUA_DEF(setwall),
+	LUA_DEF(delwall),
+	LUA_DEF(guardianinfo),
+	LUA_DEF(getitemname),
+	LUA_DEF(getitemslots),
+	LUA_DEF(iteminfo),
+	LUA_DEF(getequipcardid),
+	LUA_DEF(petskillbonus),
+	LUA_DEF(petloot),
+	LUA_DEF(_getinventorylist),
+	LUA_DEF(_getskilllist),
+	LUA_DEF(clearitem),
+	LUA_DEF(_disguise),
+	LUA_DEF(misceffect),
+	LUA_DEF(soundeffect),
+	//LUA_DEF(soundeffectall),
+	LUA_DEF(petrecovery),
+	LUA_DEF(petheal),
+	LUA_DEF(petskillattack),
+	//LUA_DEF(petskillattack2),
+	LUA_DEF(petskillsupport),
+	LUA_DEF(skilleffect),
+	LUA_DEF(npcskilleffect),
+	LUA_DEF(specialeffect),
+	//LUA_DEF(specialeffect2),
+	LUA_DEF(nude),
+	LUA_DEF(gmcommand),
+	LUA_DEF(disp),
+	LUA_DEF(recovery),
+	LUA_DEF(getpetinfo),
 	// End of build-in functions list
 	{"-End of list-", NULL},
 };
@@ -4095,7 +4915,19 @@ static struct map_session_data* script_get_target(lua_State *NL,int idx)
 	return sd;
 }
 
-// Run a Lua function that was previously loaded, specifying the type of arguments with a "format" string
+/* Run a Lua function that was previously loaded, specifying the type of arguments with a "format" string
+
+ A bit of an explanation on how format works. When a lua function is called using script_run_function, these values are pushed as arguments to the function.
+ The args can be named whatever in lua.
+ 
+ ex: script_run_function(nd->function,sd->status.char_id,"ii",sd->status.char_id,nd->bl.id)
+ run from npc_click() will push the character's id and the npc's id as arguments in
+ 
+ function foo(arg,arg2) (let's say nd-> function was "foo")
+ end
+
+ And if you're wondering, the stack size is 20 for these function calls. [sketchyphoenix]
+*/
 void script_run_function(const char *name,int char_id,const char *format,...)
 {
 	va_list arg;
@@ -4138,9 +4970,8 @@ void script_run_function(const char *name,int char_id,const char *format,...)
         n++;
         luaL_checkstack(NL,1,"Too many arguments");
     }
-
 	va_end(arg);
-
+	
 	// Tell Lua to run the function
 	if ( lua_resume(NL,n)!=0 && lua_tostring(NL,-1) != NULL ) {
 		//If it fails, print to console the error that lua returned.

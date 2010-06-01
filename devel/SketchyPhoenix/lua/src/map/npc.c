@@ -114,7 +114,10 @@ int npc_ontouch_event(struct map_session_data *sd, struct npc_data *nd)
 {
 	char name[NAME_LENGTH*2+3];
 
-	if( nd->touching_id || pc_ishiding(sd) )
+	if( nd->touching_id )
+		return 0;
+		
+	if( pc_ishiding(sd) )
 		return 0;
 
 	snprintf(name, ARRAYLENGTH(name), "%s::%s", nd->exname, script_config.ontouch_name);
@@ -1103,7 +1106,7 @@ int npc_click(struct map_session_data* sd, struct npc_data* nd)
 		run_script(nd->u.scr.script,0,sd->bl.id,nd->bl.id);
 		break;
 	case LUA:
-		script_run_function(nd->function,sd->status.char_id,"");
+		script_run_function(nd->function,sd->status.char_id,"ii",sd->status.char_id,nd->bl.id);
 		break;
 	}
 
