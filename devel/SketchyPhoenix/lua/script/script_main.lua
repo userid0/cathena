@@ -18,7 +18,7 @@ require "script/core/core"
 --------------------------------------------------------------
 ------------------------ Script Files ------------------------
 -- Sample scripts
---require "script/sample/script_sample"
+require "script/sample/script_sample"
 -- Warps
 --require "script/warps/script_warps"
 -- Monster Spawn

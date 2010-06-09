@@ -4655,7 +4655,641 @@ LUA_FUNC(getpetinfo)
 	return 1;
 }
 
+LUA_FUNC(gethominfo)
+{
+	lua_get_target(2);
+	TBL_HOM *hd;
+	int type=luaL_checkint(NL,1);
+	hd = sd?sd->hd:NULL;
+	if(!merc_is_hom_active(hd))
+			lua_pushnil(NL);
+	else {
+		switch(type){
+			case 0: lua_pushinteger(NL,hd->homunculus.hom_id); break;
+			case 1: lua_pushinteger(NL,hd->homunculus.class_); break;
+			case 2: lua_pushstring(NL,hd->homunculus.name); break;
+			case 3: lua_pushinteger(NL,hd->homunculus.intimacy); break;
+			case 4: lua_pushinteger(NL,hd->homunculus.hunger); break;
+			case 5: lua_pushinteger(NL,hd->homunculus.rename_flag); break;
+			case 6: lua_pushinteger(NL,hd->homunculus.level); break;
+			default:
+				lua_pushnil(NL);
+				break;
+		}
+	}
+	return 1;
+}
 
+LUA_FUNC(checkequipedcard)
+{
+	lua_get_target(2);
+	int n,i,c=0;
+	c=luaL_checkint(NL,1);
+	
+	if(sd){
+		for(i=0;i<MAX_INVENTORY;i++){
+			if(sd->status.inventory[i].nameid > 0 && sd->status.inventory[i].amount && sd->inventory_data[i]){
+				if (itemdb_isspecial(sd->status.inventory[i].card[0]))
+					continue;
+				for(n=0;n<sd->inventory_data[i]->slot;n++){
+					if(sd->status.inventory[i].card[n]==c){
+						lua_pushinteger(NL,1);
+					}
+				}
+			}
+		}
+	}
+	else
+		lua_pushnil(NL);
+	return 1;
+}
+
+LUA_FUNC(getmapmobs)
+{
+	const char *str=NULL;
+	int m=-1,bx,by;
+	int count=0;
+	struct block_list *bl;
+
+	str=luaL_checkstring(NL,1);
+
+	if(strcmp(str,"this")==0){
+		TBL_PC *sd=map_charid2sd(luaL_checkint(NL,2));
+		if(sd)
+			m=sd->bl.m;
+		else{
+			lua_pushnil(NL);
+			return 1;
+		}
+	}else
+		m=map_mapname2mapid(str);
+
+	if(m < 0)
+		lua_pushnil(NL);
+	else {
+		for(by=0;by<=(map[m].ys-1)/BLOCK_SIZE;by++)
+			for(bx=0;bx<=(map[m].xs-1)/BLOCK_SIZE;bx++)
+				for( bl = map[m].block_mob[bx+by*map[m].bxs] ; bl != NULL ; bl = bl->next )
+					if(bl->x>=0 && bl->x<=map[m].xs-1 && bl->y>=0 && bl->y<=map[m].ys-1)
+						count++;
+	lua_pushinteger(NL,count);
+	}
+	return 1;
+}
+
+LUA_FUNC(movenpc)
+{
+	TBL_NPC *nd = NULL;
+	const char *npc;
+	int x,y;
+
+	npc = luaL_checkstring(NL,1);
+	x = luaL_checkint(NL,2);
+	y = luaL_checkint(NL,3);
+
+	if ((nd = npc_name2id(npc)) == NULL)
+		return 0;
+
+	npc_movenpc(nd, x, y);
+	return 0;
+}
+
+LUA_FUNC(message)
+{
+	const char *msg,*player;
+	TBL_PC *pl_sd = NULL;
+
+	player = luaL_checkstring(NL,1);
+	msg = luaL_checkstring(NL,2);
+
+	if((pl_sd=map_nick2sd((char *) player)) == NULL)
+		return 0;
+	clif_displaymessage(pl_sd->fd, msg);
+
+	return 0;
+}
+
+LUA_FUNC(npctalk)
+{
+	const char* str;
+	char message[255];
+
+	struct npc_data* nd = (struct npc_data *)map_id2bl(luaL_checkint(NL,1));
+	str = luaL_checkstring(NL,2);
+
+	if(nd) {
+		memcpy(message, nd->name, NAME_LENGTH);
+		strtok(message, "#"); // discard extra name identifier if present
+		strcat(message, " : ");
+		strncat(message, str, 254); //Prevent overflow possibility.
+		clif_message(&(nd->bl), message);
+	}
+
+	return 0;
+}
+
+LUA_FUNC(npcspeed)
+{
+	struct npc_data* nd;
+	int speed;
+
+	speed = luaL_checkint(NL,2);
+	nd =(struct npc_data *)map_id2bl(luaL_checkint(NL,1));
+
+	if( nd )
+	{
+		nd->speed = speed;
+		nd->ud.state.speed_changed = 1;
+	}
+
+	return 0;
+}
+
+LUA_FUNC(npcwalkto)
+{
+	struct npc_data *nd=(struct npc_data *)map_id2bl(luaL_checkint(NL,1));
+	int x=0,y=0;
+
+	x=luaL_checkint(NL,2);
+	y=luaL_checkint(NL,3);
+
+	if(nd) {
+		unit_walktoxy(&nd->bl,x,y,0);
+	}
+
+	return 0;
+}
+
+LUA_FUNC(npcstop)
+{
+	struct npc_data *nd=(struct npc_data *)map_id2bl(luaL_checkint(NL,1));
+
+	if(nd) {
+		unit_stop_walking(&nd->bl,1|4);
+	}
+
+	return 0;
+}
+
+LUA_FUNC(getlook)
+{
+	lua_get_target(2);
+	int type,val;
+	type=luaL_checkint(NL,1);
+	val=-1;
+	
+	switch(type) {
+		case LOOK_HAIR: val=sd->status.hair; break; //1
+		case LOOK_WEAPON: val=sd->status.weapon; break; //2
+		case LOOK_HEAD_BOTTOM: val=sd->status.head_bottom; break; //3
+		case LOOK_HEAD_TOP: val=sd->status.head_top; break; //4
+		case LOOK_HEAD_MID: val=sd->status.head_mid; break; //5
+		case LOOK_HAIR_COLOR: val=sd->status.hair_color; break; //6
+		case LOOK_CLOTHES_COLOR: val=sd->status.clothes_color; break; //7
+		case LOOK_SHIELD: val=sd->status.shield; break; //8
+		case LOOK_SHOES: break; //9
+		}
+		
+	lua_pushinteger(NL,val);
+	return 1;
+}
+
+LUA_FUNC(getsavepoint)
+{
+	lua_get_target(2);
+	int type;
+	nullpo_retr(0,sd);
+	type = luaL_checkint(NL,1);
+	switch(type) {
+		case 0: lua_pushstring(NL,mapindex_id2name(sd->status.save_point.map)); break;
+		case 1: lua_pushinteger(NL,sd->status.save_point.x); break;
+		case 2: lua_pushinteger(NL,sd->status.save_point.y); break;
+		default:
+			lua_pushnil(NL);
+			break;
+	}
+	return 1;
+}
+
+LUA_FUNC(getlocation)
+{
+	struct map_session_data *sd = NULL;
+	struct block_list *bl = NULL;
+	int type = luaL_checkint(NL,1);
+	switch (type) {
+		case 0:
+			if (lua_isnumber(NL,2))
+				sd=map_charid2sd(lua_tointeger(NL,2));
+			else
+				sd=script_get_target(NL,0);
+			
+			if (sd)
+				bl = &sd->bl;
+			break;
+		case 1:
+			if (lua_isnumber(NL,2))
+			{
+				struct npc_data *nd;
+				nd = map_id2nd(lua_tointeger(NL,2));
+				if (nd)
+					bl = &nd->bl;
+			}
+			else if (lua_isstring(NL,2))
+			{
+				bl = &(npc_name2id(lua_tostring(NL,2)))->bl;
+			}
+			break;
+		case 2:
+			if (lua_isstring(NL,2))
+				sd=map_nick2sd(lua_tostring(NL,2));
+			else
+				sd=script_get_target(NL,0);
+			
+			if (sd && sd->pd)
+				bl = &sd->pd->bl;
+			break;
+		case 3:
+			break;
+		case 4:
+			if(lua_isstring(NL,2))
+				sd=map_nick2sd(lua_tostring(NL,2));
+			else
+				sd=script_get_target(NL,0);
+			
+			if (sd && sd->hd)
+				bl = &sd->hd->bl;
+			break;
+		default:
+			break;
+	}
+	
+	if (!bl)
+		return 0;
+	
+	lua_newtable(NL);
+	lua_pushstring(NL,"map");
+	lua_pushstring(NL,map[bl->m].name);
+	lua_settable(NL,-3);
+	lua_pushstring(NL,"x");
+	lua_pushinteger(NL,bl->x);
+	lua_settable(NL,-3);
+	lua_pushstring(NL,"y");
+	lua_pushinteger(NL,bl->y);
+	lua_settable(NL,-3);
+	
+	return 1;
+}
+
+LUA_FUNC(logmes)
+{
+	lua_get_target(2);
+	const char *str;
+	nullpo_retr(0,sd);
+	if( log_config.npc <= 0 )
+		return 0;
+	str = luaL_checkstring(NL,1);
+	log_npc(sd,str);
+	return 0;
+}
+
+LUA_FUNC(summon)
+{
+	lua_get_target(5);
+	int _class, timeout=0;
+	const char *str,*event="";
+	struct mob_data *md;
+	int tick = gettick();
+	
+	nullpo_retr(0,sd);
+	
+	str	= luaL_checkstring(NL,1);
+	_class = luaL_checkint(NL,2);
+	timeout = luaL_checkint(NL,3);
+	event = luaL_checkstring(NL,4);
+
+	clif_skill_poseffect(&sd->bl,AM_CALLHOMUN,1,sd->bl.x,sd->bl.y,tick);
+
+	md = mob_once_spawn_sub(&sd->bl, sd->bl.m, sd->bl.x, sd->bl.y, str, _class, event, 1);
+	if (md) {
+		md->master_id=sd->bl.id;
+		md->special_state.ai=1;
+		if( md->deletetimer != INVALID_TIMER )
+			delete_timer(md->deletetimer, mob_timer_delete);
+		md->deletetimer = add_timer(tick+(timeout>0?timeout*1000:60000),mob_timer_delete,md->bl.id,0);
+		mob_spawn (md); //Now it is ready for spawning.
+		clif_misceffect2(&md->bl,344);
+		sc_start4(&md->bl, SC_MODECHANGE, 100, 1, 0, MD_AGGRESSIVE, 0, 60000);
+	}
+	return 0;
+}
+
+LUA_FUNC(getnightflag)
+{
+	lua_pushinteger(NL,night_flag);
+	return 1;
+}
+
+LUA_FUNC(isequipped)
+{
+	TBL_PC *sd;
+	int i=1, j, k, id = 1;
+	int index, flag;
+	int ret = -1;
+	//Original hash to reverse it when full check fails.
+	unsigned int setitem_hash = 0, setitem_hash2 = 0;
+
+	while ( i )
+	{
+		if (lua_tonumber(NL,i+1) == 0)
+			break;
+		
+		i++;
+	}
+	
+	sd = script_get_target(NL,i);
+	nullpo_retr(0,sd);
+	
+	setitem_hash = sd->setitem_hash;
+	setitem_hash2 = sd->setitem_hash2;
+	for (i=1; id!=0; i++)
+	{
+		id = luaL_checkint(NL,i);
+		if (id <= 0)
+			continue;
+		flag = 0;
+		for (j=0; j<EQI_MAX; j++)
+		{
+			index = sd->equip_index[j];
+			if(index < 0) continue;
+			if(j == EQI_HAND_R && sd->equip_index[EQI_HAND_L] == index) continue;
+			if(j == EQI_HEAD_MID && sd->equip_index[EQI_HEAD_LOW] == index) continue;
+			if(j == EQI_HEAD_TOP && (sd->equip_index[EQI_HEAD_MID] == index || sd->equip_index[EQI_HEAD_LOW] == index)) continue;
+	
+			if(!sd->inventory_data[index])
+				continue;
+			
+			if (itemdb_type(id) != IT_CARD) {
+				if (sd->inventory_data[index]->nameid != id)
+					continue;
+				flag = 1;
+				break;
+			} else { //Cards
+				if (sd->inventory_data[index]->slot == 0 ||
+					itemdb_isspecial(sd->status.inventory[index].card[0]))
+					continue;
+
+				for (k = 0; k < sd->inventory_data[index]->slot; k++)
+				{	//New hash system which should support up to 4 slots on any equipment. [Skotlex]
+					unsigned int hash = 0;
+					if (sd->status.inventory[index].card[k] != id)
+						continue;
+
+					hash = 1<<((j<5?j:j-5)*4 + k);
+					// check if card is already used by another set
+					if ((j<5?sd->setitem_hash:sd->setitem_hash2) & hash)	
+						continue;
+
+					// We have found a match
+					flag = 1;
+					// Set hash so this card cannot be used by another
+					if (j<5)
+						sd->setitem_hash |= hash;
+					else
+						sd->setitem_hash2 |= hash;
+					break;
+				}
+			}
+			if (flag) break; //Card found
+		}
+		if (ret == -1)
+			ret = flag;
+		else
+			ret &= flag;
+		if (!ret) break;
+	}
+	if (!ret)
+  	{	//When check fails, restore original hash values. [Skotlex]
+		sd->setitem_hash = setitem_hash;
+		sd->setitem_hash2 = setitem_hash2;
+	}
+	lua_pushinteger(NL,ret);
+	return 1;
+}
+
+LUA_FUNC(isequippedcnt)
+{
+	TBL_PC *sd;
+	int i=1, j, k, id = 1;
+	int ret = 0;
+
+	while ( i )
+	{
+		if (lua_tonumber(NL,i+1) == 0)
+			break;
+		
+		i++;
+	}
+	
+	sd = script_get_target(NL,i);
+	
+	for (i=1; id!=0; i++) {
+		id = luaL_checkint(NL,i);
+		if (id <= 0)
+			continue;
+		
+		for (j=0; j<EQI_MAX; j++) {
+			int index;
+			index = sd->equip_index[j];
+			if(index < 0) continue;
+			if(j == EQI_HAND_R && sd->equip_index[EQI_HAND_L] == index) continue;
+			if(j == EQI_HEAD_MID && sd->equip_index[EQI_HEAD_LOW] == index) continue;
+			if(j == EQI_HEAD_TOP && (sd->equip_index[EQI_HEAD_MID] == index || sd->equip_index[EQI_HEAD_LOW] == index)) continue;
+			
+			if(!sd->inventory_data[index])
+				continue;
+
+			if (itemdb_type(id) != IT_CARD) { //No card. Count amount in inventory.
+				if (sd->inventory_data[index]->nameid == id)
+					ret+= sd->status.inventory[index].amount;
+			} else { //Count cards.
+				if (itemdb_isspecial(sd->status.inventory[index].card[0]))
+					continue; //No cards
+				for(k=0; k<sd->inventory_data[index]->slot; k++) {
+					if (sd->status.inventory[index].card[k] == id) 
+						ret++; //[Lupus]
+				}				
+			}
+		}
+	}
+	
+	lua_pushinteger(NL,ret);
+	return 1;
+}
+
+
+LUA_FUNC(cardscnt)
+{
+	lua_get_target(1);
+	int i, k, id = 1;
+	int ret = 0;
+	int index;
+	
+	nullpo_retr(0,sd);
+	
+	for (i=1; id!=0; i++) {
+		id = luaL_checkint(NL,i);
+		if (id <= 0)
+			continue;
+		
+		index = current_equip_item_index; //we get CURRENT WEAPON inventory index from status.c
+		if(index < 0) continue;
+			
+		if(!sd->inventory_data[index])
+			continue;
+
+		if(itemdb_type(id) != IT_CARD) {
+			if (sd->inventory_data[index]->nameid == id)
+				ret+= sd->status.inventory[index].amount;
+		} else {
+			if (itemdb_isspecial(sd->status.inventory[index].card[0]))
+				continue;
+			for(k=0; k<sd->inventory_data[index]->slot; k++) {
+				if (sd->status.inventory[index].card[k] == id)
+					ret++;
+			}				
+		}
+	}
+	lua_pushinteger(NL,ret);
+	return 1;
+}
+
+LUA_FUNC(getrefine)
+{
+	lua_get_target(1);
+	if (!sd)
+		lua_pushnil(NL);
+	else
+		lua_pushinteger(NL,sd->status.inventory[current_equip_item_index].refine);
+	return 1;
+}
+
+LUA_FUNC(togglenight)
+{
+	if ( night_flag == 0 )
+		map_night_timer(night_timer_tid, 0, 0, 1);
+	else if ( night_flag == 1 )
+		map_day_timer(day_timer_tid, 0, 0, 1);
+	
+	return 0;
+}
+
+LUA_FUNC(unequip)
+{
+	int i;
+	size_t num;
+	lua_get_target(2);
+	num = luaL_checkint(NL,1);
+	if( sd != NULL && num >= 1 && num <= ARRAYLENGTH(equip) )
+	{
+		i = pc_checkequip(sd,equip[num-1]);
+		if (i >= 0)
+			pc_unequipitem(sd,i,1|2);
+	}
+	return 0;
+}
+
+LUA_FUNC(equip)
+{
+	int nameid=0,i;
+	lua_get_target(2);
+	struct item_data *item_data;
+	nameid=luaL_checkint(NL,1);
+	if((item_data = itemdb_exists(nameid)) == NULL)
+	{
+		luaL_error(NL,"Wrong item ID: equipitem(%i)\n",nameid);
+		return 0;
+	}
+	ARR_FIND( 0, MAX_INVENTORY, i, sd->status.inventory[i].nameid == nameid );
+	if( i < MAX_INVENTORY )
+		pc_equipitem(sd,i,item_data->equip);
+
+	return 0;
+}
+
+LUA_FUNC(autoequip)
+{
+	int nameid, flag;
+	lua_get_target(3);
+	struct item_data *item_data;
+	nameid=luaL_checkint(NL,1);
+	flag=luaL_checkint(NL,2);
+	if(nameid>=500 && (item_data = itemdb_search(nameid)) != NULL){
+		item_data->flag.autoequip = flag>0?1:0;
+	}
+	return 0;
+}
+
+LUA_FUNC(setbattleflag)
+{
+	const char *flag, *value;
+
+	flag = luaL_checkstring(NL,1);
+	value = luaL_checkstring(NL,2);
+	
+	if (battle_set_value(flag, value) == 0)
+		ShowWarning("buildin_setbattleflag: unknown battle_config flag '%s'\n",flag);
+	else
+		ShowInfo("buildin_setbattleflag: battle_config flag '%s' is now set to '%s'.\n",flag,value);
+
+	return 0;
+}
+
+LUA_FUNC(getbattleflag)
+{
+	const char *flag;
+	flag = luaL_checkstring(NL,1);
+	lua_pushinteger(NL,battle_get_value(flag));
+	return 1;
+}
+
+LUA_FUNC(setnpcdisplay)
+{
+	const char* name;
+	const char* newname = NULL;
+	int class_ = -1, size = -1;
+	struct npc_data* nd;
+
+	name = luaL_checkstring(NL,1);
+	newname = luaL_checkstring(NL,2);
+	class_ = luaL_checkint(NL,3);
+	size = luaL_checkint(NL,4);
+
+	nd = npc_name2id(name);
+	if( nd == NULL )
+	{// not found
+		lua_pushnil(NL);
+		return 1;
+	}
+	// update npc
+	if( newname )
+		npc_setdisplayname(nd, newname);
+
+	if( size != -1 && size != nd->size )
+		nd->size = size;
+	else
+		size = -1;
+
+	if( class_ != -1 && nd->class_ != class_ )
+		npc_setclass(nd, class_);
+	else if( size != -1 )
+	{ // Required to update the visual size
+		clif_clearunit_area(&nd->bl, 0);
+		clif_spawn(&nd->bl);
+	}
+	
+	lua_pushinteger(NL,1);
+	return 1;
+}
 
 // List of commands to build into Lua, format : {"function_name_in_lua", C_function_name}
 #define LUA_DEF(x) {#x, buildin_ ##x}
@@ -4856,6 +5490,32 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(disp),
 	LUA_DEF(recovery),
 	LUA_DEF(getpetinfo),
+	LUA_DEF(gethominfo),
+	LUA_DEF(checkequipedcard),
+	LUA_DEF(getmapmobs),
+	LUA_DEF(movenpc),
+	LUA_DEF(message),
+	LUA_DEF(npctalk),
+	LUA_DEF(npcspeed),
+	LUA_DEF(npcwalkto),
+	LUA_DEF(npcstop),
+	LUA_DEF(getlook),
+	LUA_DEF(getsavepoint),
+	LUA_DEF(getlocation),
+	LUA_DEF(logmes),
+	LUA_DEF(summon),
+	LUA_DEF(getnightflag),
+	LUA_DEF(isequipped),
+	LUA_DEF(isequippedcnt),
+	LUA_DEF(cardscnt),
+	LUA_DEF(getrefine),
+	LUA_DEF(togglenight),
+	LUA_DEF(unequip),
+	LUA_DEF(equip),
+	LUA_DEF(autoequip),
+	LUA_DEF(setbattleflag),
+	LUA_DEF(getbattleflag),
+	LUA_DEF(setnpcdisplay),
 	// End of build-in functions list
 	{"-End of list-", NULL},
 };
