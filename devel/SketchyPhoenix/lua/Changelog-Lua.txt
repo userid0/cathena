@@ -1,5 +1,9 @@
 Date	Added
 
+2010/06/xx
+	* Finished script command conversion
+	* Implemented LuaSocket
+	
 2010/04/25
 	* Updated to /trunk r14286
 	* More script commands converted.

@@ -317,6 +317,12 @@ typedef enum sc_type {
 	SC_HELLPOWER = 294,
 	SC_INVINCIBLE, //295
 	SC_INVINCIBLEOFF,
+	SC_MANU_ATK,
+	SC_MANU_DEF,
+	SC_SPL_ATK,
+	SC_SPL_DEF, //300
+	SC_MANU_MATK,
+	SC_SPL_MATK,
 
 	SC_MAX, //Automatically updated max, used in for's to check we are within bounds.
 } sc_type;
@@ -366,7 +372,7 @@ enum si_type {
 	SI_ASPDPOTION2 = 39,
 	SI_ASPDPOTIONINFINITY = 40,
 	SI_SPEEDPOTION1		= 41,
-	SI_SPEEDPOTION2		= 42,
+//	SI_MOVHASTE_INFINITY		= 42,
 //	SI_AUTOCOUNTER = 43,
 //	SI_SPLASHER = 44,
 //	SI_ANKLESNARE = 45,
@@ -613,7 +619,7 @@ enum si_type {
 	SI_CRITICALWOUND	= 286,
 //	SI_NPC_DEFENDER = 287,
 //	SI_NOACTION_WAIT = 288,
-//	SI_MOVHASTE_HORSE = 289,
+	SI_MOVHASTE_HORSE = 289,
 	SI_DEF_RATE		= 290,
 	SI_MDEF_RATE	= 291,
 	SI_INCHEALRATE	= 292,

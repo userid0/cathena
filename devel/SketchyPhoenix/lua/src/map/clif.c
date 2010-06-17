@@ -7352,6 +7352,23 @@ int clif_wisall(struct map_session_data *sd,int type,int flag)
 
 	return 0;
 }
+
+void clif_playBGM(struct map_session_data* sd, struct block_list* bl, const char* name)
+{
+	int fd;
+
+	nullpo_retv(sd);
+	nullpo_retv(bl);
+
+	fd = sd->fd;
+	WFIFOHEAD(fd,packet_len(0x7fe));
+	WFIFOW(fd,0) = 0x7fe;
+	safestrncpy((char*)WFIFOP(fd,2), name, NAME_LENGTH);
+	WFIFOSET(fd,packet_len(0x7fe));
+
+	return;
+}
+
 /*==========================================
  * サウンドエフェクト
  *------------------------------------------*/
@@ -12004,6 +12021,9 @@ void clif_parse_AutoRevive(int fd, struct map_session_data *sd)
 	if (item_position < 0)
 		return;
 
+	if (sd->sc.data[SC_HELLPOWER]) //Cannot res while under the effect of SC_HELLPOWER.
+		return;
+		
 	if (!status_revive(&sd->bl, 100, 100))
 		return;
 	
@@ -13982,7 +14002,7 @@ static int packetdb_readdb(void)
 	    6,  2, -1,  4,  4,  4,  4,  8,  8,268,  6,  8,  6, 54, 30, 54,
 #endif
 	    0,  0,  0,  0,  0,  8,  8, 32, -1,  5,  0,  0,  0,  0,  0,  0,
-	    0,  0,  0,  0,  0,  0, 14, 93, 86, 87,  0,  0,  0,  0,  0,  0,
+		0,  0,  0,  0,  0,  0, 14, 93, 86, 87,  0,  0,  0,  0, 26,  0,
 	//#0x0800
 	   -1, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 20,
 	    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,

@@ -1,10 +1,8 @@
 TODO:
-	*Finish coverting all needed script commands to lua. Not all of them will make it over
-		since the functionality may be covered already, such as attachrid or some variable scopes from eAS
-
-	*Code Cleanup.
-
-	*DOCUMENT SCRIPT COMMANDS*
-
-
+	*Document the commands
 	
+	*Cleanup
+	
+	*Write NPCs
+
+	*Convert item scripts to lua

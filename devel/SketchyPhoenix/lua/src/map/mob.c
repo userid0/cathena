@@ -683,7 +683,7 @@ int mob_spawn_guardian(const char* mapname, short x, short y, const char* mobnam
 /*==========================================
  * Summoning BattleGround [Zephyrus]
  *------------------------------------------*/
-int mob_spawn_bg(const char* mapname, short x, short y, const char* mobname, int class_, const char* event, int bg_id)
+int mob_spawn_bg(const char* mapname, short x, short y, const char* mobname, int class_, const char* event, int bg_id, int islua)
 {
 	struct mob_data *md = NULL;
 	struct spawn_data data;
@@ -714,7 +714,12 @@ int mob_spawn_bg(const char* mapname, short x, short y, const char* mobname, int
 	data.x = x;
 	data.y = y;
 	safestrncpy(data.name, mobname, sizeof(data.name));
-	safestrncpy(data.eventname, event, sizeof(data.eventname));
+	
+	if (islua)
+		safestrncpy(data.function, event, sizeof(data.function));
+	else
+		safestrncpy(data.eventname, event, sizeof(data.eventname));
+		
 	if( !mob_parse_dataset(&data) )
 		return 0;
 
@@ -2236,10 +2241,7 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 
 			// attempt to drop the item
 			if (rand() % 10000 >= drop_rate)
-			{	// Double try by Bubble Gum
-				if (!(mvp_sd && mvp_sd->sc.data[SC_ITEMBOOST] && rand() % 10000 < drop_rate))
 					continue;
-			}
 
 			ditem = mob_setdropitem(md->db->dropitem[i].nameid, 1);
 

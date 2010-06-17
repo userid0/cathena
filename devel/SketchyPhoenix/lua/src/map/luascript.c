@@ -2133,7 +2133,7 @@ LUA_FUNC(guildchangegm)
 	return 1;
 }
 
-LUA_FUNC(monster)
+LUA_FUNC(_monster)
 {
 	lua_get_target(8);
 	int m;
@@ -2144,6 +2144,7 @@ LUA_FUNC(monster)
 	const char* str   = luaL_checkstring(NL,4);
 	int class_        = luaL_checkint(NL,5);
 	int amount        = luaL_checkint(NL,6);
+	int instance_id = luaL_checkint(NL,8);
 	sprintf(function, "%s", lua_tostring(NL,7));
 	if (class_ >= 0 && !mobdb_checkid(class_)) {
 		//ShowWarning("buildin_monster: Attempted to spawn non-existing monster class %d\n", class_);
@@ -2151,20 +2152,18 @@ LUA_FUNC(monster)
 	}
 	if( sd && strcmp(mapn,"this") == 0 )
 		m = sd->bl.m;
-/* [TODO] Instance Support
-	else
+	else if (instance_id)
 	{
 		m = map_mapname2mapid(mapn);
-		if( map[m].flag.src4instance && st->instance_id )
+		if( map[m].flag.src4instance && instance_id )
 		{ // Try to redirect to the instance map, not the src map
-			if( (m = instance_mapid2imapid(m, st->instance_id)) < 0 )
+			if( (m = instance_mapid2imapid(m, instance_id)) < 0 )
 			{
-				//ShowError("buildin_monster: Trying to spawn monster (%d) on instance map (%s) without instance attached.\n", class_, mapn);
+				luaL_error(NL,"monster: Trying to spawn monster (%d) on instance map (%s) without instance attached.\n", class_, mapn);
 				return 0;
 			}
 		}
 	}
-*/
 	mob_once_spawn(sd,m,x,y,str,class_,amount,function,1);
 	return 0;
 }
@@ -2198,7 +2197,7 @@ LUA_FUNC(getmobdrops)
 	return 1;
 }
 
-LUA_FUNC(areamonster)
+LUA_FUNC(_areamonster)
 {
 	lua_get_target(10);
 	int m;
@@ -2211,23 +2210,22 @@ LUA_FUNC(areamonster)
 	const char* str   = luaL_checkstring(NL,6);
 	int class_        = luaL_checkint(NL,7);
 	int amount        = luaL_checkint(NL,8);
+	int instance_id = luaL_checkint(NL,10);
 	sprintf(function, "%s", lua_tostring(NL,9));
 	if( sd && strcmp(mapn,"this") == 0 )
 		m = sd->bl.m;
-/*[TODO]Instance Support
-	else
+	else if (instance_id)
 	{
 		m = map_mapname2mapid(mapn);
-		if( map[m].flag.src4instance && st->instance_id )
+		if( map[m].flag.src4instance && instance_id )
 		{ // Try to redirect to the instance map, not the src map
-			if( (m = instance_mapid2imapid(m, st->instance_id)) < 0 )
+			if( (m = instance_mapid2imapid(m, instance_id)) < 0 )
 			{
-				ShowError("buildin_areamonster: Trying to spawn monster (%d) on instance map (%s) without instance attached.\n", class_, mapn);
+				luaL_error(NL,"lua:areamonster : Trying to spawn monster (%d) on instance map (%s) without instance attached.\n", class_, mapn);
 				return 1;
 			}
 		}
 	}
-*/	
 	mob_once_spawn_area(sd,m,x0,y0,x1,y1,str,class_,amount,function,1);
 	return 0;
 }
@@ -2235,17 +2233,19 @@ LUA_FUNC(areamonster)
 LUA_FUNC(killmonster)
 {
 	const char *mapname,*event;
-	int m,allflag=0;
+	int instance_id,m,allflag=0;
 	mapname=luaL_checkstring(NL,1);
 	event=luaL_checkstring(NL,2);
+	instance_id=luaL_checkint(NL,3);
 	if(strcmp(event,"All")==0) {
 		allflag = 1;
 	}
 	if( (m=map_mapname2mapid(mapname))<0 )
 		return 0;
-	//TODO : instance support	
-	//if( map[m].flag.src4instance && st->instance_id && (m = instance_mapid2imapid(m, st->instance_id)) < 0 )
-	//	return 0;
+		
+	if( map[m].flag.src4instance && instance_id && (m = instance_mapid2imapid(m, instance_id)) < 0 )
+		return 0;
+		
 	if( lua_isnumber(NL,3) ) {
 		if ( lua_tointeger(NL,3) == 1 ) {
 			map_foreachinmap(buildin_killmonster_sub, m, BL_MOB, event ,allflag);
@@ -2297,14 +2297,16 @@ static int buildin_killmonster_sub(struct block_list *bl,va_list ap)
 LUA_FUNC(killmonsterall)
 {
 	const char *mapname;
-	int m;
+	int m, instance_id;
 	mapname=luaL_checkstring(NL,1);
+	instance_id=luaL_checkint(NL,2);
 	if( (m = map_mapname2mapid(mapname))<0 ) {
 		return 0;
 	}
-	//TODO Instance Support
-	//if( map[m].flag.src4instance && st->instance_id && (m = instance_mapid2imapid(m, st->instance_id)) < 0 )
-	//	return 0;
+	
+	if( map[m].flag.src4instance && instance_id && (m = instance_mapid2imapid(m, instance_id)) < 0 )
+		return 0;
+		
 	if(lua_isnumber(NL,2) && lua_isnumber(NL,2) == 1) {
 		map_foreachinmap(buildin_killmonsterall_sub,m,BL_MOB);
 		return 0;
@@ -3848,19 +3850,19 @@ static int buildin_mobcount_sub(struct block_list *bl,va_list ap)
 LUA_FUNC(mobcount)
 {
 	const char *mapname,*event;
-	int m;
+	int m, instance_id;
 	mapname=luaL_checkstring(NL,1);
 	event=luaL_checkstring(NL,2);
+	instance_id = luaL_checkint(NL,3);
 
 	if( (m = map_mapname2mapid(mapname)) < 0 ) {
 		return 0;
 	}
-	/* TODO ## Instance Support
-	if( map[m].flag.src4instance && map[m].instance_id == 0 && st->instance_id && (m = instance_mapid2imapid(m, st->instance_id)) < 0 )
+	
+	if( map[m].flag.src4instance && map[m].instance_id == 0 && instance_id && (m = instance_mapid2imapid(m, instance_id)) < 0 )
 	{
 		return 0;
 	}
-	*/
 	lua_pushinteger(NL,map_foreachinmap(buildin_mobcount_sub, m, BL_MOB, event));
 	return 0;
 }
@@ -5291,6 +5293,1414 @@ LUA_FUNC(setnpcdisplay)
 	return 1;
 }
 
+LUA_FUNC(md5)
+{
+	const char *tmpstr;
+	char *md5str;
+
+	tmpstr = luaL_checkstring(NL,1);
+	md5str = (char *)aMallocA((32+1)*sizeof(char));
+	MD5_String(tmpstr, md5str);
+	lua_pushstring(NL,md5str);
+	return 1;
+}
+
+LUA_FUNC(petstat)
+{
+	struct pet_data *pd;
+	int flag = luaL_checkint(NL,1);
+	lua_get_target(2);
+	
+	if(!sd || !sd->status.pet_id || !sd->pd){
+		lua_pushnil(NL);
+	}
+	else {
+		pd = sd->pd;
+		switch(flag){
+			case 1: lua_pushinteger(NL,(int)pd->pet.class_); break;
+			case 2: lua_pushstring(NL, pd->pet.name); break;
+			case 3: lua_pushinteger(NL,(int)pd->pet.level); break;
+			case 4: lua_pushinteger(NL,(int)pd->pet.hungry); break;
+			case 5: lua_pushinteger(NL,(int)pd->pet.intimate); break;
+			default:
+				lua_pushnil(NL);
+				break;
+		}
+	}
+	return 1;
+}
+
+LUA_FUNC(getmonsterinfo)
+{
+	struct mob_db *mob;
+	int mob_id;
+
+	mob_id	= luaL_checkint(NL,1);
+	if (!mobdb_checkid(mob_id)) {
+		luaL_error(NL,"lua_getmonsterinfo: Wrong Monster ID: %i\n", mob_id);
+		lua_pushnil(NL);
+	}
+	else {
+		mob = mob_db(mob_id);
+		switch ( luaL_checkint(NL,2) ) {
+			case 0:  lua_pushstring(NL,mob->jname); break;
+			case 1:  lua_pushinteger(NL,mob->lv); break;
+			case 2:  lua_pushinteger(NL,mob->status.max_hp); break;
+			case 3:  lua_pushinteger(NL,mob->base_exp); break;
+			case 4:  lua_pushinteger(NL,mob->job_exp); break;
+			case 5:  lua_pushinteger(NL,mob->status.rhw.atk); break;
+			case 6:  lua_pushinteger(NL,mob->status.rhw.atk2); break;
+			case 7:  lua_pushinteger(NL,mob->status.def); break;
+			case 8:  lua_pushinteger(NL,mob->status.mdef); break;
+			case 9:  lua_pushinteger(NL,mob->status.str); break;
+			case 10: lua_pushinteger(NL,mob->status.agi); break;
+			case 11: lua_pushinteger(NL,mob->status.vit); break;
+			case 12: lua_pushinteger(NL,mob->status.int_); break;
+			case 13: lua_pushinteger(NL,mob->status.dex); break;
+			case 14: lua_pushinteger(NL,mob->status.luk); break;
+			case 15: lua_pushinteger(NL,mob->status.rhw.range); break;
+			case 16: lua_pushinteger(NL,mob->range2); break;
+			case 17: lua_pushinteger(NL,mob->range3); break;
+			case 18: lua_pushinteger(NL,mob->status.size); break;
+			case 19: lua_pushinteger(NL,mob->status.race); break;
+			case 20: lua_pushinteger(NL,mob->status.def_ele); break;
+			case 21: lua_pushinteger(NL,mob->status.mode); break;
+			default: lua_pushnil(NL); //wrong Index
+		}
+	}
+	return 1;
+}
+
+LUA_FUNC(playBGM)
+{
+	lua_get_target(2);
+	const char* name = luaL_checkstring(NL,1);
+
+	if(sd)
+		clif_playBGM(sd,&sd->bl,name);
+
+	return 0;
+}
+
+int playBGM_sub(struct block_list* bl,va_list ap)
+{
+	char* name = va_arg(ap,char*);
+
+	clif_playBGM((TBL_PC *)bl, bl, name);
+
+    return 0;
+}
+
+LUA_FUNC(playBGMall)
+{
+	struct block_list* bl;
+	const char* name;
+	const char* map;
+	int x0, y0, x1, y1;
+	int id = luaL_checkint(NL,1);
+
+	bl = (id) ? &(map_charid2sd(id)->bl) : map_id2bl(id);
+	if (!bl)
+		return 0;
+
+	name = luaL_checkstring(NL,2);
+
+	map = luaL_checkstring(NL,3);
+	x0 = luaL_checkint(NL,4);
+	y0 = luaL_checkint(NL,5);
+	x1 = luaL_checkint(NL,6);
+	y1 = luaL_checkint(NL,7);
+	
+	if ( map && x0 && y0 && x1 && y1 )
+		map_foreachinarea(playBGM_sub, map_mapname2mapid(map), x0, y0, x1, y1, BL_PC, name);
+	else if ( map )
+			map_foreachinmap(playBGM_sub, map_mapname2mapid(map), BL_PC, name);
+	else
+		ShowError("lua_playBGMall: insufficient arguments for specific area broadcast.\n");
+
+	return 0;
+}
+
+LUA_FUNC(checkvending)
+{
+	TBL_PC *sd = NULL;
+	sd = map_nick2sd(luaL_checkstring(NL,1));
+	if (sd)
+		lua_pushinteger(NL,(sd->vender_id != 0));
+	else
+		lua_pushnil(NL);
+		
+	return 1;
+}
+
+LUA_FUNC(checkchatting)
+{
+	TBL_PC *sd = NULL;
+	sd = map_nick2sd(luaL_checkstring(NL,1));
+	if (sd)
+		lua_pushinteger(NL,(sd->chatID != 0));
+	else
+		lua_pushnil(NL);
+		
+	return 1;
+}
+
+LUA_FUNC(searchitem)
+{
+	const char *itemname = luaL_checkstring(NL,1);
+	struct item_data *items[MAX_SEARCH];
+	int count;
+
+	int32 start = 1;
+	int32 i;
+	TBL_PC* sd = NULL;
+	
+	if ((items[0] = itemdb_exists(atoi(itemname))))
+		count = 1;
+	else {
+		count = itemdb_searchname_array(items, ARRAYLENGTH(items), itemname);
+		if (count > MAX_SEARCH) count = MAX_SEARCH;
+	}
+
+	if (!count) {
+		lua_pushnil(NL);
+		return 1;
+	}
+
+	lua_newtable(NL);
+	for( i = 0; i < count; ++start, ++i )
+	{// Set array
+		void* v = (void*)items[i]->nameid;
+		lua_pushinteger(NL,(int)v);
+		lua_rawseti(NL,-2,i+1);
+	}
+	
+	return 1;
+}
+
+LUA_FUNC(accountid2name)
+{
+	struct block_list *bl = NULL;
+	int rid = luaL_checkint(NL,1);
+	if((bl = map_id2bl(rid)))
+	{
+		switch(bl->type) {
+			case BL_MOB: lua_pushstring(NL,((TBL_MOB*)bl)->name); break;
+			case BL_PC:  lua_pushstring(NL,((TBL_PC*)bl)->status.name); break;
+			case BL_NPC: lua_pushstring(NL,((TBL_NPC*)bl)->exname); break;
+			case BL_PET: lua_pushstring(NL,((TBL_PET*)bl)->pet.name); break;
+			case BL_HOM: lua_pushstring(NL,((TBL_HOM*)bl)->homunculus.name); break;
+			case BL_MER: lua_pushstring(NL,((TBL_MER*)bl)->db->name); break;
+			default:
+				luaL_error(NL,"lua_accountid2name: BL type unknown.\n");
+				lua_pushnil(NL);
+				break;
+		}
+	} else {
+		luaL_error(NL,"lua_rid2name: invalid RID\n");
+		lua_pushnil(NL);
+	}
+	return 1;
+}
+
+LUA_FUNC(pcblockmove)
+{
+	int id, flag;
+	TBL_PC *sd = NULL;
+
+	id = luaL_checkint(NL,1);
+	flag = luaL_checkint(NL,2);
+
+	if(id)
+		sd = map_charid2sd(id);
+
+	if(sd)
+		sd->state.blockedmove = flag > 0;
+
+	return 0;
+}
+
+LUA_FUNC(pcfollow)
+{
+	int id, targetid;
+	TBL_PC *sd = NULL;
+
+	id = luaL_checkint(NL,1);
+	targetid = luaL_checkint(NL,2);
+
+	if(id)
+		sd = map_charid2sd(id);
+
+	if(sd)
+		pc_follow(sd, targetid);
+
+    return 0;
+}
+
+LUA_FUNC(pcstopfollow)
+{
+	int id;
+	TBL_PC *sd = NULL;
+	
+	id = luaL_checkint(NL,1);
+
+	if(id)
+		sd = map_charid2sd(id);
+		
+	if(sd)
+		pc_stop_following(sd);
+
+	return 0;
+}
+
+LUA_FUNC(unitwalk)
+{
+	struct block_list* bl;
+
+	bl = map_id2bl(luaL_checkint(NL,1));
+	if( bl == NULL )
+	{
+		lua_pushnil(NL);
+	}
+	else if (lua_tointeger(NL,3))
+	{
+		int x = luaL_checkint(NL,2);
+		int y = luaL_checkint(NL,3);
+		lua_pushinteger(NL, unit_walktoxy(bl,x,y,0));// We'll use harder calculations.
+	}
+	else
+	{
+		int map_id = luaL_checkint(NL,2);
+		lua_pushinteger(NL, unit_walktobl(bl,map_id2bl(map_id),65025,1));
+	}
+
+	return 1;
+}
+
+LUA_FUNC(unitkill)
+{
+	struct block_list* bl = map_id2bl(luaL_checkint(NL,1));
+	if( bl != NULL )
+		status_kill(bl);
+	return 0;
+}
+
+LUA_FUNC(unitwarp)
+{
+	int unit_id;
+	int map;
+	short x;
+	short y;
+	struct block_list* bl;
+
+	unit_id = luaL_checkint(NL,1);
+	map = map_mapname2mapid(luaL_checkstring(NL,2));
+	x = (short)luaL_checkint(NL,3);
+	y = (short)luaL_checkint(NL,4);
+
+	bl = map_id2bl(unit_id);
+	if( map >= 0 && bl != NULL )
+		lua_pushinteger(NL, unit_warp(bl,map,x,y,0));
+	else
+		lua_pushnil(NL);
+
+	return 1;
+}
+
+LUA_FUNC(unitattack)
+{
+	struct block_list* unit_bl;
+	struct block_list* target_bl = NULL;
+	int actiontype = 0;
+
+	// get unit
+	unit_bl = map_id2bl(luaL_checkint(NL,1));
+	if( unit_bl == NULL ) {
+		lua_pushnil(NL);
+		return 1;
+	}
+
+	if( lua_isstring(NL,2) )
+	{
+		TBL_PC* sd = map_nick2sd(luaL_checkstring(NL,2));
+		if( sd != NULL )
+			target_bl = &sd->bl;
+	} else
+		target_bl = map_id2bl(luaL_checkint(NL,2));
+	// request the attack
+	if( target_bl == NULL )
+	{
+		lua_pushnil(NL);
+		return 1;
+	}
+	
+	// get actiontype
+	//if( script_hasdata(st,4) )
+	//	actiontype = luaL_checkint(NL,4);
+
+	switch( unit_bl->type )
+	{
+	case BL_PC:
+		clif_parse_ActionRequest_sub(((TBL_PC *)unit_bl), actiontype > 0 ? 0x07 : 0x00, target_bl->id, gettick());
+		lua_pushnil(NL);
+		return 1;
+	case BL_MOB:
+		((TBL_MOB *)unit_bl)->target_id = target_bl->id;
+		break;
+	case BL_PET:
+		((TBL_PET *)unit_bl)->target_id = target_bl->id;
+		break;
+	default:
+		luaL_error(NL,"lua_unitattack: unsupported source unit type %d\n", unit_bl->type);
+		lua_pushnil(NL);
+		return 1;
+	}
+	lua_pushinteger(NL, unit_walktobl(unit_bl, target_bl, 65025, 2));
+	return 1;
+}
+
+LUA_FUNC(unitstop)
+{
+	int unit_id;
+	struct block_list* bl;
+
+	unit_id = luaL_checkint(NL,1);
+
+	bl = map_id2bl(unit_id);
+	if( bl != NULL )
+	{
+		unit_stop_attack(bl);
+		unit_stop_walking(bl,4);
+		if( bl->type == BL_MOB )
+			((TBL_MOB*)bl)->target_id = 0;
+	}
+
+	return 0;
+}
+
+LUA_FUNC(unittalk)
+{
+	int unit_id;
+	const char* message;
+	struct block_list* bl;
+
+	unit_id = luaL_checkint(NL,1);
+	message = luaL_checkstring(NL,2);
+
+	bl = map_id2bl(unit_id);
+	if( bl != NULL )
+	{
+		struct StringBuf sbuf;
+		StringBuf_Init(&sbuf);
+		StringBuf_Printf(&sbuf, "%s : %s", status_get_name(bl), message);
+		clif_message(bl, StringBuf_Value(&sbuf));
+		if( bl->type == BL_PC )
+			clif_displaymessage(((TBL_PC*)bl)->fd, StringBuf_Value(&sbuf));
+		StringBuf_Destroy(&sbuf);
+	}
+
+	return 0;
+}
+
+LUA_FUNC(unitemote)
+{
+	int unit_id;
+	int emotion;
+	struct block_list* bl;
+
+	unit_id = luaL_checkint(NL,1);
+	emotion = luaL_checkint(NL,2);
+	bl = map_id2bl(unit_id);
+	if( bl != NULL )
+		clif_emotion(bl, emotion);
+
+	return 0;
+}
+
+LUA_FUNC(unitskilluseid)
+{
+	int unit_id;
+	int skill_id;
+	int skill_lv;
+	int target_id;
+	struct block_list* bl;
+
+	unit_id  = luaL_checkint(NL,1);
+	skill_id = ( lua_isstring(NL,2) ? skill_name2id(luaL_checkstring(NL,2)) : luaL_checkint(NL,2) );
+	skill_lv = luaL_checkint(NL,3);
+	target_id = luaL_checkint(NL,4);
+	if (!target_id)
+		target_id = unit_id;
+
+	bl = map_id2bl(unit_id);
+	if( bl != NULL )
+		unit_skilluse_id(bl, target_id, skill_id, skill_lv);
+
+	return 0;
+}
+
+LUA_FUNC(unitskillusepos)
+{
+	int unit_id;
+	int skill_id;
+	int skill_lv;
+	int skill_x;
+	int skill_y;
+	struct block_list* bl;
+
+	unit_id  = luaL_checkint(NL,1);
+	skill_id = ( lua_isstring(NL,2) ? skill_name2id(luaL_checkstring(NL,2)) : luaL_checkint(NL,2) );
+	skill_lv = luaL_checkint(NL,3);
+	skill_x  = luaL_checkint(NL,4);
+	skill_y  = luaL_checkint(NL,5);
+
+	bl = map_id2bl(unit_id);
+	if( bl != NULL )
+		unit_skilluse_pos(bl, skill_x, skill_y, skill_id, skill_lv);
+
+	return 0;
+}
+
+LUA_FUNC(warpportal)
+{
+	int spx;
+	int spy;
+	unsigned short mapindex;
+	int tpx;
+	int tpy;
+	struct skill_unit_group* group;
+	struct block_list* bl;
+
+	bl = map_id2bl(luaL_checkint(NL,1));
+	if( bl == NULL )
+	{
+		luaL_error(NL,"lua_warpportal: npc is needed\n");
+		return 0;
+	}
+
+	spx = luaL_checkint(NL,2);
+	spy = luaL_checkint(NL,3);
+	mapindex = mapindex_name2id(luaL_checkstring(NL, 4));
+	tpx = luaL_checkint(NL,5);
+	tpy = luaL_checkint(NL,6);
+
+	if( mapindex == 0 )
+		return 0;// map not found
+
+	group = skill_unitsetting(bl, AL_WARP, 4, spx, spy, 0);
+	if( group == NULL )
+		return 0;// failed
+	group->val2 = (tpx<<16) | tpy;
+	group->val3 = mapindex;
+
+	return 0;
+}
+
+LUA_FUNC(openmail)
+{
+	lua_get_target(1);
+
+	if( sd == NULL )
+		return 0;
+
+#ifndef TXT_ONLY
+	mail_openmail(sd);
+#endif
+	return 0;
+}
+
+LUA_FUNC(openauction)
+{
+	lua_get_target(1);
+	
+	if( sd == NULL )
+		return 0;
+
+#ifndef TXT_ONLY
+	clif_Auction_openwindow(sd);
+#endif
+	return 0;
+}
+
+LUA_FUNC(checkcell)
+{
+	int m = map_mapname2mapid(luaL_checkstring(NL,1));
+	int x = luaL_checkint(NL,2);
+	int y = luaL_checkint(NL,3);
+	cell_chk type = (cell_chk)luaL_checkint(NL,4);
+
+	lua_pushinteger(NL, map_getcell(m, x, y, type));
+
+	return 1;
+}
+
+LUA_FUNC(setcell)
+{
+	int m = map_mapname2mapid(luaL_checkstring(NL,1));
+	int x1 = luaL_checkint(NL,2);
+	int y1 = luaL_checkint(NL,3);
+	int x2 = luaL_checkint(NL,4);
+	int y2 = luaL_checkint(NL,5);
+	cell_t type = (cell_t)luaL_checkint(NL,6);
+	bool flag = (bool)luaL_checkint(NL,7);
+
+	int x,y;
+
+	if( x1 > x2 ) swap(x1,x2);
+	if( y1 > y2 ) swap(y1,y2);
+
+	for( y = y1; y <= y2; ++y )
+		for( x = x1; x <= x2; ++x )
+			map_setcell(m, x, y, type, flag);
+
+	return 0;
+}
+
+LUA_FUNC(mercenary_create)
+{
+	lua_get_target(3);
+	int class_, contract_time;
+
+	if( (sd == NULL || sd->md || sd->status.mer_id != 0 ) )
+		return 0;
+	
+	class_ = luaL_checkint(NL,1);
+
+	if( !merc_class(class_) )
+		return 0;
+
+	contract_time = luaL_checkint(NL,2);
+	merc_create(sd, class_, contract_time);
+
+	return 0;
+}
+
+LUA_FUNC(mercenary_heal)
+{
+	lua_get_target(3);
+	int hp, sp;
+
+	if( sd == NULL || sd->md == NULL )
+		return 0;
+		
+	hp = luaL_checkint(NL,1);
+	sp = luaL_checkint(NL,2);
+
+	status_heal(&sd->md->bl, hp, sp, 0);	
+	return 0;
+}
+
+LUA_FUNC(mercenary_sc_start)
+{
+	lua_get_target(4);
+	enum sc_type type;
+	int tick, val1;
+
+	if( sd == NULL || sd->md == NULL )
+		return 0;
+
+	type = (sc_type)luaL_checkint(NL,1);
+	tick = luaL_checkint(NL,2);
+	val1 = luaL_checkint(NL,3);
+
+	status_change_start(&sd->md->bl, type, 10000, val1, 0, 0, 0, tick, 2);
+	return 0;
+}
+
+LUA_FUNC(mercenary_get_calls)
+{
+	lua_get_target(2);
+	int guild;
+
+	if( sd == NULL )
+		return 0;
+
+	guild = luaL_checkint(NL,1);
+	switch( guild )
+	{
+		case ARCH_MERC_GUILD:
+			lua_pushinteger(NL,sd->status.arch_calls);
+			break;
+		case SPEAR_MERC_GUILD:
+			lua_pushinteger(NL,sd->status.spear_calls);
+			break;
+		case SWORD_MERC_GUILD:
+			lua_pushinteger(NL,sd->status.sword_calls);
+			break;
+		default:
+			lua_pushnil(NL);
+			break;
+	}
+
+	return 1;
+}
+
+LUA_FUNC(mercenary_set_calls)
+{
+	lua_get_target(3);
+	int guild, value, *calls;
+
+	if( sd == NULL )
+		return 0;
+
+	guild = luaL_checkint(NL,1);
+	value = luaL_checkint(NL,2);
+
+	switch( guild )
+	{
+		case ARCH_MERC_GUILD:
+			calls = &sd->status.arch_calls;
+			break;
+		case SPEAR_MERC_GUILD:
+			calls = &sd->status.spear_calls;
+			break;
+		case SWORD_MERC_GUILD:
+			calls = &sd->status.sword_calls;
+			break;
+		default:
+			return 0; // Invalid Guild
+	}
+
+	*calls += value;
+	*calls = cap_value(*calls, 0, INT_MAX);
+
+	return 0;
+}
+
+LUA_FUNC(mercenary_get_faith)
+{
+	lua_get_target(2);
+	int guild;
+
+	if( sd == NULL )
+		return 0;
+
+	guild = luaL_checkint(NL,1);
+	switch( guild )
+	{
+		case ARCH_MERC_GUILD:
+			lua_pushinteger(NL,sd->status.arch_faith);
+			break;
+		case SPEAR_MERC_GUILD:
+			lua_pushinteger(NL,sd->status.spear_faith);
+			break;
+		case SWORD_MERC_GUILD:
+			lua_pushinteger(NL,sd->status.sword_faith);
+			break;
+		default:
+			lua_pushnil(NL);
+			break;
+	}
+
+	return 1;
+}
+
+LUA_FUNC(mercenary_set_faith)
+{
+	lua_get_target(3);
+	int guild, value, *calls;
+
+	if( sd == NULL )
+		return 0;
+
+	guild = luaL_checkint(NL,1);
+	value = luaL_checkint(NL,2);
+
+	switch( guild )
+	{
+		case ARCH_MERC_GUILD:
+			calls = &sd->status.arch_faith;
+			break;
+		case SPEAR_MERC_GUILD:
+			calls = &sd->status.spear_faith;
+			break;
+		case SWORD_MERC_GUILD:
+			calls = &sd->status.sword_faith;
+			break;
+		default:
+			return 0; // Invalid Guild
+	}
+
+	*calls += value;
+	*calls = cap_value(*calls, 0, INT_MAX);
+	if( mercenary_get_guild(sd->md) == guild )
+		clif_mercenary_updatestatus(sd,SP_MERCFAITH);
+
+	return 0;
+}
+
+LUA_FUNC(readbook)
+{
+	lua_get_target(3);
+	int book_id, page;
+
+	if( (sd == NULL ) )
+		return 0;
+
+	book_id = luaL_checkint(NL,1);
+	page = luaL_checkint(NL,2);
+
+	clif_readbook(sd->fd, book_id, page);
+	return 0;
+}
+
+LUA_FUNC(setquest)
+{
+	lua_get_target(2);
+	quest_add(sd, luaL_checkint(NL,1));
+	return 0;
+}
+
+LUA_FUNC(erasequest)
+{
+	lua_get_target(2);
+	quest_delete(sd, luaL_checkint(NL,1));
+	return 0;
+}
+
+LUA_FUNC(completequest)
+{
+	lua_get_target(2);
+	quest_update_status(sd, luaL_checkint(NL,1), Q_COMPLETE);
+	return 0;
+}
+
+LUA_FUNC(changequest)
+{
+	lua_get_target(3);
+	quest_change(sd, luaL_checkint(NL,1),luaL_checkint(NL,2));
+	return 0;
+}
+
+LUA_FUNC(checkquest)
+{
+	lua_get_target(3);
+	quest_check_type type = HAVEQUEST;
+	
+	if( lua_tointeger(NL,2) )
+		type = (quest_check_type)luaL_checkint(NL,2);
+
+	lua_pushinteger(NL, quest_check(sd, luaL_checkint(NL,1), type));
+
+	return 0;
+}
+
+LUA_FUNC(showevent)
+{
+  lua_get_target(3);
+  struct npc_data *nd = map_id2nd(luaL_checkint(NL,4));
+  int state, color;
+
+  if( sd == NULL || nd == NULL )
+     return 0;
+	 
+  state = luaL_checkint(NL,1);
+  color = luaL_checkint(NL,2);
+
+  if( color < 0 || color > 4 )
+     color = 0; // set default color
+
+  clif_quest_show_event(sd, &nd->bl, state, color);
+  return 0;
+}
+
+LUA_FUNC(retrcharid)
+{
+	lua_get_target(1);
+	lua_pushinteger(NL,sd->status.char_id);
+	return 1;
+}
+
+LUA_FUNC(_waitingroom2bg)
+{
+	struct npc_data *nd;
+	struct chat_data *cd;
+	const char *map_name, *ev = "", *dev = "";
+	int x, y, i, mapindex = 0, bg_id, n;
+	struct map_session_data *sd;
+
+	map_name = luaL_checkstring(NL,1);
+	x = luaL_checkint(NL,2);
+	y = luaL_checkint(NL,3);
+	ev = luaL_checkstring(NL,4); //Logout event
+	dev = luaL_checkstring(NL,5); //Die event
+	
+	if( lua_isstring(NL,6) )
+		nd = npc_name2id(luaL_checkstring(NL,6));
+	else
+		nd = (struct npc_data *)map_id2bl(luaL_checkint(NL,6));
+
+	if( nd == NULL || (cd = (struct chat_data *)map_id2bl(nd->chat_id)) == NULL )
+		lua_pushnil(NL);
+	else {
+		if( strcmp(map_name,"-") != 0 )
+		{
+			mapindex = mapindex_name2id(map_name);
+			if( mapindex == 0 )
+			{ // Invalid Map
+				lua_pushnil(NL);
+				return 1;
+			}
+		}
+
+		if( (bg_id = bg_create(mapindex, x, y, ev, dev)) == 0 )
+		{ // Creation failed
+			lua_pushnil(NL);
+			return 1;
+		}
+
+		lua_newtable(NL);
+		n = cd->users;
+		for( i = 0; i < n && i < MAX_BG_MEMBERS; i++ )
+		{
+			if( (sd = cd->usersd[i]) != NULL && bg_team_join(bg_id, sd) ) {
+				lua_pushinteger(NL,sd->bl.id);
+				lua_rawseti(NL,-2,i+1);
+			}
+			else {
+				lua_pushinteger(NL,0);
+				lua_rawseti(NL,-2,i+1);
+			}
+		}
+		lua_pushinteger(NL,i);
+		lua_rawseti(NL,-2,i+1);
+		lua_pushinteger(NL,bg_id);
+		lua_rawseti(NL,-2,i+1);
+		return 1;
+	}
+	return 1;
+}
+
+LUA_FUNC(waitingroom2bg_single)
+{
+	const char* map_name;
+	struct npc_data *nd;
+	struct chat_data *cd;
+	struct map_session_data *sd;
+	int x, y, mapindex, bg_id;
+
+	bg_id = luaL_checkint(NL,1);
+	map_name = luaL_checkstring(NL,2);
+	if( (mapindex = mapindex_name2id(map_name)) == 0 )
+		return 0; // Invalid Map
+	x = luaL_checkint(NL,3);
+	y = luaL_checkint(NL,4);
+	nd = npc_name2id(luaL_checkstring(NL,5));
+
+	if( nd == NULL || (cd = (struct chat_data *)map_id2bl(nd->chat_id)) == NULL || cd->users <= 0 )
+		return 0;
+
+	if( (sd = cd->usersd[0]) == NULL )
+		return 0;
+
+	if( bg_team_join(bg_id, sd) )
+	{
+		pc_setpos(sd, mapindex, x, y, 3);
+		lua_pushinteger(NL,1);
+	}
+	else
+		lua_pushnil(NL);
+
+	return 1;
+}
+
+LUA_FUNC(bg_team_setxy)
+{
+	struct battleground_data *bg;
+	int bg_id;
+
+	bg_id = luaL_checkint(NL,1);
+	if( (bg = bg_team_search(bg_id)) == NULL )
+		return 0;
+
+	bg->x = luaL_checkint(NL,2);
+	bg->y = luaL_checkint(NL,3);
+	return 0;
+}
+
+LUA_FUNC(bg_warp)
+{
+	int x, y, mapindex, bg_id;
+	const char* map_name;
+
+	bg_id = luaL_checkint(NL,1);
+	map_name = luaL_checkstring(NL,2);
+	if( (mapindex = mapindex_name2id(map_name)) == 0 )
+		return 0; // Invalid Map
+	x = luaL_checkint(NL,3);
+	y = luaL_checkint(NL,4);
+	bg_team_warp(bg_id, mapindex, x, y);
+	return 0;
+}
+
+LUA_FUNC(bg_monster)
+{
+	int class_ = 0, x = 0, y = 0, bg_id = 0;
+	const char *str,*map, *evt="";
+
+	bg_id  = luaL_checkint(NL,1);
+	map    = luaL_checkstring(NL,2);
+	x      = luaL_checkint(NL,3);
+	y      = luaL_checkint(NL,4);
+	str    = luaL_checkstring(NL,5);
+	class_ = luaL_checkint(NL,6);
+	evt = luaL_checkstring(NL,7);
+	lua_pushinteger(NL, mob_spawn_bg(map,x,y,str,class_,evt,bg_id,1));
+	return 0;
+}
+
+LUA_FUNC(bg_monster_set_team)
+{
+	struct mob_data *md;
+	struct block_list *mbl;
+	int id = luaL_checkint(NL,2),
+		bg_id = luaL_checkint(NL,3);
+	
+	if( (mbl = map_id2bl(id)) == NULL || mbl->type != BL_MOB )
+		return 0;
+	md = (TBL_MOB *)mbl;
+	md->state.bg_id = bg_id;
+
+	mob_stop_attack(md);
+	mob_stop_walking(md, 0);
+	md->target_id = md->attacked_id = 0;
+	clif_charnameack(0, &md->bl);
+
+	return 0;
+}
+
+LUA_FUNC(bg_leave)
+{
+	lua_get_target(1);
+	if( sd == NULL || !sd->state.bg_id )
+		return 0;
+	
+	bg_team_leave(sd,0);
+	return 0;
+}
+
+LUA_FUNC(bg_destroy)
+{
+	int bg_id = luaL_checkint(NL,1);
+	bg_team_delete(bg_id);
+	return 0;
+}
+
+LUA_FUNC(bg_getareausers)
+{
+	const char *str;
+	int m, x0, y0, x1, y1, bg_id;
+	int i = 0, c = 0;
+	struct battleground_data *bg = NULL;
+	struct map_session_data *sd;
+
+	bg_id = luaL_checkint(NL,1);
+	str = luaL_checkstring(NL,2);
+
+	if( (bg = bg_team_search(bg_id)) == NULL || (m = map_mapname2mapid(str)) < 0 )
+		lua_pushnil(NL);
+	else {
+		x0 = luaL_checkint(NL,3);
+		y0 = luaL_checkint(NL,4);
+		x1 = luaL_checkint(NL,5);
+		y1 = luaL_checkint(NL,6);
+
+		for( i = 0; i < MAX_BG_MEMBERS; i++ )
+		{
+			if( (sd = bg->members[i].sd) == NULL )
+				continue;
+			if( sd->bl.m != m || sd->bl.x < x0 || sd->bl.y < y0 || sd->bl.x > x1 || sd->bl.y > y1 )
+				continue;
+			c++;
+		}
+
+		lua_pushinteger(NL,c);
+	}
+	return 1;
+}
+
+LUA_FUNC(bg_updatescore)
+{
+	const char *str;
+	int m;
+
+	str = luaL_checkstring(NL,1);
+	if( (m = map_mapname2mapid(str)) < 0 )
+		return 0;
+
+	map[m].bgscore_lion = luaL_checkint(NL,2);
+	map[m].bgscore_eagle = luaL_checkint(NL,3);
+
+	clif_bg_updatescore(m);
+	return 0;
+}
+
+LUA_FUNC(bg_get_data)
+{
+	struct battleground_data *bg;
+	int bg_id = luaL_checkint(NL,1),
+		type = luaL_checkint(NL,2);
+
+	if( (bg = bg_team_search(bg_id)) == NULL )
+		lua_pushnil(NL);
+	else {
+		switch( type )
+		{
+			case 0: lua_pushinteger(NL, bg->count); break;
+			default:
+				luaL_error(NL,"lua:bg_get_data: unknown data identifier %d\n", type);
+				break;
+		}
+	}
+	return 1;
+}
+
+LUA_FUNC(instance_create)
+{
+	const char *name;
+	int party_id, res;
+
+	name = luaL_checkstring(NL,1);
+	party_id = luaL_checkint(NL,2);
+
+	res = instance_create(party_id, name);
+	if( res == -4 ) // Already exists
+	{
+		lua_pushnil(NL);
+		return 1;
+	}
+	else if( res < 0 )
+	{
+		char *err;
+		switch(res)
+		{
+		case -3: err = "No free instances"; break;
+		case -2: err = "Missing parameter"; break;
+		case -1: err = "Invalid type"; break;
+		default: err = "Unknown"; break;
+		}
+		luaL_error(NL,"buildin_instance_create: %s [%d].\n", err, res);
+		return 1;
+	}
+	
+	lua_pushinteger(NL, res);
+	return 0;
+}
+
+LUA_FUNC(instance_destroy)
+{
+	int instance_id;
+
+	instance_id = luaL_checkint(NL,1);
+
+	if( instance_id <= 0 || instance_id >= MAX_INSTANCE )
+	{
+		luaL_error(NL,"lua:instance_destroy : Trying to destroy invalid instance %d.\n", instance_id);
+		return 0;
+	}
+
+	instance_destroy(instance_id);
+	return 0;
+}
+
+LUA_FUNC(instance_attachmap)
+{
+	const char *name;
+	int m;
+	int instance_id;
+	int usebasename;
+	
+	name = luaL_checkstring(NL,1);
+	instance_id = luaL_checkint(NL,2);
+	usebasename = luaL_checkint(NL,3);
+
+	if( (m = instance_add_map(name, instance_id, usebasename)) < 0 ) // [Saithis]
+	{
+		luaL_error(NL,"lua:instance_attachmap : instance creation failed (%s): %d\n", name, m);
+		lua_pushnil(NL);
+	}
+	else
+		lua_pushstring(NL, map[m].name);
+		
+	return 1;
+}
+
+LUA_FUNC(instance_detachmap)
+{
+	const char *str;
+	int m, instance_id;
+ 	
+	str = luaL_checkstring(NL,1);
+	instance_id = luaL_checkint(NL,2);
+ 	
+	if( (m = map_mapname2mapid(str)) < 0 || (m = instance_map2imap(m,instance_id)) < 0 )
+ 	{
+		luaL_error(NL,"lua:instance_detachmap : Trying to detach invalid map %s\n", str);
+ 		return 0;
+ 	}
+	instance_del_map(m);
+	return 0;
+}
+
+LUA_FUNC(instance_attach)
+{
+	int instance_id, instanceid_two;
+	
+	instance_id = luaL_checkint(NL,1);
+	instanceid_two = luaL_checkint(NL,2);
+	if( instance_id <= 0 || instance_id >= MAX_INSTANCE )
+		return 0;
+	
+	instance_id = instanceid_two;
+	return 0;
+}
+
+LUA_FUNC(instance_id)
+{
+	int instance_id;
+	struct party_data *p;
+	lua_get_target(1);
+	
+	if( sd->status.party_id && (p = party_search(sd->status.party_id)) != NULL )
+		instance_id = p->instance_id;
+
+	lua_pushinteger(NL, instance_id);
+	return 0;
+}
+
+LUA_FUNC(instance_set_timeout)
+{
+	int progress_timeout, idle_timeout;
+	int instance_id;
+	
+	progress_timeout = luaL_checkint(NL,1);
+	idle_timeout = luaL_checkint(NL,2);
+	instance_id = luaL_checkint(NL,3);
+
+	if( instance_id > 0 )
+		instance_set_timeout(instance_id, progress_timeout, idle_timeout);
+		
+	return 0;
+}
+
+LUA_FUNC(instance_init)
+{
+	int instance_id = luaL_checkint(NL,1);
+
+	if( instance[instance_id].state != INSTANCE_IDLE )
+	{
+		luaL_error(NL,"instance_init: instance already initialized (Instance ID: %d).\n",instance_id);
+		return 0;
+	}
+
+	instance_init(instance_id);
+	return 0;
+}
+
+LUA_FUNC(instance_announce)
+{
+	int         instance_id = luaL_checkint(NL,1);
+	const char *mes         = luaL_checkstring(NL,2);
+	int         flag        = luaL_checkint(NL,3);
+	const char *fontColor   = lua_isstring(NL,4) ? luaL_checkstring(NL,4) : NULL;
+	int         fontType    = lua_isnumber(NL,5) ? luaL_checkint(NL,5) : 0x190; // default fontType (FW_NORMAL)
+	int         fontSize    = lua_isnumber(NL,6) ? luaL_checkint(NL,6) : 12;    // default fontSize
+	int         fontAlign   = lua_isnumber(NL,7) ? luaL_checkint(NL,7) : 0;     // default fontAlign
+	int         fontY       = lua_isnumber(NL,8) ? luaL_checkint(NL,8) : 0;     // default fontY
+
+	int i;
+
+	if( instance_id <= 0 || instance_id >= MAX_INSTANCE )
+		return 0;
+		
+	for( i = 0; i < instance[instance_id].num_map; i++ )
+		map_foreachinmap(buildin_announce_sub, instance[instance_id].map[i], BL_PC,
+			mes, strlen(mes)+1, flag&0xf0, fontColor, fontType, fontSize, fontAlign, fontY);
+
+	return 0;
+}
+
+LUA_FUNC(instance_npcname)
+{
+	const char *str;
+	int instance_id = 0;
+	struct npc_data *nd;
+	
+	str = luaL_checkstring(NL,1);
+	instance_id = luaL_checkint(NL,2);
+
+	if( instance_id && (nd = npc_name2id(str)) != NULL )
+ 	{
+		static char npcname[NAME_LENGTH];
+		snprintf(npcname, sizeof(npcname), "dup_%d_%d", instance_id, nd->bl.id);
+ 		lua_pushstring(NL,npcname);
+	}
+	else
+		lua_pushnil(NL);
+
+	return 1;
+}
+
+LUA_FUNC(has_instance)
+{
+ 	const char *str;
+	int m, instance_id = 0;
+ 
+ 	str = luaL_checkstring(NL,1);
+	instance_id = luaL_checkint(NL,2);
+	
+	if( !instance_id || (m = map_mapname2mapid(str)) < 0 || (m = instance_map2imap(m, instance_id)) < 0 )
+		lua_pushnil(NL);
+	else
+		lua_pushstring(NL, map[m].name);
+		
+	return 1;
+}
+
+LUA_FUNC(instance_warpall)
+{
+	struct map_session_data *pl_sd;
+	int m, i, instance_id;
+	const char *mapn;
+	int x, y;
+	unsigned short mapindex;
+	struct party_data *p = NULL;
+
+	mapn = luaL_checkstring(NL,2);
+	x    = luaL_checkint(NL,3);
+	y    = luaL_checkint(NL,4);
+	instance_id = luaL_checkint(NL,5);
+
+	if( (m = map_mapname2mapid(mapn)) < 0 || (map[m].flag.src4instance && (m = instance_mapid2imapid(m, instance_id)) < 0) )
+		return 0;
+
+	if( !(p = party_search(instance[instance_id].party_id)) )
+		return 0;
+
+	mapindex = map_id2index(m);
+	for( i = 0; i < MAX_PARTY; i++ )
+		if( (pl_sd = p->data[i].sd) && map[pl_sd->bl.m].instance_id == instance_id ) pc_setpos(pl_sd,mapindex,x,y,3);
+
+	return 0;
+}
+
+LUA_FUNC(setfont)
+{
+	int font = luaL_checkint(NL,1);
+	lua_get_target(2);
+	
+	if( sd == NULL )
+		return 0;
+
+	if( sd->state.user_font != font )
+		sd->state.user_font = font;
+	else
+		sd->state.user_font = 0;
+	
+	clif_font_area(sd);
+	return 0;
+}
+
+static int buildin_mobuseskill_sub(struct block_list *bl,va_list ap)
+{
+	TBL_MOB* md		= (TBL_MOB*)bl;
+	struct block_list *tbl;
+	int mobid		= va_arg(ap,int);
+	int skillid		= va_arg(ap,int);
+	int skilllv		= va_arg(ap,int);
+	int casttime	= va_arg(ap,int);
+	int cancel		= va_arg(ap,int);
+	int emotion		= va_arg(ap,int);
+	int target		= va_arg(ap,int);
+
+	if( md->class_ != mobid )
+		return 0;
+
+	if( md->ud.skilltimer != -1 ) // Cancel the casting skill.
+		unit_skillcastcancel(bl,0);
+
+	// 0:self, 1:target, 2:master, default:random
+	switch( target )
+	{
+		case 0: tbl = map_id2bl(md->bl.id); break;
+		case 1: tbl = map_id2bl(md->target_id); break;
+		case 2: tbl = map_id2bl(md->master_id); break;
+		default:tbl = battle_getenemy(&md->bl, DEFAULT_ENEMY_TYPE(md),skill_get_range2(&md->bl, skillid, skilllv)); break;
+	}
+
+	if( !tbl )
+		return 0;
+
+	if( skill_get_casttype(skillid) == CAST_GROUND )
+		unit_skilluse_pos2(&md->bl, tbl->x, tbl->y, skillid, skilllv, casttime, cancel);
+	else
+		unit_skilluse_id2(&md->bl, tbl->id, skillid, skilllv, casttime, cancel);
+
+	clif_emotion(&md->bl, emotion);
+
+	return 0;
+}
+
+LUA_FUNC(areamobuseskill)
+{
+	struct block_list center;
+	int m,range,mobid,skillid,skilllv,casttime,emotion,target,cancel,instance_id;
+	instance_id = luaL_checkint(NL,12);
+
+	if( (m = map_mapname2mapid(luaL_checkstring(NL,1))) < 0 )
+	{
+		ShowError("areamobuseskill: invalid map name.\n");
+		return 0;
+	}
+
+	if( map[m].flag.src4instance && instance_id && (m = instance_mapid2imapid(m, instance_id)) < 0 )
+		return 0;
+
+	center.m = m;
+	center.x = luaL_checkint(NL,2);
+	center.y = luaL_checkint(NL,3);
+	range = luaL_checkint(NL,4);
+	mobid = luaL_checkint(NL,5);
+	skillid = ( lua_isstring(NL,6) ? skill_name2id(luaL_checkstring(NL,6)) : luaL_checkint(NL,6) );
+	if( (skilllv = luaL_checkint(NL,7)) > battle_config.mob_max_skilllvl )
+		skilllv = battle_config.mob_max_skilllvl;
+
+	casttime = luaL_checkint(NL,8);
+	cancel = luaL_checkint(NL,9);
+	emotion = luaL_checkint(NL,10);
+	target = luaL_checkint(NL,11);
+	
+	map_foreachinrange(buildin_mobuseskill_sub, &center, range, BL_MOB, mobid, skillid, skilllv, casttime, cancel, emotion, target);
+	return 0;
+}
+
+LUA_FUNC(progressbar)
+{
+#if PACKETVER >= 20080318
+	const char * color;
+	unsigned int second;
+	int npc_id;
+	lua_get_target(4);
+	
+	if( !sd )
+		return 0;
+
+	sd->lua_script_state = L_CLOSE;
+
+	color = luaL_checkstring(NL,1);
+	second = luaL_checkint(NL,2);
+	npc_id = luaL_checkint(NL,3);
+
+	sd->progressbar.npc_id = npc_id;
+	sd->progressbar.timeout = gettick() + second*1000;
+
+	clif_progressbar(sd, strtol(color, (char **)NULL, 0), second);
+#endif
+    return 0;
+}
+
+//TODO: PCRE
+
 // List of commands to build into Lua, format : {"function_name_in_lua", C_function_name}
 #define LUA_DEF(x) {#x, buildin_ ##x}
 static struct LuaCommandInfo commands[] = {
@@ -5380,9 +6790,9 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(getexp),
 	LUA_DEF(guildgetexp),
 	LUA_DEF(guildchangegm),
-	LUA_DEF(monster),
+	LUA_DEF(_monster),
 	LUA_DEF(getmobdrops),
-	LUA_DEF(areamonster),
+	LUA_DEF(_areamonster),
 	LUA_DEF(killmonster),
 	LUA_DEF(killmonsterall),
 	LUA_DEF(clone),
@@ -5516,6 +6926,73 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(setbattleflag),
 	LUA_DEF(getbattleflag),
 	LUA_DEF(setnpcdisplay),
+	LUA_DEF(md5),
+	LUA_DEF(petstat),
+	//LUA_DEF(setitemscript),
+	LUA_DEF(getmonsterinfo),
+	LUA_DEF(checkvending),
+	LUA_DEF(checkchatting),
+	LUA_DEF(searchitem),
+	LUA_DEF(accountid2name),
+	LUA_DEF(pcblockmove),
+	LUA_DEF(pcfollow),
+	LUA_DEF(unitwalk),
+	LUA_DEF(unitkill),
+	LUA_DEF(unitwarp),
+	LUA_DEF(unitattack),
+	LUA_DEF(unitstop),
+	LUA_DEF(unittalk),
+	LUA_DEF(unitemote),
+	LUA_DEF(unitskilluseid),
+	LUA_DEF(unitskillusepos),
+	LUA_DEF(warpportal),
+	LUA_DEF(openmail),
+	LUA_DEF(openauction),
+	LUA_DEF(checkcell),
+	LUA_DEF(setcell),
+	LUA_DEF(mercenary_create),
+	LUA_DEF(mercenary_heal),
+	LUA_DEF(mercenary_sc_start),
+	LUA_DEF(mercenary_get_calls),
+	LUA_DEF(mercenary_set_calls),
+	LUA_DEF(mercenary_get_faith),
+	LUA_DEF(mercenary_set_faith),
+	LUA_DEF(readbook),
+	LUA_DEF(setquest),
+	LUA_DEF(erasequest),
+	LUA_DEF(completequest),
+	LUA_DEF(changequest),
+	LUA_DEF(checkquest),
+	LUA_DEF(showevent),
+	LUA_DEF(playBGM),
+	LUA_DEF(playBGMall),
+	LUA_DEF(retrcharid),
+	LUA_DEF(_waitingroom2bg),
+	LUA_DEF(waitingroom2bg_single),
+	LUA_DEF(bg_team_setxy),
+	LUA_DEF(bg_warp),
+	LUA_DEF(bg_monster),
+	LUA_DEF(bg_monster_set_team),
+	LUA_DEF(bg_leave),
+	LUA_DEF(bg_destroy),
+	LUA_DEF(bg_getareausers),
+	LUA_DEF(bg_updatescore),
+	LUA_DEF(bg_get_data),
+/*	LUA_DEF(instance_create),
+	LUA_DEF(instance_destroy),
+	LUA_DEF(instance_attachmap),
+	LUA_DEF(instance_detachmap),
+	LUA_DEF(instance_attach),
+	LUA_DEF(instance_id),
+	LUA_DEF(instance_set_timeout),
+	LUA_DEF(instance_init),
+	LUA_DEF(instance_announce),
+	LUA_DEF(instance_npcname),
+	LUA_DEF(has_instance),
+	LUA_DEF(instance_warpall),
+	LUA_DEF(setfont),
+	LUA_DEF(areamobuseskill),
+	LUA_DEF(progressbar),*/
 	// End of build-in functions list
 	{"-End of list-", NULL},
 };
