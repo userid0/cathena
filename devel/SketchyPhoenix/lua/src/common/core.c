@@ -175,25 +175,67 @@ const char* get_svn_revision(void)
  *--------------------------------------*/
 static void display_title(void)
 {
-	//ClearScreen(); // clear screen and go up/left (0, 0 position in text)
-	ShowMessage("\n");
-	ShowMessage(""CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=)"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BT_YELLOW"            eAthena Development Team presents            "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"       ______  __    __                                  "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"      /\\  _  \\/\\ \\__/\\ \\                                 "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"    __\\ \\ \\_\\ \\ \\ ,_\\ \\ \\___      __    ___      __      "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"  /'__`\\ \\  __ \\ \\ \\/\\ \\  _ `\\  /'__`\\/' _ `\\  /'__`\\    "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD" /\\  __/\\ \\ \\/\\ \\ \\ \\_\\ \\ \\ \\ \\/\\  __//\\ \\/\\ \\/\\ \\_\\.\\_  "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD" \\ \\____\\\\ \\_\\ \\_\\ \\__\\\\ \\_\\ \\_\\ \\____\\ \\_\\ \\_\\ \\__/.\\_\\ "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"  \\/____/ \\/_/\\/_/\\/__/ \\/_/\\/_/\\/____/\\/_/\\/_/\\/__/\\/_/ "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"   _   _   _   _   _   _   _     _   _   _   _   _   _   "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"  / \\ / \\ / \\ / \\ / \\ / \\ / \\   / \\ / \\ / \\ / \\ / \\ / \\  "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD" ( e | n | g | l | i | s | h ) ( A | t | h | e | n | a ) "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"  \\_/ \\_/ \\_/ \\_/ \\_/ \\_/ \\_/   \\_/ \\_/ \\_/ \\_/ \\_/ \\_/  "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_XXBL"          ("CL_BOLD"                                                         "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=)"CL_CLL""CL_NORMAL"\n\n");
-
-	ShowInfo("SVN Revision: '"CL_WHITE"%s"CL_RESET"'.\n", get_svn_revision());
+//ClearScreen(); // clear screen and go up/left (0, 0 position in text)
+ShowMessage("\n");
+ShowMessage(""CL_XXBL"          ("CL_BT_YELLOW"            eAthena Development Team presents            "CL_XXBL")"CL_CLL""CL_NORMAL"\n");     
+ShowMessage(""CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=)"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"          ("CL_BOLD"       ______  __    __                                  "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"          ("CL_BOLD"      /\\  _  \\/\\ \\__/\\ \\                                 "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"          ("CL_BOLD"    __\\ \\ \\_\\ \\ \\ ,_\\ \\ \\___      __    ___      __      "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"          ("CL_BOLD"  /'__`\\ \\  __ \\ \\ \\/\\ \\  _ `\\  /'__`\\/' _ `\\  /'__`\\    "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"          ("CL_BOLD" /\\  __/\\ \\ \\/\\ \\ \\ \\_\\ \\ \\ \\ \\/\\  __//\\ \\/\\ \\/\\ \\_\\.\\_  "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"          ("CL_BOLD" \\ \\____\\\\ \\_\\ \\_\\ \\__\\\\ \\_\\ \\_\\ \\____\\ \\_\\ \\_\\ \\__/.\\_\\ "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"          ("CL_BOLD"  \\/____/ \\/_/\\/_/\\/__/ \\/_/\\/_/\\/____/\\/_/\\/_/\\/__/\\/_/ "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="CL_XXBL")"CL_CLL""CL_NORMAL"\n");           
+ShowMessage(""CL_XXBL"          ("CL_BT_YELLOW"                       Featuring...                      "CL_XXBL")"CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_WTBL"          (=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="CL_XXBL")"CL_CLL""CL_NORMAL"\n");                
+ShowMessage(""CL_WTBL"                                ,++ , ,,:++                   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                            +  +.::   , +:+:,      ,@@@@,     "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                        . .  + .     :   .+: +    @@@@@@@#    "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                           +:               ++   .@@@@@@@@    "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                        +++                      @@@@@@@@@@   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                      :                         @@@@@@@@@@   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                    ++          :@@@@@@@@        @@@@@@@@@@   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                   .: .      ,@@@@@@@@@@@@@@     @@@@@@@@@@   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                  ,  ,      @@@@@@@@@@@@@@@@@@   ,@@@@@@@@    "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                   ,:     #@@@@@@@@@@@@@@@@@@@@   #@@@@@@*    "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                 , :     @@@@@@@@@@@@@@@@@@@@@@@.   @@@@      "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                 .      @@@@@@@@@@@@@@@@@#    @@@.            "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                 +     @@@@@@@@@@@@@@@@@       :@@      +     "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                +,.   ,@@@@@@@@@@@@@@@@*        @@@     :     "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                .     @@@@@@@@@@@@@@@@@          @@@          "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"               +,    #@@@@@@@@@@@@@@@@@          @@@     ,    "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"              :      @@@@@@@@@@@@@@@@@@          @@@@         "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"              :,    ,@@@@@@@@@@@@@@@@@@          @@@@         "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                    @@@@@@@@@@@@@@@@@@@+        @@@@@         "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"               .+   @@@@@@@@@@@@@@@@@@@@       .@@@@@#    +   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                   @@@@@@@@@@@@@@@@@@@@@*    @@@@@@@@    ,   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"             .:+    @@@@@  @@@@@@@@@@@@@@@@@@@@@@@@@@@        "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"              +.    @@@@@  @@@@@@@@@@@@@@@@@@@@@@@@@@@        "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"             :+.    @@@@@  @@@@@@@@@@@@@@@@@@*@@@@@@@@        "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"             . ,    @@@@@  @@@@@@@ @@@@ @@:     @@@@@@        "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"             , :    @@@@@  @@@@@@@ @@@@ @@ *@@@ @@@@@@        "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                    @@@@@  @@@@@@@ @@@@ @@@@@@@ @@@@@@        "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                    @@@@@  @@@@@@@ @@@@ @@@.    @@@@@     +   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                    +@@@@  @@@@@@@ @@@@ @@  @@@ @@@@@     +   "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"               +     @@@@  @@@@@@@ @@@@ @@ @@@@ @@@@@         "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"              ,      @@@@  @@@@@@@ #@@  @@ @@@  @@@@          "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                      @@@       @@    @ @@    *  @@@     +    "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"               ,     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@           "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                 :     @@@@@@@@@@@@@@@@@@@@@@@@@@@:           "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                        @@@@@@@@@@@@@@@@@@@@@@@@@@     .      "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                         @@@@@@@@@@@@@@@@@@@@@@@@      :      "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                   .      @@@@@@@@@@@@@@@@@@@@@*              "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                   .       *@@@@@@@@@@@@@@@@@@       +        "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                             @@@@@@@@@@@@@@@:       :         "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                     :         .@@@@@@@@@@                    "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                                                  +           "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                        +                                     "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                         :                     +              "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                           ++                 ,               "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                               +          .+                  "CL_CLL""CL_NORMAL"\n");
+ShowMessage(""CL_XXBL"                                   :+  ,                      "CL_CLL""CL_NORMAL"\n");
+ShowInfo("SVN Revision: '"CL_WHITE"%s"CL_RESET"'.\n", get_svn_revision());
 }
 
 // Warning if logged in as superuser (root)
@@ -203,7 +245,7 @@ void usercheck(void)
     if ((getuid() == 0) && (getgid() == 0)) {
 	ShowWarning ("You are running eAthena as the root superuser.\n");
 	ShowWarning ("It is unnecessary and unsafe to run eAthena with root privileges.\n");
-	sleep(3);
+	exit(EXIT_FAILURE);
     }
 #endif
 }

@@ -7,6 +7,10 @@ function menu(...)
 	return npcmenu(arg)
 end
 
+function select(...)
+	return npcmenu(arg)
+end
+
 function shop(...)
 	return npcshop(arg)
 end
@@ -25,10 +29,10 @@ function addtoskill(...)
 end
 
 --sleep() command
-local clock = os.clock
 function sleep(n)  -- seconds
-  local t0 = clock()
-  while clock() - t0 <= n do end
+	local clock = os.clock
+	local t0 = clock()
+	while clock() - t0 <= n do end
 end
 
 --Return timer tick in milliseconds
@@ -168,6 +172,31 @@ function areamonster(...)
 		return _areamonster(tmp[1],tmp[2],tmp[3],tmp[4],tmp[5],tmp[6],tmp[7],tmp[8],tmp[9],0)
 	end
 end
+
+function talk(...)
+	local tmp = {...}
+	for i=1, table.getn(tmp) do
+		if tmp[i] == "/next" then
+			npcnext()
+		elseif tmp[i] == "/close" then
+			close()
+		elseif checktype(tmp[i]) == TYPE_STR then
+			mes(tmp[i])
+		end
+	end
+end
+
+gmcommands = {}
+function addgmcommand(name,fname)
+	gmcommands[name] = fname
+end
+
+function is_scriptedcommand(name)
+	buf = string.gsub(name,"@","",1)
+	if gmcommands[buf] then return callfunc(buf)
+end
+
+function setLocal(char_id,
 
 TYPE_NIL = 0
 TYPE_NUM = 1

@@ -72,8 +72,70 @@ static int buildin_killmonster_sub_strip(struct block_list *bl,va_list ap);
 static int buildin_killmonsterall_sub(struct block_list *bl,va_list ap);
 static int buildin_killmonsterall_sub_strip(struct block_list *bl,va_list ap);
 
-extern enum { CLOSE, NRUN, NEXT, INPUT, MENU };
+// Counts the number of valid and total number of options in 'str'
+// If max_count > 0 the counting stops when that valid option is reached
+// total is incremented for each option (NULL is supported)
+int menu_countoptions(const char* str, int max_count, int* total)
+{
+	int count = 0;
+	int bogus_total;
 
+	if( total == NULL )
+		total = &bogus_total;
+	++(*total);
+
+	// initial empty options
+	while( *str == ':' )
+	{
+		++str;
+		++(*total);
+	}
+	// count menu options
+	while( *str != '\0' )
+	{
+		++count;
+		--max_count;
+		if( max_count == 0 )
+			break;
+		while( *str != ':' && *str != '\0' )
+			++str;
+		while( *str == ':' )
+		{
+			++str;
+			++(*total);
+		}
+	}
+	return count;
+}
+
+static void stackDump (lua_State *L) {
+	int i;
+	int top = lua_gettop(L);
+	for (i = 1; i <= top; i++) {  /* repeat for each level */
+		int t = lua_type(L, i);
+		switch (t) {
+		
+		case LUA_TSTRING:  /* strings */
+			printf("`%s'", lua_tostring(L, i));
+			break;
+			
+		case LUA_TBOOLEAN:  /* booleans */
+			printf(lua_toboolean(L, i) ? "true" : "false");
+            break;
+    
+		case LUA_TNUMBER:  /* numbers */
+			printf("%g", lua_tonumber(L, i));
+			break;
+    
+		default:  /* other values */
+			printf("%s", lua_typename(L, t));
+			break;
+    
+		}
+		printf("  ");  /* put a separator */
+	}
+		printf("\n");  /* end the listing */
+}
 /*-----------------------------------------------------------------------------
  buildin functions for lua
  
@@ -108,7 +170,8 @@ LUA_FUNC(_addnpc)
 	dir=luaL_checkint(NL,6);
 	class_=luaL_checkint(NL,7);
 	sprintf(function, "%s", luaL_checkstring(NL,8));
-	return npc_add_lua(name,exname,m,x,y,dir,class_,function);
+	lua_pushinteger(NL,npc_add_lua(name,exname,m,x,y,dir,class_,function));
+	return 1;
 }
 
 // npcmes("Text",[id])
@@ -129,67 +192,42 @@ LUA_FUNC(mes)
 //npcmenu("menu_name1",return_value1,...)
 LUA_FUNC(npcmenu)
 {
-	struct StringBuf buf;
-	char *menu;
-	int len=0, n, i;
-
-	lua_get_target(2);
+//Pretty much dump the contents of the stack into a string buffer.
+	int i,top;
+	const char *text;
+	TBL_PC *sd;
+	nullpo_retr(0,NL);
+	top = lua_gettop(NL);
+	sd = script_get_target(NL,top);
 	
-	if ( sd->lua_script_state == INPUT || sd->lua_script_state == MENU ) {
-		//You shouldn't get another input/menu while already in an input/menu
-		lua_pushstring(NL, "Player received npc input request while already in one in function 'npcmenu'\n");
-		lua_error(NL);
-		return -1;
+	if (sd == NULL) {
+		lua_pushnil(NL);
+		return 1;
 	}
-
-	lua_pushliteral(NL, "n");
-	lua_rawget(NL, 1);
-	n = luaL_checkint(NL, -1);
-	lua_pop(NL, 1);
-
-	if(n%2 == 1) {
-		lua_pushstring(NL, "Incorrect number of arguments for function 'npcmenu'\n");
-		lua_error(NL);
-		return -1;
-	}
-
-	if(!sd->npc_menu_data.current) {
-		sd->npc_menu_data.current=0;
-	}
-
-	for(i=0; i<n; i+=2) {
-		lua_pushinteger(NL, i+1);
-		lua_rawget(NL, 1);
-		menu = (char *)luaL_checkstring(NL, -1);
-		lua_pop(NL, 1);
-		len += strlen(menu);
-	}
-
-	StringBuf_Init(&buf);
-
-	for(i=0; i<n; i+=2) {
-		lua_pushinteger(NL, i+1);
-		lua_rawget(NL, 1);
-		menu = (char *)luaL_checkstring(NL, -1);
-		lua_pop(NL, 1);
-
-		lua_pushinteger(NL, i+2);
-		lua_rawget(NL, 1);
-		sd->npc_menu_data.value[sd->npc_menu_data.current] = luaL_checkint(NL, -1);
-		lua_pop(NL, 1);
-
-		sd->npc_menu_data.id[sd->npc_menu_data.current] = sd->npc_menu_data.current;
-		sd->npc_menu_data.current+=1;
-		
-		StringBuf_AppendStr(&buf, menu);
-		StringBuf_AppendStr(&buf, ":");
-	}
-
-	clif_scriptmenu(sd,sd->npc_id,StringBuf_Value(&buf));
-	StringBuf_Destroy(&buf);
 	
-	sd->lua_script_state = MENU;
-	return lua_yield(NL, 1);
+	sd->menu_snum=0;
+	if (sd->state.menu_or_input == 0)
+	{
+		struct StringBuf buf;
+		StringBuf_Init(&buf);
+		sd->npc_menu = 0;
+		for (i = 1; i < top; i++) 
+		{
+			text = luaL_checkstring(NL,i);
+			if (!strcmp(text,":"))
+				sd->menu_snum++;
+			if( sd->npc_menu > 0 ) {
+				StringBuf_AppendStr(&buf,":");
+			}
+			StringBuf_AppendStr(&buf,text);
+			sd->npc_menu += menu_countoptions(text,0,NULL);
+		}
+		sd->state.menu_or_input = 1;
+		sd->lua_script_state = L_MENU;
+		clif_scriptmenu(sd,sd->npc_id,StringBuf_Value(&buf));
+		StringBuf_Destroy(&buf);
+	}
+	return lua_yield(NL,1);
 }
 
 //Display a [Next] button in the NPC dialog window
@@ -217,6 +255,16 @@ LUA_FUNC(close)
 
 	sd->lua_script_state = L_CLOSE;
 	return lua_yield(NL, 0);
+}
+
+LUA_FUNC(halt)
+{
+	lua_get_target(1);
+	sd->lua_script_state = L_NRUN;
+	sd->NL = NULL;
+	sd->npc_id = 0;
+	sd->areanpc_id = 0;
+	return 0;
 }
 
 //Add an invisible area that triggers a function when entered
@@ -555,14 +603,13 @@ LUA_FUNC(getweight)
 	if ( sd == NULL ) {
 		return 0;
 	}
-	if ( lua_isstring(NL,1) )
-	{
+	if ( lua_isnumber(NL,1) )
+		nameid = luaL_checkint(NL,1);
+	else {
 		const char *name = luaL_checkstring(NL,1);
 		struct item_data *item_data = itemdb_searchname(name);
 		if ( item_data )
 			nameid = item_data->nameid;
-	} else {
-		nameid = luaL_checkint(NL,1);
 	}
 		
 	amount = luaL_checkint(NL,2);
@@ -591,22 +638,21 @@ LUA_FUNC(getweight)
 	return 1;
 }
 
+LUA_FUNC(addzeny)
+{
+	lua_get_target(2);
+	pc_getzeny(sd,luaL_checkint(NL,1));
+	return 0;
+}
+
 //giveitem(item id, amount[,character id];
 LUA_FUNC(giveitem)
 {
 	int nameid,amount,get_count,i,flag = 0;
 	struct item it;
 	lua_get_target(3);
-	if( lua_isstring(NL,1) )
-	{
-		const char *name = luaL_checkstring(NL,1);
-		struct item_data *item_data = itemdb_searchname(name);
-		if ( item_data == NULL )
-		{
-			return 0;
-		}
-		nameid = item_data->nameid;
-	} else {
+	
+	if( lua_isnumber(NL,1) ) {
 		nameid = luaL_checkint(NL,1);
 		if ( nameid < 0 )
 		{
@@ -618,6 +664,16 @@ LUA_FUNC(giveitem)
 			return 0;
 		}
 	}
+	else {
+		const char *name = luaL_checkstring(NL,1);
+		struct item_data *item_data = itemdb_searchname(name);
+		if ( item_data == NULL )
+		{
+			return 0;
+		}
+		nameid = item_data->nameid;
+	}
+	
 	// <amount>
 	if( (amount=luaL_checkint(NL,2)) <= 0) {
 		return 0; //return if amount <=0, skip the useles iteration
@@ -687,27 +743,25 @@ LUA_FUNC(getrentalitem)
 	if( sd == NULL )
 		return 0;
 
-	if( lua_isstring(NL,1) )
-	{
+	if( lua_isnumber(NL,1) ) {
+		nameid = luaL_checkint(NL,1);
+		if( nameid <= 0 || !itemdb_exists(nameid) )
+		{
+			luaL_error(NL,"buildin_getrentalitem: Nonexistant item %d rquested.\n", nameid);
+			return 0;
+		}
+	}
+	else {
 		const char *name = luaL_checkstring(NL,1);
 		struct item_data *itd = itemdb_searchname(name);
 		if( itd == NULL )
 		{
-			ShowError("buildin_getrentalitem: Nonexistant item %s requested.\n", name);
+			luaL_error(NL,"buildin_getrentalitem: Nonexistant item %s requested.\n", name);
 			return 0;
 		}
 		nameid = itd->nameid;
-
 	}
-	else {
-		nameid = luaL_checkint(NL,1);
-		if( nameid <= 0 || !itemdb_exists(nameid) )
-		{
-			ShowError("buildin_getrentalitem: Nonexistant item %d rquested.\n", nameid);
-			return 0;
-		}
-	}
-
+	
 	seconds = luaL_checkint(NL,2);
 	memset(&it, 0, sizeof(it));
 	it.nameid = nameid;
@@ -881,7 +935,9 @@ LUA_FUNC(givenameditem)
 	lua_get_target(3);
 	struct map_session_data *tsd;
 	
-	if( lua_isstring(NL,1) )
+	if( lua_isnumber(NL,1) )
+		nameid = luaL_checkint(NL,1);
+	else
 	{
 		const char *name = (const char*)luaL_checkstring(NL,1);
 		struct item_data *item_data = itemdb_searchname(name);
@@ -890,20 +946,19 @@ LUA_FUNC(givenameditem)
 			return 0;
 		}
 		nameid = item_data->nameid;
-	}else
-		nameid = luaL_checkint(NL,1);
+	}
 
 	if(!itemdb_exists(nameid))
 	{	//Even though named stackable items "could" be risky, they are required for certain quests.
 		return 0;
 	}
 		
-	if ( lua_isstring(NL,2) )
+	if ( lua_isnumber(NL,2) )
+		tsd = map_charid2sd(luaL_checkint(NL,2));
+	else
 	{
 		tsd = map_nick2sd(luaL_checkstring(NL,2));
 	}
-	else
-		tsd = map_charid2sd(luaL_checkint(NL,2));
 	
 	if( tsd == NULL )
 	{	//Failed
@@ -942,7 +997,9 @@ LUA_FUNC(additem)
 	const char *mapname;
 	struct item item_tmp;
 
-	if( lua_isstring(NL,1) )
+	if( lua_isnumber(NL,1) )
+		nameid = luaL_checkint(NL,1);
+	else
 	{
 		const char *name = luaL_checkstring(NL,1);
 		struct item_data *item_data = itemdb_searchname(name);
@@ -950,8 +1007,7 @@ LUA_FUNC(additem)
 			nameid = item_data->nameid;
 		else
 			nameid = UNKNOWN_ITEM_ID;
-	}else
-		nameid = luaL_checkint(NL,1);
+	}
 
 	amount = luaL_checkint(NL,2);
 	mapname = (const char*)lua_tostring(NL,3);
@@ -996,7 +1052,9 @@ LUA_FUNC(deleteitem)
 		return 0;
 	}
 	
-	if( lua_isstring(NL,1) )
+	if( lua_isnumber(NL,1) )
+		nameid = luaL_checkint(NL,1);
+	else
 	{
 		const char* item_name = luaL_checkstring(NL,1);
 		struct item_data* id = itemdb_searchname(item_name);
@@ -1007,8 +1065,6 @@ LUA_FUNC(deleteitem)
 		}
 		nameid = id->nameid;
 	}
-	else
-		nameid = luaL_checkint(NL,1);
 
 	amount = luaL_checkint(NL,2);
 
@@ -1102,7 +1158,9 @@ LUA_FUNC(deleteitem2)
 	if ( sd == NULL )
 		return 0;
 
-	if( lua_isstring(NL,1) )
+	if( lua_isnumber(NL,1) )
+		nameid = luaL_checkint(NL,1);
+	else
 	{
 		const char* item_name = luaL_checkstring(NL,1);
 		struct item_data* id = itemdb_searchname(item_name);
@@ -1113,8 +1171,6 @@ LUA_FUNC(deleteitem2)
 		}
 		nameid = id->nameid;// "<item name>"
 	}
-	else
-		nameid = luaL_checkint(NL,1);// <item id>
 
 	amount = luaL_checkint(NL,2);
 	iden = luaL_checkint(NL,3);
@@ -1610,7 +1666,7 @@ LUA_FUNC(bonus)
 	case SP_CASTRATE:
 	case SP_ADDEFF_ONSKILL:
 		// these bonuses support skill names
-		val1=( lua_isstring(NL,2) ? skill_name2id(luaL_checkstring(NL,2)) : luaL_checkint(NL,2) );
+		val1=( lua_isnumber(NL,2) ? luaL_checkint(NL,2) : skill_name2id(luaL_checkstring(NL,2)) );
 		break;
 	default:
 		val1=luaL_checkint(NL,2);
@@ -1631,19 +1687,19 @@ LUA_FUNC(bonus)
 		pc_bonus3(sd, type, val1, val2, val3);
 		break;
 	case 4:
-		if( type == SP_AUTOSPELL_ONSKILL && lua_isstring(NL,3) )
-			val2 = skill_name2id(luaL_checkstring(NL,3)); // 2nd value can be skill name
-		else
+		if( type == SP_AUTOSPELL_ONSKILL && lua_isnumber(NL,3) )
 			val2 = luaL_checkint(NL,3);
+		else
+			val2 = skill_name2id(luaL_checkstring(NL,3)); // 2nd value can be skill name
 		val3 = luaL_checkint(NL,4);
 		val4 = luaL_checkint(NL,5);
 		pc_bonus4(sd, type, val1, val2, val3, val4);
 		break;
 	case 5:
-		if( type == SP_AUTOSPELL_ONSKILL && lua_isstring(NL,3) )
-			val2 = skill_name2id(luaL_checkstring(NL,3)); // 2nd value can be skill name
-		else
+		if( type == SP_AUTOSPELL_ONSKILL && lua_isnumber(NL,3) )
 			val2 = luaL_checkint(NL,3);
+		else
+			val2 = skill_name2id(luaL_checkstring(NL,3)); // 2nd value can be skill name
 		val3 = luaL_checkint(NL,4);
 		val4 = luaL_checkint(NL,5);
 		val5 = luaL_checkint(NL,6);
@@ -1721,7 +1777,7 @@ LUA_FUNC(autobonus3)
 	}
 	rate = luaL_checkint(NL,2);
 	dur = luaL_checkint(NL,3);
-	atk_type = ( lua_isstring(NL,4) ? skill_name2id(luaL_checkstring(NL,4)) : luaL_checkint(NL,4) );
+	atk_type = ( lua_isnumber(NL,4) ? luaL_checkint(NL,4) : skill_name2id(luaL_checkstring(NL,4)) );
 	bonus_script = luaL_checkstring(NL,1);
 	if( !rate || !dur || !atk_type || !bonus_script ) {
 		return 0;
@@ -6712,6 +6768,7 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(mes),
 	LUA_DEF(npcmenu),
 	LUA_DEF(close),
+	LUA_DEF(halt),
 	LUA_DEF(npcnext),
 	LUA_DEF(input),
 	LUA_DEF(npcshop),
@@ -6738,6 +6795,7 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(itemuseenable),
 	LUA_DEF(givenameditem),
 	LUA_DEF(getrandgroupitem),
+	LUA_DEF(addzeny),
 	LUA_DEF(additem),
 	LUA_DEF(deleteitem),
 	LUA_DEF(deleteitem2),
@@ -6978,7 +7036,7 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(bg_getareausers),
 	LUA_DEF(bg_updatescore),
 	LUA_DEF(bg_get_data),
-/*	LUA_DEF(instance_create),
+	LUA_DEF(instance_create),
 	LUA_DEF(instance_destroy),
 	LUA_DEF(instance_attachmap),
 	LUA_DEF(instance_detachmap),
@@ -6992,7 +7050,7 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(instance_warpall),
 	LUA_DEF(setfont),
 	LUA_DEF(areamobuseskill),
-	LUA_DEF(progressbar),*/
+	LUA_DEF(progressbar),
 	// End of build-in functions list
 	{"-End of list-", NULL},
 };
@@ -7161,7 +7219,7 @@ void script_resume(struct map_session_data *sd,const char *format,...) {
 	int n=0;
 
 	nullpo_retv(sd);
-	
+		
 	if(sd->lua_script_state==L_NRUN) { // Check that the player is currently running a script
 		ShowError("Cannot resume script for player %d : player is not running a script\n",sd->status.char_id);
 		return;
@@ -7175,7 +7233,7 @@ void script_resume(struct map_session_data *sd,const char *format,...) {
             lua_pushnumber(sd->NL,va_arg(arg,double));
             break;
           case 'i': // i = Integer
-            lua_pushnumber(sd->NL,va_arg(arg,int));
+			lua_pushnumber(sd->NL,va_arg(arg,int));
             break;
           case 's': // s = String
             lua_pushstring(sd->NL,va_arg(arg,char*));
@@ -7198,5 +7256,6 @@ void script_resume(struct map_session_data *sd,const char *format,...) {
 	if(sd->lua_script_state==L_NRUN) { // If the script has finished (not waiting answer from client)
 	    sd->NL=NULL; // Close the player's personal thread
 		sd->npc_id=0; // Set the player's current NPC to 'none'
+		sd->areanpc_id=0;
 	}
 }

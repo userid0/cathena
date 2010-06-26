@@ -176,6 +176,7 @@ struct map_session_data {
 	unsigned int chatID;
 	time_t idletime;
 	int lua_script_state;
+	int menu_snum;
 	npc_menu_datas npc_menu_data;
 	lua_State *NL;
 

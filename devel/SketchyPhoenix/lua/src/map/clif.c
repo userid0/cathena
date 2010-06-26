@@ -41,6 +41,9 @@
 #include "quest.h"
 #include "luascript.h"
 
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5974,6 +5977,38 @@ void clif_hpmeter_single(int fd, int id, unsigned int hp, unsigned int maxhp)
 	WFIFOSET(fd, packet_len(0x106));
 }
 
+int clif_hpmeter_sub(struct block_list *bl, va_list ap)
+{
+	struct map_session_data *sd, *tsd;
+	int level;
+
+	sd = va_arg(ap, struct map_session_data *);
+	tsd = (TBL_PC *)bl;
+
+	nullpo_retr(0, sd);
+	nullpo_retr(0, tsd);
+
+	if( !tsd->fd || tsd == sd )
+		return 0;
+
+	if( (level = pc_isGM(tsd)) >= battle_config.disp_hpmeter && level >= pc_isGM(sd) )
+	{
+		WFIFOHEAD(tsd->fd,packet_len(0x106));
+		WFIFOW(tsd->fd,0) = 0x106;
+		WFIFOL(tsd->fd,2) = sd->status.account_id;
+		if( sd->battle_status.max_hp > SHRT_MAX )
+		{ //To correctly display the %hp bar. [Skotlex]
+			WFIFOW(tsd->fd,6) = sd->battle_status.hp/(sd->battle_status.max_hp/100);
+			WFIFOW(tsd->fd,8) = 100;
+		} else {
+			WFIFOW(tsd->fd,6) = sd->battle_status.hp;
+			WFIFOW(tsd->fd,8) = sd->battle_status.max_hp;
+		}
+		WFIFOSET(tsd->fd,packet_len(0x106));
+	}
+	return 0;
+}
+
 /*==========================================
  * GM‚ÖêŠ‚ÆHP’Ê’m
  *------------------------------------------*/
@@ -10073,41 +10108,34 @@ void clif_parse_WeaponRefine(int fd, struct map_session_data *sd)
  *------------------------------------------*/
 void clif_parse_NpcSelectMenu(int fd,struct map_session_data *sd)
 {
-	int npc_id = RFIFOL(fd,2);
+	int x=0, menu=0, npc_id = RFIFOL(fd,2);
 	uint8 select = RFIFOB(fd,6);
 
-	/*if( (select > sd->npc_menu_data.current && select != 0xff) || select == 0 )
+	nullpo_retv(sd->NL);
+	
+	if ( sd->lua_script_state != L_MENU )
+		return;
+
+	if ( select == 0xff )
+	{	//If the player clicks Cancel, flag him as no longer running a script, close his thread, and set his current NPC to none
+		sd->state.menu_or_input = 0;
+		sd->lua_script_state = L_NRUN;
+		sd->NL = NULL;
+		sd->npc_id = 0;
+		sd->areanpc_id = 0;
+		return;
+	}
+
+	if( (select > sd->npc_menu) && select != 0xff || select == 0 )
 	{
 		TBL_NPC* nd = map_id2nd(npc_id);
 		ShowWarning("Invalid menu selection on npc %d:'%s' - got %d, valid range is [%d..%d] (player AID:%d, CID:%d, name:'%s')!\n", npc_id, (nd)?nd->name:"invalid npc id", select, 1, sd->npc_menu, sd->bl.id, sd->status.char_id, sd->status.name);
 		clif_GM_kick(NULL,sd);
 		return;
 	}
-
-	sd->npc_menu = select;
-	npc_scriptcont(sd,npc_id);
-	*/
 	
-	if ( sd->lua_script_state != L_MENU ) 
-	{
-		//If we're not waiting on the player to pick a menu, we have a problem.
-		ShowWarning("Player %s sent an unexpected packet : NPC menu option selected\n",sd->status.name);
-		clif_GM_kick(NULL,sd);
-		return;
-	}
-	
-	if ( select == 0xff ) {
-		//If the player clicks Cancel, flag him as no longer running a script, close his thread, and set his current NPC to none
-		sd->lua_script_state=L_NRUN;
-		sd->NL = NULL;
-		sd->npc_id = 0;
-		sd->areanpc_id = 0;
-	}
-	else {
-		//Resume the script, passing the value
-		sd->npc_menu_data.current = 0;
-		script_resume(sd,"i",sd->npc_menu_data.value[select-1]);
-	}
+	sd->state.menu_or_input = 0;
+	script_resume(sd,"i",select+sd->menu_snum);
 }
 
 /*==========================================
@@ -13739,8 +13767,9 @@ int clif_parse(int fd)
 		else
 		if( sd && session[sd->fd]->flag.eof )
 			; //No more packets accepted
-		else
+		else {
 			packet_db[packet_ver][cmd].func(fd, sd); 
+		}
 	}
 #if DUMP_UNKNOWN_PACKET
 	else if (battle_config.error_log)

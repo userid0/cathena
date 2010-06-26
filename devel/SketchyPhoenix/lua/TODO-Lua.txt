@@ -6,3 +6,7 @@ TODO:
 	*Write NPCs
 
 	*Convert item scripts to lua
+	
+	*Fix potential bugs with lua string type checking. 
+	
+	*Decide on what system of states to use to identify certain conditions when script execution should pause.
