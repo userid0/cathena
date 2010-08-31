@@ -136,6 +136,7 @@ static void stackDump (lua_State *L) {
 	}
 		printf("\n");  /* end the listing */
 }
+
 /*-----------------------------------------------------------------------------
  buildin functions for lua
  
@@ -555,7 +556,7 @@ LUA_FUNC(changelook)
 //returns the amount of item ID in a player's posession.
 //if it fails, the function returns nil
 //getitemcount(item_id,[char_id])
-LUA_FUNC(getitemcount)
+LUA_FUNC(countitem)
 {
 	int nameid, i;
 	int count = 0;
@@ -588,7 +589,7 @@ LUA_FUNC(getitemcount)
 	return 1;
 }
 
-LUA_FUNC(getitemcount2)
+LUA_FUNC(countitem2)
 {
 	//countitem2
 	return 0;
@@ -6755,6 +6756,20 @@ LUA_FUNC(progressbar)
     return 0;
 }
 
+LUA_FUNC(callfunc)
+{
+	lua_get_target(2);
+	script_run_function(luaL_checkstring(NL,1),sd->status.char_id,"");
+	return 0;
+}
+
+LUA_FUNC(scmd_flag)
+{
+	lua_get_target(2);
+	sd->state.scriptedcommand = luaL_checkint(NL,1);
+	return 0;
+}
+
 //TODO: PCRE
 
 // List of commands to build into Lua, format : {"function_name_in_lua", C_function_name}
@@ -6781,8 +6796,8 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(setlook),
 	LUA_DEF(changelook),
 	LUA_DEF(getjobname),
-	LUA_DEF(getitemcount),
-	LUA_DEF(getitemcount2),
+	LUA_DEF(countitem),
+	LUA_DEF(countitem2),
 	LUA_DEF(getweight),
 	LUA_DEF(giveitem),
 	LUA_DEF(giveitem2),
@@ -7051,6 +7066,8 @@ static struct LuaCommandInfo commands[] = {
 	LUA_DEF(setfont),
 	LUA_DEF(areamobuseskill),
 	LUA_DEF(progressbar),
+	LUA_DEF(callfunc),
+	LUA_DEF(scmd_flag),
 	// End of build-in functions list
 	{"-End of list-", NULL},
 };
@@ -7120,8 +7137,7 @@ static struct map_session_data* script_get_target(lua_State *NL,int idx)
  
  function foo(arg,arg2) (let's say nd-> function was "foo")
  end
-
- And if you're wondering, the stack size is 20 for these function calls. [sketchyphoenix]
+ 
 */
 void script_run_function(const char *name,int char_id,const char *format,...)
 {
@@ -7146,7 +7162,7 @@ void script_run_function(const char *name,int char_id,const char *format,...)
 	}
 
 	lua_getglobal(NL,name); // Pass function name to Lua
- 
+			
 	va_start(arg,format); // Initialize the argument list
 	while (*format) { // Pass arguments to Lua, according to the types defined by "format"
         switch (*format++) {

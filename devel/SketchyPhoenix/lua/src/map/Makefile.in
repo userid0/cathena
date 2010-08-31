@@ -17,7 +17,7 @@ MAP_OBJ = map.o chrif.o clif.o pc.o status.o npc.o \
 	npc_chat.o chat.o path.o itemdb.o mob.o script.o \
 	storage.o skill.o atcommand.o battle.o battleground.o \
 	intif.o trade.o party.o vending.o guild.o pet.o \
-	log.o mail.o date.o unit.o homunculus.o mercenary.o quest.o instance.o
+	log.o mail.o date.o unit.o homunculus.o mercenary.o quest.o instance.o luascript.o
 MAP_TXT_OBJ = $(MAP_OBJ:%=obj_txt/%) \
 	obj_txt/mapreg_txt.o
 MAP_SQL_OBJ = $(MAP_OBJ:%=obj_sql/%) \
@@ -26,7 +26,7 @@ MAP_H = map.h chrif.h clif.h pc.h status.h npc.h \
 	chat.h itemdb.h mob.h script.h path.h \
 	storage.h skill.h atcommand.h battle.h battleground.h \
 	intif.h trade.h party.h vending.h guild.h pet.h \
-	log.h mail.h date.h unit.h homunculus.h mercenary.h quest.h instance.h mapreg.h
+	log.h mail.h date.h unit.h homunculus.h mercenary.h quest.h instance.h mapreg.h luascript.h
 
 HAVE_MYSQL=@HAVE_MYSQL@
 ifeq ($(HAVE_MYSQL),yes)
@@ -85,10 +85,10 @@ obj_sql:
 
 # executables
 map-server: obj_txt $(MAP_TXT_OBJ) $(COMMON_OBJ)
-	@CC@ @LDFLAGS@ -o ../../map-server@EXEEXT@ $(MAP_TXT_OBJ) $(COMMON_OBJ) @LIBS@ @PCRE_LIBS@
+	@CC@ @LDFLAGS@ -o ../../map-server@EXEEXT@ $(MAP_TXT_OBJ) $(COMMON_OBJ) @LIBS@ @PCRE_LIBS@ -llua -ldl
 
 map-server_sql: obj_sql $(MAP_SQL_OBJ) $(COMMON_OBJ) $(COMMON_SQL_OBJ)
-	@CC@ @LDFLAGS@ -o ../../map-server_sql@EXEEXT@ $(MAP_SQL_OBJ) $(COMMON_OBJ) $(COMMON_SQL_OBJ) @LIBS@ @PCRE_LIBS@ @MYSQL_LIBS@
+	@CC@ @LDFLAGS@ -o ../../map-server_sql@EXEEXT@ $(MAP_SQL_OBJ) $(COMMON_OBJ) $(COMMON_SQL_OBJ) @LIBS@ @PCRE_LIBS@ @MYSQL_LIBS@ -llua -ldl
 
 # map object files
 obj_txt/%.o: %.c $(MAP_H) $(COMMON_H)

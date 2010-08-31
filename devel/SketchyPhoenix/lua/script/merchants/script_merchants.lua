@@ -1,1 +1,1 @@
-require "script/merchants/shops"
+dofile "script/merchants/shops.lua"

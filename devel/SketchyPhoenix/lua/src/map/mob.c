@@ -2418,38 +2418,18 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 		if( sd && sd->md && src && src->type != BL_HOM && mob_db(md->class_)->lv > sd->status.base_level/2 )
 			mercenary_kills(sd->md);
 		
-		if( md->npc_event[0] && !md->state.npc_killmonster )
-		{
-			if( sd && battle_config.mob_npc_event_type )
-			{
-				pc_setglobalreg(sd,"killerrid",sd->bl.id);
-				npc_event(sd,md->npc_event,0);
-			}
-			else if( mvp_sd )
-			{
-				pc_setglobalreg(mvp_sd,"killerrid",sd?sd->bl.id:0);
-				npc_event(mvp_sd,md->npc_event,0);
-			}
-			else
-				npc_event_do(md->npc_event);
-		}
-		else if( mvp_sd && !md->state.npc_killmonster )
-		{
-			pc_setglobalreg(mvp_sd,"killedrid",md->class_);
-			npc_script_event(mvp_sd, NPCE_KILLNPC); // PCKillNPC [Lance]
-		}
 		//Lua Engine: Run function event from mob death
 		if(md->function[0] && !md->state.npc_killmonster)
 		{
 			if(sd && battle_config.mob_npc_event_type)
 			{
-				pc_setglobalreg(sd,"killerrid",sd->bl.id);
-				script_run_function(md->function,sd->status.char_id,"");
+				//killer of the mob
+				script_run_function(md->function,sd->status.char_id,"i",sd->bl.id);
 			}
 			else if (mvp_sd)
 			{
-				pc_setglobalreg(mvp_sd,"killerrid",sd?sd->bl.id:0);
-				script_run_function(md->function,mvp_sd->status.char_id,"");
+				//run function with the mvp but pass the id of the person who killed it if one.
+				script_run_function(md->function,mvp_sd->status.char_id,"i",sd?sd->bl.id:0);
 			}
 			else {
 				script_run_function(md->function,0,"");
@@ -2457,8 +2437,7 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 		}
 		else if(mvp_sd && !md->state.npc_killmonster)
 		{
-			pc_setglobalreg(mvp_sd,"killedrid",md->class_);
-			script_run_function("OnNPCKillEvent",mvp_sd->status.char_id,"");
+			script_run_function("OnNPCKillEvent",mvp_sd->status.char_id,"ii",md->class_);
 		}
 		md->status.hp = 1;
 	}

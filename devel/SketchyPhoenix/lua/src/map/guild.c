@@ -1867,8 +1867,6 @@ int guild_castlealldataload(int len,struct guild_castle *gc)
 	ev = i; // offset of castle or -1
 
 	if( ev < 0 ) { //No castles owned, invoke OnAgitInit as it is.
-		npc_event_doall("OnAgitInit");
-		npc_event_doall("OnAgitInit2");
 		script_run_function("OnAgitInit",0,"");
 		script_run_function("OnAgitInit2",0,"");
 	}

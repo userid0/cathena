@@ -14,17 +14,25 @@
 --------------------------------------------------------------
 ------------------- Core Scripts Functions -------------------
 -- Simply do NOT touch this !
-require "script/core/core"
+dofile "script/core/core.lua"
 --------------------------------------------------------------
 ------------------------ Script Files ------------------------
+
 -- Sample scripts
-require "script/sample/script_sample"
+dofile "script/sample/script_sample.lua"
+
 -- Warps
---require "script/warps/script_warps"
+--dofile "script/warps/script_warps.lua"
+
 -- Monster Spawn
-require "script/spawns/script_spawns"
+dofile "script/spawns/script_spawns.lua"
+
 -- Shops/Merchants
---require "script/merchants/script_merchants"
+dofile "script/merchants/script_merchants.lua"
+
+-- Guild Siege (War of Emperium)
+dofile "script/guildsiege/guildsiege.lua"
+
 -- Your NPCs go in this file!
-require "script/custom/script_custom"
+dofile "script/custom/script_custom.lua"
 --------------------------------------------------------------

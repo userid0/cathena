@@ -130,6 +130,7 @@ struct map_session_data {
 		unsigned short autoloot;
 		unsigned short autolootid; // [Zephyrus]
 		unsigned noks : 3; // [Zeph Kill Steal Protection]
+		unsigned scriptedcommand : 1;
 		bool changemap;
 		short pmap; // Previous map on Map Change
 		struct guild *gmaster_flag;
@@ -177,7 +178,7 @@ struct map_session_data {
 	time_t idletime;
 	int lua_script_state;
 	int menu_snum;
-	npc_menu_datas npc_menu_data;
+	//npc_menu_datas npc_menu_data;
 	lua_State *NL;
 
 	struct { //Lua shop npc data

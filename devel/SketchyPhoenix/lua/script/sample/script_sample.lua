@@ -1,6 +1,4 @@
-module(..., package.seeall);
-
-require "script/sample/npc_example"
-require "script/sample/gmcmd_example"
-require "script/sample/event_example"
-require "script/sample/socket_test"
+dofile "script/sample/npc_example.lua"
+dofile "script/sample/gmcmd_example.lua"
+dofile "script/sample/event_example.lua"
+dofile "script/sample/socket_test.lua"

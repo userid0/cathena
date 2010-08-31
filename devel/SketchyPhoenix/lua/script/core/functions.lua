@@ -30,7 +30,9 @@ end
 
 --sleep() command
 function sleep(n)  -- seconds
-	socket.select(nil, nil, n)
+	local clock = os.clock
+	local t0 = clock()
+	while clock() - t0 <= n do end
 end
 
 --Return timer tick in milliseconds
@@ -183,6 +185,18 @@ function talk(...)
 		end
 	end
 end
+
+gmcommands = {}
+function addgmcommand(name,fname)
+	gmcommands[name] = fname
+end
+
+function is_scriptedcommand(name)
+	buf = string.gsub(name,"@","",1)
+	if gmcommands[buf] then scmd_flag(1); return callfunc(gmcommands[buf])
+	end
+end
+
 TYPE_NIL = 0
 TYPE_NUM = 1
 TYPE_STR = 2

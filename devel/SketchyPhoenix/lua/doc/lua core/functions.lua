@@ -150,7 +150,7 @@ function waitingroom2bg(...)
 	buffer[x-1] = nil
 	return buffer
 end
-	
+
 function monster(...)
 	local tmp = {...}
 	if type(tmp[8]) == "number" then
@@ -194,9 +194,8 @@ end
 function is_scriptedcommand(name)
 	buf = string.gsub(name,"@","",1)
 	if gmcommands[buf] then return callfunc(buf)
+	end
 end
-
-function setLocal(char_id,
 
 TYPE_NIL = 0
 TYPE_NUM = 1
