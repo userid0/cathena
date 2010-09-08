@@ -1,5 +1,5 @@
-The core folder contains code that is shared with all scripts like script commands
-, constants, storage systems and other features.
+The core folder contains code that is shared with all scripts like script commands, 
+constants, storage systems and other features.
 
 ------------------------------------------------------------------------------>
 

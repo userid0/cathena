@@ -3,6 +3,8 @@
    BUILDIN FUNCTIONS
 
 ================ --]]
+
+-- Most of these functions are tail calls so that they retain their original names from the old script engine.
 function menu(...)
 	return npcmenu(arg)
 end
@@ -173,6 +175,7 @@ function areamonster(...)
 	end
 end
 
+--Wrapper for typical NPC conversations.
 function talk(...)
 	local tmp = {...}
 	for i=1, table.getn(tmp) do
@@ -186,7 +189,11 @@ function talk(...)
 	end
 end
 
-gmcommands = {}
+-- Scriptable GM commands system.
+-- Basic implementation is here. The commands are stored in a dictionary
+-- I found this to be a good method of doing this implementation without having
+-- to rely on most of the code or the storage itself being in the source. 
+local gmcommands = {}
 function addgmcommand(name,fname)
 	gmcommands[name] = fname
 end
@@ -197,6 +204,7 @@ function is_scriptedcommand(name)
 	end
 end
 
+-- I'm not sure if I want to keep this or not.
 TYPE_NIL = 0
 TYPE_NUM = 1
 TYPE_STR = 2
