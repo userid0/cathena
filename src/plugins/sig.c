@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#define __USE_GNU  // required to enable strsignal on some platforms
 #include <string.h>
 #include <time.h>
 #include "../common/plugin.h"
@@ -53,6 +52,7 @@ unsigned long (*getuptime)();
 char *server_name;
 int crash_flag = 0;
 
+extern const char *strsignal(int);
 int sig_final ();
 
 // by Gabuzomeu
@@ -60,6 +60,9 @@ int sig_final ();
 // (sigaction() is POSIX; signal() is not.)  Taken from Stevens' _Advanced
 // Programming in the UNIX Environment_.
 //
+#ifdef WIN32	// windows don't have SIGPIPE
+#define SIGPIPE SIGINT
+#endif
 
 #ifndef POSIX
 #define compat_signal(signo, func) signal(signo, func)
@@ -200,7 +203,9 @@ int sig_init ()
 	compat_signal(SIGSEGV, func);
 	compat_signal(SIGFPE, func);
 	compat_signal(SIGILL, func);
-	compat_signal(SIGBUS, func);
+	#ifndef __WIN32
+		compat_signal(SIGBUS, func);
+	#endif
 
 	return 1;
 }

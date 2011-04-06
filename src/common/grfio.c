@@ -12,8 +12,6 @@
 #include "../common/cbasetypes.h"
 #include "../common/showmsg.h"
 #include "../common/malloc.h"
-#include "../common/strlib.h"
-#include "../common/utils.h"
 
 
 //----------------------------
@@ -383,35 +381,6 @@ static void filelist_adjust(void)
 	}
 }
 
-
-/// Combines are resource path with the data folder location to
-/// create local resource path.
-static void grfio_localpath_create(char* buffer, size_t size, const char* filename)
-{
-	unsigned int i;
-	size_t len;
-
-	len = strlen(data_dir);
-
-	if( data_dir[0] == 0 || data_dir[len-1] == '/' || data_dir[len-1] == '\\' )
-	{
-		safesnprintf(buffer, size, "%s%s", data_dir, filename);
-	}
-	else
-	{
-		safesnprintf(buffer, size, "%s/%s", data_dir, filename);
-	}
-
-	for( i = 0; buffer[i]; i++ )
-	{// normalize path
-		if( buffer[i] == '\\' )
-		{
-			buffer[i] = '/';
-		}
-	}
-}
-
-
 /***********************************************************
  ***                  Grfio Sobroutines                  ***
  ***********************************************************/
@@ -429,10 +398,13 @@ int grfio_size(char* fname)
 		FILELIST lentry;
 		struct stat st;
 
-		grfio_localpath_create(lfname, sizeof(lfname), fname);
+		sprintf(lfname, "%s%s", data_dir, fname);
+
+		for (p = &lfname[0]; *p != 0; p++)
+			if (*p=='\\') *p = '/';
 
 		if (stat(lfname, &st) == 0) {
-			safestrncpy(lentry.fn, fname, sizeof(lentry.fn));
+			strncpy(lentry.fn, fname, sizeof(lentry.fn) - 1);
 			lentry.fnd = NULL;
 			lentry.declen = st.st_size;
 			lentry.gentry = 0;	// 0:LocalFile
@@ -456,28 +428,35 @@ void* grfio_reads(char* fname, int* size)
 	entry = filelist_find(fname);
 
 	if (entry == NULL || entry->gentry <= 0) {	// LocalFileCheck
-		char lfname[256];
-		int declen;
+		char lfname[256], *p;
+		FILELIST lentry;
 
-		grfio_localpath_create(lfname, sizeof(lfname), ( entry && entry->fnd ) ? entry->fnd : fname);
+		sprintf(lfname, "%s%s", data_dir, fname);
+		
+		for (p = &lfname[0]; *p != 0; p++)
+			if (*p == '\\') *p = '/';
 
 		in = fopen(lfname, "rb");
 		if (in != NULL) {
-			fseek(in,0,SEEK_END);
-			declen = ftell(in);
-			fseek(in,0,SEEK_SET);
-			buf2 = (unsigned char *)aMallocA(declen+1);  // +1 for resnametable zero-termination
-			fread(buf2, 1, declen, in);
-			fclose(in);
-			if( size )
-			{
-				size[0] = declen;
+			if (entry != NULL && entry->gentry == 0) {
+				lentry.declen = entry->declen;
+			} else {
+				fseek(in,0,SEEK_END);
+				lentry.declen = ftell(in);
 			}
+			fseek(in,0,SEEK_SET);
+			buf2 = (unsigned char *)aMallocA(lentry.declen + 1024);
+			fread(buf2, 1, lentry.declen, in);
+			fclose(in);
+			strncpy(lentry.fn, fname, sizeof(lentry.fn) - 1);
+			lentry.fnd = NULL;
+			lentry.gentry = 0;	// 0:LocalFile
+			entry = filelist_modify(&lentry);
 		} else {
 			if (entry != NULL && entry->gentry < 0) {
 				entry->gentry = -entry->gentry;	// local file checked
 			} else {
-				ShowError("grfio_reads: %s not found (local file: %s)\n", fname, lfname);
+				ShowError("%s not found (grfio_reads - local file %s)\n", fname, lfname);
 				return NULL;
 			}
 		}
@@ -486,11 +465,11 @@ void* grfio_reads(char* fname, int* size)
 		char* grfname = gentry_table[entry->gentry - 1];
 		in = fopen(grfname, "rb");
 		if(in != NULL) {
-			unsigned char *buf = (unsigned char *)aMallocA(entry->srclen_aligned);
+			unsigned char *buf = (unsigned char *)aMallocA(entry->srclen_aligned + 1024);
 			fseek(in, entry->srcpos, 0);
 			fread(buf, 1, entry->srclen_aligned, in);
 			fclose(in);
-			buf2 = (unsigned char *)aMallocA(entry->declen+1);  // +1 for resnametable zero-termination
+			buf2 = (unsigned char *)aMallocA(entry->declen + 1024);
 			if (entry->type == 1 || entry->type == 3 || entry->type == 5) {
 				uLongf len;
 				if (entry->cycle >= 0)
@@ -506,16 +485,14 @@ void* grfio_reads(char* fname, int* size)
 			} else {
 				memcpy(buf2, buf, entry->declen);
 			}
-			if( size )
-			{
-				size[0] = entry->declen;
-			}
 			aFree(buf);
 		} else {
-			ShowError("grfio_reads: %s not found (GRF file: %s)\n", fname, grfname);
+			ShowError("%s not found (grfio_reads - GRF file %s)\n", fname, grfname);
 			return NULL;
 		}
 	}
+	if (size != NULL && entry != NULL)
+		*size = entry->declen;
 
 	return buf2;
 }
@@ -613,7 +590,7 @@ static int grfio_entryread(char* grfname, int gentry)
 				aentry.srcpos         = getlong(grf_filelist+ofs2+13)+0x2e;
 				aentry.cycle          = srccount;
 				aentry.type           = type;
-				safestrncpy(aentry.fn, fname, sizeof(aentry.fn));
+				strncpy(aentry.fn, fname,sizeof(aentry.fn)-1);
 				aentry.fnd			  = NULL;
 #ifdef	GRFIO_LOCAL
 				aentry.gentry         = -(gentry+1);	// As Flag for making it a negative number carrying out the first time LocalFileCheck
@@ -680,7 +657,7 @@ static int grfio_entryread(char* grfname, int gentry)
 				aentry.srcpos         = getlong(grf_filelist+ofs2+13)+0x2e;
 				aentry.cycle          = srccount;
 				aentry.type           = type;
-				safestrncpy(aentry.fn, fname, sizeof(aentry.fn));
+				strncpy(aentry.fn,fname,sizeof(aentry.fn)-1);
 				aentry.fnd			  = NULL;
 #ifdef	GRFIO_LOCAL
 				aentry.gentry         = -(gentry+1);	// As Flag for making it a negative number carrying out the first time LocalFileCheck
@@ -709,16 +686,17 @@ static int grfio_entryread(char* grfname, int gentry)
  *------------------------------------------*/
 static void grfio_resourcecheck(void)
 {
-	char w1[256], w2[256], src[256], dst[256], restable[256], line[256], local[256];
+	char w1[256], w2[256], src[256], dst[256], restable[256], line[256];
 	char *ptr, *buf;
 	FILELIST* entry;
-	FILELIST fentry;
 	int size;
 	FILE* fp;
 	int i = 0;
 
 	// read resnametable from data directory and return if successful
-	grfio_localpath_create(restable, sizeof(restable), "data\\resnametable.txt");
+	sprintf(restable, "%sdata\\resnametable.txt", data_dir);
+	for (ptr = &restable[0]; *ptr != 0; ptr++)
+		if (*ptr == '\\') *ptr = '/';
 
 	fp = fopen(restable, "rb");
 	if (fp) {
@@ -732,27 +710,13 @@ static void grfio_resourcecheck(void)
 				sprintf(dst, "data\\%s", w2);
 				entry = filelist_find(dst);
 				// create new entries reusing the original's info
-				if (entry != NULL)
-				{// alias for GRF resource
+				if (entry != NULL) {
+					FILELIST fentry;
 					memcpy(&fentry, entry, sizeof(FILELIST));
-					safestrncpy(fentry.fn, src, sizeof(fentry.fn));
+					strncpy(fentry.fn, src, sizeof(fentry.fn) - 1);
 					fentry.fnd = aStrdup(dst);
 					filelist_modify(&fentry);
 					i++;
-				}
-				else
-				{
-					grfio_localpath_create(local, sizeof(local), dst);
-
-					if( exists(local) )
-					{// alias for local resource
-						memset(&fentry, 0, sizeof(fentry));
-						//fentry.gentry = 0;
-						safestrncpy(fentry.fn, src, sizeof(fentry.fn));
-						fentry.fnd = aStrdup(dst);
-						filelist_modify(&fentry);
-						i++;
-					}
 				}
 			}
 		}
@@ -774,27 +738,13 @@ static void grfio_resourcecheck(void)
 				sprintf(src, "data\\%s", w1);
 				sprintf(dst, "data\\%s", w2);
 				entry = filelist_find(dst);
-				if (entry != NULL)
-				{// alias for GRF resource
+				if (entry != NULL) {
+					FILELIST fentry;
 					memcpy(&fentry, entry, sizeof(FILELIST));
-					safestrncpy(fentry.fn, src, sizeof(fentry.fn));
+					strncpy(fentry.fn, src, sizeof(fentry.fn) - 1);
 					fentry.fnd = aStrdup(dst);
 					filelist_modify(&fentry);
 					i++;
-				}
-				else
-				{
-					grfio_localpath_create(local, sizeof(local), dst);
-
-					if( exists(local) )
-					{// alias for local resource
-						memset(&fentry, 0, sizeof(fentry));
-						//fentry.gentry = 0;
-						safestrncpy(fentry.fn, src, sizeof(fentry.fn));
-						fentry.fnd = aStrdup(dst);
-						filelist_modify(&fentry);
-						i++;
-					}
 				}
 			}
 			ptr = strchr(ptr, '\n');	// Next line
@@ -874,7 +824,7 @@ void grfio_init(char* fname)
 			if(strcmp(w1, "grf") == 0)	// GRF file
 				grf_num += (grfio_add(w2) == 0);
 			else if(strcmp(w1,"data_dir") == 0) {	// Data directory
-				safestrncpy(data_dir, w2, sizeof(data_dir));
+				strcpy(data_dir, w2);
 			}
 		}
 		fclose(data_conf);

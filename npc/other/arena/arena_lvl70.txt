@@ -3,14 +3,13 @@
 //===== By: ==================================================
 //= SinSloth
 //===== Current Version: =====================================
-//= 1.1
+//= 1.0
 //===== Compatible With: =====================================
 //= Any Athena Version
 //===== Description: =========================================
 //= Izlude Battle Arena Level 70
 //===== Additional Comments: =================================
 //= 1.0 First version.
-//= 1.1 Replaced effect numerics with constants. [Samuray22]
 //============================================================
 
 arena_room,52,42,7	script	lvl 70s Waiting Room	124,{
@@ -861,7 +860,7 @@ prt_are_in,129,83,3	script	Staff#70-1	67,{
 	mes "[Staff]";	
 	mes "Let me guide you outside. I hope you had a good time.";	
 	close2;
-	specialeffect2 EF_EXIT;	
+	specialeffect2 7;	
 	warp "arena_room",100,75;
 	end;
 }
@@ -939,7 +938,7 @@ prt_are_in,25,84,3	script	Staff#70-2	67,{
 			mes "See you later~";	
 			close2;
 		}
-		specialeffect2 EF_EXIT;
+		specialeffect2 7;	
  		donpcevent "cast#70::Onnomal1";
 		warp "arena_room",100,75;
 		donpcevent "#arn_timer_70::Onstop";
@@ -990,7 +989,7 @@ prt_are_in,25,84,3	script	Staff#70-2	67,{
 			mes "See you later~";	
 			close2;
 		}
-		specialeffect2 EF_HIT5;
+		specialeffect2 4;	
  		donpcevent "cast#70::Onnomal2";
 		warp "arena_room",100,75;
 		donpcevent "#arn_timer_70::Onstop";

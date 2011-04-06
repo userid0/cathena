@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\3rdparty\msinttypes\include"
-				PreprocessorDefinitions="WIN32;_WIN32;__WIN32;_DEBUG;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;FD_SETSIZE=4096;DB_MANUAL_CAST_TO_UNION;WITH_TXT"
+				AdditionalIncludeDirectories="..\src\common;..\src\zlib"
+				PreprocessorDefinitions="WIN32;_WIN32;__WIN32;_DEBUG;TXT_ONLY;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;FD_SETSIZE=4096;DB_MANUAL_CAST_TO_UNION"
 				GeneratePreprocessedFile="0"
 				MinimalRebuild="true"
 				ExceptionHandling="0"
@@ -67,11 +67,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libcmtd.lib oldnames.lib ws2_32.lib"
+				AdditionalDependencies="libcmtd.lib oldnames.lib ws2_32.lib zdll.lib"
 				ShowProgress="0"
 				OutputFile="$(OutDir)\login-server.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories=""
+				AdditionalLibraryDirectories="..\lib"
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)\login-server.pdb"
@@ -134,8 +134,8 @@
 				OmitFramePointers="true"
 				EnableFiberSafeOptimizations="true"
 				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories="..\3rdparty\msinttypes\include"
-				PreprocessorDefinitions="WIN32;_WIN32;__WIN32;NDEBUG;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;FD_SETSIZE=4096;DB_MANUAL_CAST_TO_UNION;WITH_TXT"
+				AdditionalIncludeDirectories="..\src\common;..\src\zlib"
+				PreprocessorDefinitions="WIN32;_WIN32;__WIN32;NDEBUG;TXT_ONLY;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;FD_SETSIZE=4096;DB_MANUAL_CAST_TO_UNION"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				DefaultCharIsUnsigned="false"
@@ -156,10 +156,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libcmt.lib oldnames.lib ws2_32.lib"
+				AdditionalDependencies="libcmt.lib oldnames.lib ws2_32.lib zdll.lib"
 				OutputFile="$(OutDir)\login-server.exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories=""
+				AdditionalLibraryDirectories="..\lib"
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)\login-server.pdb"
@@ -201,19 +201,7 @@
 			Name="login_txt"
 			>
 			<File
-				RelativePath="..\src\login\account.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\login\account_txt.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\login\ipban.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\login\ipban_txt.c"
+				RelativePath="..\src\login\admin.c"
 				>
 			</File>
 			<File
@@ -222,14 +210,6 @@
 			</File>
 			<File
 				RelativePath="..\src\login\login.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\login\loginlog.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\login\loginlog_txt.c"
 				>
 			</File>
 		</Filter>

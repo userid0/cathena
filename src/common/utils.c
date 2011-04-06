@@ -5,7 +5,6 @@
 #include "../common/mmo.h"
 #include "../common/malloc.h"
 #include "../common/showmsg.h"
-#include "socket.h"
 #include "utils.h"
 
 #include <stdio.h>
@@ -15,75 +14,46 @@
 #include <math.h> // floor()
 
 #ifdef WIN32
-	#include <io.h>
 	#include <windows.h>
-	#ifndef F_OK
-		#define F_OK   0x0
-	#endif  /* F_OK */
 #else
 	#include <unistd.h>
 	#include <dirent.h>
 	#include <sys/stat.h>
 #endif
 
-
-/// Dumps given buffer into file pointed to by a handle.
-void WriteDump(FILE* fp, const void* buffer, size_t length)
+// generate a hex dump of the first 'length' bytes of 'buffer'
+void dump(FILE* fp, const unsigned char* buffer, int length)
 {
-	size_t i;
-	char hex[48+1], ascii[16+1];
+	int i, j;
 
-	fprintf(fp, "--- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F   0123456789ABCDEF\n");
-	ascii[16] = 0;
+	fprintf(fp, "         Hex                                                  ASCII\n");
+	fprintf(fp, "         -----------------------------------------------      ----------------");
 
-	for( i = 0; i < length; i++ )
+	for (i = 0; i < length; i += 16)
 	{
-		char c = RBUFB(buffer,i);
-
-		ascii[i%16] = ISCNTRL(c) ? '.' : c;
-		sprintf(hex+(i%16)*3, "%02X ", RBUFB(buffer,i));
-
-		if( (i%16) == 15 )
+		fprintf(fp, "\n%p ", &buffer[i]);
+		for (j = i; j < i + 16; ++j)
 		{
-			fprintf(fp, "%03X %s  %s\n", i/16, hex, ascii);
+			if (j < length)
+				fprintf(fp, "%02hX ", buffer[j]);
+			else
+				fprintf(fp, "   ");
+		}
+
+		fprintf(fp, "  |  ");
+
+		for (j = i; j < i + 16; ++j)
+		{
+			if (j < length) {
+				if (buffer[j] > 31 && buffer[j] < 127)
+					fprintf(fp, "%c", buffer[j]);
+				else
+					fprintf(fp, ".");
+			} else
+				fprintf(fp, " ");
 		}
 	}
-
-	if( (i%16) != 0 )
-	{
-		ascii[i%16] = 0;
-		fprintf(fp, "%03X %-48s  %-16s\n", i/16, hex, ascii);
-	}
-}
-
-
-/// Dumps given buffer on the console.
-void ShowDump(const void* buffer, size_t length)
-{
-	size_t i;
-	char hex[48+1], ascii[16+1];
-
-	ShowDebug("--- 00-01-02-03-04-05-06-07-08-09-0A-0B-0C-0D-0E-0F   0123456789ABCDEF\n");
-	ascii[16] = 0;
-
-	for( i = 0; i < length; i++ )
-	{
-		char c = RBUFB(buffer,i);
-
-		ascii[i%16] = ISCNTRL(c) ? '.' : c;
-		sprintf(hex+(i%16)*3, "%02X ", RBUFB(buffer,i));
-
-		if( (i%16) == 15 )
-		{
-			ShowDebug("%03X %s  %s\n", i/16, hex, ascii);
-		}
-	}
-
-	if( (i%16) != 0 )
-	{
-		ascii[i%16] = 0;
-		ShowDebug("%03X %-48s  %-16s\n", i/16, hex, ascii);
-	}
+	fprintf(fp, "\n");
 }
 
 
@@ -107,7 +77,7 @@ static char* checkpath(char *path, const char *srcpath)
 
 void findfile(const char *p, const char *pat, void (func)(const char*))
 {	
-	WIN32_FIND_DATAA FindFileData;
+	WIN32_FIND_DATA FindFileData;
 	HANDLE hFind;
 	char tmppath[MAX_PATH+1];
 	
@@ -120,7 +90,7 @@ void findfile(const char *p, const char *pat, void (func)(const char*))
 	else
 		strcat(tmppath, "*");
 	
-	hFind = FindFirstFileA(tmppath, &FindFileData);
+	hFind = FindFirstFile(tmppath, &FindFileData);
 	if (hFind != INVALID_HANDLE_VALUE)
 	{
 		do
@@ -141,7 +111,7 @@ void findfile(const char *p, const char *pat, void (func)(const char*))
 			{
 				findfile(tmppath, pat, func);
 			}
-		}while (FindNextFileA(hFind, &FindFileData) != 0);
+		}while (FindNextFile(hFind, &FindFileData) != 0);
 		FindClose(hFind);
 	}
 	return;
@@ -209,15 +179,8 @@ void findfile(const char *p, const char *pat, void (func)(const char*))
 			findfile(tmppath, pat, func);
 		}
 	}//end while
-
-	closedir(dir);
 }
 #endif
-
-bool exists(const char* filename)
-{
-	return !access(filename, F_OK);
-}
 
 uint8 GetByte(uint32 val, int idx)
 {
@@ -269,7 +232,7 @@ unsigned int get_percentage(const unsigned int A, const unsigned int B)
 	if( B == 0 )
 	{
 		ShowError("get_percentage(): divison by zero! (A=%u,B=%u)\n", A, B);
-		return ~0U;
+		return -1;
 	}
 
 	result = 100 * ((double)A / (double)B);

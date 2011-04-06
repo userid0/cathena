@@ -1,9 +1,8 @@
 // Copyright (c) Athena Dev Teams - Licensed under GNU GPL
 // For more information, see LICENCE in the main folder
 
-#include "cbasetypes.h"
-#include "showmsg.h"
-#include "utils.h"
+#include "../common/cbasetypes.h"
+#include "../common/showmsg.h"
 #include "lock.h"
 
 #include <stdio.h>
@@ -12,7 +11,20 @@
 #ifndef WIN32
 #include <unistd.h>
 #else
-#include <io.h>
+#include <windows.h>
+#define F_OK   0x0
+#define R_OK   0x4
+#endif
+
+#ifndef WIN32
+	#define exists(filename) (!access(filename, F_OK))
+#else
+// could be speed up maybe?
+int exists(char *file) {
+	FILE *fp;
+	if ((fp = fopen(file,"r")) && fclose(fp) == 0) return 1;
+	return 0;
+}
 #endif
 
 // 書き込みファイルの保護処理
@@ -21,12 +33,13 @@
 // 新しいファイルの書き込み開始
 FILE* lock_fopen (const char* filename, int *info) {
 	char newfile[512];
+	FILE *fp;
 	int no = 0;
 
 	// 安全なファイル名を得る（手抜き）
 	do {
 		sprintf(newfile, "%s_%04d.tmp", filename, ++no);
-	} while(exists(newfile) && no < 9999);
+	} while((fp = fopen(newfile,"r")) && (fclose(fp), no < 9999));
 	*info = no;
 	return fopen(newfile,"w");
 }

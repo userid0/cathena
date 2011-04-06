@@ -3,7 +3,7 @@
 //===== By: ==================================================
 //= SinSloth
 //===== Current Version: =====================================
-//= 1.3
+//= 1.0a
 //===== Compatible With: =====================================
 //= Any Athena Version
 //===== Description: =========================================
@@ -11,9 +11,6 @@
 //===== Additional Comments: =================================
 //= 1.0 First version.
 //= 1.0a Fixed a typo.
-//= 1.1 Replaced effect numerics with constants. [Samuray22]
-//= 1.2 Fixed "OnMobDeath" doesn't work sometime. [Inkfish]
-//= 1.3 Corrected donpcevent typo. (bugreport:4374) [L0ne_w0lf]
 //============================================================
 
 arena_room,162,88,3	script	Ponox	124,{
@@ -28,7 +25,7 @@ OnStartArena:
 	donpcevent "toarena#party::OnInit";
 	donpcevent "toout#party::OnInit";
 	warpwaitingpc "prt_are_in",73,78;
-	donpcevent "toout#party::OnTimer";
+	donpcevent "toout#party::OnTime";	
 	donpcevent "Helper#party::OnEnter";
 	disablewaitingroomevent;
 	end;
@@ -1151,7 +1148,7 @@ prt_are_in,181,135,3	script	Staff#party-1	67,{
 	mes "[Staff]";	
 	mes "Let me guide you outside. I hope you had a good time.";	
 	close2;
-	specialeffect2 EF_HIT5;
+	specialeffect2 4;	
 	warp "arena_room",100,75;
 	end;
 }
@@ -1236,7 +1233,7 @@ prt_are_in,77,135,3	script	Staff#party-2	67,{
 			donpcevent "alloff#pt::Onon";
 			donpcevent "Ponox::Onstart";
 		}
-		specialeffect2 EH_HIT5;
+		specialeffect2 4;	
  		donpcevent "cast#pt::Onnomal1";
 		warp "arena_room",100,75;
 		end;
@@ -1328,7 +1325,7 @@ prt_are_in,77,135,3	script	Staff#party-2	67,{
 			donpcevent "alloff#pt::Onon";
 			donpcevent "Ponox::Onstart";
 		}
-		specialeffect2 EF_HIT5;
+		specialeffect2 4;	
 		warp "arena_room",100,75;
 		end;
 	}	
@@ -1408,17 +1405,17 @@ Onon:
 	donpcevent "force_10-1mob#party::OnReset";
 	donpcevent "force_10-2mob#party::OnReset";
 	donpcevent "force_exitmob#party::OnReset";
-	//disablenpc "force_01mob#party";
-	//disablenpc "force_02mob#party";
-	//disablenpc "force_03mob#party";
-	//disablenpc "force_04mob#party";
-	//disablenpc "force_05mob#party";
-	//disablenpc "force_06mob#party";
-	//disablenpc "force_07mob#party";
-	//disablenpc "force_08mob#party";
-	//disablenpc "force_09mob#party";
-	//disablenpc "force_10mob-1#party";
-	//disablenpc "force_10mob-2#party";
+	disablenpc "force_01mob#party";
+	disablenpc "force_02mob#party";
+	disablenpc "force_03mob#party";
+	disablenpc "force_04mob#party";
+	disablenpc "force_05mob#party";
+	disablenpc "force_06mob#party";
+	disablenpc "force_07mob#party";
+	disablenpc "force_08mob#party";
+	disablenpc "force_09mob#party";
+	disablenpc "force_10mob-1#party";
+	disablenpc "force_10mob-2#party";
 	enablenpc "force_01start#party";
 	enablenpc "force_02start#party";
 	enablenpc "force_03start#party";

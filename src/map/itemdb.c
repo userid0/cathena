@@ -27,6 +27,8 @@ static struct item_group itemgroup_db[MAX_ITEMGROUP];
 
 struct item_data dummy_item; //This is the default dummy item used for non-existant items. [Skotlex]
 
+
+
 /*==========================================
  * 名前で検索用
  *------------------------------------------*/
@@ -180,27 +182,6 @@ struct item_data* itemdb_exists(int nameid)
 	return item;
 }
 
-/// Returns human readable name for given item type.
-/// @param type Type id to retrieve name for ( IT_* ).
-const char* itemdb_typename(int type)
-{
-	switch(type)
-	{
-		case IT_HEALING:        return "Potion/Food";
-		case IT_USABLE:         return "Usable";
-		case IT_ETC:            return "Etc.";
-		case IT_WEAPON:         return "Weapon";
-		case IT_ARMOR:          return "Armor";
-		case IT_CARD:           return "Card";
-		case IT_PETEGG:         return "Pet Egg";
-		case IT_PETARMOR:       return "Pet Accessory";
-		case IT_AMMO:           return "Arrow/Ammunition";
-		case IT_DELAYCONSUME:   return "Delay-Consume Usable";
-		case IT_CASH:           return "Cash Usable";
-	}
-	return "Unknown Type";
-}
-
 /*==========================================
  * Converts the jobid from the format in itemdb 
  * to the format used by the map server. [Skotlex]
@@ -274,13 +255,13 @@ static void create_dummy_data(void)
 	dummy_item.view_id=UNKNOWN_ITEM_ID;
 }
 
-static struct item_data* create_item_data(int nameid)
+static void* create_item_data(DBKey key, va_list args)
 {
 	struct item_data *id;
 	CREATE(id, struct item_data, 1);
-	id->nameid = nameid;
-	id->weight = 1;
-	id->type = IT_ETC;
+	id->nameid=key.i;
+	id->weight=1;
+	id->type=IT_ETC;
 	return id;
 }
 
@@ -290,22 +271,34 @@ static struct item_data* create_item_data(int nameid)
 struct item_data* itemdb_load(int nameid)
 {
 	struct item_data *id;
+	DBKey key;
 
 	if( nameid >= 0 && nameid < ARRAYLENGTH(itemdb_array) )
 	{
 		id = itemdb_array[nameid];
-		if( id == NULL || id == &dummy_item )
-			id = itemdb_array[nameid] = create_item_data(nameid);
+		if( id == NULL )
+		{
+			key.i = nameid;
+			id = itemdb_array[nameid] = (struct item_data*)create_item_data(key, NULL);
+		}
 		return id;
 	}
 
-	id = (struct item_data*)idb_get(itemdb_other, nameid);
-	if( id == NULL || id == &dummy_item )
-	{
-		id = create_item_data(nameid);
+	id = (struct item_data*)idb_ensure(itemdb_other, nameid, create_item_data);
+	if( id == &dummy_item )
+	{// Remove dummy_item, replace by real data.
+		key.i = nameid;
+		id = (struct item_data*)create_item_data(key, NULL);
 		idb_put(itemdb_other, nameid, id);
 	}
 	return id;
+}
+
+static void* return_dummy_data(DBKey key, va_list args)
+{
+	ShowWarning("itemdb_search: Item ID %d does not exists in the item_db. Using dummy data.\n", key.i);
+	dummy_item.nameid = key.i;
+	return &dummy_item;
 }
 
 /*==========================================
@@ -313,19 +306,15 @@ struct item_data* itemdb_load(int nameid)
  *------------------------------------------*/
 struct item_data* itemdb_search(int nameid)
 {
-	struct item_data* id;
 	if( nameid >= 0 && nameid < ARRAYLENGTH(itemdb_array) )
-		id = itemdb_array[nameid];
-	else
-		id = (struct item_data*)idb_get(itemdb_other, nameid);
-
-	if( id == NULL )
 	{
-		ShowWarning("itemdb_search: Item ID %d does not exists in the item_db. Using dummy data.\n", nameid);
-		id = &dummy_item;
-		dummy_item.nameid = nameid;
+		DBKey key;
+		if( itemdb_array[nameid] )
+			return itemdb_array[nameid];
+		key.i = nameid;
+		return (struct item_data*)return_dummy_data(key, NULL);
 	}
-	return id;
+	return (struct item_data*)idb_ensure(itemdb_other,nameid,return_dummy_data);
 }
 
 /*==========================================
@@ -349,7 +338,7 @@ int itemdb_isequip(int nameid)
  *------------------------------------------*/
 int itemdb_isequip2(struct item_data *data)
 { 
-	nullpo_ret(data);
+	nullpo_retr(0, data);
 	switch(data->type) {
 		case IT_WEAPON:
 		case IT_ARMOR:
@@ -382,7 +371,7 @@ int itemdb_isstackable(int nameid)
  *------------------------------------------*/
 int itemdb_isstackable2(struct item_data *data)
 {
-  nullpo_ret(data);
+  nullpo_retr(0, data);
   switch(data->type) {
 	  case IT_WEAPON:
 	  case IT_ARMOR:
@@ -471,32 +460,46 @@ int itemdb_isidentified(int nameid)
 /*==========================================
  * アイテム使用可能フラグのオーバーライド
  *------------------------------------------*/
-static bool itemdb_read_itemavail(char* str[], int columns, int current)
-{// <nameid>,<sprite>
-	int nameid, sprite;
+static int itemdb_read_itemavail (void)
+{
+	FILE *fp;
+	int nameid, j, k, ln = 0;
+	char line[1024], *str[10], *p;
 	struct item_data *id;
 
-	nameid = atoi(str[0]);
-
-	if( ( id = itemdb_exists(nameid) ) == NULL )
-	{
-		ShowWarning("itemdb_read_itemavail: Invalid item id %d.\n", nameid);
-		return false;
+	sprintf(line, "%s/item_avail.txt", db_path);
+	if ((fp = fopen(line,"r")) == NULL) {
+		ShowError("can't read %s\n", line);
+		return -1;
 	}
 
-	sprite = atoi(str[1]);
-
-	if( sprite > 0 )
+	while(fgets(line, sizeof(line), fp))
 	{
-		id->flag.available = 1;
-		id->view_id = sprite;
-	}
-	else
-	{
-		id->flag.available = 0;
-	}
+		if (line[0] == '/' && line[1] == '/')
+			continue;
+		memset(str, 0, sizeof(str));
+		for (j = 0, p = line; j < 2 && p; j++) {
+			str[j] = p;
+			p = strchr(p, ',');
+			if(p) *p++ = 0;
+		}
 
-	return true;
+		if (j < 2 || str[0] == NULL ||
+			(nameid = atoi(str[0])) < 0 || !(id = itemdb_exists(nameid)))
+			continue;
+
+		k = atoi(str[1]);
+		if (k > 0) {
+			id->flag.available = 1;
+			id->view_id = k;
+		} else
+			id->flag.available = 0;
+		ln++;
+	}
+	fclose(fp);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", ln, "item_avail.txt");
+
+	return 0;
 }
 
 /*==========================================
@@ -577,118 +580,94 @@ static void itemdb_read_itemgroup(void)
 /*==========================================
  * 装備制限ファイル読み出し
  *------------------------------------------*/
-static bool itemdb_read_noequip(char* str[], int columns, int current)
-{// <nameid>,<mode>
-	int nameid;
+static int itemdb_read_noequip(void)
+{
+	FILE *fp;
+	char line[1024];
+	int ln=0;
+	int nameid,j;
+	char *str[32],*p;
 	struct item_data *id;
 
-	nameid = atoi(str[0]);
-
-	if( ( id = itemdb_exists(nameid) ) == NULL )
-	{
-		ShowWarning("itemdb_read_noequip: Invalid item id %d.\n", nameid);
-		return false;
+	sprintf(line, "%s/item_noequip.txt", db_path);
+	if( (fp=fopen(line,"r"))==NULL ){
+		ShowError("can't read %s\n", line);
+		return -1;
 	}
+	while(fgets(line, sizeof(line), fp))
+	{
+		if(line[0]=='/' && line[1]=='/')
+			continue;
+		memset(str,0,sizeof(str));
+		for(j=0,p=line;j<2 && p;j++){
+			str[j]=p;
+			p=strchr(p,',');
+			if(p) *p++=0;
+		}
+		if(str[0]==NULL)
+			continue;
 
-	id->flag.no_equip |= atoi(str[1]);
+		nameid=atoi(str[0]);
+		if(nameid<=0 || !(id=itemdb_exists(nameid)))
+			continue;
 
-	return true;
+		id->flag.no_equip=atoi(str[1]);
+
+		ln++;
+
+	}
+	fclose(fp);
+	if (ln > 0) {
+		ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n",ln,"item_noequip.txt");
+	}	
+	return 0;
 }
 
 /*==========================================
  * Reads item trade restrictions [Skotlex]
  *------------------------------------------*/
-static bool itemdb_read_itemtrade(char* str[], int columns, int current)
-{// <nameid>,<mask>,<gm level>
-	int nameid, flag, gmlv;
+static int itemdb_read_itemtrade(void)
+{
+	FILE *fp;
+	int nameid, j, flag, gmlv, ln = 0;
+	char line[1024], *str[10], *p;
 	struct item_data *id;
 
-	nameid = atoi(str[0]);
+	sprintf(line, "%s/item_trade.txt", db_path);
+	if ((fp = fopen(line,"r")) == NULL) {
+		ShowError("can't read %s\n", line);
+		return -1;
+	}
 
-	if( ( id = itemdb_exists(nameid) ) == NULL )
+	while(fgets(line, sizeof(line), fp))
 	{
-		//ShowWarning("itemdb_read_itemtrade: Invalid item id %d.\n", nameid);
-		//return false;
-		// FIXME: item_trade.txt contains items, which are commented in item database.
-		return true;
+		if (line[0] == '/' && line[1] == '/')
+			continue;
+		memset(str, 0, sizeof(str));
+		for (j = 0, p = line; j < 3 && p; j++) {
+			str[j] = p;
+			p = strchr(p, ',');
+			if(p) *p++ = 0;
+		}
+
+		if (j < 3 || str[0] == NULL ||
+			(nameid = atoi(str[0])) < 0 || !(id = itemdb_exists(nameid)))
+			continue;
+
+		flag = atoi(str[1]);
+		gmlv = atoi(str[2]);
+		
+		if (flag > 0 && flag < 128 && gmlv > 0) { //Check range
+			id->flag.trade_restriction = flag;
+			id->gm_lv_trade_override = gmlv;
+			ln++;
+		}
 	}
+	fclose(fp);
+	ShowStatus("Done reading '"CL_WHITE"%d"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", ln, "item_trade.txt");
 
-	flag = atoi(str[1]);
-	gmlv = atoi(str[2]);
-
-	if( flag < 0 || flag >= 128 )
-	{//Check range
-		ShowWarning("itemdb_read_itemtrade: Invalid trading mask %d for item id %d.\n", flag, nameid);
-		return false;
-	}
-
-	if( gmlv < 1 )
-	{
-		ShowWarning("itemdb_read_itemtrade: Invalid override GM level %d for item id %d.\n", gmlv, nameid);
-		return false;
-	}
-
-	id->flag.trade_restriction = flag;
-	id->gm_lv_trade_override = gmlv;
-
-	return true;
+	return 0;
 }
-
-/*==========================================
- * Reads item delay amounts [Paradox924X]
- *------------------------------------------*/
-static bool itemdb_read_itemdelay(char* str[], int columns, int current)
-{// <nameid>,<delay>
-	int nameid, delay;
-	struct item_data *id;
-
-	nameid = atoi(str[0]);
-
-	if( ( id = itemdb_exists(nameid) ) == NULL )
-	{
-		ShowWarning("itemdb_read_itemdelay: Invalid item id %d.\n", nameid);
-		return false;
-	}
-
-	delay = atoi(str[1]);
-
-	if( delay < 0 )
-	{
-		ShowWarning("itemdb_read_itemdelay: Invalid delay %d for item id %d.\n", id->delay, nameid);
-		return false;
-	}
-
-	id->delay = delay;
-
-	return true;
-}
-
-
-/// Reads items allowed to be sold in buying stores
-static bool itemdb_read_buyingstore(char* fields[], int columns, int current)
-{// <nameid>
-	int nameid;
-	struct item_data* id;
-
-	nameid = atoi(fields[0]);
-
-	if( ( id = itemdb_exists(nameid) ) == NULL )
-	{
-		ShowWarning("itemdb_read_buyingstore: Invalid item id %d.\n", nameid);
-		return false;
-	}
-
-	if( !itemdb_isstackable2(id) )
-	{
-		ShowWarning("itemdb_read_buyingstore: Non-stackable item id %d cannot be enabled for buying store.\n", nameid);
-		return false;
-	}
-
-	id->flag.buyingstore = true;
-
-	return true;
-}
-
 
 /*======================================
  * Applies gender restrictions according to settings. [Skotlex]
@@ -735,13 +714,6 @@ static bool itemdb_parse_dbrow(char** str, const char* source, int line, int scr
 	safestrncpy(id->jname, str[2], sizeof(id->jname));
 
 	id->type = atoi(str[3]);
-
-	if( id->type < 0 || id->type == IT_UNKNOWN || id->type == IT_UNKNOWN2 || ( id->type > IT_DELAYCONSUME && id->type < IT_CASH ) || id->type >= IT_MAX )
-	{// catch invalid item types
-		ShowWarning("itemdb_parse_dbrow: Invalid item type %d for item %d. IT_ETC will be used.\n", id->type, nameid);
-		id->type = IT_ETC;
-	}
-
 	if (id->type == IT_DELAYCONSUME)
 	{	//Items that are consumed only after target confirmation
 		id->type = IT_USABLE;
@@ -801,6 +773,8 @@ static bool itemdb_parse_dbrow(char** str, const char* source, int line, int scr
 	id->look = atoi(str[18]);
 
 	id->flag.available = 1;
+	id->flag.value_notdc = 0;
+	id->flag.value_notoc = 0;
 	id->view_id = 0;
 	id->sex = itemdb_gendercheck(id); //Apply gender filtering.
 
@@ -1002,11 +976,9 @@ static void itemdb_read(void)
 		itemdb_readdb();
 
 	itemdb_read_itemgroup();
-	sv_readdb(db_path, "item_avail.txt",   ',', 2, 2, -1,             &itemdb_read_itemavail);
-	sv_readdb(db_path, "item_noequip.txt", ',', 2, 2, -1,             &itemdb_read_noequip);
-	sv_readdb(db_path, "item_trade.txt",   ',', 3, 3, -1,             &itemdb_read_itemtrade);
-	sv_readdb(db_path, "item_delay.txt",   ',', 2, 2, MAX_ITEMDELAYS, &itemdb_read_itemdelay);
-	sv_readdb(db_path, "item_buyingstore.txt", ',', 1, 1, -1,         &itemdb_read_buyingstore);
+	itemdb_read_itemavail();
+	itemdb_read_noequip();
+	itemdb_read_itemtrade();
 }
 
 /*==========================================
@@ -1066,10 +1038,7 @@ void itemdb_reload(void)
 	// readjust itemdb pointer cache for each player
 	iter = mapit_geteachpc();
 	for( sd = (struct map_session_data*)mapit_first(iter); mapit_exists(iter); sd = (struct map_session_data*)mapit_next(iter) )
-	{
-		memset(sd->item_delay, 0, sizeof(sd->item_delay));  // reset item delays
 		pc_setinventorydata(sd);
-	}
 	mapit_free(iter);
 }
 

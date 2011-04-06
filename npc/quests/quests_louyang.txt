@@ -3,7 +3,7 @@
 //===== By: ================================================== 
 //= Evera and The eAthena Dev Team
 //===== Current Version: ===================================== 
-//= 2.2
+//= 1.9
 //===== Compatible With: ===================================== 
 //= eAthena 1.0
 //===== Description: ========================================= 
@@ -30,9 +30,6 @@
 //=	a typo in Poison King quest.
 //= 1.8 Bug fixes. (bugreport:1025 bugreport:1062) [L0ne_W0lf]
 //= 1.9 Bug fixes/Typos. [Paradox924X]
-//= 2.0 Replaced effect numerics with constants. [L0ne_W0lf]
-//= 2.1 Fixed guard tower warper ALWAYS warping. (bugreport:2377) [L0ne_W0lf]
-//= 2.2 Removed unused "name" variable. [L0ne_W0lf]
 //============================================================ 
 
 // Soup Quest
@@ -584,7 +581,7 @@ lou_fild01,195,177,5	script	Jiu Lian Bu#1-1	819,{
 		mes "Hey~";
 		mes "So how ya been, ya smooth criminal? You wanna visit that place again?";
 		next;
-		if (select("Sure, let's go~:Nah, maybe next time.") == 1) {
+		switch(select("Sure, let's go~:Nah, maybe next time.")) {
 			mes "[Jiu Lian Bu]";
 			mes "Alright~";
 			mes "Let's get";
@@ -870,20 +867,20 @@ lou_in02,58,183,5	script	Chef Assistant#lou1	823,5,5,{
 	mes "[Jin Wei Ling]";
 	mes "When we're busy, I can use my martial arts to cook cuisine much more quickly! Hahaha~ Martial arts can be very practical!";
 	next;
-	specialeffect EF_BEGINSPELL3;
+	specialeffect 55; //"Chef Assistant" EF_BEGINSPELL3
 	mes "[Jin Wei Ling]";
 	mes "Waaa-!!!!";
 	next;
-	specialeffect EF_ENDURE; 
+	specialeffect 11; //"Chef Assistant" EF_ENDURE
 	mes "[Jin Wei Ling]";
 	mes "Waaa Taaah-!!!!!";
 	next;
-	specialeffect EF_SONICBLOW;
+	specialeffect 121; //"Chef Assistant" EF_SONICBLOW
 	mes "[Jin Wei Ling]";
 	mes "Waaa...";
 	mes "Waaa Taaah-!!!!!";
 	next;
-	specialeffect EF_SONICBLOWHIT;
+	specialeffect 122; //"Chef Assistant" EF_SONICBLOWHIT
 	mes "^3355FF* Chop chop chop chop chop *^000000";
 	next;
 	emotion e_no1;
@@ -1820,6 +1817,25 @@ lou_in02,201,166,4	script	Storage Keeper#lou	819,{
 	mes "take care of these things";
 	mes "as soon as I can...";
 	close;
+
+OnEmotion1:
+	emotion e_an;
+	end;
+
+OnEmotion2:
+	emotion e_pif;
+	end;
+
+OnEmotion3:
+	emotion e_gg;
+	end;
+
+OnEmotion4:
+	emotion e_wah;
+	end;
+
+OnEmotion5:
+	emotion e_rock;
 }
 
 lou_in02,210,47,0	script	City Hall Officer#lou	825,{
@@ -2175,7 +2191,7 @@ lou_in02,204,169,0	script	Supply Stack#1lou	111,{
 			mes "[Jiang Xiayou]";
 			mes "Hey, hey...";
 			mes "I told you! It's not too late, why don't you do me the favor I asked? I'm only asking you once!";
-			emotion e_an,0,"Storage Keeper#lou";
+			donpcevent "Storage Keeper#lou::OnEmotion1";
 			close;
 		}
 		mes "^3355FF*Rummage rummage*";
@@ -2237,7 +2253,7 @@ lou_in02,207,168,0	script	Supply Stack#5lou	111,{
 	next;
 	mes "[Jiang Xiayou]";
 	mes "Hey, don't touch anything! If you mess anything up, you've gotta pile it up again, got it? If you don't want to clean up after yourself, don't make a mess!";
-	emotion e_rock,0,"Storage Keeper#lou";
+	donpcevent "Storage Keeper#lou::OnEmotion5";
 	close;
 }
 
@@ -2266,7 +2282,7 @@ lou_in02,206,163,0	script	Supply Stack#4lou	111,{
 				mes "You found it...?!";
 				mes "I can't believe it!";
 				mes "You just lucked out.";
-				emotion e_wah,0,"Storage Keeper#lou";
+				donpcevent "Storage Keeper#lou::OnEmotion4";
 				close;
 			}
 			mes "^3355FF*Rummage rummage*";
@@ -2331,7 +2347,7 @@ lou_in02,198,170,0	script	Supply Stack#3lou	111,{
 			mes "It's not too late for you";
 			mes "to do the favor I asked.";
 			mes "I'm only asking you once!";
-			emotion e_gg,0,"Storage Keeper#lou";
+			donpcevent "Storage Keeper#lou::OnEmotion3";
 			close;
 		}
 		mes "^3355FF*Rummage rummage*";
@@ -2379,7 +2395,7 @@ lou_in02,192,170,0	script	Supply Stack#2	111,{
 			next;
 			mes "[Jiang Xiayou]";
 			mes "I told you! Now stop bugging me and leave now! I don't wanna deal with someone who won't trust me.";
-			emotion e_pif,0,"Storage Keeper#lou";
+			donpcevent "Storage Keeper#lou::OnEmotion2";
 			close;
 		}
 		mes "^3355FF*Rummage rummage*";
@@ -3634,7 +3650,7 @@ lou_in02,253,45,0	script	Employee#poison	822,{
 		mes "Oh, forget about it.";
 		mes "I don't think I can ever";
 		mes "make you understand how I feel.";
-		specialeffect EF_ENDURE;
+		specialeffect 11; //"Employee#poison" EF_ENDURE
 		close2;
 		set ch_poison,6;
 		end;
@@ -3673,7 +3689,7 @@ lou_in02,253,45,0	script	Employee#poison	822,{
 			next;
 			mes "[Song Zhi Du]";
 			mes "You're still missing some of the items I need. I must have them all in order to finish making this poison!";
-			specialeffect EF_ENDURE;
+			specialeffect 11; //"Employee#poison" EF_ENDURE
 			close;
 		}
 		mes "[Song Zhi Du]";
@@ -3685,7 +3701,7 @@ lou_in02,253,45,0	script	Employee#poison	822,{
 		mes "10 Venom Canine,";
 		mes "10 Empty Potion,";
 		mes "30 Green Potion^000000.";
-		specialeffect EF_ENDURE;
+		specialeffect 11; //"Employee#poison" EF_ENDURE
 		close;
 	}
 	else if (ch_par > 9 && ch_poison == 8) {
@@ -3723,17 +3739,17 @@ lou_in02,253,45,0	script	Employee#poison	822,{
 			next;
 			mes "[Song Zhi Du]";
 			mes "Then, I add Green Herb extract, poison extracted from Bee Sting and a Large Jellopy into the liquid! Finally, I must heat them all!";
-			specialeffect EF_BEGINSPELL;
+			specialeffect 12; //"Employee#poison" EF_BEGINSPELL
 			next;
 			mes "[Song Zhi Du]";
 			mes "Finally, I have to carefully heat the mixture and collect it all into a Potion Bottle.";
-			specialeffect EF_ENCHANTPOISON;
-			specialeffect EF_VENOMDUST;
+			specialeffect 125; //"Employee#poison" EF_ENCHANTPOISON
+			specialeffect 124; //"Employee#poison" EF_VENOMDUST
 			next;
 			mes "[Song Zhi Du]";
 			mes "Now, I've got to do this just right. This is a very delicate procedure...";
 			next;
-			specialeffect EF_MAGNUMBREAK;
+			specialeffect 17; //"Employee#poison" EF_MAGNUMBREAK
 			emotion e_omg;
 			mes "[Song Zhi Du]";
 			mes "No!! I failed again! ^666666*Sigh...*^000000 And I spent a long time preparing all of those materials...";
@@ -3791,20 +3807,20 @@ lou_in02,253,45,0	script	Employee#poison	822,{
 				mes "[Song Zhi Du]";
 				mes "Then, I add Green Herb extract,";
 				mes "a poison extracted from Bee Sting and a Large Jellopy!";
-				specialeffect EF_BEGINSPELL;
+				specialeffect 12; //"Employee#poison" EF_BEGINSPELL
 				next;
 				mes "[Song Zhi Du]";
 				mes "Finally, I have to carefully heat the mixture and collect it all into a Potion Bottle.";
-				specialeffect EF_ENCHANTPOISON;
-				specialeffect EF_VENOMDUST;
+				specialeffect 125; //"Employee#poison" EF_ENCHANTPOISON
+				specialeffect 124; //"Employee#poison" EF_VENOMDUST
 				next;
 				mes "[Song Zhi Du]";
 				mes "*Phew...*";
 				mes "Did...";
 				mes "Did I make it?";
 				next;
-				specialeffect EF_PATTACK;
-				specialeffect EF_POISONHIT; 
+				specialeffect 20; //"Employee#poison" EF_PATTACK
+				specialeffect 53; //"Employee#poison" EF_POISONHIT
 				emotion e_omg;
 				mes "[Song Zhi Du]";
 				mes "Hahaha~!";
@@ -3839,19 +3855,19 @@ lou_in02,253,45,0	script	Employee#poison	822,{
 			next;
 			mes "[Song Zhi Du]";
 			mes "Then I add Green Herb extract, a poison extracted from Bee Sting and a Large Jellopy!";
-			specialeffect EF_BEGINSPELL;
+			specialeffect 12; //"Employee#poison" EF_BEGINSPELL
 			next;
 			mes "[Song Zhi Du]";
 			mes "Then I must carefully heat the mixture, and gather it all into a potion bottle.";
-			specialeffect EF_ENCHANTPOISON;
-			specialeffect EF_VENOMDUST;
+			specialeffect 125; //"Employee#poison" EF_ENCHANTPOISON
+			specialeffect 124; //"Employee#poison" EF_VENOMDUST
 			next;
 			mes "[Song Zhi Du]";
 			mes "*Phew...*";
 			mes "Did...";
 			mes "Did I make it?";
 			next;
-			specialeffect EF_MAGNUMBREAK;
+			specialeffect 17; //"Employee#poison" EF_MAGNUMBREAK
 			emotion e_omg;
 			mes "[Song Zhi Du]";
 			mes "NO! I... I've failed again! And I spent a long time getting everything ready...";
@@ -4112,7 +4128,7 @@ lou_fild01,224,348,0	script	Lady#delivery	817,{
 				set zeny,zeny-100;
 			}
 			close2;
-			specialeffect EF_BLASTMINEBOMB,AREA," #fire";
+			donpcevent " #fire::OnClaymore";
 			end;
 		}
 		mes "[Lady]";
@@ -4233,6 +4249,10 @@ lou_fild01,224,348,0	script	Lady#delivery	817,{
 
 lou_fild01,225,350,0	script	 #fire	139,{
 	end;
+
+OnClaymore:
+	specialeffect 106; //" #fire" EF_BLASTMINEBOMB
+	end;
 }
 
 lou_in01,101,125,0	script	Trap#lou_in1	-1,20,1,{
@@ -4311,6 +4331,7 @@ OnTouch:
 
 louyang,217,278,0	script	 #lou_path	111,{
 	if (ch_poison == 12 || ch_poison == 16) {
+		set name,PcName;
 		mes "["+strcharinfo(0)+"]";
 		mes "What's this?";
 		mes "A crack in the wall?";
