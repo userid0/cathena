@@ -11,6 +11,7 @@ extern int potion_hp, potion_per_hp, potion_sp, potion_per_sp;
 extern int potion_target;
 
 extern struct Script_Config {
+	unsigned warn_func_mismatch_argtypes : 1;
 	unsigned warn_func_mismatch_paramnum : 1;
 	int check_cmdcount;
 	int check_gotocount;
@@ -70,55 +71,6 @@ typedef enum c_op {
 	C_L_SHIFT // a << b
 } c_op;
 
-enum {
-	MF_NOMEMO,	//0
-	MF_NOTELEPORT,
-	MF_NOSAVE,
-	MF_NOBRANCH,
-	MF_NOPENALTY,
-	MF_NOZENYPENALTY,
-	MF_PVP,
-	MF_PVP_NOPARTY,
-	MF_PVP_NOGUILD,
-	MF_GVG,
-	MF_GVG_NOPARTY,	//10
-	MF_NOTRADE,
-	MF_NOSKILL,
-	MF_NOWARP,
-	MF_PARTYLOCK,
-	MF_NOICEWALL,
-	MF_SNOW,
-	MF_FOG,
-	MF_SAKURA,
-	MF_LEAVES,
-	MF_RAIN,	//20
-	MF_INDOORS,
-	MF_NOGO,
-	MF_CLOUDS,
-	MF_CLOUDS2,
-	MF_FIREWORKS,
-	MF_GVG_CASTLE,
-	MF_GVG_DUNGEON,
-	MF_NIGHTENABLED,
-	MF_NOBASEEXP,
-	MF_NOJOBEXP,	//30
-	MF_NOMOBLOOT,
-	MF_NOMVPLOOT,
-	MF_NORETURN,
-	MF_NOWARPTO,
-	MF_NIGHTMAREDROP,
-	MF_RESTRICTED,
-	MF_NOCOMMAND,
-	MF_NODROP,
-	MF_JEXP,
-	MF_BEXP,	//40
-	MF_NOVENDING,
-	MF_LOADEVENT,
-	MF_NOCHAT,
-	MF_NOEXPPENALTY,
-	MF_GUILDLOCK
-};
-
 struct script_retinfo {
 	struct linkdb_node** var_function;// scope variables
 	struct script_code* script;// script code
@@ -170,6 +122,9 @@ struct script_state {
 		int tick,timer,charid;
 	} sleep;
 	int instance_id;
+	//For backing up purposes
+	struct script_state *bk_st;
+	int bk_npcid;
 };
 
 struct script_reg {
@@ -198,7 +153,7 @@ void run_script(struct script_code*,int,int,int);
 int set_var(struct map_session_data *sd, char *name, void *val);
 int conv_num(struct script_state *st,struct script_data *data);
 const char* conv_str(struct script_state *st,struct script_data *data);
-int run_script_timer(int tid, unsigned int tick, int id, intptr data);
+int run_script_timer(int tid, unsigned int tick, int id, intptr_t data);
 void run_script_main(struct script_state *st);
 
 void script_stop_sleeptimers(int id);
@@ -211,7 +166,12 @@ void script_free_state(struct script_state* st);
 struct DBMap* script_get_label_db(void);
 struct DBMap* script_get_userfunc_db(void);
 void script_run_autobonus(const char *autobonus,int id, int pos);
-void script_add_autobonus(const char *autobonus);
+
+bool script_get_constant(const char* name, int* value);
+void script_set_constant(const char* name, int value, bool isparameter);
+
+void script_cleararray_pc(struct map_session_data* sd, const char* varname, void* value);
+void script_setarray_pc(struct map_session_data* sd, const char* varname, uint8 idx, void* value, int* refcache);
 
 int script_config_read(char *cfgName);
 int do_init_script(void);

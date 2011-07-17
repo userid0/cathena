@@ -72,20 +72,19 @@ struct block_list* battle_getenemy(struct block_list *target, int type, int rang
 int battle_gettarget(struct block_list *bl);
 int battle_getcurrentskill(struct block_list *bl);
 
-//New definitions [Skotlex]
-#define BCT_ENEMY 0x020000
-//This should be (~BCT_ENEMY&BCT_ALL)
-#define BCT_NOENEMY 0x1d0000
-#define BCT_PARTY	0x040000
-//This should be (~BCT_PARTY&BCT_ALL)
-#define BCT_NOPARTY 0x1b0000
-#define BCT_GUILD	0x080000
-//This should be (~BCT_GUILD&BCT_ALL)
-#define BCT_NOGUILD 0x170000
-#define BCT_ALL 0x1f0000
-#define BCT_NOONE 0x000000
-#define BCT_SELF 0x010000
-#define BCT_NEUTRAL 0x100000
+enum e_battle_check_target
+{//New definitions [Skotlex]
+	BCT_ENEMY   = 0x020000,
+	BCT_NOENEMY = 0x1d0000, //This should be (~BCT_ENEMY&BCT_ALL)
+	BCT_PARTY	= 0x040000,
+	BCT_NOPARTY = 0x1b0000, //This should be (~BCT_PARTY&BCT_ALL)
+	BCT_GUILD	= 0x080000,
+	BCT_NOGUILD = 0x170000, //This should be (~BCT_GUILD&BCT_ALL)
+	BCT_ALL     = 0x1f0000,
+	BCT_NOONE   = 0x000000,
+	BCT_SELF    = 0x010000,
+	BCT_NEUTRAL = 0x100000,
+};
 
 #define	is_boss(bl)	(status_get_mode(bl)&MD_BOSS)	// Can refine later [Aru]
 
@@ -95,6 +94,13 @@ bool battle_check_range(struct block_list *src,struct block_list *bl,int range);
 
 void battle_consume_ammo(struct map_session_data* sd, int skill, int lv);
 // ê›íË
+
+#define MIN_HAIR_STYLE battle_config.min_hair_style
+#define MAX_HAIR_STYLE battle_config.max_hair_style
+#define MIN_HAIR_COLOR battle_config.min_hair_color
+#define MAX_HAIR_COLOR battle_config.max_hair_color
+#define MIN_CLOTH_COLOR battle_config.min_cloth_color
+#define MAX_CLOTH_COLOR battle_config.max_cloth_color
 
 extern struct Battle_Config
 {
@@ -214,6 +220,7 @@ extern struct Battle_Config
 	int combo_delay_rate;
 	int item_check;
 	int item_use_interval;	//[Skotlex]
+	int cashfood_use_interval;
 	int wedding_modifydisplay;
 	int wedding_ignorepalette;	//[Skotlex]
 	int xmas_ignorepalette;	// [Valaris]
@@ -228,7 +235,7 @@ extern struct Battle_Config
 	int max_hp;
 	int max_sp;
 	int max_lv, aura_lv;
-	int max_parameter, max_baby_parameter;
+	int max_parameter, max_baby_parameter, max_third_parameter, max_baby_third_parameter;
 	int max_cart_weight;
 	int skill_log;
 	int battle_log;
@@ -469,6 +476,17 @@ extern struct Battle_Config
 	int eq_single_target_reflectable;
 	int invincible_nodamage;
 	int mob_slave_keep_target;
+	int autospell_check_range;	//Enable range check for autospell bonus. [L0ne_W0lf]
+	int client_reshuffle_dice;  // Reshuffle /dice
+	int client_sort_storage;
+	int gm_check_minlevel;  // min GM level for /check
+	int feature_buying_store;
+	int feature_search_stores;
+	int searchstore_querydelay;
+	int searchstore_maxresults;
+	int display_party_name;
+	int cashshop_show_points;
+	int mail_show_status;
 
 	// [BattleGround Settings]
 	int bg_update_interval;

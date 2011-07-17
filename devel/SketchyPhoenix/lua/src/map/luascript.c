@@ -72,6 +72,61 @@ static int buildin_killmonster_sub_strip(struct block_list *bl,va_list ap);
 static int buildin_killmonsterall_sub(struct block_list *bl,va_list ap);
 static int buildin_killmonsterall_sub_strip(struct block_list *bl,va_list ap);
 
+enum {
+	MF_NOMEMO,	//0
+	MF_NOTELEPORT,
+	MF_NOSAVE,
+	MF_NOBRANCH,
+	MF_NOPENALTY,
+	MF_NOZENYPENALTY,
+	MF_PVP,
+	MF_PVP_NOPARTY,
+	MF_PVP_NOGUILD,
+	MF_GVG,
+	MF_GVG_NOPARTY,	//10
+	MF_NOTRADE,
+	MF_NOSKILL,
+	MF_NOWARP,
+	MF_PARTYLOCK,
+	MF_NOICEWALL,
+	MF_SNOW,
+	MF_FOG,
+	MF_SAKURA,
+	MF_LEAVES,
+	MF_RAIN,	//20
+	// 21 free
+	MF_NOGO = 22,
+	MF_CLOUDS,
+	MF_CLOUDS2,
+	MF_FIREWORKS,
+	MF_GVG_CASTLE,
+	MF_GVG_DUNGEON,
+	MF_NIGHTENABLED,
+	MF_NOBASEEXP,
+	MF_NOJOBEXP,	//30
+	MF_NOMOBLOOT,
+	MF_NOMVPLOOT,
+	MF_NORETURN,
+	MF_NOWARPTO,
+	MF_NIGHTMAREDROP,
+	MF_RESTRICTED,
+	MF_NOCOMMAND,
+	MF_NODROP,
+	MF_JEXP,
+	MF_BEXP,	//40
+	MF_NOVENDING,
+	MF_LOADEVENT,
+	MF_NOCHAT,
+	MF_NOEXPPENALTY,
+	MF_GUILDLOCK,
+	MF_TOWN,
+	MF_AUTOTRADE,
+	MF_ALLOWKS,
+	MF_MONSTER_NOTELEPORT,
+	MF_PVP_NOCALCRANK,	//50
+	MF_BATTLEGROUND
+};
+
 // Counts the number of valid and total number of options in 'str'
 // If max_count > 0 the counting stops when that valid option is reached
 // total is incremented for each option (NULL is supported)
@@ -814,7 +869,7 @@ LUA_FUNC(getcharid)
 			lua_pushinteger(NL, sd->status.account_id);
 			return 1;
 		case 4: 
-			lua_pushinteger(NL, sd->state.bg_id); 
+			lua_pushinteger(NL, sd->bg_id); 
 			return 1;
 		default:
 			return 0;
@@ -1102,7 +1157,7 @@ LUA_FUNC(deleteitem)
 			if(log_config.enable_logs&0x40)
 				log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -amount, &sd->status.inventory[i]);
 
-			pc_delitem(sd,i,amount,0);
+			pc_delitem(sd,i,amount,0,0);
 			lua_pushinteger(NL,1);
 			return 1;
 		} else {
@@ -1114,7 +1169,7 @@ LUA_FUNC(deleteitem)
 			}
 			//Logs
 
-			pc_delitem(sd,i,sd->status.inventory[i].amount,0);
+			pc_delitem(sd,i,sd->status.inventory[i].amount,0,0);
 		}
 	}
 	//2nd pass
@@ -1132,7 +1187,7 @@ LUA_FUNC(deleteitem)
 				if(log_config.enable_logs&0x40)
 					log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -amount, &sd->status.inventory[i]);
 
-				pc_delitem(sd,i,amount,0);
+				pc_delitem(sd,i,amount,0,0);
 				lua_pushinteger(NL,1);
 				return 1; //we deleted exact amount of items. now exit
 			} else {
@@ -1142,7 +1197,7 @@ LUA_FUNC(deleteitem)
 				if(log_config.enable_logs&0x40)
 					log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -sd->status.inventory[i].amount, &sd->status.inventory[i]);
 
-				pc_delitem(sd,i,sd->status.inventory[i].amount,0);
+				pc_delitem(sd,i,sd->status.inventory[i].amount,0,0);
 			}
 		}
 
@@ -1207,7 +1262,7 @@ LUA_FUNC(deleteitem2)
 			if(log_config.enable_logs&0x40)
 				log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -amount, &sd->status.inventory[i]);
 
-			pc_delitem(sd,i,amount,0);
+			pc_delitem(sd,i,amount,0,0);
 			lua_pushinteger(NL,1);
 			return 1; //we deleted exact amount of items. now exit
 		} else {
@@ -1217,7 +1272,7 @@ LUA_FUNC(deleteitem2)
 			if(log_config.enable_logs&0x40)
 				log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -sd->status.inventory[i].amount, &sd->status.inventory[i]);
 
-			pc_delitem(sd,i,sd->status.inventory[i].amount,0);
+			pc_delitem(sd,i,sd->status.inventory[i].amount,0,0);
 		}
 	}
 
@@ -1575,7 +1630,7 @@ LUA_FUNC(successrefitem)
 		sd->status.inventory[i].refine++;
 		pc_unequipitem(sd,i,2); // status calc will happen in pc_equipitem() below
 		clif_refine(sd->fd,0,i,sd->status.inventory[i].refine);
-		clif_delitem(sd,i,1);
+		clif_delitem(sd,i,1,0);
 		//Logs items, got from (N)PC scripts
 		if(log_config.enable_logs&0x40) {
 			log_pick_pc(sd, "N", sd->status.inventory[i].nameid, 1, &sd->status.inventory[i]);
@@ -1620,7 +1675,7 @@ LUA_FUNC(failedrefitem)
 		pc_unequipitem(sd,i,3);
 		clif_refine(sd->fd,1,i,sd->status.inventory[i].refine);
 
-		pc_delitem(sd,i,1,0);
+		pc_delitem(sd,i,1,0,0);
 		clif_misceffect(&sd->bl,2);
 	}
 	return 0;
@@ -1730,12 +1785,14 @@ LUA_FUNC(autobonus)
 		atk_type=luaL_checkint(NL,4);
 	if( lua_tostring(NL,5) )
 		other_script=luaL_checkstring(NL,5);
+	/*
 	if( pc_addautobonus(sd->autobonus,ARRAYLENGTH(sd->autobonus),bonus_script,rate,dur,atk_type,other_script,sd->status.inventory[current_equip_item_index].equip,false) )
 	{
 		script_add_autobonus(bonus_script);
 		if( other_script )
 			script_add_autobonus(other_script);
 	}
+	*/
 	return 0;
 }
 
@@ -1757,13 +1814,14 @@ LUA_FUNC(autobonus2)
 		atk_type=luaL_checkint(NL,4);
 	if( lua_tostring(NL,5) )
 		other_script=luaL_checkstring(NL,5);
-	if( pc_addautobonus(sd->autobonus2,ARRAYLENGTH(sd->autobonus2),
+/*	if( pc_addautobonus(sd->autobonus2,ARRAYLENGTH(sd->autobonus2),
 		bonus_script,rate,dur,atk_type,other_script,sd->status.inventory[current_equip_item_index].equip,false) )
 	{
 		script_add_autobonus(bonus_script);
 		if( other_script )
 			script_add_autobonus(other_script);
 	}
+*/
 	return 0;
 }
 
@@ -1786,7 +1844,7 @@ LUA_FUNC(autobonus3)
 	if( lua_isstring(NL,5) ) {
 		other_script = luaL_checkstring(NL,5);
 	}
-	if( pc_addautobonus(sd->autobonus3,ARRAYLENGTH(sd->autobonus3),bonus_script,rate,dur,atk_type,other_script,sd->status.inventory[current_equip_item_index].equip,true) )
+/*	if( pc_addautobonus(sd->autobonus3,ARRAYLENGTH(sd->autobonus3),bonus_script,rate,dur,atk_type,other_script,sd->status.inventory[current_equip_item_index].equip,true) )
 	{
 		script_add_autobonus(bonus_script);
 		if( other_script )
@@ -1794,6 +1852,7 @@ LUA_FUNC(autobonus3)
 			script_add_autobonus(other_script);
 		}
 	}
+*/	
 	return 0;
 }
 
@@ -3026,7 +3085,8 @@ LUA_FUNC(globalmes)
 
 //##TODO waiting room events
 LUA_FUNC(waitingroom)
-{
+{ /* Needs zeny, minlvl, maxlvl check on stack.
+
 	struct npc_data* nd;
 	const char* title;
 	const char* ev = "";
@@ -3042,7 +3102,8 @@ LUA_FUNC(waitingroom)
 	}
 	nd = (struct npc_data *)map_id2bl(npc_id);
 	if( nd != NULL )
-		chat_createnpcchat(nd, title, limit, pub, trigger, ev);
+		chat_createnpcchat(nd, title, limit, pub, trigger, ev, zeny, minlvl, maxlvl);
+	*/
 	return 0;
 }
 
@@ -3223,7 +3284,6 @@ LUA_FUNC(getmapflag)
 			case MF_SAKURA:			lua_pushinteger(NL,map[m].flag.sakura); break;
 			case MF_LEAVES:			lua_pushinteger(NL,map[m].flag.leaves); break;
 			case MF_RAIN:			lua_pushinteger(NL,map[m].flag.rain); break;
-			case MF_INDOORS:		lua_pushinteger(NL,map[m].flag.indoors); break;
 			case MF_NIGHTENABLED:	lua_pushinteger(NL,map[m].flag.nightenabled); break;
 			case MF_NOGO:			lua_pushinteger(NL,map[m].flag.nogo); break;
 			case MF_NOBASEEXP:		lua_pushinteger(NL,map[m].flag.nobaseexp); break;
@@ -3287,7 +3347,6 @@ LUA_FUNC(editmapflag)
 			case MF_SAKURA:        map[m].flag.sakura=flag; break;
 			case MF_LEAVES:        map[m].flag.leaves=flag; break;
 			case MF_RAIN:          map[m].flag.rain=flag; break;
-			case MF_INDOORS:       map[m].flag.indoors=flag; break;
 			case MF_NIGHTENABLED:  map[m].flag.nightenabled=flag; break;
 			case MF_NOGO:          map[m].flag.nogo=flag; break;
 			case MF_NOBASEEXP:     map[m].flag.nobaseexp=flag; break;
@@ -3323,7 +3382,7 @@ LUA_FUNC(pvpon)
 	if( m < 0 || map[m].flag.pvp )
 		return 0; // nothing to do
 	map[m].flag.pvp = 1;
-	clif_send0199(m,1);
+	clif_map_property_mapall(m, MAPPROPERTY_FREEPVPZONE);
 	if(battle_config.pk_mode) // disable ranking functions if pk_mode is on [Valaris]
 		return 0;
 	iter = mapit_getallusers();
@@ -3363,7 +3422,7 @@ LUA_FUNC(pvpoff)
 	if(m < 0 || !map[m].flag.pvp)
 		return 0;
 	map[m].flag.pvp = 0;
-	clif_send0199(m,0);
+	clif_map_property_mapall(m, MAPPROPERTY_NOTHING);
 	if(battle_config.pk_mode) // disable ranking options if pk_mode is on
 		return 0;
 	map_foreachinmap(buildin_pvpoff_sub, m, BL_PC);
@@ -3378,7 +3437,7 @@ LUA_FUNC(gvgon)
 	m = map_mapname2mapid(str);
 	if(m >= 0 && !map[m].flag.gvg) {
 		map[m].flag.gvg = 1;
-		clif_send0199(m,3);
+		clif_map_property_mapall(m, MAPPROPERTY_AGITZONE);
 	}
 	return 0;
 }
@@ -3390,7 +3449,7 @@ LUA_FUNC(gvgoff)
 	m = map_mapname2mapid(str);
 	if(m >= 0 && map[m].flag.gvg) {
 		map[m].flag.gvg = 0;
-		clif_send0199(m,0);
+		clif_map_property_mapall(m, MAPPROPERTY_NOTHING);
 	}
 	return 0;
 }
@@ -3726,7 +3785,7 @@ LUA_FUNC(successremovecards)
 		if(log_config.enable_logs&0x40)
 			log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -1, &sd->status.inventory[i]);
 
-		pc_delitem(sd,i,1,0);
+		pc_delitem(sd,i,1,0,0);
 
 		//Logs items, got from (N)PC scripts [Lupus]
 		if(log_config.enable_logs&0x40)
@@ -3793,7 +3852,7 @@ LUA_FUNC(failedremovecards)
 			if(log_config.enable_logs&0x40)
 				log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -1, &sd->status.inventory[i]);
 
-			pc_delitem(sd,i,1,0);
+			pc_delitem(sd,i,1,0,0);
 		}
 		if(typefail == 1){	// カードのみ損失（武具を返す）
 			int flag;
@@ -3810,7 +3869,7 @@ LUA_FUNC(failedremovecards)
 				item_tmp.card[j]=0;
 			for (j = sd->inventory_data[i]->slot; j < MAX_SLOTS; j++)
 				item_tmp.card[j]=sd->status.inventory[i].card[j];
-			pc_delitem(sd,i,1,0);
+			pc_delitem(sd,i,1,0,0);
 
 			//Logs items, got from (N)PC scripts [Lupus]
 			if(log_config.enable_logs&0x40)
@@ -4387,7 +4446,7 @@ LUA_FUNC(clearitem)
 			if(log_config.enable_logs&0x40)
 				log_pick_pc(sd, "N", sd->status.inventory[i].nameid, -sd->status.inventory[i].amount, &sd->status.inventory[i]);
 
-			pc_delitem(sd, i, sd->status.inventory[i].amount, 0);
+			pc_delitem(sd, i, sd->status.inventory[i].amount, 0,0);
 		}
 	}
 	return 0;
@@ -4424,11 +4483,11 @@ LUA_FUNC(misceffect)
 	if(obj && obj != fake_nd->bl.id) {
 		struct block_list *bl = map_id2bl(obj);
 		if (bl)
-			clif_misceffect2(bl,type);
+			clif_specialeffect(bl,type,AREA);
 	} else{
 		lua_get_target(3);
 		if(sd)
-			clif_misceffect2(&sd->bl,type);
+			clif_specialeffect(&sd->bl,type,AREA);
 	}
 	return 0;
 }
@@ -5036,7 +5095,7 @@ LUA_FUNC(summon)
 			delete_timer(md->deletetimer, mob_timer_delete);
 		md->deletetimer = add_timer(tick+(timeout>0?timeout*1000:60000),mob_timer_delete,md->bl.id,0);
 		mob_spawn (md); //Now it is ready for spawning.
-		clif_misceffect2(&md->bl,344);
+		clif_specialeffect(&md->bl,344,AREA);
 		sc_start4(&md->bl, SC_MODECHANGE, 100, 1, 0, MD_AGGRESSIVE, 0, 60000);
 	}
 	return 0;
@@ -5434,7 +5493,7 @@ LUA_FUNC(playBGM)
 	const char* name = luaL_checkstring(NL,1);
 
 	if(sd)
-		clif_playBGM(sd,&sd->bl,name);
+		clif_playBGM(sd,name);
 
 	return 0;
 }
@@ -5443,7 +5502,7 @@ int playBGM_sub(struct block_list* bl,va_list ap)
 {
 	char* name = va_arg(ap,char*);
 
-	clif_playBGM((TBL_PC *)bl, bl, name);
+	clif_playBGM((TBL_PC *)bl, name);
 
     return 0;
 }
@@ -6316,7 +6375,7 @@ LUA_FUNC(bg_monster_set_team)
 	if( (mbl = map_id2bl(id)) == NULL || mbl->type != BL_MOB )
 		return 0;
 	md = (TBL_MOB *)mbl;
-	md->state.bg_id = bg_id;
+	md->bg_id = bg_id;
 
 	mob_stop_attack(md);
 	mob_stop_walking(md, 0);
@@ -6329,7 +6388,7 @@ LUA_FUNC(bg_monster_set_team)
 LUA_FUNC(bg_leave)
 {
 	lua_get_target(1);
-	if( sd == NULL || !sd->state.bg_id )
+	if( sd == NULL || !sd->bg_id )
 		return 0;
 	
 	bg_team_leave(sd,0);
@@ -6649,12 +6708,12 @@ LUA_FUNC(setfont)
 	if( sd == NULL )
 		return 0;
 
-	if( sd->state.user_font != font )
-		sd->state.user_font = font;
+	if( sd->user_font != font )
+		sd->user_font = font;
 	else
-		sd->state.user_font = 0;
+		sd->user_font = 0;
 	
-	clif_font_area(sd);
+	clif_font(sd);
 	return 0;
 }
 

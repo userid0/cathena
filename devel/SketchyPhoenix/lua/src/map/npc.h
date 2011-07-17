@@ -33,7 +33,7 @@ struct npc_data {
 	short speed;
 	char name[NAME_LENGTH+1];// display name
 	char exname[NAME_LENGTH+1];// unique npc name
-	char function[50]; //Lua function to call when clicked.
+	char function[EVENT_NAME_LENGTH]; //Lua function to call when clicked.
 	int chat_id;
 	int touching_id;
 	unsigned int next_walktime;
@@ -87,7 +87,7 @@ struct areascript_data {
 #define MAX_NPC_CLASS 1000
 //Checks if a given id is a valid npc id. [Skotlex]
 //Since new npcs are added all the time, the max valid value is the one before the first mob (Scorpion = 1001)
-#define npcdb_checkid(id) ((id >=  46 && id <= 125) || id == 139 || (id >= 400 && id <= MAX_NPC_CLASS) || id == INVISIBLE_CLASS)
+#define npcdb_checkid(id) ( ( (id) >= 46 && (id) <= 125) || (id) == 139 || ( (id) > 400 && (id) < MAX_NPC_CLASS ) || (id) == INVISIBLE_CLASS )
 
 #ifdef PCRE_SUPPORT
 void npc_chat_finalize(struct npc_data* nd);
@@ -120,7 +120,6 @@ int npc_buysellsel(struct map_session_data* sd, int id, int type);
 int npc_buylist(struct map_session_data* sd,int n, unsigned short* item_list);
 int npc_selllist(struct map_session_data* sd, int n, unsigned short* item_list);
 void npc_parse_mob2(struct spawn_data* mob);
-void npc_parse_mob_common(struct spawn_data mob, struct mob_db* db);
 struct npc_data* npc_add_warp(short from_mapid, short from_x, short from_y, short xs, short ys, unsigned short to_mapindex, short to_x, short to_y);
 int npc_globalmessage(const char* name,const char* mes);
 
@@ -146,6 +145,7 @@ int npc_do_ontimer(int npc_id, int option);
 int npc_event_do(const char* name);
 int npc_event_doall(const char* name);
 int npc_event_doall_id(const char* name, int rid);
+bool npc_event_isspecial(const char* eventname);
 
 int npc_timerevent_start(struct npc_data* nd, int rid);
 int npc_timerevent_stop(struct npc_data* nd);

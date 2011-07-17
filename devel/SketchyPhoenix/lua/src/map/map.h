@@ -4,9 +4,8 @@
 #ifndef _MAP_H_
 #define _MAP_H_
 
-#ifndef _CBASETYPES_H_
 #include "../common/cbasetypes.h"
-#endif
+#include "../common/core.h" // CORE_ST_LAST
 #include "../common/mmo.h"
 #include "../common/mapindex.h"
 #include "../common/db.h"
@@ -15,6 +14,13 @@
 
 struct npc_data;
 struct item_data;
+
+enum E_MAPSERVER_ST
+{
+	MAPSERVER_ST_RUNNING = CORE_ST_LAST,
+	MAPSERVER_ST_SHUTDOWN,
+	MAPSERVER_ST_LAST
+};
 
 //Uncomment to enable the Cell Stack Limit mod.
 //It's only config is the battle_config cell_stack_limit.
@@ -41,10 +47,11 @@ struct item_data;
 #define NATURAL_HEAL_INTERVAL 500
 #define MIN_FLOORITEM 2
 #define MAX_FLOORITEM START_ACCOUNT_NUM
-#define MAX_LEVEL 99
+#define MAX_LEVEL 150
 #define MAX_DROP_PER_MAP 48
 #define MAX_IGNORE_LIST 20 // official is 14
 #define MAX_VENDING 12
+#define MAX_MAP_SIZE 512*512 // Wasn't there something like this already? Can't find it.. [Shinryo]
 #define MOBID_EMPERIUM 1288
 // Added definitions for WoESE objects. [L0ne_W0lf]
 #define MOBID_BARRICADE1 1905
@@ -62,6 +69,7 @@ struct item_data;
 
 #define JOBL_UPPER 0x1000 //4096
 #define JOBL_BABY 0x2000  //8192
+#define JOBL_3 0x4000     //16384
 
 //for filtering and quick checking.
 #define MAPID_UPPERMASK 0x0fff
@@ -71,6 +79,7 @@ struct item_data;
 //Super Novices are considered the 2-1 version of the novice! Novices are considered a first class type, too...
 enum {
 	MAPID_NOVICE = 0x0,
+//1st classes
 	MAPID_SWORDMAN,
 	MAPID_MAGE,
 	MAPID_ARCHER,
@@ -84,7 +93,7 @@ enum {
 	MAPID_XMAS,
 	MAPID_SUMMER,
 //2_1 classes
-	MAPID_SUPER_NOVICE = JOBL_2_1|0x0,
+	MAPID_SUPER_NOVICE = JOBL_2_1|MAPID_NOVICE,
 	MAPID_KNIGHT,
 	MAPID_WIZARD,
 	MAPID_HUNTER,
@@ -93,15 +102,29 @@ enum {
 	MAPID_ASSASSIN,
 	MAPID_STAR_GLADIATOR,
 //2_2 classes
-	MAPID_CRUSADER = JOBL_2_2|0x1,
+	MAPID_CRUSADER = JOBL_2_2|MAPID_SWORDMAN,
 	MAPID_SAGE,
 	MAPID_BARDDANCER,
 	MAPID_MONK,
 	MAPID_ALCHEMIST,
 	MAPID_ROGUE,
 	MAPID_SOUL_LINKER,
-//1-1, advanced
-	MAPID_NOVICE_HIGH = JOBL_UPPER|0x0,
+//3_1 classes
+	MAPID_RUNE_KNIGHT = JOBL_3|JOBL_2_1|MAPID_SWORDMAN,
+	MAPID_WARLOCK,
+	MAPID_RANGER,
+	MAPID_ARCHBISHOP,
+	MAPID_MECHANIC,
+	MAPID_GUILLOTINE_CROSS,
+//3_2 classes
+	MAPID_ROYAL_GUARD = JOBL_3|JOBL_2_2|MAPID_SWORDMAN,
+	MAPID_SORCERER,
+	MAPID_MINSTRELWANDERER,
+	MAPID_SURA,
+	MAPID_GENETIC,
+	MAPID_SHADOW_CHASER,
+//1st, advanced
+	MAPID_NOVICE_HIGH = JOBL_UPPER|MAPID_NOVICE,
 	MAPID_SWORDMAN_HIGH,
 	MAPID_MAGE_HIGH,
 	MAPID_ARCHER_HIGH,
@@ -109,21 +132,35 @@ enum {
 	MAPID_MERCHANT_HIGH,
 	MAPID_THIEF_HIGH,
 //2_1 advanced
-	MAPID_LORD_KNIGHT = JOBL_UPPER|JOBL_2_1|0x1,
+	MAPID_LORD_KNIGHT = JOBL_UPPER|JOBL_2_1|MAPID_SWORDMAN,
 	MAPID_HIGH_WIZARD,
 	MAPID_SNIPER,
 	MAPID_HIGH_PRIEST,
 	MAPID_WHITESMITH,
 	MAPID_ASSASSIN_CROSS,
 //2_2 advanced
-	MAPID_PALADIN = JOBL_UPPER|JOBL_2_2|0x1,
+	MAPID_PALADIN = JOBL_UPPER|JOBL_2_2|MAPID_SWORDMAN,
 	MAPID_PROFESSOR,
 	MAPID_CLOWNGYPSY,
 	MAPID_CHAMPION,
 	MAPID_CREATOR,
 	MAPID_STALKER,
-//1-1 baby
-	MAPID_BABY = JOBL_BABY|0x0,
+//3_1 advanced
+	MAPID_RUNE_KNIGHT_H = JOBL_3|JOBL_UPPER|JOBL_2_1|MAPID_SWORDMAN,
+	MAPID_WARLOCK_H,
+	MAPID_RANGER_H,
+	MAPID_ARCHBISHOP_H,
+	MAPID_MECHANIC_H,
+	MAPID_GUILLOTINE_CROSS_H,
+//3_2 advanced
+	MAPID_ROYAL_GUARD_H = JOBL_3|JOBL_UPPER|JOBL_2_2|MAPID_SWORDMAN,
+	MAPID_SORCERER_H,
+	MAPID_MINSTRELWANDERER_H,
+	MAPID_SURA_H,
+	MAPID_GENETIC_H,
+	MAPID_SHADOW_CHASER_H,
+//1st baby
+	MAPID_BABY = JOBL_BABY|MAPID_NOVICE,
 	MAPID_BABY_SWORDMAN,
 	MAPID_BABY_MAGE,
 	MAPID_BABY_ARCHER,
@@ -132,7 +169,7 @@ enum {
 	MAPID_BABY_THIEF,
 	MAPID_BABY_TAEKWON,
 //2_1 baby
-	MAPID_SUPER_BABY = JOBL_BABY|JOBL_2_1|0x0,
+	MAPID_SUPER_BABY = JOBL_BABY|JOBL_2_1|MAPID_NOVICE,
 	MAPID_BABY_KNIGHT,
 	MAPID_BABY_WIZARD,
 	MAPID_BABY_HUNTER,
@@ -141,13 +178,27 @@ enum {
 	MAPID_BABY_ASSASSIN,
 	MAPID_BABY_STAR_GLADIATOR,
 //2_2 baby
-	MAPID_BABY_CRUSADER = JOBL_BABY|JOBL_2_2|0x1,
+	MAPID_BABY_CRUSADER = JOBL_BABY|JOBL_2_2|MAPID_SWORDMAN,
 	MAPID_BABY_SAGE,
 	MAPID_BABY_BARDDANCER,
 	MAPID_BABY_MONK,
 	MAPID_BABY_ALCHEMIST,
 	MAPID_BABY_ROGUE,
 	MAPID_BABY_SOUL_LINKER,
+//3_1 baby
+	MAPID_BABY_RUNE = JOBL_3|JOBL_BABY|JOBL_2_1|MAPID_SWORDMAN,
+	MAPID_BABY_WARLOCK,
+	MAPID_BABY_RANGER,
+	MAPID_BABY_BISHOP,
+	MAPID_BABY_MECHANIC,
+	MAPID_BABY_CROSS,
+//3_2 baby
+	MAPID_BABY_GUARD = JOBL_3|JOBL_BABY|JOBL_2_2|MAPID_SWORDMAN,
+	MAPID_BABY_SORCERER,
+	MAPID_BABY_MINSTRELWANDERER,
+	MAPID_BABY_SURA,
+	MAPID_BABY_GENETIC,
+	MAPID_BABY_CHASER
 };
 
 //Max size for inputs to Graffiti, Talkie Box and Vending text prompts
@@ -159,6 +210,8 @@ enum {
 #define CHATROOM_PASS_SIZE (8 + 1)
 //Max allowed chat text length
 #define CHAT_SIZE_MAX (255 + 1)
+//24 for npc name + 24 for label + 2 for a "::" and 1 for EOS
+#define EVENT_NAME_LENGTH ( NAME_LENGTH * 2 + 3 )
 
 #define DEFAULT_AUTOSAVE_INTERVAL 5*60*1000
 
@@ -212,6 +265,17 @@ enum {
 };
 
 enum {
+	RC2_NONE = 0,
+	RC2_GOBLIN,
+	RC2_KOBOLD,
+	RC2_ORC,
+	RC2_GOLEM,
+	RC2_GUARDIAN,
+	RC2_NINJA,
+	RC2_MAX
+};
+
+enum {
 	ELE_NEUTRAL=0,
 	ELE_WATER,
 	ELE_EARTH,
@@ -247,18 +311,18 @@ struct block_list {
 // Expanded to specify all mob-related spawn data by [Skotlex]
 struct spawn_data {
 	short class_; //Class, used because a mob can change it's class
-	unsigned boss : 1;
 	unsigned short m,x,y;	//Spawn information (map, point, spawn-area around point)
 	signed short xs,ys;
 	unsigned short num; //Number of mobs using this structure
 	unsigned short active; //Number of mobs that are already spawned (for mob_remove_damaged: no)
 	unsigned int delay1,delay2; //Min delay before respawning after spawn/death
 	struct {
-		unsigned size :2; //Holds if mob has to be tiny/large
-		unsigned ai :2;	//Holds if mob is special ai.
-		unsigned dynamic :1; //Whether this data is indexed by a map's dynamic mob list
+		unsigned int size :2; //Holds if mob has to be tiny/large
+		unsigned int ai :2;	//Holds if mob is special ai.
+		unsigned int dynamic :1; //Whether this data is indexed by a map's dynamic mob list
+		unsigned int boss : 1;
 	} state;
-	char name[NAME_LENGTH],eventname[50]; //Name/event
+	char name[NAME_LENGTH],eventname[EVENT_NAME_LENGTH]; //Name/event
 	char function[50];
 	//equivalent to eventname for the lua scripts but calls a 
 	//function rather than event label is triggered on mob death
@@ -289,6 +353,8 @@ enum _sp {
 
 	SP_BASEJOB=119,	// 100+19 - celest
 	SP_BASECLASS=120,	//Hmm.. why 100+19? I just use the next one... [Skotlex]
+	SP_KILLERRID=121,
+	SP_KILLEDRID=122,
 
 	// Mercenaries
 	SP_MERCFLEE=165, SP_MERCKILLS=189, SP_MERCFAITH=190,
@@ -345,7 +411,10 @@ enum _look {
 	LOOK_HAIR_COLOR,
 	LOOK_CLOTHES_COLOR,
 	LOOK_SHIELD,
-	LOOK_SHOES
+	LOOK_SHOES,
+	LOOK_BODY,
+	LOOK_FLOOR,
+	LOOK_ROBE,
 };
 
 // used by map_setcell()
@@ -461,7 +530,6 @@ struct map_data {
 		unsigned sakura : 1; // [Valaris]
 		unsigned leaves : 1; // [Valaris]
 		unsigned rain : 1; // [Valaris]
-		unsigned indoors : 1; // celest
 		unsigned nogo : 1; // [Valaris]
 		unsigned nobaseexp	: 1; // [Lorky] added by Lupus
 		unsigned nojobexp	: 1; // [Lorky]
@@ -564,8 +632,8 @@ bool map_addnpc(int,struct npc_data *);
 int map_addareascript(int m,struct areascript_data *ad);
 
 // 床アイテム関連
-int map_clearflooritem_timer(int tid, unsigned int tick, int id, intptr data);
-int map_removemobs_timer(int tid, unsigned int tick, int id, intptr data);
+int map_clearflooritem_timer(int tid, unsigned int tick, int id, intptr_t data);
+int map_removemobs_timer(int tid, unsigned int tick, int id, intptr_t data);
 #define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
 int map_addflooritem(struct item *item_data,int amount,int m,int x,int y,int first_charid,int second_charid,int third_charid,int flags);
 
@@ -579,6 +647,9 @@ struct map_session_data* map_charid2sd(int charid);
 struct map_session_data * map_id2sd(int id);
 struct mob_data * map_id2md(int id);
 struct npc_data * map_id2nd(int id);
+struct homun_data* map_id2hd(int id);
+struct mercenary_data* map_id2mc(int id);
+struct chat_data* map_id2cd(int id);
 struct block_list * map_id2bl(int id);
 
 #define map_id2index(id) map[(id)].index
@@ -628,6 +699,7 @@ int cleanup_sub(struct block_list *bl, va_list ap);
 
 void map_helpscreen(int flag); // [Valaris]
 int map_delmap(char* mapname);
+void map_flags_init(void);
 
 bool map_iwall_set(int m, int x, int y, int size, int dir, bool shootable, const char* wall_name);
 void map_iwall_get(struct map_session_data *sd);
@@ -683,5 +755,7 @@ extern char mob_db_db[32];
 extern char mob_db2_db[32];
 
 #endif /* not TXT_ONLY */
+
+void do_shutdown(void);
 
 #endif /* _MAP_H_ */

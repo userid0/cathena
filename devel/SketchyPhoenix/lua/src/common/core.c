@@ -24,7 +24,12 @@
 #include <unistd.h>
 #endif
 
-int runflag = 1;
+
+/// Called when a terminate signal is received.
+void (*shutdown_callback)(void) = NULL;
+
+
+int runflag = CORE_ST_RUN;
 int arg_c = 0;
 char **arg_v = NULL;
 
@@ -78,7 +83,10 @@ static void sig_proc(int sn)
 	case SIGTERM:
 		if (++is_called > 3)
 			exit(EXIT_SUCCESS);
-		runflag = 0;
+		if( shutdown_callback != NULL )
+			shutdown_callback();
+		else
+			runflag = CORE_ST_STOP;// auto-shutdown
 		break;
 	case SIGSEGV:
 	case SIGFPE:
@@ -245,7 +253,7 @@ void usercheck(void)
     if ((getuid() == 0) && (getgid() == 0)) {
 	ShowWarning ("You are running eAthena as the root superuser.\n");
 	ShowWarning ("It is unnecessary and unsafe to run eAthena with root privileges.\n");
-	exit(EXIT_FAILURE);
+	sleep(3);
     }
 #endif
 }
@@ -291,7 +299,7 @@ int main (int argc, char **argv)
 
 	{// Main runtime cycle
 		int next;
-		while (runflag) {
+		while (runflag != CORE_ST_STOP) {
 			next = do_timer(gettick_nocache());
 			do_sockets(next);
 		}

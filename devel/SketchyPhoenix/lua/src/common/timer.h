@@ -19,7 +19,7 @@
 
 // Struct declaration
 
-typedef int (*TimerFunc)(int tid, unsigned int tick, int id, intptr data);
+typedef int (*TimerFunc)(int tid, unsigned int tick, int id, intptr_t data);
 
 struct TimerData {
 	unsigned int tick;
@@ -30,7 +30,7 @@ struct TimerData {
 	int is_lua : 1;
 	// general-purpose storage
 	int id; 
-	intptr data;
+	intptr_t data;
 };
 
 // Function prototype declaration
@@ -38,10 +38,10 @@ struct TimerData {
 unsigned int gettick(void);
 unsigned int gettick_nocache(void);
 
-int add_timer(unsigned int tick, TimerFunc func, int id, intptr data);
+int add_timer(unsigned int tick, TimerFunc func, int id, intptr_t data);
+int add_timer_interval(unsigned int tick, TimerFunc func, int id, intptr_t data, int interval);
 void add_timer_lua(int tid);
 int get_timer_event_lua(int tid);
-int add_timer_interval(unsigned int tick, TimerFunc func, int id, intptr data, int interval);
 const struct TimerData* get_timer(int tid);
 int delete_timer(int tid, TimerFunc func);
 

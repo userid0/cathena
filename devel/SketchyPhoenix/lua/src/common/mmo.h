@@ -21,6 +21,7 @@
 // 20070821 - 2007-08-21aSakexe+   - 0x2c5
 // 20070918 - 2007-09-18aSakexe+   - 0x2d7, 0x2d9, 0x2da
 // 20071106 - 2007-11-06aSakexe+   - 0x78, 0x7c, 0x22c
+// 20080102 - 2008-01-02aSakexe+   - 0x2ec, 0x2ed , 0x2ee
 // 20081126 - 2008-11-26aSakexe+   - 0x1a2
 // 20090408 - 2009-04-08aSakexe+   - 0x44a (dont use as it overlaps with RE client packets)
 // 20080827 - 2008-08-27aRagexeRE+ - First RE Client
@@ -31,11 +32,19 @@
 // 20090922 - 2009-09-22aRagexeRE+ - 0x7e5, 0x7e7, 0x7e8, 0x7e9
 // 20091103 - 2009-11-03aRagexeRE+ - 0x7f7, 0x7f8, 0x7f9
 // 20100105 - 2010-01-05aRagexeRE+ - 0x133, 0x800, 0x801
+// 20100126 - 2010-01-26aRagexeRE+ - 0x80e
 // 20100223 - 2010-02-23aRagexeRE+ - 0x80f
+// 20100413 - 2010-04-13aRagexeRE+ - 0x6b
+// 20100629 - 2010-06-29aRagexeRE+ - 0x2d0, 0xaa, 0x2d1, 0x2d2
+// 20100721 - 2010-07-21aRagexeRE+ - 0x6b, 0x6d
+// 20100727 - 2010-07-27aRagexeRE+ - 0x6b, 0x6d
+// 20100803 - 2010-08-03aRagexeRE+ - 0x6b, 0x6d, 0x827, 0x828, 0x829, 0x82a, 0x82b, 0x82c, 0x842, 0x843
+// 20101124 - 2010-11-24aRagexeRE+ - 0x856, 0x857, 0x858
+// 20110111 - 2011-01-11aRagexeRE+ - 0x6b, 0x6d
 
 #ifndef PACKETVER
 	#define PACKETVER	20081126
-	//#define PACKETVER 20100223
+	//#define PACKETVER 20100707
 #endif
 // backward compatible PACKETVER 8 and 9
 #if PACKETVER == 8
@@ -46,8 +55,6 @@
 #undef PACKETVER
 #define PACKETVER 20071106
 #endif
-
-#define FIFOSIZE_SERVERLINK	256*1024
 
 //Remove/Comment this line to disable sc_data saving. [Skotlex]
 #define ENABLE_SC_SAVING 
@@ -79,17 +86,17 @@
 #define MAX_ZENY 1000000000
 #define MAX_FAME 1000000000
 #define MAX_CART 100
-#define MAX_SKILL 1020
+#define MAX_SKILL 2536
 #define GLOBAL_REG_NUM 256
 #define ACCOUNT_REG_NUM 64
 #define ACCOUNT_REG2_NUM 16
 //Should hold the max of GLOBAL/ACCOUNT/ACCOUNT2 (needed for some arrays that hold all three)
-#define MAX_REG_NUM 96
+#define MAX_REG_NUM 256
 #define DEFAULT_WALK_SPEED 150
 #define MIN_WALK_SPEED 0
 #define MAX_WALK_SPEED 1000
 #define MAX_STORAGE 600
-#define MAX_GUILD_STORAGE 1000
+#define MAX_GUILD_STORAGE 600
 #define MAX_PARTY 12
 #define MAX_GUILD 16+10*6	// increased max guild members +6 per 1 extension levels [Lupus]
 #define MAX_GUILDPOSITION 20	// increased max guild positions to accomodate for all members [Valaris] (removed) [PoW]
@@ -99,15 +106,8 @@
 #define MAX_GUILDCASTLE 34	// Updated to include new entries for WoE:SE. [L0ne_W0lf]
 #define MAX_GUILDLEVEL 50
 #define MAX_GUARDIANS 8	//Local max per castle. [Skotlex]
-#define MAX_QUEST_DB 1500 //Max quests that the server will load
+#define MAX_QUEST_DB 2000 //Max quests that the server will load
 #define MAX_QUEST_OBJECTIVES 3 //Max quest objectives for a quest
-
-#define MIN_HAIR_STYLE battle_config.min_hair_style
-#define MAX_HAIR_STYLE battle_config.max_hair_style
-#define MIN_HAIR_COLOR battle_config.min_hair_color
-#define MAX_HAIR_COLOR battle_config.max_hair_color
-#define MIN_CLOTH_COLOR battle_config.min_cloth_color
-#define MAX_CLOTH_COLOR battle_config.max_cloth_color
 
 // for produce
 #define MIN_ATTRIBUTE 0
@@ -141,6 +141,10 @@
 #define END_ACCOUNT_NUM 100000000
 #define START_CHAR_NUM 150000
 
+//Guilds
+#define MAX_GUILDMES1 60
+#define MAX_GUILDMES2 120
+
 //Base Homun skill.
 #define HM_SKILLBASE 8001
 #define MAX_HOMUNSKILL 16
@@ -155,8 +159,8 @@
 
 //Mercenary System
 #define MC_SKILLBASE 8201
-#define MAX_MERCSKILL 37
-#define MAX_MERCENARY_CLASS 36
+#define MAX_MERCSKILL 40
+#define MAX_MERCENARY_CLASS 40
 
 enum item_types {
 	IT_HEALING = 0,
@@ -171,6 +175,7 @@ enum item_types {
 	IT_UNKNOWN2,//9
 	IT_AMMO,    //10
 	IT_DELAYCONSUME,//11
+	IT_CASH = 18,
 	IT_MAX 
 };
 
@@ -202,8 +207,19 @@ struct point {
 	short x,y;
 };
 
+enum e_skill_flag
+{
+	SKILL_FLAG_PERMANENT,
+	SKILL_FLAG_TEMPORARY,
+	SKILL_FLAG_PLAGIARIZED,
+	SKILL_FLAG_REPLACED_LV_0, // temporary skill overshadowing permanent skill of level 'N - SKILL_FLAG_REPLACED_LV_0'
+	//...
+};
+
 struct s_skill {
-	unsigned short id,lv,flag;
+	unsigned short id;
+	unsigned short lv;
+	unsigned short flag; // see enum e_skill_flag
 };
 
 struct global_reg {
@@ -234,7 +250,7 @@ struct guild_storage {
 	int guild_id;
 	short storage_status;
 	short storage_amount;
-	struct item storage_[MAX_GUILD_STORAGE];
+	struct item items[MAX_GUILD_STORAGE];
 };
 
 struct s_pet {
@@ -326,6 +342,7 @@ struct mmo_charstatus {
 	short weapon; // enum weapon_type
 	short shield; // view-id
 	short head_top,head_mid,head_bottom;
+	short robe;
 
 	char name[NAME_LENGTH];
 	unsigned int base_level,job_level;
@@ -346,6 +363,8 @@ struct mmo_charstatus {
 #endif
 	bool show_equip;
 	short rename;
+
+	time_t delete_date;
 };
 
 typedef enum mail_status {
@@ -462,12 +481,13 @@ struct guild_skill {
 struct guild {
 	int guild_id;
 	short guild_lv, connect_member, max_member, average_lv;
-	unsigned int exp,next_exp;
+	uint64 exp;
+	unsigned int next_exp;
 	int skill_point;
 	char name[NAME_LENGTH],master[NAME_LENGTH];
 	struct guild_member member[MAX_GUILD];
 	struct guild_position position[MAX_GUILDPOSITION];
-	char mes1[60],mes2[120];
+	char mes1[MAX_GUILDMES1],mes2[MAX_GUILDMES2];
 	int emblem_len,emblem_id;
 	char emblem_data[2048];
 	struct guild_alliance alliance[MAX_GUILDALLIANCE];
@@ -497,12 +517,6 @@ struct guild_castle {
 	} guardian[MAX_GUARDIANS];
 	int* temp_guardians; // ids of temporary guardians (mobs)
 	int temp_guardians_max;
-};
-
-// for Brandish Spear calculations
-struct square {
-	int val1[5];
-	int val2[5];
 };
 
 struct fame_list {
@@ -631,6 +645,65 @@ enum {
 	JOB_STAR_GLADIATOR,
 	JOB_STAR_GLADIATOR2,
 	JOB_SOUL_LINKER,
+
+	JOB_RUNE_KNIGHT = 4054,
+	JOB_WARLOCK,
+	JOB_RANGER,
+	JOB_ARCHBISHOP,
+	JOB_MECHANIC,
+	JOB_GUILLOTINE_CROSS,
+
+	JOB_RUNE_KNIGHT_H,
+	JOB_WARLOCK_H,
+	JOB_RANGER_H,
+	JOB_ARCHBISHOP_H,
+	JOB_MECHANIC_H,
+	JOB_GUILLOTINE_CROSS_H,
+
+	JOB_ROYAL_GUARD,
+	JOB_SORCERER,
+	JOB_MINSTREL,
+	JOB_WANDERER,
+	JOB_SURA,
+	JOB_GENETIC,
+	JOB_SHADOW_CHASER,
+
+	JOB_ROYAL_GUARD_H,
+	JOB_SORCERER_H,
+	JOB_MINSTREL_H,
+	JOB_WANDERER_H,
+	JOB_SURA_H,
+	JOB_GENETIC_H,
+	JOB_SHADOW_CHASER_H,
+
+	JOB_RUNE_KNIGHT2,
+	JOB_RUNE_KNIGHT_H2,
+	JOB_ROYAL_GUARD2,
+	JOB_ROYAL_GUARD_H2,
+	JOB_RANGER2,
+	JOB_RANGER_H2,
+	JOB_MECHANIC2,
+	JOB_MECHANIC_H2,
+
+	JOB_BABY_RUNE = 4096,
+	JOB_BABY_WARLOCK,
+	JOB_BABY_RANGER,
+	JOB_BABY_BISHOP,
+	JOB_BABY_MECHANIC,
+	JOB_BABY_CROSS,
+	JOB_BABY_GUARD,
+	JOB_BABY_SORCERER,
+	JOB_BABY_MINSTREL,
+	JOB_BABY_WANDERER,
+	JOB_BABY_SURA,
+	JOB_BABY_GENETIC,
+	JOB_BABY_CHASER,
+
+	JOB_BABY_RUNE2,
+	JOB_BABY_GUARD2,
+	JOB_BABY_RANGER2,
+	JOB_BABY_MECHANIC2,
+
 	JOB_MAX,
 };
 

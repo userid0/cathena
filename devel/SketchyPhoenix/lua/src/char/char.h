@@ -4,7 +4,17 @@
 #ifndef _CHAR_H_
 #define _CHAR_H_
 
+#include "../common/core.h" // CORE_ST_LAST
 #include "../common/mmo.h"
+
+#ifndef TXT_SQL_CONVERT
+enum E_CHARSERVER_ST
+{
+	CHARSERVER_ST_RUNNING = CORE_ST_LAST,
+	CHARSERVER_ST_SHUTDOWN,
+	CHARSERVER_ST_LAST
+};
+#endif
 
 #define MAX_MAP_SERVERS 30
 
@@ -29,7 +39,6 @@ int mapif_send(int fd,unsigned char *buf, unsigned int len);
 int char_married(int pl1,int pl2);
 int char_child(int parent_id, int child_id);
 int char_family(int cid1, int cid2, int cid3);
-void char_clearparty(int party_id);
 
 int char_log(char *fmt, ...);
 

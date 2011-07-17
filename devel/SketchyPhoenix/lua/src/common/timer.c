@@ -146,7 +146,7 @@ static unsigned int tick(void)
 	//
 		return (unsigned int)((_rdtsc() - RDTSC_BEGINTICK) / RDTSC_CLOCK);
 	//
-#elif (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0 && defined(_POSIX_MONOTONIC_CLOCK) /* posix compliant */) || (defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 500005 /* FreeBSD >= 5.1.0 */)
+#elif defined(HAVE_MONOTONIC_CLOCK)
 	struct timespec tval;
 	clock_gettime(CLOCK_MONOTONIC, &tval);
 	return tval.tv_sec * 1000 + tval.tv_nsec / 1000000;
@@ -241,7 +241,7 @@ static int acquire_timer(void)
 
 /// Starts a new timer that is deleted once it expires (single-use).
 /// Returns the timer's id.
-int add_timer(unsigned int tick, TimerFunc func, int id, intptr data)
+int add_timer(unsigned int tick, TimerFunc func, int id, intptr_t data)
 {
 	int tid;
 	
@@ -271,7 +271,7 @@ int get_timer_event_lua(int tid)
 
 /// Starts a new timer that automatically restarts itself (infinite loop until manually removed).
 /// Returns the timer's id, or INVALID_TIMER if it fails.
-int add_timer_interval(unsigned int tick, TimerFunc func, int id, intptr data, int interval)
+int add_timer_interval(unsigned int tick, TimerFunc func, int id, intptr_t data, int interval)
 {
 	int tid;
 

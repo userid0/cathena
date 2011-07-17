@@ -323,6 +323,12 @@ typedef enum sc_type {
 	SC_SPL_DEF, //300
 	SC_MANU_MATK,
 	SC_SPL_MATK,
+	SC_FOOD_STR_CASH,
+	SC_FOOD_AGI_CASH,
+	SC_FOOD_VIT_CASH,
+	SC_FOOD_DEX_CASH,
+	SC_FOOD_INT_CASH,
+	SC_FOOD_LUK_CASH,
 
 	SC_MAX, //Automatically updated max, used in for's to check we are within bounds.
 } sc_type;
@@ -601,12 +607,12 @@ enum si_type {
 //	SI_DA_EDARKNESS = 268,
 //	SI_DA_EGUARDIAN = 269,
 //	SI_DA_TIMEOUT = 270,
-//	SI_FOOD_STR_CASH = 271,
-//	SI_FOOD_AGI_CASH = 272,
-//	SI_FOOD_VIT_CASH = 273,
-//	SI_FOOD_DEX_CASH = 274,
-//	SI_FOOD_INT_CASH = 275,
-//	SI_FOOD_LUK_CASH = 276,
+	SI_FOOD_STR_CASH = 271,
+	SI_FOOD_AGI_CASH = 272,
+	SI_FOOD_VIT_CASH = 273,
+	SI_FOOD_DEX_CASH = 274,
+	SI_FOOD_INT_CASH = 275,
+	SI_FOOD_LUK_CASH = 276,
 	SI_MERC_FLEEUP	= 277,
 	SI_MERC_ATKUP	= 278,
 	SI_MERC_HPUP	= 279,
@@ -712,13 +718,15 @@ enum si_type {
 	SI_NEUTRALBARRIER_MASTER = 378,
 	SI_STEALTHFIELD = 379,
 	SI_STEALTHFIELD_MASTER = 380,
+*/
 	SI_MANU_ATK = 381, 
 	SI_MANU_DEF = 382, 
 	SI_SPL_ATK = 383, 
 	SI_SPL_DEF = 384, 
-	SI_REPRODUCE = 385,
+//	SI_REPRODUCE = 385,
 	SI_MANU_MATK = 386,
 	SI_SPL_MATK = 387,
+/*
 	SI_STR_SCROLL = 388,
 	SI_INT_SCROLL = 389,
 	SI_LG_REFLECTDAMAGE = 390,
@@ -902,17 +910,21 @@ enum si_type {
 	SI_WATER_INSIGNIA = 568,
 	SI_WIND_INSIGNIA = 569,
 	SI_EARTH_INSIGNIA = 570,
+	SI_EQUIPED_FLOOR = 571,
 */
 };
 
 // JOINTBEAT stackable ailments
-#define BREAK_ANKLE    0x01 // MoveSpeed reduced by 50%
-#define BREAK_WRIST    0x02 // ASPD reduced by 25%
-#define BREAK_KNEE     0x04 // MoveSpeed reduced by 30%, ASPD reduced by 10%
-#define BREAK_SHOULDER 0x08 // DEF reduced by 50%
-#define BREAK_WAIST    0x10 // DEF reduced by 25%, ATK reduced by 25%
-#define BREAK_NECK     0x20 // current attack does 2x damage, inflicts 'bleeding' for 30 seconds
-#define BREAK_FLAGS    ( BREAK_ANKLE | BREAK_WRIST | BREAK_KNEE | BREAK_SHOULDER | BREAK_WAIST | BREAK_NECK )
+enum e_joint_break
+{
+	BREAK_ANKLE    = 0x01, // MoveSpeed reduced by 50%
+	BREAK_WRIST    = 0x02, // ASPD reduced by 25%
+	BREAK_KNEE     = 0x04, // MoveSpeed reduced by 30%, ASPD reduced by 10%
+	BREAK_SHOULDER = 0x08, // DEF reduced by 50%
+	BREAK_WAIST    = 0x10, // DEF reduced by 25%, ATK reduced by 25%
+	BREAK_NECK     = 0x20, // current attack does 2x damage, inflicts 'bleeding' for 30 seconds
+	BREAK_FLAGS    = BREAK_ANKLE | BREAK_WRIST | BREAK_KNEE | BREAK_SHOULDER | BREAK_WAIST | BREAK_NECK,
+};
 
 extern int current_equip_item_index;
 extern int current_equip_card_id;
@@ -920,22 +932,25 @@ extern int current_equip_card_id;
 extern int percentrefinery[5][MAX_REFINE+1]; //The last slot always has a 0% success chance [Skotlex]
 
 //Mode definitions to clear up code reading. [Skotlex]
-#define MD_CANMOVE 0x0001
-#define MD_LOOTER 0x0002
-#define MD_AGGRESSIVE 0x0004
-#define MD_ASSIST 0x0008
-#define MD_CASTSENSOR_IDLE 0x0010
-#define MD_BOSS 0x0020
-#define MD_PLANT 0x0040
-#define MD_CANATTACK 0x0080
-#define MD_DETECTOR 0x0100
-#define MD_CASTSENSOR_CHASE 0x0200
-#define MD_CHANGECHASE 0x0400
-#define MD_ANGRY 0x0800
-#define MD_CHANGETARGET_MELEE 0x1000
-#define MD_CHANGETARGET_CHASE 0x2000
-#define MD_TARGETWEAK 0x4000
-#define MD_MASK 0xFFFF
+enum e_mode
+{
+	MD_CANMOVE            = 0x0001,
+	MD_LOOTER             = 0x0002,
+	MD_AGGRESSIVE         = 0x0004,
+	MD_ASSIST             = 0x0008,
+	MD_CASTSENSOR_IDLE    = 0x0010,
+	MD_BOSS               = 0x0020,
+	MD_PLANT              = 0x0040,
+	MD_CANATTACK          = 0x0080,
+	MD_DETECTOR           = 0x0100,
+	MD_CASTSENSOR_CHASE   = 0x0200,
+	MD_CHANGECHASE        = 0x0400,
+	MD_ANGRY              = 0x0800,
+	MD_CHANGETARGET_MELEE = 0x1000,
+	MD_CHANGETARGET_CHASE = 0x2000,
+	MD_TARGETWEAK         = 0x4000,
+	MD_MASK               = 0xFFFF,
+};
 
 //Status change option definitions (options are what makes status changes visible to chars
 //who were not on your field of sight when it happened)
@@ -947,7 +962,9 @@ enum {
 	OPT1_STUN,
 	OPT1_SLEEP,
 	//Aegis uses OPT1 = 5 to identify undead enemies (which also grants them immunity to the other opt1 changes)
-	OPT1_STONEWAIT=6 //Petrifying
+	OPT1_STONEWAIT=6, //Petrifying
+	OPT1_BURNING,
+	OPT1_IMPRISON,
 };
 
 //opt2: Stackable status changes.
@@ -960,6 +977,7 @@ enum {
 	OPT2_ANGELUS      = 0x0020,
 	OPT2_BLEEDING     = 0x0040,
 	OPT2_DPOISON      = 0x0080,
+	OPT2_FEAR         = 0x0100,
 };
 
 //opt3: (SHOW_EFST_*)
@@ -1006,18 +1024,29 @@ enum {
 	OPTION_XMAS      = 0x00010000,
 	OPTION_TRANSFORM = 0x00020000,
 	OPTION_SUMMER    = 0x00040000,
+	OPTION_DRAGON1   = 0x00080000,
+	OPTION_WUG       = 0x00100000,
+	OPTION_WUGRIDER  = 0x00200000,
+	OPTION_MADOGEAR  = 0x00400000,
+	OPTION_DRAGON2   = 0x00800000,
+	OPTION_DRAGON3   = 0x01000000,
+	OPTION_DRAGON4   = 0x02000000,
+	OPTION_DRAGON5   = 0x04000000,
+	// compound constants
+	OPTION_CART      = OPTION_CART1|OPTION_CART2|OPTION_CART3|OPTION_CART4|OPTION_CART5,
+	OPTION_DRAGON    = OPTION_DRAGON1|OPTION_DRAGON2|OPTION_DRAGON3|OPTION_DRAGON4|OPTION_DRAGON5,
+	OPTION_MASK      = ~OPTION_INVISIBLE,
 };
 
-#define OPTION_CART (OPTION_CART1|OPTION_CART2|OPTION_CART3|OPTION_CART4|OPTION_CART5)
-
-#define OPTION_MASK ~0x40
-
 //Defines for the manner system [Skotlex]
-#define MANNER_NOCHAT 0x01
-#define MANNER_NOSKILL 0x02
-#define MANNER_NOCOMMAND 0x04
-#define MANNER_NOITEM 0x08
-#define MANNER_NOROOM 0x10
+enum manner_flags
+{
+	MANNER_NOCHAT    = 0x01,
+	MANNER_NOSKILL   = 0x02,
+	MANNER_NOCOMMAND = 0x04,
+	MANNER_NOITEM    = 0x08,
+	MANNER_NOROOM    = 0x10,
+};
 
 //Define flags for the status_calc_bl function. [Skotlex]
 enum scb_flag
@@ -1255,9 +1284,10 @@ int status_get_sc_def(struct block_list *bl, enum sc_type type, int rate, int ti
 #define sc_start4(bl, type, rate, val1, val2, val3, val4, tick) status_change_start(bl,type,100*(rate),val1,val2,val3,val4,tick,0)
 
 int status_change_start(struct block_list* bl,enum sc_type type,int rate,int val1,int val2,int val3,int val4,int tick,int flag);
-int status_change_end(struct block_list* bl, enum sc_type type, int tid);
-int kaahi_heal_timer(int tid, unsigned int tick, int id, intptr data);
-int status_change_timer(int tid, unsigned int tick, int id, intptr data);
+int status_change_end_(struct block_list* bl, enum sc_type type, int tid, const char* file, int line);
+#define status_change_end(bl,type,tid) status_change_end_(bl,type,tid,__FILE__,__LINE__)
+int kaahi_heal_timer(int tid, unsigned int tick, int id, intptr_t data);
+int status_change_timer(int tid, unsigned int tick, int id, intptr_t data);
 int status_change_timer_sub(struct block_list* bl, va_list ap);
 int status_change_clear(struct block_list* bl, int type);
 int status_change_clear_buffs(struct block_list* bl, int type);
